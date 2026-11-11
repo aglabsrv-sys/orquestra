@@ -1,0 +1,62 @@
+# Abrir o painel no celular (Tailscale)
+
+O painel escuta apenas em `127.0.0.1`: só o seu computador enxerga. Para abrir no
+celular sem expor nada à internet, usamos o [Tailscale](https://tailscale.com), uma
+rede privada entre os seus aparelhos. O plano gratuito basta.
+
+> **O painel não tem senha.** Quem alcança o endereço lê e altera o seu vault.
+> Por isso: **nunca use `tailscale funnel`** e nunca abra a porta no roteador. O
+> Funnel publica o endereço para a internet inteira. O `serve`, usado aqui, só
+> funciona para aparelhos da sua conta do Tailscale.
+
+## Passo a passo
+
+1. **Instale o Tailscale no computador** onde o painel roda e entre com a sua conta.
+   Baixe em <https://tailscale.com/download>.
+2. **Instale o Tailscale no celular** (App Store ou Google Play) e entre com a **mesma conta**.
+3. Com o painel rodando, abra um terminal no computador e rode uma vez:
+
+   ```bash
+   tailscale serve --bg 8420
+   ```
+
+   Na primeira vez o Tailscale pode pedir para ativar HTTPS na sua conta: ele mostra
+   um link, é só abrir e confirmar.
+4. O comando mostra um endereço parecido com `https://seu-pc.tail1234.ts.net`. Abra
+   esse endereço no navegador do celular (com o Tailscale ligado nele).
+5. No celular, use "Adicionar à tela de início" para ter o painel como um aplicativo.
+
+O `--bg` deixa o encaminhamento ligado mesmo depois de fechar o terminal e de
+reiniciar o computador. O painel precisa estar rodando para o endereço responder
+(veja `orquestra autostart` no README).
+
+## Conferir e desligar
+
+```bash
+tailscale serve status
+```
+
+```bash
+tailscale serve reset
+```
+
+O `orquestra doctor` também confere tudo isso e avisa em vermelho se o Funnel estiver ligado.
+
+## Se algo não funcionar
+
+| Sintoma | O que fazer |
+|---|---|
+| O endereço não abre no celular | Confira se o Tailscale está ligado no celular e se o painel está rodando no computador. |
+| A página abre, mas nada salva ("Requisição vinda de outro site foi bloqueada") | Acrescente o nome do endereço (sem `https://`) em `hosts_permitidos` no `orquestra.yaml` e reinicie o painel. |
+| "Endereço não permitido" | Você está acessando por um nome que não é `localhost` nem `*.ts.net`. Acrescente-o em `hosts_permitidos`. |
+| O computador dorme e o endereço cai | Ajuste as opções de energia para não suspender, ou aceite que o painel só responde com o computador acordado. |
+
+## Falar com o agente pelo celular
+
+O painel não conversa com IA: ele mostra e edita os arquivos. Para dar ordens a um
+agente estando fora de casa, você tem dois caminhos que combinam bem com ele:
+
+- **Captura rápida**: o botão "Capturar" grava o seu pedido em `entrada/`. Na próxima
+  sessão, o agente processa (é o que o `AGENTS.md` manda).
+- **O acesso remoto do seu agente**: Claude Code, por exemplo, pode ser controlado
+  pelo celular. O agente trabalha na pasta, e você acompanha o resultado no painel.
