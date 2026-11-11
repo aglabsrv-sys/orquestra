@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}Diário{% endblock %}
+{% block trilha %}Diário{% endblock %}
+{% block observa %}{% if e_hoje %}tudo{% endif %}{% endblock %}
+
+{% block conteudo %}
+<section class="pagina">
+  <header class="pagina-topo">
+    <h1>Diário</h1>
+    <div class="navega-dia">
+      <a class="botao so-icone" href="?dia={{ anterior }}" aria-label="Dia anterior">{{ icone('chevron_esq', 18) }}</a>
+      <b>{{ 'Hoje · ' if e_hoje }}{{ dia_longo }}</b>
+      {% if proximo %}<a class="botao so-icone" href="?dia={{ proximo }}" aria-label="Dia seguinte">{{ icone('chevron_dir', 18) }}</a>{% endif %}
+    </div>
+  </header>
+
+  <h2 class="grupo-titulo">{{ icone('chip', 18) }} Sessões dos agentes</h2>
+  {% if sessoes.strip() %}
+  <div class="texto bloco">{{ sessoes }}</div>
+  {% else %}
+  <p class="suave">Nenhum agente registrou sessão neste dia. Pelo AGENTS.md, todo agente escreve aqui um resumo do que fez ao terminar.</p>
+  {% endif %}
+
+  <h2 class="grupo-titulo">{{ icone('pulso', 18) }} Registro de mudanças <small>{{ entradas|length }}</small></h2>
+  {% if entradas %}
+  <ol class="registro">
+    {% for e in entradas %}
+    <li class="reg-{{ e.tipo }}">
+      <time>{{ e.hora[:5] }}</time>
+      <span class="et reg-tipo">{{ e.tipo }}</span>
+      <div>
+        {% if e.existe %}<a href="{{ url_nota(e.rel) }}">{{ e.rel }}</a>{% else %}<span>{{ e.rel }}</span>{% endif %}
+        {% if e.detalhe %}<small>{{ e.detalhe }}</small>{% endif %}
+      </div>
+      <span class="et{% if e.autor == 'painel' %} zona-humano{% else %} zona-maquina{% endif %}">{{ 'fora do painel' if e.autor.startswith('externo') else e.autor }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  {{ p.vazio("Nenhuma mudança registrada", "Toda criação, edição ou remoção de nota neste dia aparece aqui, não importa quem fez.") }}
+  {% endif %}
+
+  {% if dias %}
+  <p class="suave outros-dias">Outros dias: {% for d in dias %}<a href="?dia={{ d }}">{{ d[8:] }}/{{ d[5:7] }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% endif %}
+</section>
+{% endblock %}

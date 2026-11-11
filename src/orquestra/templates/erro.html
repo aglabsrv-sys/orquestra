@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block trilha %}{{ titulo }}{% endblock %}
+
+{% block conteudo %}
+<section class="pagina">
+  {{ p.vazio(titulo, mensagem) }}
+  <p style="text-align:center"><a class="botao principal" href="/">Voltar ao início</a></p>
+</section>
+{% endblock %}

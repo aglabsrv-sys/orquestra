@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ tema.cores.fundo }}">
+  <title>{% block titulo %}Início{% endblock %} · {{ cfg.nome }}</title>
+  <link rel="icon" href="/static/icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ marca }}">
+  {# As cores vêm do tema ativo (arquivo tema.yaml no vault). #}
+  <style>:root{ {% for nome, cor in tema.cores.items() %}--{{ nome|replace('_', '-') }}:{{ cor }};{% endfor %} }</style>
+</head>
+<body data-observa="{% block observa %}{% endblock %}">
+  <canvas id="ambiente" width="48" height="27" aria-hidden="true"></canvas>
+
+  <header class="topo">
+    <div class="trilha">
+      <a class="marca" href="/">{{ cfg.nome }}</a>
+      <span class="barra">/</span>
+      <span class="aqui">{% block trilha %}Início{% endblock %}</span>
+    </div>
+    <div class="topo-dir">
+      <time class="relogio" id="relogio">--:--</time>
+      <span class="data-hoje">{{ hoje_longo|capitalize }}</span>
+      <a class="botao so-icone" href="/buscar" title="Buscar" aria-label="Buscar">{{ icone('busca', 18) }}</a>
+      {% if modulo_captura %}
+      <button class="botao" id="abrir-captura" title="Captura rápida (tecla C)">{{ icone('mais', 16) }}<span>Capturar</span></button>
+      {% endif %}
+    </div>
+  </header>
+
+  <main>{% block conteudo %}{% endblock %}</main>
+
+  {# Dock: só ícones. O nome aparece ao passar o mouse. #}
+  <nav class="dock" aria-label="Navegação">
+    <a class="dock-item{% if dock.inicio_ativo %} ativo{% endif %}" href="/" data-dica="Início" aria-label="Início">{{ icone('inicio', 22) }}</a>
+    {% for m in dock.modulos %}
+    <a class="dock-item{% if m.ativo %} ativo{% endif %}" href="{{ m.url }}" data-dica="{{ m.nome }}" aria-label="{{ m.nome }}" data-selo-de="{{ m.id }}">
+      {{ icone(m.icone, 22) }}<b class="selo"{% if not m.selo %} hidden{% endif %}>{{ m.selo }}</b>
+    </a>
+    {% endfor %}
+    <span class="dock-sep" aria-hidden="true"></span>
+    {% for s in dock.sistema %}
+    <a class="dock-item{% if s.ativo %} ativo{% endif %}" href="{{ s.url }}" data-dica="{{ s.nome }}" aria-label="{{ s.nome }}" data-selo-de="{{ s.id }}">
+      {{ icone(s.icone, 22) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ s.selo }}</b>
+    </a>
+    {% endfor %}
+  </nav>
+
+  {% if modulo_captura %}
+  <dialog id="captura" class="dialogo">
+    <div class="dialogo-corpo">
+      <h2>Captura rápida</h2>
+      <p class="suave">Vai para “{{ modulo_captura.nome }}” como nota sua, do jeito que você escreveu. Um agente processa depois.</p>
+      <textarea id="captura-texto" rows="6" placeholder="Uma ideia, um pedido, um lembrete..."></textarea>
+      <div class="dialogo-acoes">
+        <span class="suave dica-tecla">Ctrl + Enter para guardar</span>
+        <button type="button" class="botao" data-fechar>Cancelar</button>
+        <button type="button" class="botao principal" id="captura-salvar">Guardar</button>
+      </div>
+    </div>
+  </dialog>
+  {% endif %}
+
+  {% block dialogos %}{% endblock %}
+  <div id="avisos" aria-live="polite"></div>
+
+  <script src="/static/js/cenas.js?v={{ marca }}"></script>
+  <script src="/static/js/app.js?v={{ marca }}"></script>
+</body>
+</html>

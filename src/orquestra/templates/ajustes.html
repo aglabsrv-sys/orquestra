@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}Ajustes{% endblock %}
+{% block trilha %}Ajustes{% endblock %}
+
+{% block conteudo %}
+<section class="pagina">
+  <header class="pagina-topo"><h1>Ajustes</h1></header>
+
+  <h2 class="grupo-titulo">{{ icone('paleta', 18) }} Tema</h2>
+  <div class="temas">
+    {% for t in temas %}
+    <button class="tema{% if t.atual %} atual{% endif %}" type="button" data-tema="{{ t.id }}" style="--t-fundo:{{ t.cores.fundo }};--t-texto:{{ t.cores.texto }};--t-destaque:{{ t.cores.destaque }};--t-borda:{{ t.cores.borda }}">
+      <span class="tema-previa">{{ p.capa(t.previa) }}</span>
+      <span class="tema-info">
+        <b>{{ t.nome }}</b>
+        <small>{{ t.descricao }}</small>
+        <span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ t.cores[chave] }}"></i>{% endfor %}</span>
+      </span>
+    </button>
+    {% endfor %}
+  </div>
+  <p class="suave">Cada tema é uma pasta em <code>_orquestra/temas/</code>. Para criar o seu, copie uma delas e edite o <code>tema.yaml</code>, ou peça a um agente: “crie um tema verde-escuro com capas de floresta”.</p>
+
+  <h2 class="grupo-titulo">{{ icone('nuvem', 18) }} Histórico e backup</h2>
+  <div class="bloco">
+    {% if tem_git %}
+    <p>Último commit do vault: <b>{{ ultimo_commit or 'nenhum ainda' }}</b>.
+      {% if cfg.backup.auto_commit %}Commit automático a cada {{ cfg.backup.intervalo_min }} min.{% else %}Commit automático desligado.{% endif %}
+      {% if tem_remoto %}{% if cfg.backup.push %}Envio diário às {{ cfg.backup.push_as }}.{% else %}Há um repositório remoto, mas o envio automático está desligado.{% endif %}{% else %}Sem repositório remoto: o histórico existe só neste computador.{% endif %}
+    </p>
+    {% if estado_backup.resultado_push and estado_backup.resultado_push.startswith('erro') %}<p class="erro-texto">Último envio falhou: {{ estado_backup.resultado_push }}</p>{% endif %}
+    <div class="linha-botoes">
+      <button class="botao" type="button" data-backup="local">Fazer commit agora</button>
+      {% if tem_remoto %}<button class="botao" type="button" data-backup="enviar">Commit e enviar</button>{% endif %}
+    </div>
+    {% else %}
+    <p>O vault ainda não tem histórico. Rode <code>orquestra backup</code> no terminal para criar o repositório git do vault.</p>
+    {% endif %}
+  </div>
+
+  <h2 class="grupo-titulo">{{ icone('radar', 18) }} Coletores</h2>
+  <div class="bloco">
+    {% for c in coletores %}
+    <p><b>{{ c.def.nome }}</b> em <a class="link" href="/m/{{ c.modulo.id }}?aba=maquina">{{ c.modulo.nome }}</a> ·
+      {{ 'automático' if c.def.ativo else 'manual' }}
+      {% if c.ultima %}· última vez {{ c.ultima.ultima|replace('T', ' ') }}{% if not c.ultima.ok %} <span class="erro-texto">(falhou)</span>{% endif %}{% endif %}
+    </p>
+    {% else %}<p class="suave">Nenhum coletor configurado.</p>{% endfor %}
+  </div>
+
+  <h2 class="grupo-titulo">{{ icone('celular', 18) }} Acesso</h2>
+  <div class="bloco">
+    <p>Você está acessando por <code>{{ host }}</code>. O painel escuta apenas neste computador (127.0.0.1).</p>
+    <p>Para abrir no celular, use o Tailscale: <code>tailscale serve --bg {{ cfg.porta }}</code>. Nunca use Funnel nem abra a porta no roteador: o painel não tem senha.</p>
+  </div>
+
+  <h2 class="grupo-titulo">{{ icone('pasta', 18) }} Vault</h2>
+  <div class="bloco">
+    <p><code>{{ vault }}</code> · {{ n_notas }} notas · Orquestra {{ versao }}</p>
+    {% for nome, aviso in avisos %}<p class="erro-texto">{{ icone('aviso', 14) }} {{ nome }}: {{ aviso }}</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

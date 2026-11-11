@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block observa %}inicio{% endblock %}
+
+{% block conteudo %}
+<section class="semana" aria-label="Próximos dias">
+  <div class="dias">
+    {% for d in semana %}
+    <a class="dia{% if d.hoje %} ativo{% endif %}" href="/dia/{{ d.iso }}" title="{{ d.n }} em aberto">
+      <span>{{ d.nome }}</span> <b>{{ d.num }}</b>
+      {% if d.n %}<i class="ponto"></i>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  <div class="semana-resumo">
+    <a class="resumo-item" href="/decidir">
+      {{ icone('sino', 18) }}
+      <span><b>Para decidir</b><small><span data-conta="decidir">{{ total_decidir }}</span> esperando</small></span>
+    </a>
+    <a class="resumo-item" href="/dia/{{ hoje.isoformat() }}">
+      {{ icone('check', 18) }}
+      <span><b>Hoje</b><small><span data-conta="hoje">{{ para_hoje }}</span> por fazer</small></span>
+    </a>
+  </div>
+</section>
+
+<section class="carrossel" id="carrossel" aria-label="Áreas do painel">
+  <button class="seta esq" type="button" aria-label="Anterior">{{ icone('chevron_esq', 20) }}</button>
+  <div class="trilho">
+    {% for s in slides %}
+    <a class="slide" href="{{ s.url }}" data-id="{{ s.id }}">
+      {{ p.capa(s.capa) }}
+      <span class="slide-sombra"></span>
+      <span class="selo-capa">{{ s.selo }}</span>
+      <span class="slide-texto">
+        <small>{{ s.sobre }}</small>
+        <strong>{{ s.titulo }}</strong>
+      </span>
+      <span class="botao principal entrar">Entrar {{ icone('seta_dir', 16) }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  <button class="seta dir" type="button" aria-label="Próximo">{{ icone('chevron_dir', 20) }}</button>
+  <div class="pontos">
+    {% for s in slides %}<button type="button" aria-label="{{ s.titulo }}"></button>{% endfor %}
+  </div>
+</section>
+{% endblock %}

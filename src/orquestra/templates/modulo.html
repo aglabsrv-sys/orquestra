@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}{{ modulo.nome }}{% endblock %}
+{% block trilha %}{{ modulo.nome }}{% endblock %}
+{% block observa %}modulo:{{ modulo.id }}{% endblock %}
+
+{% block conteudo %}
+<section class="cab-modulo">
+  {{ p.capa(capa) }}
+  <span class="slide-sombra"></span>
+  <div class="cab-texto">
+    <h1>{{ modulo.nome }}</h1>
+    {% if modulo.descricao %}<p>{{ modulo.descricao }}</p>{% endif %}
+  </div>
+  <div class="cab-numeros">
+    <span><b>{{ resumo.abertos }}</b> em aberto</span>
+    {% if modulo.campo_data %}<span><b>{{ resumo.hoje }}</b> para hoje</span>{% endif %}
+    {% if modulo.decidir %}<span><b>{{ resumo.decidir }}</b> para decidir</span>{% endif %}
+  </div>
+</section>
+
+<nav class="abas" aria-label="Visões do módulo">
+  {% for v in modulo.visoes %}
+  <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}">{{ v.nome }}</a>
+  {% endfor %}
+  <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano">{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
+  <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina">{{ icone('chip', 15) }} Máquina</a>
+  {% if aba != 'maquina' %}
+  <button class="botao principal novo" type="button" id="abrir-novo">{{ icone('mais', 16) }}<span>{{ 'Nova nota' if aba == 'humano' else 'Novo' }}</span></button>
+  {% endif %}
+</nav>
+
+{% if modulo.avisos %}
+<div class="faixa alerta">{{ icone('aviso', 16) }} O _modulo.yaml tem avisos: {{ modulo.avisos|join(' ') }}</div>
+{% endif %}
+
+{# ---------------------------------------------------------------- Humano #}
+{% if aba == "humano" %}
+<section class="lista-notas">
+  <p class="explica">{{ icone('pessoa', 15) }} O que <b>você</b> disse ou decidiu, com as suas palavras. Agentes leem esta pasta, mas não reescrevem nada aqui: só acrescentam, marcando que foram eles.</p>
+  {% for n in notas %}
+  <a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><span>{{ n.trecho }}</span></a>
+  {% else %}
+  {{ p.vazio("Nada aqui ainda", "Escreva como você gosta de trabalhar neste módulo: seu tom, suas regras, o que não quer. Os agentes vão ler antes de agir.") }}
+  {% endfor %}
+</section>
+
+{# ---------------------------------------------------------------- Máquina #}
+{% elif aba == "maquina" %}
+<section class="lista-notas">
+  <p class="explica">{{ icone('chip', 15) }} O que faz o módulo funcionar: instruções para os agentes e os coletores que trazem informação de fora. Você raramente precisa mexer aqui.</p>
+
+  <h3 class="sub">Coletores</h3>
+  {% for c in coletores %}
+  <div class="coletor" data-modulo="{{ modulo.id }}" data-script="{{ c.def.script }}">
+    <div class="coletor-info">
+      <b>{{ c.def.nome }}</b>
+      <span class="suave">{{ c.def.script }} · {{ c.quando }}</span>
+      {% if c.ultima %}
+      <span class="{{ 'suave' if c.ultima.ok else 'erro-texto' }}">
+        Última vez: {{ c.ultima.ultima|replace('T', ' ') }} ·
+        {% if c.ultima.ok %}{{ c.ultima.novos }} novos, {{ c.ultima.repetidos }} já conhecidos{% else %}{{ c.ultima.erro }}{% endif %}
+      </span>
+      {% else %}<span class="suave">Ainda não rodou.</span>{% endif %}
+    </div>
+    <label class="chave" title="Rodar sozinho no horário"><input type="checkbox" data-ativar{% if c.def.ativo %} checked{% endif %}><i></i><span>automático</span></label>
+    <button class="botao" type="button" data-rodar>{{ icone('tocar', 14) }}<span>Rodar agora</span></button>
+  </div>
+  {% else %}
+  <p class="suave">Este módulo não tem coletores. Veja <code>docs/coletores.md</code> para criar um.</p>
+  {% endfor %}
+
+  <h3 class="sub">Instruções e arquivos da máquina</h3>
+  {% for n in notas %}
+  <a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><span>{{ n.trecho }}</span></a>
+  {% else %}
+  <p class="suave">Nenhuma instrução em <code>{{ modulo.id }}/maquina/</code>.</p>
+  {% endfor %}
+  {% if arquivadas %}<p class="suave">{{ arquivadas }} nota(s) arquivada(s) em <code>{{ modulo.id }}/arquivo/</code>.</p>{% endif %}
+</section>
+
+{# ---------------------------------------------------------------- Quadro #}
+{% elif visao.tipo == "kanban" %}
+<section class="quadro" data-campo="{{ visao.agrupar_por }}">
+  {% for col in colunas %}
+  <div class="coluna{% if col.concluida %} concluida{% endif %}" data-valor="{{ col.valor }}">
+    <header><h3>{{ col.rotulo }}</h3><span class="conta">{{ col.total }}</span></header>
+    <div class="cartoes">
+      {% for c in col.cartoes %}{{ p.cartao(c, opcoes, visao.agrupar_por, arrastavel=True) }}{% endfor %}
+    </div>
+    {% if col.total > col.cartoes|length %}<p class="suave mais">+{{ col.total - col.cartoes|length }} na lista</p>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+
+{# ---------------------------------------------------------------- Lista #}
+{% else %}
+<section class="tabela-envolta">
+  {% if linhas %}
+  <table class="tabela">
+    <thead><tr>{% for col in colunas_tabela %}<th data-ordenar>{{ col.rotulo }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for l in linhas %}
+      <tr{% if l.cartao.concluido %} class="concluido"{% endif %}>
+        {% for c in l.celulas %}
+        {% if c.tipo == "titulo" %}<td class="cel-titulo"><a href="{{ l.cartao.url }}">{{ c.texto }}</a></td>
+        {% elif c.tipo == "escolha" %}<td><span class="et {{ c.classe }}">{{ c.texto }}</span></td>
+        {% elif c.tipo == "data" %}<td data-ordem="{{ c.ordem }}">{{ c.texto }}</td>
+        {% elif c.tipo == "link" %}<td><a class="link" href="{{ c.texto }}" target="_blank" rel="noopener noreferrer">abrir {{ icone('externo', 12) }}</a></td>
+        {% else %}<td>{{ c.texto }}</td>{% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  {{ p.vazio("Nenhum item", "Crie o primeiro com o botão Novo, ou peça a um agente.") }}
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block dialogos %}
+<dialog id="dialogo-novo" class="dialogo" data-modulo="{{ modulo.id }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
+  <form class="dialogo-corpo" method="dialog">
+    <h2>{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
+    <label class="campo"><span>Título *</span><input type="text" name="titulo" id="novo-titulo" required autocomplete="off"></label>
+    {% if aba != 'humano' %}
+    <div class="grade-campos">
+      {% for campo in modulo.campos.values() if campo.nome != 'origem' %}
+      {{ p.entrada(campo, padroes.get(campo.nome, ''), 'data-novo') }}
+      {% endfor %}
+    </div>
+    {% endif %}
+    <label class="campo"><span>Texto</span><textarea name="corpo" id="novo-corpo" rows="4" placeholder="Opcional"></textarea></label>
+    <div class="dialogo-acoes">
+      <button type="button" class="botao" data-fechar>Cancelar</button>
+      <button type="submit" class="botao principal" id="novo-salvar">Criar</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

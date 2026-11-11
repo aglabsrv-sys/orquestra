@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}{{ dia_longo|capitalize }}{% endblock %}
+{% block trilha %}Agenda{% endblock %}
+{% block observa %}tudo{% endblock %}
+
+{% block conteudo %}
+<section class="pagina">
+  <header class="pagina-topo">
+    <h1>{{ 'Hoje' if e_hoje else dia_longo|capitalize }}</h1>
+    <p class="suave">{% if e_hoje %}{{ dia_longo|capitalize }}. Inclui o que está atrasado.{% else %}O que está marcado para este dia.{% endif %}</p>
+  </header>
+  {% for g in grupos %}
+  <h2 class="grupo-titulo">{{ icone(g.modulo.icone, 18) }} <a href="/m/{{ g.modulo.id }}">{{ g.modulo.nome }}</a> <small>{{ g.cartoes|length }}</small></h2>
+  <div class="grade-cartoes">
+    {% for c in g.cartoes %}{{ p.cartao(c, g.modulo.campos[g.modulo.campo_status].opcoes if g.modulo.campo_status in g.modulo.campos else None, g.modulo.campo_status) }}{% endfor %}
+  </div>
+  {% else %}
+  {{ p.vazio("Dia livre", "Nenhum item em aberto com esta data.") }}
+  {% endfor %}
+</section>
+{% endblock %}

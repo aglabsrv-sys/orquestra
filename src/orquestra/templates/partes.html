@@ -1,0 +1,66 @@
+{# Pedaços reutilizados pelas páginas. #}
+
+{# Capa: cena em pixel art desenhada pelo navegador, ou imagem/vídeo do vault. #}
+{% macro capa(c, classe="") -%}
+{%- if c.tipo == "cena" -%}
+<canvas class="capa {{ classe }}" width="320" height="180" data-cena="{{ c.cena }}" data-semente="{{ c.semente }}" data-paleta='{{ c.paleta|tojson }}' aria-hidden="true"></canvas>
+{%- elif c.tipo == "video" -%}
+<video class="capa midia {{ classe }}" src="{{ c.url }}" autoplay loop muted playsinline aria-hidden="true"></video>
+{%- else -%}
+<img class="capa midia {{ classe }}" src="{{ c.url }}" alt="">
+{%- endif -%}
+{%- endmacro %}
+
+{# Cartão de uma nota. Com `opcoes`, mostra um seletor para mudar o status. #}
+{% macro cartao(c, opcoes=None, campo_status="status", arrastavel=False) %}
+<article class="cartao{% if c.concluido %} concluido{% endif %}" data-rel="{{ c.rel }}" data-versao="{{ c.versao }}"{% if arrastavel %} draggable="true"{% endif %}>
+  {% if c.imagem %}<a class="cartao-img" href="{{ c.url }}" draggable="false"><img src="{{ c.imagem }}" alt="" loading="lazy" draggable="false"></a>{% endif %}
+  <a class="cartao-titulo" href="{{ c.url }}" draggable="false">{{ c.titulo }}</a>
+  {% if c.pergunta %}<p class="cartao-pergunta">{{ icone('sino', 13) }} {{ c.pergunta }}</p>{% endif %}
+  {% if c.trecho %}<p class="cartao-trecho">{{ c.trecho }}</p>{% endif %}
+  <div class="etiquetas">
+    {% for e in c.etiquetas %}<span class="et {{ e.classe }}">{{ e.texto }}</span>{% endfor %}
+    {% if c.origem and c.origem != "humano" %}<span class="et et-origem" title="Criado por {{ c.origem }}">{{ icone('chip', 12) }}{{ c.origem }}</span>{% endif %}
+    {% if c.com_aviso %}<span class="et et-aviso" title="Há campos fora do schema do módulo">{{ icone('aviso', 12) }}</span>{% endif %}
+    {% if c.link %}<a class="et et-link" href="{{ c.link }}" target="_blank" rel="noopener noreferrer" draggable="false" title="Abrir link">{{ icone('externo', 12) }}</a>{% endif %}
+    {% if opcoes %}
+    <select class="mudar-status" data-campo="{{ campo_status }}" aria-label="Mudar {{ campo_status }}">
+      {% if c.status not in opcoes %}<option value="{{ c.status or '' }}" selected>{{ rotulo(c.status) if c.status else '—' }}</option>{% endif %}
+      {% for o in opcoes %}<option value="{{ o }}"{% if o == c.status %} selected{% endif %}>{{ rotulo(o) }}</option>{% endfor %}
+    </select>
+    {% endif %}
+  </div>
+</article>
+{% endmacro %}
+
+{# Campo de formulário gerado a partir do schema do módulo. #}
+{% macro entrada(campo, valor="", marca="data-campo") %}
+<label class="campo{% if campo.tipo == 'booleano' %} campo-linha{% endif %}">
+  <span>{{ campo.rotulo }}{% if campo.obrigatorio %} *{% endif %}</span>
+  {% if campo.tipo == "escolha" %}
+  <select name="{{ campo.nome }}" {{ marca }}>
+    {% if not campo.obrigatorio or not valor %}<option value="">—</option>{% endif %}
+    {% for o in campo.opcoes %}<option value="{{ o }}"{% if o == valor %} selected{% endif %}>{{ rotulo(o) }}</option>{% endfor %}
+    {% if valor and valor not in campo.opcoes %}<option value="{{ valor }}" selected>{{ valor }} (fora do schema)</option>{% endif %}
+  </select>
+  {% elif campo.tipo == "data" %}
+  <input type="date" name="{{ campo.nome }}" value="{{ valor }}" {{ marca }}>
+  {% elif campo.tipo == "numero" %}
+  <input type="number" step="any" name="{{ campo.nome }}" value="{{ valor }}" {{ marca }}>
+  {% elif campo.tipo == "booleano" %}
+  <input type="checkbox" name="{{ campo.nome }}"{% if valor %} checked{% endif %} {{ marca }}>
+  {% elif campo.tipo == "lista" %}
+  <input type="text" name="{{ campo.nome }}" value="{{ valor }}" placeholder="separe por vírgulas" {{ marca }}>
+  {% elif campo.tipo == "link" %}
+  <input type="url" name="{{ campo.nome }}" value="{{ valor }}" placeholder="https://" {{ marca }}>
+  {% elif campo.tipo == "imagem" %}
+  <input type="text" name="{{ campo.nome }}" value="{{ valor }}" placeholder="caminho no vault ou https://" {{ marca }}>
+  {% else %}
+  <input type="text" name="{{ campo.nome }}" value="{{ valor }}" {{ marca }}>
+  {% endif %}
+</label>
+{% endmacro %}
+
+{% macro vazio(titulo, texto) %}
+<div class="vazio"><b>{{ titulo }}</b><p>{{ texto }}</p></div>
+{% endmacro %}

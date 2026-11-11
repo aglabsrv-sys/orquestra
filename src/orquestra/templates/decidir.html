@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}Decidir{% endblock %}
+{% block trilha %}Decidir{% endblock %}
+{% block observa %}tudo{% endblock %}
+
+{% block conteudo %}
+<section class="pagina">
+  <header class="pagina-topo">
+    <h1>Para decidir</h1>
+    <p class="suave">{% if total %}{{ total }} {{ 'item espera' if total == 1 else 'itens esperam' }} uma resposta sua.{% else %}Nada esperando por você.{% endif %}</p>
+  </header>
+
+  {% for g in grupos %}
+  <h2 class="grupo-titulo">{{ icone(g.modulo.icone, 18) }} <a href="/m/{{ g.modulo.id }}">{{ g.modulo.nome }}</a> <small>{{ g.cartoes|length }}</small></h2>
+  <div class="fila">
+    {% for c in g.cartoes %}
+    <div class="fila-item" data-rel="{{ c.rel }}" data-versao="{{ c.versao }}">
+      {{ p.cartao(c) }}
+      <div class="fila-acoes">
+        {% if c.pergunta %}
+        <button class="botao principal" type="button" data-responder>Responder</button>
+        {% endif %}
+        {% if c.por_status %}
+        {% for a in g.modulo.acoes %}
+        <button class="botao{% if a.estilo == 'principal' and not c.pergunta %} principal{% elif a.estilo == 'discreto' %} discreto{% endif %}" type="button" data-acao='{{ a.definir|tojson }}'>{{ a.rotulo }}</button>
+        {% endfor %}
+        {% endif %}
+        <a class="botao discreto" href="{{ c.url }}">Abrir</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {{ p.vazio("Tudo decidido", "Quando um coletor trouxer novidades ou um agente precisar da sua aprovação, aparece aqui.") }}
+  {% endfor %}
+</section>
+{% endblock %}
