@@ -1,0 +1,68 @@
+# Tema Maré: água funda e fim de tarde no litoral.
+
+nome: Maré
+descricao: Verde-água profundo, com um toque de coral.
+
+cores:
+  fundo: "#07141a"
+  superficie: "#0e2029"
+  superficie_alta: "#15303b"
+  borda: "#21434f"
+  texto: "#e6f3f2"
+  texto_suave: "#8fb0b3"
+  destaque: "#86e3ce"
+  sobre_destaque: "#062019"
+  alerta: "#ff9f7a"
+  ok: "#a8e6a1"
+
+paletas:
+  laguna:
+    ceu: ["#04232e", "#0b4a55", "#1f8a84", "#8fd9b6"]
+    astro: "#f3ffd9"
+    nuvem: "#bfeedd"
+    longe: "#1c6b6f"
+    meio: "#114a52"
+    perto: "#0a2f38"
+    sombra: "#051c23"
+    luz: "#ffd98a"
+    brilho: "#f4fff4"
+  abissal:
+    ceu: ["#020a12", "#051a28", "#0a3040", "#14505a"]
+    astro: "#d8f7ee"
+    nuvem: "#1f5560"
+    longe: "#0d3945"
+    meio: "#082732"
+    perto: "#051922"
+    sombra: "#020c12"
+    luz: "#7ff0d0"
+    brilho: "#eafff8"
+    noite: true
+  coral:
+    ceu: ["#0c2a3a", "#2a5a70", "#e08a7a", "#ffd0a0"]
+    astro: "#fff0c8"
+    nuvem: "#ffb9a0"
+    longe: "#3a6a7a"
+    meio: "#234a5a"
+    perto: "#122f3d"
+    sombra: "#081c26"
+    luz: "#ffc27a"
+    brilho: "#fffbe8"
+  musgo:
+    ceu: ["#06140f", "#0f2e22", "#1f5a40", "#5fa37a"]
+    astro: "#f6ffcf"
+    nuvem: "#9fd0a8"
+    longe: "#1f5238"
+    meio: "#143a29"
+    perto: "#0b241a"
+    sombra: "#06150f"
+    luz: "#e9ff8f"
+    brilho: "#fbffe6"
+    noite: true
+
+capas:
+  tarefas: {cena: janela, paleta: coral}
+  conteudo: {cena: cidade, paleta: abissal}
+  radar: {cena: espaco, paleta: abissal}
+  entrada: {cena: mar, paleta: laguna}
+  decidir: {cena: montanhas, paleta: coral}
+  diario: {cena: floresta, paleta: musgo}

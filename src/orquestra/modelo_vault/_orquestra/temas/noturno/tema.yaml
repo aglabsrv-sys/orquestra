@@ -1,0 +1,69 @@
+# Tema Noturno: madrugada em índigo e lilás.
+
+nome: Noturno
+descricao: Madrugada em índigo, lilás e um pouco de néon.
+
+cores:
+  fundo: "#0c0b1a"
+  superficie: "#15142b"
+  superficie_alta: "#1f1d3d"
+  borda: "#302d5a"
+  texto: "#ecebff"
+  texto_suave: "#a09dc8"
+  destaque: "#c4a7ff"
+  sobre_destaque: "#1a1033"
+  alerta: "#ff8fa3"
+  ok: "#9be7c0"
+
+paletas:
+  madrugada:
+    ceu: ["#06051a", "#12103a", "#2a1f6a", "#5a3f9a"]
+    astro: "#f4efff"
+    nuvem: "#4a3d8f"
+    longe: "#2a2166"
+    meio: "#1a1547"
+    perto: "#0f0c2e"
+    sombra: "#070517"
+    luz: "#ffd86b"
+    brilho: "#ffffff"
+    noite: true
+  aurora:
+    ceu: ["#070b24", "#152a5a", "#2a7a8a", "#7ae0b0"]
+    astro: "#eafff4"
+    nuvem: "#5ac0b0"
+    longe: "#1c3a6a"
+    meio: "#12264a"
+    perto: "#0b1730"
+    sombra: "#060c1c"
+    luz: "#b6ff9a"
+    brilho: "#f0fff8"
+    noite: true
+  neon:
+    ceu: ["#0d0524", "#3a0f5a", "#a02a8a", "#ff6aa8"]
+    astro: "#ffe0f0"
+    nuvem: "#c04a9a"
+    longe: "#4a1a6a"
+    meio: "#2c1048"
+    perto: "#1a0930"
+    sombra: "#0c041a"
+    luz: "#6af0ff"
+    brilho: "#ffffff"
+    noite: true
+  lilas:
+    ceu: ["#1a1440", "#4a3a8a", "#9a7ad0", "#f0c0e8"]
+    astro: "#fff4fb"
+    nuvem: "#e0c0f0"
+    longe: "#5a4a9a"
+    meio: "#3a2f70"
+    perto: "#231c4a"
+    sombra: "#120e2c"
+    luz: "#ffe38a"
+    brilho: "#ffffff"
+
+capas:
+  tarefas: {cena: janela, paleta: lilas}
+  conteudo: {cena: cidade, paleta: neon}
+  radar: {cena: espaco, paleta: madrugada}
+  entrada: {cena: mar, paleta: aurora}
+  decidir: {cena: montanhas, paleta: aurora}
+  diario: {cena: floresta, paleta: madrugada}

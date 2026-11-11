@@ -1,0 +1,46 @@
+# Módulo Conteúdo: o caminho de uma ideia até a publicação.
+
+nome: Conteúdo
+descricao: Da ideia ao publicado, em todas as plataformas.
+icone: video
+ordem: 2
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [ideia, roteiro, gravado, editado, publicado]
+    padrao: ideia
+    obrigatorio: true
+  plataforma:
+    tipo: escolha
+    opcoes: [youtube, instagram, tiktok, newsletter, blog]
+  data:
+    tipo: data
+    rotulo: Publicar em
+  miniatura:
+    tipo: imagem          # caminho de uma imagem do vault (ex.: conteudo/midia/capa.png) ou um link https
+  link:
+    tipo: link            # onde foi publicado
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+campo_data: data
+
+status:
+  concluidos: [publicado]
+  decidir: []             # aqui a fila Decidir é alimentada pelo campo `pergunta` dos agentes
+
+visoes:
+  - tipo: kanban
+    nome: Pipeline
+    agrupar_por: status
+  - tipo: kanban
+    nome: Por plataforma
+    agrupar_por: plataforma
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, plataforma, data, link]

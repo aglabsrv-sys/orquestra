@@ -1,0 +1,76 @@
+# Tema Brasa: fim de tarde quente.
+# Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
+
+nome: Brasa
+descricao: Fim de tarde quente, laranja e carvão.
+
+# Cores da interface
+cores:
+  fundo: "#130c09"
+  superficie: "#1e1410"
+  superficie_alta: "#2a1c16"
+  borda: "#3b2a22"
+  texto: "#f6ebe3"
+  texto_suave: "#b59f92"
+  destaque: "#f4b183"        # botões, item ativo do dock
+  sobre_destaque: "#2a1608"  # texto em cima da cor de destaque
+  alerta: "#ff7a59"
+  ok: "#9bd49b"
+
+# Paletas das capas em pixel art.
+#   ceu: 4 cores, do alto até o horizonte      astro: sol ou lua
+#   longe / meio / perto: planos de profundidade, do mais distante ao mais próximo
+#   sombra: o tom mais escuro      luz: janelas e pontos de luz      brilho: estrelas e reflexos
+#   noite: true desenha mais estrelas
+paletas:
+  poente:
+    ceu: ["#2b1a3a", "#7a2e4a", "#d9603f", "#f7b267"]
+    astro: "#ffe3a3"
+    nuvem: "#f29a6b"
+    longe: "#8a3f4d"
+    meio: "#5a2a3c"
+    perto: "#33182a"
+    sombra: "#1a0d18"
+    luz: "#ffd27a"
+    brilho: "#fff3d1"
+  brasa:
+    ceu: ["#1b0f14", "#4a1a1c", "#a8402a", "#f08a3c"]
+    astro: "#ffcf70"
+    nuvem: "#c9603a"
+    longe: "#6e2a24"
+    meio: "#47191a"
+    perto: "#2a1012"
+    sombra: "#16090b"
+    luz: "#ffb347"
+    brilho: "#ffe9b8"
+  cobre:
+    ceu: ["#0e0a12", "#1f1220", "#3d1d2a", "#70332f"]
+    astro: "#f4c98b"
+    nuvem: "#7a3d3a"
+    longe: "#3f1f2a"
+    meio: "#2a1420"
+    perto: "#1a0c15"
+    sombra: "#0e070c"
+    luz: "#ff9d5c"
+    brilho: "#ffe2bd"
+    noite: true
+  areia:
+    ceu: ["#3c2f52", "#a05a6a", "#e9a17a", "#fbe0a8"]
+    astro: "#fff6d6"
+    nuvem: "#fbd3b0"
+    longe: "#b97a78"
+    meio: "#7d4a5c"
+    perto: "#4a2b44"
+    sombra: "#2a1830"
+    luz: "#ffe08a"
+    brilho: "#ffffff"
+
+# Qual cena e qual paleta cada módulo usa neste tema.
+# Cenas: janela, cidade, montanhas, mar, floresta, espaco
+capas:
+  tarefas: {cena: janela, paleta: poente}
+  conteudo: {cena: cidade, paleta: brasa}
+  radar: {cena: espaco, paleta: cobre}
+  entrada: {cena: mar, paleta: areia}
+  decidir: {cena: montanhas, paleta: poente}
+  diario: {cena: floresta, paleta: cobre}

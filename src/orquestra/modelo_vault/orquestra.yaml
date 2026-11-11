@@ -1,0 +1,15 @@
+# Configuração do painel. Edite à vontade: o painel recarrega sozinho ao salvar.
+
+nome: Orquestra        # aparece no canto superior esquerdo
+tema: brasa            # uma das pastas em _orquestra/temas/
+porta: 8420            # endereço local: http://localhost:8420
+captura: entrada       # módulo que recebe o botão "Capturar"
+
+# Só preencha se acessar o painel por um nome diferente de localhost ou *.ts.net.
+hosts_permitidos: []
+
+backup:
+  auto_commit: true    # commit local automático quando algo muda
+  intervalo_min: 30    # de quanto em quanto tempo
+  push: false          # enviar para o repositório remoto (configure um antes; veja a documentação)
+  push_as: "03:00"     # horário do envio diário
