@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Segredos: nunca vão para o git
+.env
+
+# Se você criar seu vault dentro da pasta do projeto, ele não entra no repositório do app
+/vault/
+/meu-vault/
+
+# Sistema
+.DS_Store
+Thumbs.db

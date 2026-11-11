@@ -1,0 +1,36 @@
+[project]
+name = "orquestra"
+version = "0.3.0"
+description = "Painel operacional local para trabalhar com agentes de IA em cima de uma pasta de arquivos markdown."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = ["obsidian", "markdown", "agentes", "ia", "painel", "local-first"]
+dependencies = [
+    # Servidor web e templates
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "jinja2>=3.1",
+    # YAML que preserva comentários e ordem das chaves (essencial para não bagunçar o frontmatter)
+    "ruamel.yaml>=0.18",
+    # Avisa quando um arquivo muda no disco (Obsidian, agente, você)
+    "watchdog>=4.0",
+    # Markdown -> HTML para a pré-visualização das notas
+    "markdown-it-py>=3.0",
+]
+
+[project.scripts]
+orquestra = "orquestra.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orquestra"]
+
+[dependency-groups]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
