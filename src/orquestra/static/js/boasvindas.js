@@ -107,7 +107,7 @@
     $("#bloco-existente").hidden = qual !== "existente";
     $("#bloco-novo").hidden = qual !== "novo";
     $("#bloco-comum").hidden = qual !== "novo"; // no "já tenho", só depois de olhar a pasta
-    $("#passo-pronto").hidden = true;
+    if ($("#passo-pronto").open) $("#passo-pronto").close();
     if (qual === "novo") {
       $("#titulo-prontos").textContent = "Áreas do painel";
       $("#texto-prontos").textContent = "Vêm do ponto de partida que você escolheu. Marque e desmarque à vontade: dá para mudar depois, em Ajustes.";
@@ -316,15 +316,15 @@
         if (r.pediu_git && !r.com_git) avisos.push("Não liguei o histórico porque o git não está instalado. Instale em git-scm.com e ligue depois, em Ajustes.");
         $("#bv-navegacao").hidden = true;
         ["#bloco-existente", "#bloco-novo", "#bloco-comum"].forEach(function (s) { $(s).hidden = true; });
-        $("#pronto-texto").textContent = "O vault está pronto em " + r.vault + ". Antes de abrir, vale ler:";
+        $("#pronto-texto").textContent = "Seu cofre foi preparado. Suas notas e áreas já estão disponíveis.";
         var lista = $("#pronto-avisos");
         lista.textContent = "";
         avisos.forEach(function (a) { lista.appendChild(el("li", "", a)); });
-        $("#passo-pronto").hidden = false;
+        $("#passo-pronto").showModal();
         etapa(3); estado("Seu vault está pronto. Confira os avisos antes de continuar.");
         raiz.removeAttribute("aria-busy");
         window.scrollTo({ top: 0, behavior: reduzirMovimento ? "auto" : "smooth" });
-        focar("#passo-pronto h2");
+        focar("#passo-pronto a");
       })
       .catch(function (erro) {
         preparando = false;
@@ -336,38 +336,34 @@
       });
   }
 
+  $("#passo-pronto").addEventListener("cancel", function (e) { e.preventDefault(); location.href = "/"; });
+
   var paginas = [], paginaAtual = 0;
   function iniciarPassos() {
-    var compacto = window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
-    var grupos = Math.ceil($$('.bv-modulo').length / (compacto ? 6 : 12));
-    paginas = modo === "novo" ? ["pasta", "perfil"] : ["pasta"];
-    if (modo === 'existente' && analise) for (var p = 0; p < Math.ceil($$('.bv-pasta').length / 5); p++) paginas.push('pastas-' + p);
-    for (var i = 0; i < grupos; i++) paginas.push('modulos-' + i);
-    paginas.push('visual', 'revisao');
+    paginas = ["pasta", "areas", "visual"];
     paginaAtual = modo === 'existente' && analise && paginas.length > 1 ? 1 : 0; pintarPasso();
   }
   function pintarPasso() {
     var atual = paginas[paginaAtual];
     $("#bv-navegacao").hidden = !modo || (modo === "existente" && !analise);
-    $("#bloco-novo").hidden = modo !== "novo" || paginaAtual > 1;
-    $("#bloco-existente").hidden = modo !== "existente" || (atual !== 'pasta' && atual.indexOf('pastas-') !== 0);
+    $("#bloco-novo").hidden = modo !== "novo" || atual !== "pasta";
+    $("#bloco-existente").hidden = modo !== "existente" || (atual !== 'pasta' && atual !== 'areas');
     if (modo === 'existente') {
       Array.from($('#bloco-existente').children).forEach(function (p) { if (p.id !== 'analise') p.hidden = atual !== 'pasta'; });
-      $('#analise').hidden = atual.indexOf('pastas-') !== 0;
-      $$('.bv-pasta').forEach(function (p, i) { p.hidden = atual.indexOf('pastas-') === 0 && Math.floor(i / 5) !== Number(atual.split('-')[1]); });
+      $('#analise').hidden = atual !== 'areas';
+      $$('.bv-pasta').forEach(function (p) { p.hidden = false; });
     }
-    $("#bloco-comum").hidden = paginaAtual < (modo === "novo" ? 2 : 1);
+    $("#bloco-comum").hidden = atual === "pasta";
+    $("#bv-perfis-bloco").hidden = modo !== "novo";
     $$("[data-bv-pagina]").forEach(function (p) { p.hidden = p.dataset.bvPagina !== atual.split('-')[0]; });
-    var porPagina = window.matchMedia && window.matchMedia('(max-width: 600px)').matches ? 6 : 12;
-    $$('.bv-modulo').forEach(function (p, i) { p.hidden = atual.indexOf('modulos-') === 0 && Math.floor(i / porPagina) !== Number(atual.split('-')[1]); });
     // No primeiro passo do vault novo, apenas o caminho fica visível.
     if (modo === "novo") {
       Array.from($("#bloco-novo").children).forEach(function (p) { if (!p.dataset.bvPagina) p.hidden = atual !== "pasta"; });
     }
     $("#bv-passo").textContent = (paginaAtual + 1) + " de " + paginas.length;
-    $("#bv-proximo").hidden = atual === "revisao";
+    $("#bv-proximo").hidden = atual === "visual";
     $("#bv-anterior").disabled = paginaAtual === 0;
-    etapa(atual === "revisao" ? 3 : 2);
+    etapa(atual === "visual" ? 3 : 2);
   }
   $("#bv-proximo").onclick = function () {
     var campo = modo === "novo" ? $("#caminho-novo") : $("#caminho-existente");
@@ -417,7 +413,11 @@
   $$('input[name="tema"]').forEach(function (r) {
     r.addEventListener("change", function () {
       var cores = JSON.parse(r.dataset.cores || "{}");
+      var capa = JSON.parse(r.dataset.capa || "{}");
+      if (window.Orquestra.atualizarCena) window.Orquestra.atualizarCena($(".bv-capa canvas"), capa);
       Object.keys(cores).forEach(function (nome) { document.documentElement.style.setProperty("--" + nome.replace(/_/g, "-"), cores[nome]); });
     });
   });
+  var inicio = typeof URLSearchParams !== "undefined" && typeof location !== "undefined" ? new URLSearchParams(location.search).get("modo") : "";
+  if (inicio === "novo" || inicio === "existente") mostrar(inicio);
 })();

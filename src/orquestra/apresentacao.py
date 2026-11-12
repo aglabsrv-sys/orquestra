@@ -189,6 +189,7 @@ def cartao(nota: Nota, modulo: Modulo | None, hoje: dt.date, omitir: str | None 
         "versao": nota.versao,
         "etiquetas": [],
         "imagem": None,
+        "campo_imagem": next((c.nome for c in modulo.campos.values() if c.tipo == "imagem"), "") if modulo else "",
         "link": None,
         "origem": nota.campo("origem"),
         "pergunta": nota.campo("pergunta"),

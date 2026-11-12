@@ -79,7 +79,14 @@ class Indice:
                 anterior.avisos = modulo.avisos + ["Usando a última configuração válida até você corrigir o arquivo."]
                 novos[chave] = anterior
         self.modulos = novos
+        self.ordenar_modulos(getattr(self, "ordem_modulos", []))
         self._reindexar()
+
+    def ordenar_modulos(self, ordem: list[str]) -> None:
+        """Aplica preferências sem reler schemas nem reindexar todas as notas."""
+        self.ordem_modulos = list(ordem)
+        posicoes = {nome: i for i, nome in enumerate(ordem)}
+        self.modulos = dict(sorted(self.modulos.items(), key=lambda par: posicoes.get(par[0], len(ordem))))
 
     def _reindexar(self) -> None:
         self._links = {}

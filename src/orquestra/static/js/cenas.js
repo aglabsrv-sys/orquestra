@@ -908,7 +908,7 @@
 
   // Uma cena só é animada se estiver na tela e, dentro do carrossel, se for o slide ativo.
   function deveAnimar(cena) {
-    if (!cena.visivel || document.hidden) return false;
+    if (!cena.canvas.isConnected || !cena.visivel || document.hidden) return false;
     var slide = cena.canvas.closest(".slide");
     return !slide || slide.classList.contains("ativo");
   }
@@ -975,7 +975,19 @@
     pintarAmbiente(); atualizarAnimacao();
   }
 
-  window.Orquestra = { iniciarCenas: iniciar, ambiente: ambiente, cenas: Object.keys(CENAS) };
+  function atualizarCena(canvas, dados) {
+    if (!canvas || !dados) return;
+    var visivel = canvas._cena ? canvas._cena.visivel : true;
+    ativas = ativas.filter(function (c) { return c.canvas !== canvas && c.canvas.isConnected; });
+    delete canvas._cena;
+    canvas.dataset.cena = dados.cena || "montanhas";
+    canvas.dataset.semente = dados.semente || 1;
+    canvas.dataset.paleta = JSON.stringify(dados.paleta || {});
+    var cena = preparar(canvas); cena.visivel = visivel; ativas.push(cena);
+    pintarAmbiente(); atualizarAnimacao();
+  }
+
+  window.Orquestra = { atualizarCena: atualizarCena, iniciarCenas: iniciar, ambiente: ambiente, cenas: Object.keys(CENAS) };
   document.addEventListener("DOMContentLoaded", function () {
     iniciar(document);
     var capa = document.querySelector(".cab-modulo .capa");

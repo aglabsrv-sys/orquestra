@@ -7,7 +7,7 @@ acontece com a sua pasta, passo a passo.
 ## Pela tela
 
 Na pasta do aplicativo, rode `uv run --frozen orquestra`. Se ainda não há vault escolhido, a tela de boas-vindas abre
-sozinha. Se já há um, vá em **Ajustes > Vault > Trocar de vault**.
+sozinha. Se já há um, vá em **Ajustes > Cofres > Abrir pasta como cofre**.
 
 1. Escolha **Já tenho um vault do Obsidian**.
 2. O painel lista os cofres que o Obsidian desta máquina conhece. Clique em um, ou
@@ -16,8 +16,9 @@ sozinha. Se já há um, vá em **Ajustes > Vault > Trocar de vault**.
    gravado nessa etapa.
 4. Marque as pastas que você quer ver como área do painel e, se quiser, alguma área
    pronta (Tarefas, Entrada...).
-5. A lista **O que vou criar** mostra exatamente o que será acrescentado.
-6. **Abrir o painel**.
+5. Em **Do seu jeito**, escolha nome, tema e histórico. O banner acompanha o tema;
+   **Detalhes da preparação** mostra o que será acrescentado, se quiser consultar.
+6. **Abrir o painel** prepara o cofre e mostra um modal para entrar.
 
 Pela linha de comando, o equivalente é:
 

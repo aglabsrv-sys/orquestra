@@ -45,7 +45,7 @@ sem antes preservar sua versão atual. Arquivos de recuperação não são apaga
 automaticamente; revise o espaço usado e copie versões importantes antes de uma
 limpeza manual. Eles podem conter conteúdo privado e segredos antigos.
 
-Na própria nota, clique em **Consultar recuperação**, escolha a gravação e
+Na própria nota, abra **Propriedades e detalhes → Versões e recuperação**, escolha a gravação e
 consulte o conteúdo **antes da gravação** ou a **proposta**. **Copiar versão** copia
 o arquivo completo; **Salvar versão como nova nota** preserva frontmatter e texto
 em outra nota. A nota aberta e seu rascunho não são substituídos.

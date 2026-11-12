@@ -10,12 +10,13 @@
 
   // Versões de arquivos que esta aba acabou de gravar. Serve para não recarregar
   // a página por causa de uma mudança que ela mesma fez.
-  var minhas = {}, minhasRemovidas = {};
+  var minhas = {}, minhasRemovidas = {}, configPropriaAte = 0;
   document.addEventListener("orquestra:nota-salva", function (e) {
     if (!e.detail) return;
     if (typeof e.detail.versao === "string") minhas[e.detail.versao] = true;
     if (e.detail.removido && typeof e.detail.rel === "string") minhasRemovidas[e.detail.rel] = Date.now() + 2000;
   });
+  document.addEventListener("orquestra:config-salva", function () { configPropriaAte = Date.now() + 3000; });
   var arrastando = null;
   var personalizacaoPendente = function () { return false; };
 
@@ -39,6 +40,7 @@
     return capacidade;
   }
   function api(metodo, url, corpo) {
+    if (url === "/api/config" || url === "/api/tema") configPropriaAte = Date.now() + 3000;
     return capacidadeLocal().then(function (token) {
       var headers = { "Content-Type": "application/json" };
       if (document.body.dataset.vaultId) headers["X-Orquestra-Vault"] = document.body.dataset.vaultId;
@@ -143,13 +145,13 @@
 
   // ---------------------------------------------------------------- diálogos
 
-  function dialogos() {
+  function dialogos(raizDialogos) {
     function pedirFechamento(d) {
       // Escape, botão e backdrop passam pela mesma proteção de alterações pendentes.
       if (d && d.dispatchEvent(new Event("cancel", { cancelable: true }))) d.close();
     }
-    $$("[data-fechar]").forEach(function (b) { b.onclick = function () { pedirFechamento(b.closest("dialog")); }; });
-    $$("dialog").forEach(function (d) {
+    $$("[data-fechar]", raizDialogos).forEach(function (b) { b.onclick = function () { pedirFechamento(b.closest("dialog")); }; });
+    $$("dialog", raizDialogos).forEach(function (d) {
       d.addEventListener("click", function (e) {
         if (e.target !== d) return;
         var caixa = d.getBoundingClientRect();
@@ -407,6 +409,21 @@
       }).catch(mostrarErro);
     }
 
+    raiz.addEventListener("orquestra:anexo", function (e) {
+      var campo = raiz.dataset.imagemCampo;
+      if (!campo || bloqueioExterno) return;
+      var valores = {}; valores[campo] = e.detail.caminho;
+      var campoOculto = $("#nota-imagem-campo"); if (campoOculto) campoOculto.value = e.detail.caminho;
+      guardarRascunho();
+      gravar({campos: valores}, function () {
+        var imagem = $(".nota-imagem", raiz);
+        if (!imagem) { imagem = document.createElement("img"); imagem.className = "nota-imagem"; imagem.alt = "Criativo da nota"; ver.before(imagem); }
+        imagem.src = "/arquivo/" + caminho(e.detail.caminho);
+        raiz.dataset.versao = versao;
+        var mensagem = $("#anexo-estado"); if (mensagem) mensagem.textContent = "Imagem adicionada.";
+      });
+    });
+
     // Os pedidos saem em sequência e usam a versão devolvida pela gravação anterior.
     campos.forEach(function (el) {
       el.addEventListener("input", guardarRascunho);
@@ -424,17 +441,31 @@
       });
       titulo.addEventListener("keydown", function (e) { if (e.key === "Enter") titulo.blur(); });
     }
-    function salvarTexto() {
-      if (estadoFila.ativa || bloqueioExterno) { if (bloqueioExterno) faixa.hidden = false; return; }
+    function salvarTexto(depois) {
+      if (typeof depois !== "function") depois = null;
+      if (editor.value === original && !estadoFila.pendentes) { modoEdicao(false); if (depois) depois(); return; }
+      if (bloqueioExterno) { if (bloqueioExterno) faixa.hidden = false; return; }
       gravar({ corpo: editor.value }, function (r, salvo) {
         ver.innerHTML = r.html || '<p class="suave">Sem texto.</p>';
         // Digitar durante a requisição não marca o texto posterior como salvo.
-        if (editor.value === salvo.corpo) modoEdicao(false);
-        avisar("Salvo.");
+        if (editor.value === salvo.corpo) { modoEdicao(false); if (depois) depois(); }
+
       });
     }
     if (bEditar) {
       bEditar.onclick = function () { modoEdicao(true); };
+      ver.addEventListener("dblclick", function (e) { if (!e.target.closest("a")) modoEdicao(true); });
+      ver.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target === ver) { e.preventDefault(); modoEdicao(true); } });
+      editor.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); salvarTexto(); ver.focus(); } });
+      document.addEventListener("pointerdown", function (e) {
+        if (editor.hidden || e.target === editor || e.target.closest(".nota-acoes, dialog, #falha-gravacao, #faixa-conflito")) return;
+        salvarTexto();
+      });
+      document.addEventListener("click", function (e) {
+        var link = e.target.closest("a[href]");
+        if (!link || !notaSuja || editor.hidden || e.ctrlKey || e.metaKey || e.shiftKey || link.target === "_blank" || link.getAttribute("href").charAt(0) === "#") return;
+        e.preventDefault(); salvarTexto(function () { location.href = link.href; });
+      });
       bSalvar.onclick = salvarTexto;
       bCancelar.onclick = async function () {
         if (editor.value !== original && !await confirmar({ titulo: "Descartar alterações do texto?", texto: "O texto volta à última versão salva. As propriedades já salvas continuam como estão.", confirmar: "Descartar texto", perigoso: true })) return;
@@ -889,7 +920,7 @@
         if (r.estilo) estilo.textContent = r.estilo;
         opcoes.forEach(function (opcao) { opcao.disabled = false; });
         if (grupo) grupo.removeAttribute("aria-busy");
-        avisar("Aparência salva.");
+
       }).catch(function (erro) {
         opcoes.forEach(function (opcao, i) { opcao.disabled = false; opcao.setAttribute("aria-checked", anteriores[i]); });
         if (grupo) grupo.removeAttribute("aria-busy");
@@ -906,7 +937,7 @@
       if (estadoConfig) { estadoConfig.textContent = "Salvando suas preferências…"; estadoConfig.classList.remove("erro-texto"); }
       return api("POST", "/api/config", dados).then(function () {
         if (estadoConfig) estadoConfig.textContent = mensagem || "Preferências salvas.";
-        avisar(mensagem || "Preferências salvas."); return true;
+        return true;
       }).catch(function (erro) {
         if (estadoConfig) { estadoConfig.textContent = window.OrquestraInterface.mensagemErro(erro); estadoConfig.classList.add("erro-texto"); }
         mostrarErro(erro); return false;
@@ -1085,7 +1116,7 @@
       if (!ev || typeof ev !== "object") return;
       // Pequena espera: a resposta da nossa própria gravação pode chegar depois do evento.
       setTimeout(function () {
-        if (ev.tipo === "config") { recarregarLogo(); return; }
+        if (ev.tipo === "config") { if (Date.now() > configPropriaAte) recarregarLogo(); return; }
         atualizarSelos();
         if (ev.versao && minhas[ev.versao]) return;
         if (ev.acao === "removido" && minhasRemovidas[ev.rel]) {
@@ -1099,6 +1130,10 @@
       }, 350);
     };
   }
+
+  window.Orquestra = window.Orquestra || {};
+  window.Orquestra.prepararPastas = function (novos) { dialogos(novos); pastas(); };
+  window.Orquestra.prepararModulo = function (dialogosNovos) { dialogos(dialogosNovos); novoItem(); quadro(); maquina(); tabela(); numeros(); };
 
   document.addEventListener("DOMContentLoaded", function () {
     relogio(); carrossel(); dialogos(); gaveta(); captura(); novoItem(); quadro(); seletoresSoltos();

@@ -28,42 +28,34 @@
 <div class="faixa alerta" role="alert">{{ icone('aviso', 16) }} <span><strong>Esta nota está protegida contra alterações.</strong> {{ nota.erro }} Corrija o arquivo no Obsidian para voltar a editar pelo painel.</span></div>
 {% endif %}
 
-<article class="nota" data-rel="{{ nota.rel }}" data-versao="{{ nota.versao }}" data-vault-id="{{ vault_id }}" data-meta-original='{{ nota.campos()|tojson }}' data-voltar="{{ '/m/' ~ modulo.id|urlencode if modulo and zona else url_pasta(pasta) }}"{% if nota.erro %} data-travada{% endif %}>
+<article class="nota" data-rel="{{ nota.rel }}" data-versao="{{ nota.versao }}" data-vault-id="{{ vault_id }}" data-meta-original='{{ nota.campos()|tojson }}' data-imagem-campo="{{ campo_imagem }}" data-voltar="{{ '/m/' ~ modulo.id|urlencode if modulo and zona else url_pasta(pasta) }}"{% if nota.erro %} data-travada{% endif %}>
   <h1 class="somente-leitor">Nota: {{ nota.titulo }}</h1>
+  {% if campo_imagem %}<input type="hidden" id="nota-imagem-campo" name="{{ campo_imagem }}" value="{{ nota.campo(campo_imagem) or '' }}" data-campo>{% endif %}
   <div class="nota-principal">
-    <div class="nota-topo">
-      {% if zona == "humano" %}<span class="et zona-humano">{{ icone('pessoa', 12) }} humano</span>
-      {% elif zona == "maquina" %}<span class="et zona-maquina">{{ icone('chip', 12) }} máquina</span>
-      {% elif zona == "arquivo" %}<span class="et">{{ icone('caixa', 12) }} arquivada</span>{% endif %}
-      <span class="suave caminho">{{ nota.rel }}</span>
-    </div>
+    <header class="nota-cabecalho">
     <input class="nota-titulo" id="nota-titulo" value="{{ nota.titulo }}" aria-label="Título da nota" aria-describedby="estado-salvo" maxlength="500"{% if nota.erro %} disabled{% endif %}>
-
-    {% if imagem %}<img class="nota-imagem" src="{{ imagem }}" alt="">{% endif %}
-
     <div class="nota-acoes">
       {% if not nota.erro %}
-      <button class="botao" type="button" id="editar">{{ icone('editar', 15) }}<span>Editar texto</span></button>
+      <button class="botao pequeno" type="button" id="editar">{{ icone('editar', 15) }}<span>Editar</span></button>
       <button class="botao principal" type="button" id="salvar" title="Salvar texto (Ctrl+S ou Cmd+S)" hidden>Salvar texto</button>
       <button class="botao" type="button" id="cancelar" hidden>Cancelar</button>
       {% endif %}
-      <a class="botao" href="{{ link_obsidian }}" title="Abrir este arquivo no Obsidian">{{ icone('externo', 15) }}<span>Obsidian</span></a>
+      <a class="botao pequeno so-icone" aria-label="Abrir no Obsidian" href="{{ link_obsidian }}" title="Abrir este arquivo no Obsidian">{{ icone('externo', 15) }}</a>
       {% if modulo and zona in ("itens", "humano") %}
-      <button class="botao discreto" type="button" id="arquivar" title="Move para a pasta arquivo/ do módulo. Nada é apagado.">{{ icone('caixa', 15) }}<span>Arquivar</span></button>
+      <button class="botao pequeno discreto so-icone" aria-label="Arquivar nota" type="button" id="arquivar" title="Move para a pasta arquivo/ do módulo. Nada é apagado.">{{ icone('caixa', 15) }}</button>
       {% endif %}
     </div>
 
-    <div class="texto" id="ver">{% if nota.corpo.strip() %}{{ html }}{% else %}<p class="suave">Sem texto. Clique em “Editar texto” para escrever.</p>{% endif %}</div>
-    <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" aria-describedby="estado-salvo" maxlength="1000000" hidden spellcheck="true">{{ nota.corpo }}</textarea>
-  </div>
-
-  <aside class="lateral">
+    </header>
+    <details class="nota-propriedades" id="nota-propriedades">
+      <summary>{{ icone('ajustes', 15) }} Propriedades e detalhes</summary>
+      <div class="nota-detalhes">
     {% if avisos %}
     <div class="aviso-schema" role="status">{{ icone('aviso', 15) }}<div><strong>Revise estas propriedades</strong>{% for a in avisos %}<p>{{ a }}</p>{% endfor %}</div></div>
     {% endif %}
     {% if campos %}
     <h2 id="titulo-propriedades">Propriedades</h2>
-    <fieldset aria-labelledby="titulo-propriedades" aria-describedby="estado-salvo"{% if nota.erro or zona == 'arquivo' %} disabled{% endif %}>
+    <fieldset class="grade-campos" aria-labelledby="titulo-propriedades" aria-describedby="estado-salvo"{% if nota.erro or zona == 'arquivo' %} disabled{% endif %}>
       {% for c in campos %}{{ p.entrada(c.def, c.valor) }}{% endfor %}
     </fieldset>
     {% endif %}
@@ -72,15 +64,23 @@
     <p class="cartao-pergunta">{{ nota.campo('pergunta') }}</p>
     {% endif %}
     {% if outros %}
-    <h2>Outros campos</h2>
+    <details class="nota-outros"><summary>Detalhes do arquivo</summary>
     <dl class="outros">
       {% for chave, valor in outros.items() if chave != 'pergunta' %}<dt>{{ chave }}</dt><dd>{{ valor }}</dd>{% endfor %}
-    </dl>
+    </dl></details>
     {% endif %}
-    <p class="suave salvo" id="estado-salvo" role="status" aria-live="polite" aria-atomic="true">As propriedades são salvas ao mudar. Para salvar o texto, use Salvar texto ou Ctrl+S / Cmd+S.</p>
-  </aside>
+    <p class="suave salvo" id="estado-salvo" role="status" aria-live="polite" aria-atomic="true">Alterações salvas automaticamente. Esc ou clique fora para concluir a edição.</p>
+      </div>
+      <button class="botao pequeno discreto" type="button" id="consultar-versoes">Versões e recuperação</button>
+    </details>
+    {% if campo_imagem and not nota.erro %}<div class="nota-anexo"><label class="botao pequeno discreto" title="Arraste ou cole uma imagem na nota">{{ icone('mais', 14) }} Imagem<input type="file" id="nota-anexo" accept="image/png,image/jpeg,image/webp" class="somente-leitor"></label><span class="campo-ajuda" id="anexo-estado" role="status">Arraste ou cole uma imagem aqui.</span></div>{% endif %}
+    {% if imagem %}<img class="nota-imagem" src="{{ imagem }}" alt="Criativo da nota">{% endif %}
+    <div class="texto" id="ver" tabindex="0" title="Clique duas vezes para editar" aria-label="Texto da nota. Clique duas vezes ou pressione Enter para editar.">{% if nota.corpo.strip() %}{{ html }}{% else %}<p class="suave">Clique duas vezes para começar a escrever.</p>{% endif %}</div>
+    <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" aria-describedby="estado-salvo" maxlength="1000000" hidden spellcheck="true">{{ nota.corpo }}</textarea>
+  </div>
+
+
 </article>
-<button class="botao pequeno" type="button" id="consultar-versoes">Consultar recuperação</button>
 <section hidden class="versoes-nota bloco" id="versoes-locais" data-rel="{{ nota.rel }}">
   <h2 class="sub">Versões locais de recuperação</h2>
   <p class="suave pequeno">Versões preservadas por gravações do Orquestra neste computador. Consulte e salve uma cópia; o arquivo aberto não será substituído.</p>

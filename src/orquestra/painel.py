@@ -65,6 +65,7 @@ class Painel:
         except (ValueError, OSError) as erro:
             self.avisos = [f"Não consegui ler orquestra.yaml: {str(erro).splitlines()[0]}. Corrija no Obsidian para voltar a salvar configurações."]
         self.tema: dict[str, Any] = temas.carregar(self.vault, self.config.tema)
+        self.indice.ordenar_modulos(self.config.ordem_pastas)
         self.rodando: set[str] = set()  # coletores em execução agora
         # Há algo que ainda não entrou no histórico? Ao abrir não sabemos, então conferimos uma vez.
         self.mudou_desde_o_backup = True
@@ -81,6 +82,7 @@ class Painel:
             self.avisos = [f"Não consegui ler orquestra.yaml: {str(erro).splitlines()[0]}. Usando a última configuração válida."]
             return
         self.config, self.tema, self.avisos = config, tema, []
+        self.indice.ordenar_modulos(config.ordem_pastas)
         if modulos:
             self.indice.recarregar_modulos()
 
@@ -583,6 +585,7 @@ class Painel:
         captura: str | None = None,
         auto_commit: bool | None = None,
         visual: dict[str, Any] | None = None,
+        ordem_pastas: list[str] | None = None,
     ) -> None:
         """Altera o orquestra.yaml preservando os comentários do arquivo."""
         caminho = caminho_no_vault(self.vault, "orquestra.yaml")
@@ -600,6 +603,10 @@ class Painel:
             if not isinstance(dados.get("backup"), dict):
                 dados["backup"] = CommentedMap()
             dados["backup"]["auto_commit"] = bool(auto_commit)
+        if ordem_pastas is not None:
+            if len(set(ordem_pastas)) != len(ordem_pastas) or set(ordem_pastas) != set(self.indice.modulos):
+                raise Recusado("A lista de pastas mudou. Recarregue antes de reordenar.")
+            dados["ordem_pastas"] = ordem_pastas
         if visual:
             try:
                 escolhas = aparencia.validar(visual)
