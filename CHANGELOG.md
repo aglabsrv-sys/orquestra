@@ -14,6 +14,7 @@
 - CSS e JavaScript usam hash de conteúdo na URL para renovar o cache mesmo em wheels com datas normalizadas.
 - Carrossel com controles de toque maiores e slides inativos fora do foco; rótulos ARIA, links no texto e contraste do tema claro revisados com axe-core.
 - Roteiro Chromium, benchmark sintético, capturas atualizadas e guia de lançamento.
+- CI sem execução duplicada entre branch e PR; scanner de segredos com a leitura de commits do PR declarada no próprio job.
 
 Evidências e limites em [Revisão de lançamento](docs/revisao-lancamento-2026-11-12.md).
 A versão publicada continua sendo a indicada pelo aplicativo; esta seção não representa um lançamento já feito.

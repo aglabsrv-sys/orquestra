@@ -68,6 +68,12 @@ Testes Node cobrem reconexão, isolamento entre vaults, consultas sobrepostas e
 retorno pelo cache do navegador; teste ASGI cobre pedidos concorrentes durante
 a renderização de uma nota.
 
+A passagem real pelo primeiro PR revelou falta de `pull-requests: read` no
+scanner de segredos: a consulta dos commits retornava 403. A permissão foi
+declarada somente nesse job, mantendo todo acesso em leitura. A suíte completa
+roda em PRs e pushes para `main`, evitando duas execuções iguais a cada push de
+branch com PR aberto.
+
 Validação local em clone limpo: **349 testes Python**, **35 testes Node**, as onze
 jornadas Chromium, Ruff e instalação de wheel/sdist/editável com MCP stdio
 aprovados. A checagem adicional com axe-core 4.14.0 cobriu doze páginas no escuro

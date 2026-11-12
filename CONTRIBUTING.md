@@ -62,6 +62,11 @@ empacotamento, lint, testes e dependências conhecidamente vulneráveis. Um work
 pendente ou sem runner não significa aprovação. Os testes de instalação em CI
 também não substituem uso real de Obsidian, Tailscale e login automático.
 
+A suíte roda nos pull requests, nos pushes para `main` e por disparo manual;
+push de branch com PR não duplica a execução. O job de segredos recebe somente
+leitura de conteúdo e de pull requests, necessária para consultar os commits do
+PR mesmo quando comentários e upload de artefatos estão desligados.
+
 ## Mudanças e pull requests
 
 - Use nomes, comentários e mensagens em português; explique o motivo de uma
