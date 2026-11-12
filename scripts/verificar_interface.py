@@ -87,7 +87,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     rotas = ("/", "/m/tarefas", "/m/tarefas?aba=v1", "/m/tarefas?aba=humano", "/m/tarefas?aba=maquina",
              "/m/conteudo", "/m/numeros", "/m/radar", "/m/entrada", "/ajustes", "/m/tarefas/personalizar",
              "/buscar?q=vídeo", "/pastas", "/decidir", "/diario", "/agenda", "/agenda?visao=semana",
-             "/agenda?visao=dia", "/agenda?visao=lista", "/foco", "/m/habitos")
+             "/agenda?visao=dia", "/agenda?visao=lista", "/foco", "/m/habitos",
+             *["/ajustes/" + s for s in ("painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis")])
     for largura in (1440, 390, 320):
         page.set_viewport_size({"width": largura, "height": 900})
         for rota in rotas:
@@ -303,7 +304,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
                 page.screenshot(path=str(capturas / f"{nome}-{largura}.png"), full_page=True)
 
     # Modo claro e fonte ampliada também passam pelo formulário e persistem no vault.
-    page.goto(base + "/ajustes", wait_until="domcontentloaded")
+    page.goto(base + "/ajustes/aparencia", wait_until="domcontentloaded")
     for chave, valor in (("modo", "claro"), ("tamanho", "grande")):
         botao = page.locator(f'[data-visual="{chave}"][data-valor="{valor}"]')
         with page.expect_response(lambda r: r.url.endswith("/api/config")) as visual:
