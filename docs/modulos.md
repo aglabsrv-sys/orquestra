@@ -1,9 +1,26 @@
 # Criar e ajustar módulos
 
-Um módulo é uma pasta na raiz do vault com um arquivo `_modulo.yaml`. O painel
-descobre sozinho: não há nada para registrar nem código para mexer. O jeito mais
-rápido de criar um é pedir a um agente ("crie um módulo de finanças"), mas é bom
-saber o que ele vai escrever.
+Um módulo (no painel, uma "área") é uma pasta na raiz do vault com um arquivo
+`_modulo.yaml`. O painel descobre sozinho: não há nada para registrar nem código
+para mexer.
+
+## Três jeitos de ter um módulo, sem escrever YAML
+
+- **Acrescentar um pronto.** Em Ajustes > Áreas do painel, escolha no catálogo:
+  Tarefas, Notas, Projetos, Áreas, Recursos, Arquivos, Clientes, Finanças, Estudos,
+  Conteúdo, Radar, Números, Entrada. Com ou sem notas de exemplo.
+- **Criar em branco.** No mesmo lugar: nome, ícone e se quer quadro. Depois ajuste
+  os campos em Personalizar.
+- **Mostrar uma pasta sua.** Em Pastas, "Mostrar no painel": o painel lê os campos
+  que as notas já têm e escreve o `_modulo.yaml` por você. Veja
+  [vault-existente.md](vault-existente.md).
+
+O ícone ao lado das abas de cada área abre **Personalizar**: nome, descrição, ícone,
+cena da capa, campos (com tipo e opções), o que conta como concluído e se a área
+mostra quadro e gráfico. Tudo é gravado no `_modulo.yaml`, preservando os comentários.
+
+Também dá para pedir a um agente ("crie um módulo de receitas") ou editar o arquivo
+à mão. O resto desta página é a referência do que vai nele.
 
 ## Estrutura
 
@@ -25,6 +42,8 @@ nome: Finanças
 descricao: Receitas e despesas do mês.
 icone: moeda              # veja a lista abaixo
 ordem: 5                  # posição no dock e no carrossel
+itens: itens              # onde ficam os registros. Use "." se as notas ficam soltas
+                          # na própria pasta (é o que "Mostrar no painel" escreve)
 
 campos:
   status:
@@ -64,6 +83,10 @@ visoes:
   - tipo: tabela
     nome: Lista
     colunas: [titulo, status, valor, vencimento]
+  - tipo: grafico
+    nome: Evolução
+    campos: [valor]       # opcional: quais campos numero mostrar (padrão: todos)
+    dias: 60              # opcional: quantos dias para trás (padrão: 30)
 
 capa: {cena: cidade, paleta: brasa}   # opcional; veja docs/temas.md
 ```
@@ -83,11 +106,29 @@ capa: {cena: cidade, paleta: brasa}   # opcional; veja docs/temas.md
 
 Use `padrao: hoje` num campo de data para que notas novas nasçam com a data do dia.
 
+## Visões
+
+| Tipo | O que mostra |
+|---|---|
+| `kanban` | Colunas por um campo de escolha. Arrastar o cartão muda o campo. |
+| `tabela` | Uma linha por nota, com as colunas que você escolher. Clicar no título da coluna ordena. |
+| `grafico` | Um quadro para cada campo `numero`: valor mais recente, variação no período e a linha do tempo. A data vem do `campo_data` (ou do primeiro campo de data, ou do nome do arquivo). Vários registros no mesmo dia somam. |
+
+Módulo sem campo de status não tem "em aberto" nem "atrasado": é uma coleção, e o
+painel mostra só a contagem.
+
+### O módulo Números
+
+É o uso mais direto do gráfico: uma nota por dia (`numeros/itens/AAAA-MM-DD.md`) e
+um campo por número que você acompanha. O botão **Registrar** grava os números de
+hoje (ou de outro dia); se a nota do dia já existe, só os campos preenchidos mudam.
+Para acompanhar outro número, acrescente um campo do tipo `numero` em Personalizar.
+
 ## Ícones
 
 `inicio` `check` `video` `radar` `entrada` `sino` `pulso` `lampada` `calendario`
 `moeda` `livro` `grafico` `estrela` `relogio` `pessoas` `pessoa` `raio` `coracao`
-`nota` `pasta` `caixa` `chip` `paleta` `nuvem` `celular` `busca`
+`nota` `pasta` `caixa` `casa` `chip` `paleta` `nuvem` `celular` `busca`
 
 ## Regras de convivência
 
@@ -101,6 +142,14 @@ Use `padrao: hoje` num campo de data para que notas novas nasçam com a data do 
   `decidir` e os que têm um campo `pergunta` preenchido por um agente.
 - **O número no dock** é "para hoje" quando o módulo tem `campo_data`; senão, o que
   espera decisão; senão, o que está em aberto.
+- **O dock não cresce sem parar.** Com até nove itens, mostra tudo. Acima disso, mostra
+  cinco áreas, a área em que você está e o botão "Todas as áreas" (tecla `G`), que abre
+  a lista completa com Diário, Pastas e Ajustes. Para escolher quais ficam sempre à mão,
+  liste no `orquestra.yaml`: `dock: [tarefas, projetos, notas]`.
+- **Tirar do painel não apaga nada.** O `_modulo.yaml` vira `_modulo.desligado.yaml`
+  e a pasta continua no vault. Religar devolve a área como estava.
+- **Cada módulo tem um `maquina/aprendizados.md`**, onde os agentes anotam o que
+  aprenderam trabalhando ali. O painel cria o arquivo junto com o módulo.
 
 ## Compartilhar um módulo
 

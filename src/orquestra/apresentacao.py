@@ -19,6 +19,9 @@ from orquestra.notas import Nota
 from orquestra.painel import Painel
 
 DIAS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+# Dock: até este total de itens, mostra tudo; acima disso, só algumas áreas e o botão "Áreas".
+DOCK_SEM_GAVETA = 9
+DOCK_AREAS = 5
 MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 
 # Ícones de traço, desenhados para uma grade de 24x24. Para usar um ícone num
@@ -62,8 +65,16 @@ ICONES = {
     "celular": '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
     "aviso": '<path d="M12 4 3 20h18z"/><path d="M12 10v4M12 17v.5"/>',
     "coracao": '<path d="M12 20s-7-4.400-7-10a4 4 0 0 1 7-2.500A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/>',
+    "grade": '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
     "casa": '<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/>',
 }
+
+
+# Ícones oferecidos na tela "Personalizar" (os demais são da interface).
+ICONES_DE_MODULO = [
+    "check", "nota", "pasta", "raio", "casa", "livro", "pessoas", "moeda", "grafico", "video", "radar",
+    "entrada", "lampada", "calendario", "estrela", "relogio", "coracao", "caixa", "sino", "pulso",
+]
 
 
 def icone(nome: str, tamanho: int = 20) -> Markup:
@@ -115,6 +126,16 @@ def link_seguro(valor: Any) -> str | None:
 
 def url_nota(rel: str) -> str:
     return "/n/" + quote(rel)
+
+
+def url_pasta(rel: str) -> str:
+    rel = rel.strip("/")
+    return "/pastas/" + quote(rel) if rel else "/pastas"
+
+
+def modificado_em(nota: Nota, hoje: dt.date) -> str:
+    """Quando o arquivo foi alterado pela última vez: 'hoje', 'ontem', '3 nov'."""
+    return data_curta(dt.date.fromtimestamp(nota.mtime), hoje)
 
 
 # ---------------------------------------------------------------- markdown
@@ -232,6 +253,12 @@ def valor_para_formulario(nota: Nota, nome: str, tipo: str) -> str:
 
 def texto_selo(resumo, modulo: Modulo) -> str:
     """Frase curta do cartão do módulo no início: '2 para hoje', '4 para decidir'..."""
+    if not modulo.tem_status:
+        if resumo.decidir:
+            return f"{resumo.decidir} para decidir"
+        if modulo.campos_numericos and any(v.tipo == "grafico" for v in modulo.visoes):
+            return f"{resumo.total} dia{'s' if resumo.total != 1 else ''}" if resumo.total else "sem registros"
+        return f"{resumo.total} nota{'s' if resumo.total != 1 else ''}" if resumo.total else "vazio"
     if modulo.campo_data and resumo.hoje:
         return f"{resumo.hoje} para hoje"
     if resumo.decidir:
@@ -256,18 +283,44 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
                 "url": f"/m/{quote(modulo.id)}",
                 # O número do dock: "para hoje" se o módulo tem datas; senão o que espera
                 # decisão; e, se o módulo não usa nem um nem outro, o que está em aberto.
-                "selo": resumo.hoje if modulo.campo_data else (resumo.decidir if modulo.decidir else resumo.abertos),
+                "selo": resumo.hoje
+                if (modulo.campo_data and modulo.tem_status)
+                else (resumo.decidir if (modulo.decidir or not modulo.tem_status) else resumo.abertos),
                 "ativo": ativo == f"m:{modulo.id}",
             }
         )
     sistema = [
         {"id": "decidir", "nome": "Decidir", "icone": "sino", "url": "/decidir", "selo": total_decidir},
         {"id": "diario", "nome": "Diário", "icone": "pulso", "url": "/diario", "selo": 0},
+        {"id": "pastas", "nome": "Pastas", "icone": "pasta", "url": "/pastas", "selo": 0},
         {"id": "ajustes", "nome": "Ajustes", "icone": "ajustes", "url": "/ajustes", "selo": 0},
     ]
     for item in sistema:
         item["ativo"] = ativo == item["id"]
-    return {"modulos": modulos, "sistema": sistema, "decidir": total_decidir, "inicio_ativo": ativo == "inicio"}
+
+    # Com poucas áreas, tudo cabe. Com muitas, o dock mostra as fixadas (ou as primeiras),
+    # mais a área em que a pessoa está, e o resto fica a um clique, no botão "Áreas".
+    barra, sistema_barra, gaveta = modulos, sistema, []
+    if len(modulos) + len(sistema) > DOCK_SEM_GAVETA:
+        fixas = [m for nome in painel.config.dock for m in modulos if m["id"] == nome][:DOCK_AREAS]
+        barra = fixas or modulos[:DOCK_AREAS]
+        atual = next((m for m in modulos if m["ativo"]), None)
+        if atual and atual not in barra:
+            barra = [*barra, atual]
+        sistema_barra = [s for s in sistema if s["id"] == "decidir"]
+        gaveta = [*modulos, *[s for s in sistema if s["id"] != "decidir"]]
+    escondidos = [i for i in gaveta if i not in barra]
+    return {
+        "modulos": modulos,
+        "sistema": sistema,
+        "barra": barra,
+        "sistema_barra": sistema_barra,
+        "gaveta": gaveta,
+        "gaveta_ativa": any(i["ativo"] for i in escondidos),
+        "gaveta_selo": sum(int(i["selo"] or 0) for i in escondidos),
+        "decidir": total_decidir,
+        "inicio_ativo": ativo == "inicio",
+    }
 
 
 def montar_semana(painel: Painel, hoje: dt.date) -> tuple[list[dict[str, Any]], int]:
@@ -284,6 +337,9 @@ def montar_semana(painel: Painel, hoje: dt.date) -> tuple[list[dict[str, Any]], 
             if dia is None:
                 continue
             if dia < hoje:
+                # Sem status não existe "atrasado": uma data que passou é só um registro antigo.
+                if not modulo.tem_status:
+                    continue
                 atrasados += 1
             por_dia[dia] = por_dia.get(dia, 0) + 1
     semana = []

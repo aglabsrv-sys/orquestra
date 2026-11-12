@@ -121,7 +121,7 @@ def test_editar_texto_e_titulo(cliente, vault):
 
 
 def test_arquivar_move_e_nao_apaga(cliente, vault):
-    r = cliente.post("/api/arquivar/" + quote(TAREFA), json={})
+    r = cliente.post("/api/arquivar/" + quote(TAREFA), json={"versao": versao_de(cliente, TAREFA)})
     assert r.status_code == 200
     assert not (vault / TAREFA).exists()
     assert (vault / r.json()["rel"]).exists()
@@ -151,7 +151,7 @@ def test_trocar_tema(cliente, vault):
     assert cliente.post("/api/tema", json={"tema": "mare"}).status_code == 200
     assert "tema: mare" in (vault / "orquestra.yaml").read_text(encoding="utf-8")
     assert "# Configuração do painel" in (vault / "orquestra.yaml").read_text(encoding="utf-8")  # comentários preservados
-    assert "#07141a" in cliente.get("/").text
+    assert "#0a1716" in cliente.get("/").text
     assert cliente.post("/api/tema", json={"tema": "inexistente"}).status_code == 404
 
 
@@ -178,7 +178,7 @@ def test_post_do_proprio_painel_passa(cliente):
 
 def test_host_desconhecido_e_bloqueado(cliente):
     assert cliente.get("/", headers={"Host": "atacante.com"}).status_code == 403
-    assert cliente.get("/", headers={"Host": "minha-maquina.tail1234.ts.net"}).status_code == 200
+    assert cliente.get("/", headers={"Host": "minha-maquina.tail1234.ts.net"}).status_code == 403
 
 
 def test_formulario_comum_nao_altera_nada(cliente):

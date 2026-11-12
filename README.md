@@ -1,39 +1,25 @@
 # Orquestra
 
-**Um painel local para trabalhar com agentes de IA em cima de uma pasta de arquivos markdown.**
+**Um painel local para organizar seu trabalho em cima de uma pasta de arquivos markdown, com ou sem agentes de IA.**
 
 Você já usa ChatGPT, Claude ou Gemini todo dia, mas cada conversa começa do zero e
 nada fica organizado em lugar nenhum. O Orquestra resolve isso com uma ideia simples:
-suas tarefas, seu conteúdo e sua pesquisa viram arquivos de texto numa pasta. O
+suas tarefas, seus projetos e suas anotações são arquivos de texto numa pasta. O
 painel mostra essa pasta de um jeito bonito e rápido; seus agentes trabalham direto
 nela; e você abre no Obsidian quando quiser.
 
 ![Tela inicial do Orquestra](docs/img/inicio.png)
 
 - **Roda no seu computador.** Sem conta, sem nuvem, sem mensalidade. Os dados são arquivos seus.
-- **Funciona com qualquer agente.** Claude, Codex, Gemini: basta dar acesso à pasta. As regras ficam num `AGENTS.md`.
+- **Aproveita o Obsidian que você já tem.** Aponte para o seu vault: nenhuma nota muda de lugar, e as pastas que você escolher viram quadros e listas.
+- **Do seu jeito.** Comece pelo essencial, pelo método PARA, por um perfil de criador, de estudos ou de negócio. Depois mude tudo pela tela, sem escrever código: áreas, campos, tema, modo claro ou escuro, cor de destaque, cantos e letra.
+- **Funciona com qualquer agente, e sem nenhum.** Claude, Codex, Gemini: basta dar acesso à pasta. As regras ficam num `AGENTS.md`. Quem só quer se organizar não precisa de IA.
 - **Separa o que você disse do que a IA escreveu.** Um resumo da máquina nunca vira "fala sua".
 - **Abre no celular** pela sua rede privada do Tailscale.
-- **Compatível com o Obsidian.** O vault abre normalmente; o painel só acrescenta o que falta.
 
 | Quadro de tarefas | Pipeline de conteúdo |
 |---|---|
 | ![Módulo Tarefas](docs/img/tarefas.png) | ![Módulo Conteúdo](docs/img/conteudo.png) |
-
-## O que vem pronto
-
-| | |
-|---|---|
-| **Tarefas** | Quadro e lista, com prioridade, data e o que é para hoje. |
-| **Conteúdo** | Pipeline de ideia a publicado, por plataforma, com miniaturas. |
-| **Radar** | Coletores trazem vídeos, posts e assuntos em alta. Você (ou um agente) faz a triagem. |
-| **Entrada** | Captura rápida: anote do celular, um agente organiza depois. |
-| **Decidir** | Uma fila só com tudo que espera você, incluindo perguntas dos agentes. |
-| **Diário** | O que mudou no vault e o que cada agente fez, com autor e horário. |
-| **Temas** | Três temas com capas em pixel art animadas, desenhadas por código. |
-
-Cada área é um **módulo**: uma pasta com um arquivo de configuração. Para criar a
-sua (finanças, clientes, estudos), é só pedir a um agente.
 
 ## Instalação
 
@@ -59,10 +45,10 @@ Leva uns dez minutos. Você precisa de duas ferramentas gratuitas: o **uv**
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. O git já vem no Linux. No macOS, rode `git --version`: se não estiver instalado, o sistema oferece instalar.
+2. Confira `git --version`. No macOS, o sistema oferece instalar as ferramentas de linha de comando. No Linux, instale o Git pelo gerenciador da sua distribuição (`sudo apt install git` em Debian/Ubuntu; `sudo dnf install git` em Fedora).
 3. Feche e abra o Terminal de novo.
 
-### Baixar e iniciar (todos os sistemas)
+### Baixar e abrir (todos os sistemas)
 
 ```bash
 git clone https://github.com/antoniogsouzaag/orquestra.git
@@ -72,35 +58,81 @@ git clone https://github.com/antoniogsouzaag/orquestra.git
 cd orquestra
 ```
 
-Crie o seu vault. Por padrão ele fica na pasta `Orquestra`, dentro da sua pasta pessoal:
-
 ```bash
-uv run orquestra criar
+uv sync --locked
+uv run --frozen orquestra
 ```
 
-Inicie o painel:
+O navegador abre em <http://localhost:8420> e faz uma pergunta só:
 
-```bash
-uv run orquestra iniciar --abrir
-```
+- **Já tenho um vault do Obsidian.** O painel mostra os cofres que encontrou no seu
+  Obsidian (ou você indica a pasta), olha o que há lá sem alterar nada e pergunta
+  quais pastas você quer ver no painel.
+- **Criar um vault novo.** Você escolhe a pasta, um ponto de partida e o tema.
 
-O navegador abre em <http://localhost:8420> já com exemplos preenchidos. Na primeira
-vez o `uv` baixa o que precisa e demora um pouco mais.
+Nos dois casos dá para dar nome ao painel, escolher o tema e marcar as áreas que
+quer. Na primeira vez o `uv` baixa o que precisa e demora um pouco mais.
 
-Para encerrar, `Ctrl+C` no terminal. Nas próximas vezes, basta entrar na pasta e
-rodar `uv run orquestra`.
+Para encerrar, `Ctrl+C` no terminal. Nas próximas vezes, `uv run --frozen orquestra`
+inicia direto no vault escolhido; abra a URL mostrada no terminal. Para abrir o
+navegador também nessas vezes, use `uv run --frozen orquestra iniciar --abrir`.
 
 > Algo não funcionou? Rode `uv run orquestra doctor`. Ele confere a instalação e
 > explica, em português, o que falta.
 
+## Já usa o Obsidian?
+
+Você não precisa reorganizar nada. Ao escolher o seu vault:
+
+- **A preparação preserva suas notas no lugar.** O painel acrescenta os arquivos de configuração que faltam:
+  `orquestra.yaml`, a pasta `_orquestra/` (temas) e o `AGENTS.md`. Se você já tem
+  um `AGENTS.md`, o seu fica como está e o do painel vai para `AGENTS.orquestra.md`.
+- **Suas pastas aparecem em "Pastas"**, navegáveis, do jeito que estão no disco.
+- **Qualquer pasta da raiz pode virar área do painel** com um clique em "Mostrar no
+  painel". O Orquestra lê os campos que suas notas já têm no topo (status, datas,
+  tags) e monta lista e quadro a partir deles. O único arquivo criado é um
+  `_modulo.yaml` dentro da pasta.
+- **O painel reconhece os jeitos mais comuns de organizar** (PARA, Zettelkasten,
+  Johnny Decimal, ACE, diário) e sugere a partir daí.
+- **O histórico em git fica desligado** até você ligar, para não interferir com
+  OneDrive, iCloud, Obsidian Sync ou um git que você já use.
+
+Detalhes em [docs/vault-existente.md](docs/vault-existente.md).
+
+## O que vem pronto
+
+Um vault novo nasce de um **perfil**, que é só uma lista de áreas. Depois você
+acrescenta e tira áreas à vontade, em Ajustes.
+
+| Perfil | Áreas |
+|---|---|
+| **Essencial** | Tarefas, Notas, Entrada |
+| **Criador de conteúdo** | Tarefas, Conteúdo, Radar, Números, Entrada |
+| **PARA** | Projetos, Áreas, Recursos, Arquivos, Entrada |
+| **Negócio ou freelancer** | Tarefas, Clientes, Projetos, Finanças, Entrada |
+| **Estudos** | Tarefas, Estudos, Recursos, Entrada |
+| **Em branco** | nenhuma: você monta |
+
+E, em qualquer vault:
+
+| | |
+|---|---|
+| **Entrada** | Captura rápida: anote do celular, organize depois (você ou um agente). |
+| **Decidir** | Uma fila só com tudo que espera você, incluindo perguntas dos agentes. |
+| **Números** | Uma nota por dia com o que você acompanha, e um gráfico de cada número. |
+| **Pastas** | O vault como ele é no disco, inclusive o que não é área do painel. |
+| **Diário** | O que mudou no vault e o que cada agente fez, com autor e horário. |
+| **Temas** | Três temas, cada um com o seu estilo de capas em pixel art animadas (nove cenas desenhadas por código), em modo claro e escuro. |
+| **Automações sem IA** | Tarefas que se repetem, compromissos da sua agenda, cotações, feeds e canais: scripts gratuitos que rodam sozinhos. |
+
 ## Primeiros passos
 
-1. **Olhe os exemplos.** Arraste um cartão no quadro de Tarefas, abra uma nota, aperte `C` para capturar uma ideia.
-2. **Diga quem você é.** Em cada módulo, a aba **Humano** tem uma nota de exemplo (como você prioriza, sua voz, o que te interessa). Reescreva com as suas regras: é o que os agentes leem antes de agir.
-3. **Conecte um agente.** Abra o Claude Code ou o Codex na pasta do vault e peça: "leia o AGENTS.md e processe a minha entrada". Detalhes em [docs/agentes.md](docs/agentes.md).
-4. **Ligue os coletores.** Em Radar > Máquina, troque os canais de exemplo pelos seus. Veja [docs/coletores.md](docs/coletores.md).
-5. **Abra no celular.** Siga [docs/tailscale.md](docs/tailscale.md).
-6. **Abra no Obsidian** (opcional): "Abrir pasta como cofre" e escolha a pasta do vault.
+1. **Olhe em volta.** Arraste um cartão no quadro, abra uma nota, aperte `C` para capturar uma ideia.
+2. **Ajuste as áreas.** Em **Ajustes**, acrescente uma área pronta, crie uma em branco ou tire do painel o que não usa (a pasta fica). O ícone ao lado das abas de cada área abre **Personalizar**: nome, ícone, capa, campos e opções.
+3. **Diga quem você é.** Em cada área, a aba **Humano** guarda o que você decide: como prioriza, sua voz, o que te interessa. É o que os agentes leem antes de agir.
+4. **Conecte um agente** (opcional). Abra o Claude Code ou o Codex na pasta do vault e peça: "leia o AGENTS.md e processe a minha entrada". Veja [docs/agentes.md](docs/agentes.md). Para apps de conversa, use o [conector MCP](docs/mcp.md).
+5. **Revise e aprove os coletores** (opcional). Scripts executam com as permissões da sua conta. A aprovação local vale para uma versão de código e configuração; depois, escolha se quer agendamento. Veja [docs/coletores.md](docs/coletores.md).
+6. **Abra no celular.** Siga [docs/tailscale.md](docs/tailscale.md).
 
 ## Como funciona
 
@@ -108,12 +140,12 @@ rodar `uv run orquestra`.
 seu vault/
   AGENTS.md            as regras que todo agente lê
   orquestra.yaml       nome, tema, backup
-  tarefas/             um módulo
+  tarefas/             uma área (módulo)
     _modulo.yaml       campos, status, visões
     itens/             uma nota .md por tarefa
     humano/            o que VOCÊ disse (agentes leem, não reescrevem)
-    maquina/           instruções para agentes e coletores
-  conteudo/  radar/  entrada/
+    maquina/           instruções e aprendizados dos agentes, coletores
+  Minhas Pastas/       qualquer pasta sua; vira área com um _modulo.yaml dentro
   diario/              o que mudou e o que os agentes fizeram
   _orquestra/temas/    cores e capas
 ```
@@ -131,20 +163,35 @@ origem: humano
 Gravar o vídeo principal da semana.
 ```
 
-Você edita no painel, no Obsidian ou pede a um agente: é o mesmo arquivo. Se ele
-mudar no disco enquanto está aberto no painel, a tela se atualiza; se você estiver
-editando, o painel avisa em vez de sobrescrever.
+Você edita no painel, no Obsidian ou pede a um agente: é o mesmo arquivo. O painel
+confere a versão antes de gravar e avisa quando encontra uma alteração externa.
+Mudanças no disco costumam aparecer em cerca de um segundo, dependendo do disco
+e da carga do computador.
+Em conflito, você pode copiar o rascunho ou salvá-lo como outra nota. Rascunhos
+pendentes também ficam neste navegador, separados por vault e por aba; armazenamento
+privado, quota ou limpeza do navegador podem impedir essa recuperação.
+
+As gravações preservam versões de recuperação fora do vault, em
+`~/.orquestra/recuperacao/`. Isso reduz o risco de perder uma edição, mas não impede
+que outro programa sobrescreva um arquivo depois. Evite duas edições simultâneas
+da mesma nota e mantenha uma cópia externa. Veja [recuperação e backup](docs/backup.md).
 
 ### Humano e máquina
 
-É a regra que mais importa. Em cada módulo:
+É a regra que mais importa. Em cada área:
 
 - `humano/` guarda o que você disse ou decidiu. Agentes leem sempre e nunca reescrevem.
-- `maquina/` guarda o que faz o sistema andar: instruções e scripts.
-- Toda nota tem um campo `origem` (`humano`, `agente` ou `coletor`).
+- `maquina/` guarda o que faz o sistema andar: instruções, scripts e os **aprendizados**.
+- Toda nota tem um campo `origem` (`humano`, `agente` ou `coletor`). Nota sem `origem` é sua.
 
 Sem isso, depois de algumas semanas ninguém sabe mais o que foi ideia sua e o que
 foi um resumo que a IA fez de uma ideia sua.
+
+### Agentes que melhoram a cada rodada
+
+Cada área tem um `maquina/aprendizados.md`. Todo agente lê antes de começar e
+acrescenta uma linha ao terminar, quando aprendeu algo que vale para a próxima vez:
+uma correção sua, o que rendeu, o que evitar. O trabalho deixa de se repetir igual.
 
 ### Coletar é script, decidir é IA
 
@@ -152,57 +199,75 @@ Buscar os vídeos novos de um canal não precisa de inteligência: um script faz
 dia, de graça. A IA entra depois, para dizer quais valem o seu tempo. Os coletores
 do Orquestra são scripts Python pequenos, que você pode ler e adaptar.
 
+O Orquestra não tenta substituir os conectores que os agentes já têm (e-mail,
+agenda, documentos). Quem faz a ação é o agente; o vault é onde fica o registro.
+
 ## Comandos
 
 Rode dentro da pasta do Orquestra.
 
 | Comando | O que faz |
 |---|---|
-| `uv run orquestra` | Inicia o painel |
-| `uv run orquestra criar [pasta]` | Cria um vault novo |
+| `uv run orquestra` | Inicia o painel (na primeira vez, a tela pergunta qual vault usar) |
+| `uv run orquestra criar [pasta] [--perfil P]` | Cria um vault novo sem passar pela tela |
+| `uv run orquestra adotar PASTA` | Prepara um vault que já existe, sem alterar nenhuma nota |
 | `uv run orquestra doctor` | Confere tudo e explica o que falta |
 | `uv run orquestra coletar [módulo]` | Roda os coletores agora |
-| `uv run orquestra backup [--enviar]` | Commit do vault (e envio ao remoto) |
+| `uv run orquestra confiar coletor MODULO SCRIPT` | Mostra a assinatura e os arquivos da versão que precisa de revisão local |
+| `uv run orquestra confiar backup` | Mostra a configuração e os destinos do histórico para revisão local |
+| `uv run orquestra backup [--enviar]` | Snapshot local do vault (e envio ao remoto) |
+| `uv run orquestra mcp` | Servidor MCP: o vault vira um conector para agentes |
 | `uv run orquestra autostart ativar` | Inicia o painel junto com o computador |
 | `uv run orquestra --vault PASTA` | Usa outro vault (e passa a lembrar dele) |
+
+Para trocar de vault com o painel aberto: Ajustes > Vault > Trocar de vault.
 
 ## Documentação
 
 | | |
 |---|---|
+| [Usar um vault que já existe](docs/vault-existente.md) | O que o painel cria, como as pastas viram áreas, estilos reconhecidos |
+| [Módulos](docs/modulos.md) | Áreas prontas, personalizar pela tela e a referência do `_modulo.yaml` |
 | [Conectar agentes](docs/agentes.md) | Claude Code, Codex, Gemini e o que pedir a eles |
+| [Conector MCP](docs/mcp.md) | O vault como ferramenta para apps de conversa |
 | [Celular com Tailscale](docs/tailscale.md) | Acesso remoto sem expor nada à internet |
-| [Módulos](docs/modulos.md) | Criar áreas novas e a referência do `_modulo.yaml` |
-| [Temas e capas](docs/temas.md) | Cores, paletas, suas imagens e as cenas em pixel art |
-| [Coletores](docs/coletores.md) | Configurar os prontos e escrever o seu |
-| [Histórico e backup](docs/backup.md) | Desfazer alterações e guardar uma cópia fora do computador |
+| [Temas e aparência](docs/temas.md) | Claro e escuro, cor de destaque, cantos, letra, capas e como criar um tema |
+| [Coletores](docs/coletores.md) | As automações gratuitas que vêm prontas e como escrever a sua |
+| [Histórico e backup](docs/backup.md) | Versões locais quando algo muda, envio diário, e como desfazer |
 | [Arquitetura](docs/arquitetura.md) | Como o código está organizado, para estudar ou contribuir |
 
 ## Segurança, em três linhas
 
-- O painel **não tem senha** e escuta só no seu computador (`127.0.0.1`).
+- O painel **não tem senha** e escuta só no seu computador (`127.0.0.1`). Escolher ou trocar de vault e aprovar código exigem acesso local direto. Não publique a porta nem encaminhe localhost por um proxy público.
 - No celular, use **`tailscale serve`**. **Nunca** use `tailscale funnel` nem abra a porta no roteador.
-- Chaves de API ficam em `~/.orquestra/.env`, **fora** do vault. Mantenha o backup do vault em repositório **privado**.
+- Chaves de API ficam em `~/.orquestra/.env`, **fora** do vault; copie o [.env.example](.env.example) para esse destino se precisar. URLs privadas de calendários também são segredos. Mantenha o backup em repositório **privado** e confira [SECURITY.md](SECURITY.md).
 
 ## Estado do projeto
 
-Versão 0.3. Funciona e tem testes automatizados, mas é novo: faça backup.
+As correções de segurança, recuperação, desempenho e qualidade da versão 0.4 estão
+descritas em [Preparação para produção](docs/preparacao-producao-2026-11-11.md), com
+testes executados e os limites de validação de cada plataforma.
+
+Versão 0.4. Funciona e tem testes automatizados, mas é novo: faça backup.
 
 - Testado no **Windows 10** com Chrome. macOS e Linux usam o mesmo código, mas ainda não foram testados em máquina real; relatos são bem-vindos.
-- O acesso por Tailscale e o início automático no macOS/Linux foram escritos seguindo a documentação de cada sistema e ainda precisam de confirmação de quem usa.
-- Os temas que vêm prontos são escuros.
+- A leitura da lista de cofres do Obsidian, o acesso por Tailscale e o início automático no macOS/Linux foram escritos seguindo a documentação de cada sistema e ainda precisam de confirmação de quem usa.
+- Só pastas da raiz do vault viram área do painel; subpastas aparecem dentro da área e em "Pastas".
 
-O que vem depois: tema claro, arquivos `.base` para as visões aparecerem também no
-Obsidian, mais cenas, módulos de exemplo (finanças, clientes, estudos) e um guia
-para compartilhar módulos.
+O que vem depois: arquivos `.base` para as visões aparecerem também no
+Obsidian, conector MCP remoto (para apps no celular), mais cenas e um guia para
+compartilhar módulos.
 
 ## Contribuir
 
-O código é comentado em português e feito para ser lido. Comece por
-[docs/arquitetura.md](docs/arquitetura.md).
+O código é comentado em português e feito para ser lido. Comece pelo
+[CONTRIBUTING.md](CONTRIBUTING.md) e por [docs/arquitetura.md](docs/arquitetura.md).
 
 ```bash
-uv run pytest
+uv sync --locked
+uv run --frozen python -m pytest
+uv run --frozen ruff check src tests scripts
+node --test tests/js/notas-seguras.test.cjs
 ```
 
 Ideias, problemas e módulos novos são bem-vindos nas issues.

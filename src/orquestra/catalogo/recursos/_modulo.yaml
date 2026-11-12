@@ -1,0 +1,38 @@
+# Módulo Recursos: o que você quer ler, ver ou consultar.
+
+nome: Recursos
+descricao: Artigos, livros, vídeos e cursos para ver ou consultar.
+icone: livro
+ordem: 6
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [para_ver, vendo, visto]
+    padrao: para_ver
+    obrigatorio: true
+  tipo:
+    tipo: escolha
+    opcoes: [artigo, livro, video, curso, ferramenta]
+  link:
+    tipo: link
+  assunto:
+    tipo: texto
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+status:
+  concluidos: [visto]
+  decidir: []
+
+visoes:
+  - tipo: kanban
+    nome: Quadro
+    agrupar_por: status
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, tipo, assunto, link]

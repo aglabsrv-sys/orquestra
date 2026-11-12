@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}Personalizar {{ modulo.nome }}{% endblock %}
+{% block trilha %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a>{% endblock %}
+
+{% block conteudo %}
+<section class="pagina" id="personalizar" data-modulo="{{ modulo.id }}">
+  <header class="pagina-topo">
+    <h1>Personalizar</h1>
+    <a class="botao" href="/m/{{ modulo.id|urlencode }}">{{ icone('seta_esq', 15) }}<span>Voltar</span></a>
+  </header>
+  <p class="suave">Tudo aqui é gravado em <code>{{ modulo.id }}/_modulo.yaml</code>. Você também pode editar esse arquivo à mão, ou pedir a um agente.</p>
+
+  <h2 class="grupo-titulo">{{ icone('editar', 18) }} Aparência</h2>
+  <div class="bloco">
+    <div class="grade-campos">
+      <label class="campo"><span>Nome</span><input type="text" id="p-nome" value="{{ modulo.nome }}" maxlength="60"></label>
+      <label class="campo"><span>Ícone</span>
+        <select id="p-icone">
+          {% if modulo.icone not in icones %}<option value="{{ modulo.icone }}" selected>{{ rotulo(modulo.icone) }}</option>{% endif %}
+          {% for i in icones %}<option value="{{ i }}"{% if i == modulo.icone %} selected{% endif %}>{{ rotulo(i) }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="campo"><span>Cena da capa</span>
+        <select id="p-cena">
+          <option value="">{{ 'Imagem própria (manter)' if capa.tipo != 'cena' else 'Automática' }}</option>
+          {% for c in cenas %}<option value="{{ c }}"{% if c == cena_atual %} selected{% endif %}>{{ rotulo(c) }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    <label class="campo"><span>Descrição (aparece na capa)</span><input type="text" id="p-descricao" value="{{ modulo.descricao }}" maxlength="160"></label>
+  </div>
+
+  <h2 class="grupo-titulo">{{ icone('check', 18) }} Campos das notas</h2>
+  <div class="bloco">
+    <p class="suave">Cada campo vira uma propriedade no topo da nota (o frontmatter, que o Obsidian também mostra). Em <b>escolha</b>, escreva as opções separadas por vírgula, na ordem em que devem aparecer no quadro.</p>
+    <div class="campos-editor" id="p-campos">
+      {% for c in campos %}
+      <div class="campo-editor" data-original="{{ c.nome }}">
+        <input type="text" value="{{ c.nome }}" data-nome disabled aria-label="Nome do campo">
+        <select data-tipo aria-label="Tipo de {{ c.nome }}">{% for t in tipos %}<option value="{{ t }}"{% if t == c.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        <input type="text" value="{{ c.opcoes|join(', ') }}" data-opcoes placeholder="opções, separadas por vírgula" aria-label="Opções de {{ c.nome }}"{% if c.tipo != 'escolha' %} hidden{% endif %}>
+        <label class="remover" title="Tira o campo do módulo. O valor continua nas notas que já têm."><input type="checkbox" data-remover><span>remover</span></label>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="linha-botoes">
+      <button class="botao" type="button" id="p-novo-campo">{{ icone('mais', 15) }}<span>Novo campo</span></button>
+    </div>
+    <p class="suave pequeno">Mudar o nome de uma opção não altera as notas que já usam a antiga: elas aparecem com um aviso até você atualizar.</p>
+  </div>
+
+  <h2 class="grupo-titulo">{{ icone('grafico', 18) }} Como mostrar</h2>
+  <div class="bloco">
+    {% if modulo.tem_status %}
+    <label class="campo"><span>Opções de “{{ modulo.campo_status }}” que contam como concluído</span>
+      <input type="text" id="p-concluidos" value="{{ modulo.concluidos|join(', ') }}" placeholder="feito, cancelado">
+    </label>
+    {% endif %}
+    <label class="campo campo-linha"><span>Quadro (colunas por {{ modulo.campo_status }}){% if not pode_quadro %} <small class="suave">· precisa de um campo “{{ modulo.campo_status }}” do tipo escolha</small>{% endif %}</span>
+      <input type="checkbox" id="p-quadro"{% if tem_quadro %} checked{% endif %}{% if not pode_quadro and not tem_quadro %} disabled{% endif %}></label>
+    <label class="campo campo-linha"><span>Gráfico (evolução dos campos de número){% if not pode_grafico %} <small class="suave">· precisa de pelo menos um campo do tipo numero</small>{% endif %}</span>
+      <input type="checkbox" id="p-grafico"{% if tem_grafico %} checked{% endif %}></label>
+    <p class="suave pequeno">A lista aparece sempre.</p>
+  </div>
+
+  <div class="linha-botoes">
+    <button class="botao principal" type="button" id="p-salvar">Salvar</button>
+    <a class="botao" href="/m/{{ modulo.id|urlencode }}">Cancelar</a>
+  </div>
+</section>
+
+<template id="p-modelo-campo">
+  <div class="campo-editor novo">
+    <input type="text" data-nome placeholder="nome_do_campo" aria-label="Nome do campo">
+    <select data-tipo aria-label="Tipo">{% for t in tipos %}<option value="{{ t }}"{% if t == 'texto' %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+    <input type="text" data-opcoes placeholder="opções, separadas por vírgula" aria-label="Opções" hidden>
+    <button class="botao discreto pequeno" type="button" data-tirar>tirar</button>
+  </div>
+</template>
+{% endblock %}

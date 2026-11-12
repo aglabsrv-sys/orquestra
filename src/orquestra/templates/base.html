@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="cantos-{{ cfg.aparencia.cantos }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="{{ tema.cores.fundo }}">
+  <meta name="theme-color" content="{{ cor_navegador }}">
   <title>{% block titulo %}Início{% endblock %} · {{ cfg.nome }}</title>
   <link rel="icon" href="/static/icone.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/css/app.css?v={{ marca }}">
-  {# As cores vêm do tema ativo (arquivo tema.yaml no vault). #}
-  <style>:root{ {% for nome, cor in tema.cores.items() %}--{{ nome|replace('_', '-') }}:{{ cor }};{% endfor %} }</style>
+  {# Cores, cantos e fonte: o tema ativo mais as escolhas de Ajustes > Aparência (aparencia.py). #}
+  <style>{{ estilo|safe }}</style>
 </head>
-<body data-observa="{% block observa %}{% endblock %}">
+<body data-vault-id="{{ vault_id }}" data-observa="{% block observa %}{% endblock %}">
   <canvas id="ambiente" width="48" height="27" aria-hidden="true"></canvas>
 
   <header class="topo">
@@ -24,35 +24,51 @@
       <span class="data-hoje">{{ hoje_longo|capitalize }}</span>
       <a class="botao so-icone" href="/buscar" title="Buscar" aria-label="Buscar">{{ icone('busca', 18) }}</a>
       {% if modulo_captura %}
-      <button class="botao" id="abrir-captura" title="Captura rápida (tecla C)">{{ icone('mais', 16) }}<span>Capturar</span></button>
+      <button class="botao" id="abrir-captura" type="button" aria-label="Capturar uma ideia" title="Captura rápida (tecla C)">{{ icone('mais', 16) }}<span>Capturar</span></button>
       {% endif %}
     </div>
   </header>
 
+  {% for aviso in avisos_config|default([]) %}<div class="faixa alerta" role="status">{{ icone('aviso', 16) }} {{ aviso }}</div>{% endfor %}
   <main>{% block conteudo %}{% endblock %}</main>
 
-  {# Dock: só ícones. O nome aparece ao passar o mouse. #}
+  {# Dock: só ícones. O nome aparece ao passar o mouse. Com muitas áreas, parte delas fica no botão "Áreas". #}
   <nav class="dock" aria-label="Navegação">
-    <a class="dock-item{% if dock.inicio_ativo %} ativo{% endif %}" href="/" data-dica="Início" aria-label="Início">{{ icone('inicio', 22) }}</a>
-    {% for m in dock.modulos %}
+    <a class="dock-item{% if dock.inicio_ativo %} ativo{% endif %}" href="/" data-dica="Início" aria-label="Início">{{ icone('inicio', 20) }}</a>
+    {% for m in dock.barra %}
     <a class="dock-item{% if m.ativo %} ativo{% endif %}" href="{{ m.url }}" data-dica="{{ m.nome }}" aria-label="{{ m.nome }}" data-selo-de="{{ m.id }}">
-      {{ icone(m.icone, 22) }}<b class="selo"{% if not m.selo %} hidden{% endif %}>{{ m.selo }}</b>
+      {{ icone(m.icone, 20) }}<b class="selo"{% if not m.selo %} hidden{% endif %}>{{ m.selo }}</b>
     </a>
     {% endfor %}
+    {% if dock.gaveta %}
+    <button class="dock-item{% if dock.gaveta_ativa %} ativo{% endif %}" type="button" id="abrir-gaveta" data-dica="Todas as áreas" aria-label="Todas as áreas" aria-expanded="false" aria-controls="gaveta" data-selo-de="_gaveta">
+      {{ icone('grade', 20) }}<b class="selo"{% if not dock.gaveta_selo %} hidden{% endif %}>{{ dock.gaveta_selo }}</b>
+    </button>
+    {% endif %}
     <span class="dock-sep" aria-hidden="true"></span>
-    {% for s in dock.sistema %}
+    {% for s in dock.sistema_barra %}
     <a class="dock-item{% if s.ativo %} ativo{% endif %}" href="{{ s.url }}" data-dica="{{ s.nome }}" aria-label="{{ s.nome }}" data-selo-de="{{ s.id }}">
-      {{ icone(s.icone, 22) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ s.selo }}</b>
+      {{ icone(s.icone, 20) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ s.selo }}</b>
     </a>
     {% endfor %}
   </nav>
 
+  {% if dock.gaveta %}
+  <div class="gaveta" id="gaveta" hidden>
+    {% for i in dock.gaveta %}
+    <a class="gaveta-item{% if i.ativo %} ativo{% endif %}" href="{{ i.url }}" data-selo-de="{{ i.id }}">
+      {{ icone(i.icone, 20) }}<span>{{ i.nome }}</span><b class="selo"{% if not i.selo %} hidden{% endif %}>{{ i.selo }}</b>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% if modulo_captura %}
-  <dialog id="captura" class="dialogo">
+  <dialog id="captura" class="dialogo" aria-labelledby="titulo-captura">
     <div class="dialogo-corpo">
-      <h2>Captura rápida</h2>
+      <h2 id="titulo-captura">Captura rápida</h2>
       <p class="suave">Vai para “{{ modulo_captura.nome }}” como nota sua, do jeito que você escreveu. Um agente processa depois.</p>
-      <textarea id="captura-texto" rows="6" placeholder="Uma ideia, um pedido, um lembrete..."></textarea>
+      <textarea id="captura-texto" rows="6" aria-label="Texto da captura" placeholder="Uma ideia, um pedido, um lembrete..."></textarea>
       <div class="dialogo-acoes">
         <span class="suave dica-tecla">Ctrl + Enter para guardar</span>
         <button type="button" class="botao" data-fechar>Cancelar</button>
@@ -62,10 +78,19 @@
   </dialog>
   {% endif %}
 
+  <dialog id="dialogo-resposta" class="dialogo" aria-labelledby="titulo-resposta" aria-describedby="resposta-pergunta">
+    <form class="dialogo-corpo" method="dialog" id="form-resposta">
+      <h2 id="titulo-resposta">Responder ao agente</h2>
+      <p id="resposta-pergunta"></p>
+      <label class="campo"><span>Sua resposta</span><textarea id="resposta-texto" rows="5" required></textarea></label>
+      <div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button type="submit" class="botao principal" id="resposta-salvar">Guardar resposta</button></div>
+    </form>
+  </dialog>
   {% block dialogos %}{% endblock %}
   <div id="avisos" aria-live="polite"></div>
 
   <script src="/static/js/cenas.js?v={{ marca }}"></script>
+  <script src="/static/js/notas-seguras.js?v={{ marca }}"></script>
   <script src="/static/js/app.js?v={{ marca }}"></script>
 </body>
 </html>

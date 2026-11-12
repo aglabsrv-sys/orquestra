@@ -1,0 +1,33 @@
+# Perfis: pontos de partida para um vault novo.
+# Cada perfil é só uma lista de módulos do catálogo (as pastas ao lado deste arquivo).
+# Depois de criado, o vault é seu: dá para acrescentar, tirar e mudar qualquer módulo.
+
+essencial:
+  nome: Essencial
+  descricao: Tarefas, notas e uma caixa de entrada. O mínimo para se organizar.
+  modulos: [tarefas, notas, entrada]
+
+criador:
+  nome: Criador de conteúdo
+  descricao: Pipeline de conteúdo, radar de referências, tarefas e seus números.
+  modulos: [tarefas, conteudo, radar, numeros, entrada]
+
+para:
+  nome: PARA
+  descricao: Projetos, Áreas, Recursos e Arquivos, o método de Tiago Forte.
+  modulos: [projetos, areas, recursos, arquivos, entrada]
+
+negocio:
+  nome: Negócio ou freelancer
+  descricao: Clientes, projetos, finanças e as tarefas do dia.
+  modulos: [tarefas, clientes, projetos, financas, entrada]
+
+estudos:
+  nome: Estudos
+  descricao: O que estudar, o que revisar e as referências que você junta.
+  modulos: [tarefas, estudos, recursos, entrada]
+
+vazio:
+  nome: Em branco
+  descricao: Só o painel e as regras para agentes. Você monta as áreas depois.
+  modulos: []

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}{{ trilha[-1].nome if trilha else 'Pastas' }}{% endblock %}
+{% block trilha %}{% if trilha %}<a href="/pastas">Pastas</a>{% else %}Pastas{% endif %}{% endblock %}
+{% block observa %}tudo{% endblock %}
+
+{% block conteudo %}
+<section class="pagina larga">
+  <header class="pagina-topo">
+    <h1 class="caminho-pasta">
+      {% if trilha %}
+        {% for parte in trilha %}{% if not loop.last %}<a href="{{ parte.url }}">{{ parte.nome }}</a><span class="barra">/</span>{% else %}{{ parte.nome }}{% endif %}{% endfor %}
+      {% else %}Pastas{% endif %}
+    </h1>
+    <div class="linha-botoes sem-topo">
+      {% if modulo and trilha|length == 1 %}<a class="botao" href="/m/{{ modulo.id|urlencode }}">{{ icone(modulo.icone, 15) }}<span>Ver como área do painel</span></a>{% endif %}
+      {% if pode_criar %}<button class="botao principal" type="button" id="abrir-nota-pasta">{{ icone('mais', 16) }}<span>Nova nota aqui</span></button>{% endif %}
+    </div>
+  </header>
+
+  {% if not rel %}
+  <p class="explica">{{ icone('pasta', 15) }} <span>O seu vault como ele é no disco. As pastas marcadas como <b>área</b> já aparecem no painel com quadro, lista e campos. Qualquer outra pode virar área com <b>Mostrar no painel</b>: nenhuma nota muda de lugar, o painel só passa a entender os campos que elas já têm.</span></p>
+  {% endif %}
+
+  {% if pastas %}
+  <div class="grade-pastas">
+    {% for f in pastas %}
+    <div class="pasta-cartao{% if f.modulo %} e-area{% endif %}">
+      <a class="pasta-link" href="{{ f.url }}">
+        {{ icone(f.modulo.icone if f.modulo else 'pasta', 20) }}
+        <span class="pasta-nome">{{ f.nome }}</span>
+        <small>{{ f.notas }} nota{{ '' if f.notas == 1 else 's' }}</small>
+      </a>
+      {% if f.modulo %}
+      <a class="et et-area" href="/m/{{ f.modulo.id|urlencode }}" title="Abrir a área {{ f.modulo.nome }}">área do painel</a>
+      {% elif f.pode_adotar %}
+      <button class="botao pequeno" type="button" data-adotar="{{ f.nome }}">{{ 'Religar no painel' if f.desligada else 'Mostrar no painel' }}</button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if notas %}
+  <h2 class="grupo-titulo">{{ icone('nota', 18) }} Notas <small>{{ notas|length }}</small></h2>
+  <div class="lista-notas sem-margem">
+    {% for n in notas %}
+    <a class="linha-nota com-lado" href="{{ n.url }}">
+      <span class="linha-principal"><b>{{ n.titulo }}</b>{% if n.trecho %}<span>{{ n.trecho }}</span>{% endif %}</span>
+      <small>{% if n.origem and n.origem != 'humano' %}{{ n.origem }} · {% endif %}{{ n.quando }}</small>
+    </a>
+    {% endfor %}
+  </div>
+  {% elif not pastas %}
+  {{ p.vazio("Pasta vazia", "Não há notas aqui ainda. Crie a primeira com o botão acima, ou escreva no Obsidian: ela aparece sozinha.") }}
+  {% endif %}
+  {{ p.paginar(paginacao|default(none)) }}
+</section>
+{% endblock %}
+
+{% block dialogos %}
+<dialog id="dialogo-nota-pasta" class="dialogo" aria-labelledby="titulo-nota-pasta" data-pasta="{{ rel }}">
+  <form class="dialogo-corpo" method="dialog">
+    <h2 id="titulo-nota-pasta">Nova nota{% if rel %} em {{ trilha[-1].nome }}{% endif %}</h2>
+    <label class="campo"><span>Título *</span><input type="text" id="nota-pasta-titulo" required autocomplete="off"></label>
+    <label class="campo"><span>Texto</span><textarea id="nota-pasta-corpo" rows="5" placeholder="Opcional"></textarea></label>
+    <div class="dialogo-acoes">
+      <button type="button" class="botao" data-fechar>Cancelar</button>
+      <button type="submit" class="botao principal" id="nota-pasta-salvar">Criar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dialogo-adotar" class="dialogo" aria-labelledby="titulo-dialogo-adotar">
+  <div class="dialogo-corpo">
+    <h2 id="titulo-dialogo-adotar">Mostrar “<span id="adotar-nome"></span>” no painel</h2>
+    <p class="suave">Nenhuma nota é alterada nem movida. O painel cria um único arquivo na pasta, o <code>_modulo.yaml</code>, dizendo quais campos as suas notas usam.</p>
+    <div id="adotar-achados" class="achados"></div>
+    <label class="campo campo-linha" id="adotar-linha-quadro"><span>Quero um quadro com “a fazer, fazendo, feito”</span><input type="checkbox" id="adotar-quadro"></label>
+    <p class="suave pequeno">Depois dá para mudar tudo em “Personalizar”, ou tirar a pasta do painel em Ajustes.</p>
+    <div class="dialogo-acoes">
+      <button type="button" class="botao" data-fechar>Cancelar</button>
+      <button type="button" class="botao principal" id="adotar-confirmar">Mostrar no painel</button>
+    </div>
+  </div>
+</dialog>
+{% endblock %}

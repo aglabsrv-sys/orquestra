@@ -1,14 +1,23 @@
 [project]
 name = "orquestra"
-version = "0.3.0"
+version = "0.4.0"
 description = "Painel operacional local para trabalhar com agentes de IA em cima de uma pasta de arquivos markdown."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 keywords = ["obsidian", "markdown", "agentes", "ia", "painel", "local-first"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+
 dependencies = [
     # Servidor web e templates
     "fastapi>=0.110",
+    "pydantic>=2.10,<3",
     "uvicorn>=0.29",
     "jinja2>=3.1",
     # YAML que preserva comentários e ordem das chaves (essencial para não bagunçar o frontmatter)
@@ -17,7 +26,15 @@ dependencies = [
     "watchdog>=4.0",
     # Markdown -> HTML para a pré-visualização das notas
     "markdown-it-py>=3.0",
+    # Protocolo MCP: o vault como conector para agentes (comando `orquestra mcp`)
+    "mcp>=1.2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/antoniogsouzaag/orquestra"
+Repository = "https://github.com/antoniogsouzaag/orquestra"
+Issues = "https://github.com/antoniogsouzaag/orquestra/issues"
+Documentation = "https://github.com/antoniogsouzaag/orquestra#readme"
 
 [project.scripts]
 orquestra = "orquestra.cli:main"
@@ -30,7 +47,15 @@ build-backend = "hatchling.build"
 packages = ["src/orquestra"]
 
 [dependency-groups]
-dev = ["pytest>=8", "httpx>=0.27"]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.14,<1", "pip-audit>=2.10,<3"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+extend-exclude = ["graphify-out", "dist", "build"]
+
+[tool.ruff.lint]
+# Sintaxe e todas as verificações Pyflakes, incluindo imports não usados.
+select = ["E9", "F"]

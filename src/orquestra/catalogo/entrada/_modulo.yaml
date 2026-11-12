@@ -1,0 +1,34 @@
+# Módulo Entrada: suas capturas rápidas.
+# O botão "Capturar" do painel grava aqui. Um agente lê, leva cada coisa para o
+# módulo certo e marca como processado, sem alterar o que você escreveu.
+
+nome: Entrada
+descricao: Suas capturas rápidas, esperando um agente organizar.
+icone: entrada
+ordem: 90
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [novo, processado]
+    padrao: novo
+    obrigatorio: true
+  destino:
+    tipo: texto
+    rotulo: Virou              # o agente escreve aqui o que a captura virou
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+
+status:
+  concluidos: [processado]
+  decidir: []
+
+visoes:
+  - tipo: kanban
+    nome: Quadro
+    agrupar_por: status
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, destino]

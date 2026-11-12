@@ -2,12 +2,12 @@
 
 O painel escuta apenas em `127.0.0.1`: só o seu computador enxerga. Para abrir no
 celular sem expor nada à internet, usamos o [Tailscale](https://tailscale.com), uma
-rede privada entre os seus aparelhos. O plano gratuito basta.
+rede privada entre os seus aparelhos. Confira o plano e os limites atuais para sua conta.
 
 > **O painel não tem senha.** Quem alcança o endereço lê e altera o seu vault.
 > Por isso: **nunca use `tailscale funnel`** e nunca abra a porta no roteador. O
 > Funnel publica o endereço para a internet inteira. O `serve`, usado aqui, só
-> funciona para aparelhos da sua conta do Tailscale.
+> fica limitado pela política de acesso da sua rede Tailscale. Confira usuários, compartilhamentos e ACLs antes de habilitar.
 
 ## Passo a passo
 
@@ -24,7 +24,15 @@ rede privada entre os seus aparelhos. O plano gratuito basta.
    um link, é só abrir e confirmar.
 4. O comando mostra um endereço parecido com `https://seu-pc.tail1234.ts.net`. Abra
    esse endereço no navegador do celular (com o Tailscale ligado nele).
-5. No celular, use "Adicionar à tela de início" para ter o painel como um aplicativo.
+5. Em `orquestra.yaml`, permita **somente o nome exato** que apareceu, sem esquema nem caminho, e reinicie o painel:
+
+   ```yaml
+   hosts_permitidos:
+     - seu-pc.tail1234.ts.net
+   ```
+
+   Não use curingas. Não permita domínios de terceiros.
+6. No celular, use "Adicionar à tela de início" para ter o painel como um aplicativo.
 
 O `--bg` deixa o encaminhamento ligado mesmo depois de fechar o terminal e de
 reiniciar o computador. O painel precisa estar rodando para o endereço responder
@@ -48,7 +56,7 @@ O `orquestra doctor` também confere tudo isso e avisa em vermelho se o Funnel e
 |---|---|
 | O endereço não abre no celular | Confira se o Tailscale está ligado no celular e se o painel está rodando no computador. |
 | A página abre, mas nada salva ("Requisição vinda de outro site foi bloqueada") | Acrescente o nome do endereço (sem `https://`) em `hosts_permitidos` no `orquestra.yaml` e reinicie o painel. |
-| "Endereço não permitido" | Você está acessando por um nome que não é `localhost` nem `*.ts.net`. Acrescente-o em `hosts_permitidos`. |
+| "Endereço não permitido" | O nome exato não foi permitido. Confira a URL e acrescente somente o seu nome Tailscale em `hosts_permitidos`; reinicie o painel. |
 | O computador dorme e o endereço cai | Ajuste as opções de energia para não suspender, ou aceite que o painel só responde com o computador acordado. |
 
 ## Falar com o agente pelo celular
@@ -60,3 +68,11 @@ agente estando fora de casa, você tem dois caminhos que combinam bem com ele:
   sessão, o agente processa (é o que o `AGENTS.md` manda).
 - **O acesso remoto do seu agente**: Claude Code, por exemplo, pode ser controlado
   pelo celular. O agente trabalha na pasta, e você acompanha o resultado no painel.
+
+## Ações reservadas ao computador
+
+Escolher ou trocar vault, abrir o seletor de pastas e aprovar execução de coletores
+ou configuração de backup exigem acesso direto por localhost, sem proxy. Os botões
+de aprovação ficam indisponíveis pelo Tailscale. Cabeçalhos de encaminhamento não
+concedem acesso local. As edições de notas e os coletores previamente aprovados
+continuam disponíveis para quem já tem acesso autorizado à sua rede.

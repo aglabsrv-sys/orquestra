@@ -1,9 +1,42 @@
 # Temas e capas
 
-A aparência do painel mora no vault, em `_orquestra/temas/`. Cada tema é uma pasta
-com um `tema.yaml`. Trocar de tema é escolher em **Ajustes**; criar um é copiar uma
-pasta e editar o arquivo. Como tudo está no vault, um agente também consegue:
-"crie um tema verde-escuro com capas de floresta".
+A aparência do painel tem duas camadas, e as duas moram no vault:
+
+- o **tema** (uma pasta em `_orquestra/temas/`) define as cores e as capas;
+- as **suas escolhas** por cima dele (`aparencia:` no `orquestra.yaml`): claro ou
+  escuro, cor de destaque, cantos e letra.
+
+Tudo se muda em **Ajustes**, sem editar arquivo. Como está no vault, um agente
+também consegue: "crie um tema verde-escuro com capas de floresta".
+
+## Do seu jeito (Ajustes > Tema)
+
+| Escolha | Opções | No `orquestra.yaml` |
+|---|---|---|
+| Claro ou escuro | Escuro, Claro, Igual ao sistema | `modo: escuro \| claro \| auto` |
+| Cor de destaque | a do tema, oito sugestões ou qualquer cor | `destaque: "#7cc4ff"` (vazio usa a do tema) |
+| Cantos | Retos, Discretos, Médios, Redondos (botões em pílula) | `cantos: reto \| discreto \| medio \| redondo` |
+| Letra | Padrão, Serifada, Arredondada, Monoespaçada | `fonte: sistema \| serifada \| arredondada \| mono` |
+
+```yaml
+aparencia:
+  modo: auto
+  destaque: "#7cc4ff"
+  cantos: redondo
+  fonte: sistema
+```
+
+Três detalhes de como isso funciona:
+
+- **A cor de destaque se ajusta ao modo.** Um tom pastel aparece bem no escuro e
+  some no claro. Em vez de recusar a sua cor, o painel escurece (ou clareia) só o
+  necessário para ela continuar legível, e escolhe sozinho se o texto em cima dela
+  fica preto ou branco.
+- **As letras são as do seu computador.** Nada é baixado da internet, então o painel
+  continua funcionando sem conexão. Por isso a mesma opção pode ter um desenho um
+  pouco diferente no Windows, no macOS e no celular.
+- **As capas não mudam com o modo claro.** São cenas de fim de tarde e de noite, e
+  funcionam como imagem nos dois modos.
 
 ## O que um tema define
 
@@ -23,6 +56,13 @@ cores:                       # a interface (sempre em hexadecimal)
   alerta: "#ff7a59"
   ok: "#9bd49b"
 
+cores_claras:                # as mesmas dez chaves, para o modo claro
+  fundo: "#fbf6f1"
+  texto: "#2b1a10"
+  destaque: "#c2571a"
+  # ...
+                             # sem este bloco, o painel deriva um modo claro do escuro
+
 paletas:                     # as cores das capas em pixel art
   poente:
     ceu: ["#2b1a3a", "#7a2e4a", "#d9603f", "#f7b267"]   # do alto até o horizonte
@@ -35,6 +75,8 @@ paletas:                     # as cores das capas em pixel art
     luz: "#ffd27a"           # janelas, pontos de luz
     brilho: "#fff3d1"        # estrelas, reflexos
     noite: false             # true desenha mais estrelas
+
+cenas: [janela, deserto, cidade, montanhas]   # o estilo do tema: as cenas que combinam com ele
 
 capas:                       # qual cena e paleta cada módulo usa
   tarefas: {cena: janela, paleta: poente}
@@ -59,9 +101,25 @@ problema de licença.
 | `mar` | horizonte com farol e veleiro | reflexo na água, facho do farol, ondas |
 | `floresta` | pinheiros e uma cabana | vaga-lumes, névoa, fumaça da chaminé |
 | `espaco` | planeta com anel | estrelas, lua em órbita, satélite, estrela cadente |
+| `ceu` | acima das nuvens, com balões | o mar de nuvens deslizando em três planos, balões, pássaros |
+| `aurora` | colinas nevadas e uma cabana | as cortinas da aurora, neve caindo, estrelas |
+| `deserto` | dunas, chapadas e cactos | uma caravana atravessando, areia ao vento, nuvens |
 
-Módulos que o tema não lista em `capas` ganham uma cena escolhida pelo nome do
-módulo, sempre a mesma.
+### Cada tema tem um estilo
+
+| Tema | Estilo | Cenas preferidas |
+|---|---|---|
+| **Brasa** | fim de tarde e noite quente | janela, deserto, cidade, montanhas |
+| **Maré** | verde profundo com destaque em pêssego: mar, céu e farol | mar, céu, aurora, montanhas |
+| **Noturno** | espaço, aurora e madrugada | espaço, aurora, cidade, janela |
+
+Nos temas que vêm prontos, cada área do catálogo tem um par (cena, paleta) só dela:
+duas áreas nunca ficam com a mesma capa. Uma área que o tema não lista em `capas`
+(uma que você criou, ou uma pasta sua) ganha um par ainda não usado, escolhido entre
+as `cenas` do tema a partir do nome da área, sempre o mesmo. Uma pasta sua chamada
+"1. Projetos" usa a capa que o tema reservou para `projetos`.
+
+Para escolher a cena de uma área, use **Personalizar** (o ícone ao lado das abas).
 
 ## Usar a sua própria imagem ou vídeo
 
@@ -91,8 +149,8 @@ capas:
 3. Em **Ajustes**, escolha o tema novo (ou escreva `tema: meu-tema` no `orquestra.yaml`).
 
 Dica de contraste: `texto` sobre `fundo` e `sobre_destaque` sobre `destaque` precisam
-ser bem legíveis. Os temas que vêm prontos são escuros; um tema claro funciona, mas
-teste as telas de módulo e de nota.
+ser bem legíveis, em `cores` e em `cores_claras`. Os três temas que vêm prontos têm
+os dois modos e são conferidos por teste automático (`tests/test_aparencia_e_automacoes.py`).
 
 ## Criar uma cena nova (para quem programa)
 
@@ -101,7 +159,7 @@ recebe a paleta e um gerador de números aleatórios, prepara as camadas fixas u
 vez e devolve a função que desenha cada quadro:
 
 ```js
-CENAS.deserto = function (pal, R) {
+CENAS.praia = function (pal, R) {
   var fundo = camada(function (g) {
     degrade(g, pal.ceu, 0, 0, W, 120);          // céu com transição pontilhada
     disco(g, 240, 60, 14, pal.astro);           // sol

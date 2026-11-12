@@ -64,3 +64,13 @@
 {% macro vazio(titulo, texto) %}
 <div class="vazio"><b>{{ titulo }}</b><p>{{ texto }}</p></div>
 {% endmacro %}
+
+{% macro paginar(info) %}
+{% if info and info.paginas > 1 %}
+<nav class="paginacao" aria-label="Páginas dos resultados">
+  {% if info.anterior %}<a class="botao" href="{{ info.anterior }}" rel="prev">Anterior</a>{% else %}<span></span>{% endif %}
+  <span>Página {{ info.pagina }} de {{ info.paginas }} · {{ info.total }} itens</span>
+  {% if info.proxima %}<a class="botao" href="{{ info.proxima }}" rel="next">Próxima</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}

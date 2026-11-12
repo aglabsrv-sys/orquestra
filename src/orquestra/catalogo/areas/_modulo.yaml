@@ -1,0 +1,26 @@
+# Módulo Áreas: o que você cuida sempre, sem data para acabar.
+# (No método PARA: saúde, finanças, casa, carreira...)
+
+nome: Áreas
+descricao: O que você cuida sempre, sem data para acabar.
+icone: casa
+ordem: 3
+
+campos:
+  revisar_em:
+    tipo: data
+    rotulo: Revisar em
+  padrao_que_quero:
+    tipo: texto
+    rotulo: Como quero que esteja
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+visoes:
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, padrao_que_quero, revisar_em, tags]

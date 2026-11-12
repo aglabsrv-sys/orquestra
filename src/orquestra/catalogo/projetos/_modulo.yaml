@@ -1,0 +1,41 @@
+# Módulo Projetos: tudo que tem começo, fim e um resultado.
+
+nome: Projetos
+descricao: O que tem começo, fim e um resultado esperado.
+icone: raio
+ordem: 2
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [ideia, ativo, pausado, concluido]
+    padrao: ideia
+    obrigatorio: true
+  prazo:
+    tipo: data
+  area:
+    tipo: texto
+    rotulo: Área
+  resultado:
+    tipo: texto
+    rotulo: Resultado esperado
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+campo_data: prazo
+
+status:
+  concluidos: [concluido]
+  decidir: []
+
+visoes:
+  - tipo: kanban
+    nome: Quadro
+    agrupar_por: status
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, prazo, area, resultado]

@@ -44,6 +44,22 @@ Inicie o agente na pasta do vault e, na primeira mensagem, peça:
 Qualquer agente que consiga ler e gravar arquivos funciona, inclusive assistentes
 com acesso a pastas do computador.
 
+## Aplicativos que não abrem pastas
+
+Para aplicativos de conversa, o Orquestra oferece um **conector MCP**: o agente usa
+ferramentas como "criar tarefa" e "capturar", e as regras do contrato são aplicadas
+pelo código. Veja [mcp.md](mcp.md).
+
+## E os conectores de e-mail, agenda, redes sociais?
+
+Ficam com o agente, que já os tem. O Orquestra não duplica essas integrações: quem
+lê o e-mail ou a agenda é o agente, e o vault é onde o resultado fica organizado.
+"Veja meus e-mails e crie uma tarefa para cada um que pede resposta" funciona com
+qualquer agente que tenha o conector de e-mail e acesso ao vault.
+
+O que o Orquestra faz por conta própria são os **coletores**: scripts simples que
+rodam sozinhos todo dia, sem IA e sem custo. Veja [coletores.md](coletores.md).
+
 ## Pedidos para começar
 
 - "Leia o AGENTS.md e me diga o que você entendeu das regras."
@@ -53,6 +69,18 @@ com acesso a pastas do computador.
 - "Escreva o roteiro da ideia X usando a minha voz."
 - "Crie um módulo de finanças com receitas e despesas por mês."
 - "Crie um tema claro, com capas de mar."
+
+## Agentes que aprendem com o uso
+
+Cada área tem um `maquina/aprendizados.md`. O contrato manda o agente ler antes de
+começar e acrescentar uma linha ao terminar, quando aprendeu algo que vale para a
+próxima vez: uma correção sua, um resultado medido, algo a evitar. Você vê (e pode
+editar) na aba **Máquina** da área.
+
+Dois pedidos que ajudam:
+
+- "Antes de começar, leia os aprendizados do módulo de conteúdo."
+- "Anote nos aprendizados que eu não quero títulos em caixa alta."
 
 ## Como acompanhar o que o agente fez
 

@@ -15,6 +15,19 @@ cores:
   alerta: "#ff8fa3"
   ok: "#9be7c0"
 
+# As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
+cores_claras:
+  fundo: "#f7f6fd"
+  superficie: "#ffffff"
+  superficie_alta: "#ebe8fa"
+  borda: "#d6d1f0"
+  texto: "#1b1838"
+  texto_suave: "#6a6690"
+  destaque: "#6b46d6"
+  sobre_destaque: "#ffffff"
+  alerta: "#c7305a"
+  ok: "#22805a"
+
 paletas:
   madrugada:
     ceu: ["#06051a", "#12103a", "#2a1f6a", "#5a3f9a"]
@@ -60,6 +73,13 @@ paletas:
     luz: "#ffe38a"
     brilho: "#ffffff"
 
+# O estilo deste tema: espaço, aurora e cidade de madrugada.
+# `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto
+cenas: [espaco, aurora, cidade, janela, floresta, montanhas, ceu, mar]
+
+# Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
+# para duas áreas nunca ficarem com a mesma capa.
 capas:
   tarefas: {cena: janela, paleta: lilas}
   conteudo: {cena: cidade, paleta: neon}
@@ -67,3 +87,13 @@ capas:
   entrada: {cena: mar, paleta: aurora}
   decidir: {cena: montanhas, paleta: aurora}
   diario: {cena: floresta, paleta: madrugada}
+  pastas: {cena: aurora, paleta: madrugada}
+  numeros: {cena: espaco, paleta: neon}
+  notas: {cena: janela, paleta: madrugada}
+  projetos: {cena: montanhas, paleta: lilas}
+  areas: {cena: floresta, paleta: aurora}
+  recursos: {cena: cidade, paleta: madrugada}
+  arquivos: {cena: espaco, paleta: lilas}
+  clientes: {cena: cidade, paleta: lilas}
+  financas: {cena: ceu, paleta: lilas}
+  estudos: {cena: aurora, paleta: aurora}

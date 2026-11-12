@@ -1,0 +1,27 @@
+# Módulo Arquivos: o que já passou e você quer guardar.
+# (No método PARA, é o quarto grupo: projetos encerrados, áreas que deixaram de existir.)
+# Não confunda com a subpasta arquivo/ de cada módulo, que guarda os itens que você
+# arquivou pelo painel. Aqui você guarda o que quiser, à mão.
+
+nome: Arquivos
+descricao: O que já passou e vale guardar.
+icone: caixa
+ordem: 80
+
+campos:
+  veio_de:
+    tipo: texto
+    rotulo: Veio de
+  encerrado_em:
+    tipo: data
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+visoes:
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, veio_de, encerrado_em, tags]

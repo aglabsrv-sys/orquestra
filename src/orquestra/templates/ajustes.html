@@ -7,6 +7,52 @@
 <section class="pagina">
   <header class="pagina-topo"><h1>Ajustes</h1></header>
 
+  <h2 class="grupo-titulo">{{ icone('editar', 18) }} Painel</h2>
+  <div class="bloco">
+    <div class="grade-campos">
+      <label class="campo"><span>Nome do painel</span><input type="text" id="cfg-nome" value="{{ cfg.nome }}" maxlength="60"></label>
+      <label class="campo"><span>O botão “Capturar” guarda em</span>
+        <select id="cfg-captura">
+          <option value="">(sem captura rápida)</option>
+          {% for a in areas %}<option value="{{ a.modulo.id }}"{% if a.modulo.id == cfg.captura %} selected{% endif %}>{{ a.modulo.nome }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <h2 class="grupo-titulo" id="areas">{{ icone('pasta', 18) }} Áreas do painel</h2>
+  <div class="bloco">
+    {% for a in areas %}
+    <div class="area-linha" data-modulo="{{ a.modulo.id }}">
+      {{ icone(a.modulo.icone, 18) }}
+      <span class="area-nome"><b>{{ a.modulo.nome }}</b><small class="suave">{{ a.modulo.id }}/ · {{ a.itens }} {{ 'item' if a.itens == 1 else 'itens' }}{% if a.propria %} · pasta sua{% endif %}</small></span>
+      <a class="botao pequeno" href="/m/{{ a.modulo.id|urlencode }}/personalizar">Personalizar</a>
+      <button class="botao pequeno discreto" type="button" data-desligar title="Tira a área do painel. A pasta e as notas continuam no vault.">Tirar do painel</button>
+    </div>
+    {% else %}
+    <p class="suave">Nenhuma área ainda. Acrescente uma pronta abaixo, crie uma em branco ou mostre uma pasta sua em <a class="link" href="/pastas">Pastas</a>.</p>
+    {% endfor %}
+    <p class="suave pequeno">Tirar do painel não apaga nada: a pasta continua em <a class="link" href="/pastas">Pastas</a> e pode voltar quando quiser.</p>
+  </div>
+
+  <h3 class="sub">Acrescentar uma área pronta</h3>
+  <div class="grade-prontos">
+    {% for m in prontos %}
+    <button class="pronto" type="button" data-pronto="{{ m.id }}">
+      {{ icone(m.icone, 20) }}
+      <b>{{ m.nome }}</b>
+      <small>{{ m.descricao }}</small>
+    </button>
+    {% else %}
+    <p class="suave">Todas as áreas prontas já estão no seu vault.</p>
+    {% endfor %}
+  </div>
+  <div class="linha-botoes">
+    <label class="chave"><input type="checkbox" id="pronto-exemplos"><i></i><span>com notas de exemplo</span></label>
+    <button class="botao" type="button" id="abrir-area-branco">{{ icone('mais', 15) }}<span>Criar área em branco</span></button>
+    <a class="botao" href="/pastas">{{ icone('pasta', 15) }}<span>Mostrar uma pasta minha</span></a>
+  </div>
+
   <h2 class="grupo-titulo">{{ icone('paleta', 18) }} Tema</h2>
   <div class="temas">
     {% for t in temas %}
@@ -20,23 +66,75 @@
     </button>
     {% endfor %}
   </div>
+  <h3 class="sub">Do seu jeito</h3>
+  <div class="bloco aparencia" id="aparencia">
+    <div class="ap-linha">
+      <span class="ap-rotulo">Claro ou escuro</span>
+      <div class="segmentos" role="radiogroup" aria-label="Claro ou escuro">
+        {% for m in visual.modos %}<button type="button" role="radio" aria-checked="{{ 'true' if cfg.aparencia.modo == m else 'false' }}" data-visual="modo" data-valor="{{ m }}">{{ visual.nomes[m] }}</button>{% endfor %}
+      </div>
+    </div>
+    <div class="ap-linha">
+      <span class="ap-rotulo">Cor de destaque</span>
+      <div class="cores" role="radiogroup" aria-label="Cor de destaque">
+        <button type="button" class="cor do-tema" role="radio" aria-checked="{{ 'true' if not cfg.aparencia.destaque else 'false' }}" data-visual="destaque" data-valor="" style="--c:{{ visual.destaque_do_tema }}" title="A cor do tema">tema</button>
+        {% for c in visual.sugestoes %}<button type="button" class="cor" role="radio" aria-checked="{{ 'true' if cfg.aparencia.destaque == c else 'false' }}" data-visual="destaque" data-valor="{{ c }}" style="--c:{{ c }}" title="{{ c }}" aria-label="{{ c }}"></button>{% endfor %}
+        <label class="cor livre{% if cfg.aparencia.destaque and cfg.aparencia.destaque not in visual.sugestoes %} escolhida{% endif %}" title="Escolher outra cor" style="--c:{{ cfg.aparencia.destaque or visual.destaque_do_tema }}">
+          <input type="color" id="cor-livre" value="{{ cfg.aparencia.destaque or visual.destaque_do_tema }}" aria-label="Escolher outra cor">
+          {{ icone('paleta', 14) }}
+        </label>
+      </div>
+    </div>
+    <div class="ap-linha">
+      <span class="ap-rotulo">Cantos</span>
+      <div class="segmentos" role="radiogroup" aria-label="Cantos">
+        {% for c in visual.cantos %}<button type="button" role="radio" aria-checked="{{ 'true' if cfg.aparencia.cantos == c else 'false' }}" data-visual="cantos" data-valor="{{ c }}"><i class="amostra-canto c-{{ c }}"></i>{{ visual.nomes[c] }}</button>{% endfor %}
+      </div>
+    </div>
+    <div class="ap-linha">
+      <span class="ap-rotulo">Letra</span>
+      <div class="segmentos" role="radiogroup" aria-label="Letra">
+        {% for f, pilha in visual.fontes.items() %}<button type="button" role="radio" aria-checked="{{ 'true' if cfg.aparencia.fonte == f else 'false' }}" data-visual="fonte" data-valor="{{ f }}" style="font-family:{{ pilha }}">{{ visual.nomes[f] }}</button>{% endfor %}
+      </div>
+    </div>
+    <p class="suave pequeno">Valem para qualquer tema. As letras são as do seu computador: nada é baixado. No modo claro, uma cor de destaque muito suave é escurecida um pouco para continuar legível.</p>
+  </div>
+
   <p class="suave">Cada tema é uma pasta em <code>_orquestra/temas/</code>. Para criar o seu, copie uma delas e edite o <code>tema.yaml</code>, ou peça a um agente: “crie um tema verde-escuro com capas de floresta”.</p>
 
   <h2 class="grupo-titulo">{{ icone('nuvem', 18) }} Histórico e backup</h2>
-  <div class="bloco">
+  {% set conf_backup = confianca_backup|default({}) %}
+  <div class="bloco" id="revisao-backup" data-confianca-backup='{{ conf_backup|tojson }}'>
+    <details{% if not conf_backup.confiavel %} open{% endif %}>
+      <summary>{{ 'Configuração de backup aprovada neste computador' if conf_backup.confiavel else 'Revise a configuração antes de executar o backup' }}</summary>
+      <p>O Git pode usar comandos auxiliares da configuração e os destinos abaixo podem receber suas notas. Confira os arquivos locais antes de autorizar. A autorização vale para a assinatura exibida.</p>
+      {% if conf_backup.erro %}<p class="erro-texto">{{ conf_backup.erro }}</p>{% endif %}
+      {% for aviso in conf_backup.avisos|default([]) %}<p class="erro-texto">{{ aviso }}</p>{% endfor %}
+      <p><b>Assinatura:</b> <code class="hash-confianca">{{ conf_backup.assinatura or 'indisponível' }}</code></p>
+      <p><b>Arquivos a revisar:</b> {{ conf_backup.arquivos|default([])|join(', ') or 'configuração inicial a criar' }}.</p>
+      <ul>{% for remoto in conf_backup.remotos|default([]) %}<li><b>{{ remoto.nome }}</b> ({{ remoto.tipo }}): <code>{{ remoto.destino }}</code></li>{% else %}<li>Sem destino remoto: as versões ficam só neste computador.</li>{% endfor %}</ul>
+      <p class="suave" data-backup-remoto>Para aprovar ou revogar, abra localhost no computador onde o Orquestra está rodando.</p>
+      {% if tem_git %}<button class="botao" type="button" id="confiar-backup" data-acao="{{ 'revogar' if conf_backup.confiavel else 'confiar' }}" hidden{% if not conf_backup.assinatura %} disabled{% endif %}>{{ 'Revogar autorização do backup' if conf_backup.confiavel else 'Autorizar esta configuração de backup' }}</button>{% endif %}
+    </details>
     {% if tem_git %}
-    <p>Último commit do vault: <b>{{ ultimo_commit or 'nenhum ainda' }}</b>.
-      {% if cfg.backup.auto_commit %}Commit automático a cada {{ cfg.backup.intervalo_min }} min.{% else %}Commit automático desligado.{% endif %}
+    <p>Último snapshot do Orquestra: <b>{{ ultimo_commit or 'nenhum ainda' }}</b>.
+      {% if cfg.backup.auto_commit %}Quando algo muda, o painel guarda uma versão local (no máximo uma a cada {{ cfg.backup.intervalo_min }} min).{% else %}Versões automáticas desligadas.{% endif %}
       {% if tem_remoto %}{% if cfg.backup.push %}Envio diário às {{ cfg.backup.push_as }}.{% else %}Há um repositório remoto, mas o envio automático está desligado.{% endif %}{% else %}Sem repositório remoto: o histórico existe só neste computador.{% endif %}
     </p>
     {% if estado_backup.resultado_push and estado_backup.resultado_push.startswith('erro') %}<p class="erro-texto">Último envio falhou: {{ estado_backup.resultado_push }}</p>{% endif %}
     <div class="linha-botoes">
-      <button class="botao" type="button" data-backup="local">Fazer commit agora</button>
-      {% if tem_remoto %}<button class="botao" type="button" data-backup="enviar">Commit e enviar</button>{% endif %}
+      <button class="botao" type="button" data-backup="local"{% if not conf_backup.confiavel %} disabled{% endif %}>Guardar versão agora</button>
+      {% if tem_remoto %}<button class="botao" type="button" data-backup="enviar"{% if not conf_backup.confiavel %} disabled{% endif %}>Guardar e enviar</button>{% endif %}
     </div>
+    <label class="chave linha-chave"><input type="checkbox" id="cfg-auto-commit"{% if cfg.backup.auto_commit %} checked{% endif %}{% if not conf_backup.confiavel %} disabled{% endif %}><i></i><span>guardar versões automaticamente</span></label>
+    {% elif tem_git_instalado %}
+    <p>Este vault não tem histórico. Com ele, o painel guarda versões locais após mudanças (respeitando o intervalo de {{ cfg.backup.intervalo_min }} minutos). Notas anteriores ao primeiro snapshot precisam de outra cópia para recuperação.</p>
+    <p class="suave">Ligar cria um repositório git dentro da pasta do vault. Se você já sincroniza essa pasta por outro meio (OneDrive, iCloud, Obsidian Sync), os dois convivem, mas a pasta <code>.git</code> também será sincronizada.</p>
+    <div class="linha-botoes"><button class="botao" type="button" id="ligar-historico" hidden>Preparar histórico local</button></div>
     {% else %}
-    <p>O vault ainda não tem histórico. Rode <code>orquestra backup</code> no terminal para criar o repositório git do vault.</p>
+    <p>O vault não tem histórico, e o git não está instalado. Instale em <a class="link" href="https://git-scm.com" target="_blank" rel="noopener noreferrer">git-scm.com</a> e volte aqui para ligar.</p>
     {% endif %}
+    <p class="suave pequeno">Snapshots ficam em <code>refs/orquestra/backups</code>, sem mover sua branch ou staging. O envio usa a branch remota <code>orquestra-backup</code>. Uma versão local no mesmo disco não substitui cópia externa.</p>
   </div>
 
   <h2 class="grupo-titulo">{{ icone('radar', 18) }} Coletores</h2>
@@ -58,7 +156,27 @@
   <h2 class="grupo-titulo">{{ icone('pasta', 18) }} Vault</h2>
   <div class="bloco">
     <p><code>{{ vault }}</code> · {{ n_notas }} notas · Orquestra {{ versao }}</p>
+    <div class="linha-botoes">
+      <a class="botao" href="{{ link_obsidian }}">{{ icone('externo', 15) }}<span>Abrir no Obsidian</span></a>
+      {% if pode_trocar %}<a class="botao" href="/boas-vindas">{{ icone('atualizar', 15) }}<span>Trocar de vault</span></a>{% endif %}
+    </div>
     {% for nome, aviso in avisos %}<p class="erro-texto">{{ icone('aviso', 14) }} {{ nome }}: {{ aviso }}</p>{% endfor %}
   </div>
 </section>
+{% endblock %}
+
+{% block dialogos %}
+<dialog id="dialogo-area" class="dialogo" aria-labelledby="titulo-dialogo-area">
+  <form class="dialogo-corpo" method="dialog">
+    <h2 id="titulo-dialogo-area">Nova área em branco</h2>
+    <label class="campo"><span>Nome *</span><input type="text" id="area-nome" required maxlength="40" autocomplete="off" placeholder="Viagens, Receitas, Treinos..."></label>
+    <label class="campo"><span>Ícone</span><select id="area-icone">{% for i in icones %}<option value="{{ i }}">{{ rotulo(i) }}</option>{% endfor %}</select></label>
+    <label class="campo campo-linha"><span>Com quadro (a fazer, fazendo, feito)</span><input type="checkbox" id="area-quadro" checked></label>
+    <p class="suave pequeno">Os campos e as opções você muda depois, em Personalizar.</p>
+    <div class="dialogo-acoes">
+      <button type="button" class="botao" data-fechar>Cancelar</button>
+      <button type="submit" class="botao principal" id="area-salvar">Criar</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}

@@ -1,0 +1,26 @@
+# Módulo Notas: o que você quer guardar e achar depois.
+# Sem status e sem prazo: é uma coleção. A lista ordena e a busca encontra.
+
+nome: Notas
+descricao: Ideias, referências e anotações para achar depois.
+icone: nota
+ordem: 5
+
+campos:
+  tipo:
+    tipo: escolha
+    opcoes: [ideia, referencia, reuniao, pessoal]
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+visoes:
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, tipo, tags]
+  - tipo: kanban
+    nome: Por tipo
+    agrupar_por: tipo

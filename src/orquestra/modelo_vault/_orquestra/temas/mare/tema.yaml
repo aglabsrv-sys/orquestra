@@ -1,31 +1,44 @@
-# Tema Maré: água funda e fim de tarde no litoral.
+# Tema Maré: verde profundo, com luz de fim de tarde.
 
 nome: Maré
-descricao: Verde-água profundo, com um toque de coral.
+descricao: Verde profundo e calmo, com destaque em pêssego.
 
 cores:
-  fundo: "#07141a"
-  superficie: "#0e2029"
-  superficie_alta: "#15303b"
-  borda: "#21434f"
-  texto: "#e6f3f2"
-  texto_suave: "#8fb0b3"
-  destaque: "#86e3ce"
-  sobre_destaque: "#062019"
-  alerta: "#ff9f7a"
-  ok: "#a8e6a1"
+  fundo: "#0a1716"
+  superficie: "#112423"
+  superficie_alta: "#18312f"
+  borda: "#254441"
+  texto: "#eef4f0"
+  texto_suave: "#93aea8"
+  destaque: "#f2b88c"
+  sobre_destaque: "#2a1608"
+  alerta: "#ff8f70"
+  ok: "#9fdcae"
+
+# As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
+cores_claras:
+  fundo: "#f4f8f6"
+  superficie: "#ffffff"
+  superficie_alta: "#e5efec"
+  borda: "#cbdcd7"
+  texto: "#10292a"
+  texto_suave: "#56736f"
+  destaque: "#b25a22"
+  sobre_destaque: "#ffffff"
+  alerta: "#c9492c"
+  ok: "#2c7d46"
 
 paletas:
   laguna:
     ceu: ["#04232e", "#0b4a55", "#1f8a84", "#8fd9b6"]
-    astro: "#f3ffd9"
-    nuvem: "#bfeedd"
+    astro: "#fbe9c8"
+    nuvem: "#e6d9c2"
     longe: "#1c6b6f"
     meio: "#114a52"
     perto: "#0a2f38"
     sombra: "#051c23"
-    luz: "#ffd98a"
-    brilho: "#f4fff4"
+    luz: "#f2b88c"
+    brilho: "#fff6e6"
   abissal:
     ceu: ["#020a12", "#051a28", "#0a3040", "#14505a"]
     astro: "#d8f7ee"
@@ -59,10 +72,27 @@ paletas:
     brilho: "#fbffe6"
     noite: true
 
+# O estilo deste tema: mar, céu e farol.
+# `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto
+cenas: [mar, ceu, aurora, montanhas, floresta, janela, cidade]
+
+# Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
+# para duas áreas nunca ficarem com a mesma capa.
 capas:
   tarefas: {cena: janela, paleta: coral}
   conteudo: {cena: cidade, paleta: abissal}
-  radar: {cena: espaco, paleta: abissal}
+  radar: {cena: aurora, paleta: abissal}
   entrada: {cena: mar, paleta: laguna}
   decidir: {cena: montanhas, paleta: coral}
   diario: {cena: floresta, paleta: musgo}
+  pastas: {cena: ceu, paleta: laguna}
+  numeros: {cena: ceu, paleta: coral}
+  notas: {cena: mar, paleta: coral}
+  projetos: {cena: montanhas, paleta: laguna}
+  areas: {cena: floresta, paleta: laguna}
+  recursos: {cena: janela, paleta: laguna}
+  arquivos: {cena: espaco, paleta: abissal}
+  clientes: {cena: cidade, paleta: coral}
+  financas: {cena: mar, paleta: abissal}
+  estudos: {cena: aurora, paleta: musgo}

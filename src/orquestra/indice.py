@@ -8,27 +8,21 @@ que algo mudou. Se for apagado, basta reconstruir.
 from __future__ import annotations
 
 import datetime as dt
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from orquestra.modulos import Modulo, descobrir
+from orquestra.caminhos import CaminhoInseguro, arquivos_do_vault, caminho_no_vault, ignorar
+from orquestra.modulos import NOTAS_DE_CONTRATO, ZONAS, Modulo, descobrir
 from orquestra.notas import Nota, ler_nota
 
 EXT_MIDIA = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".mp4", ".webm"}
-PASTAS_IGNORADAS = {".git", ".obsidian", ".trash", "__pycache__", "node_modules", ".venv"}
 
 
 def deve_ignorar(rel: str) -> bool:
     """Arquivos que o painel não indexa nem registra no diário."""
-    partes = rel.split("/")
-    if any(p in PASTAS_IGNORADAS for p in partes):
-        return True
-    if partes[0] == "_orquestra":
-        return True
-    if partes[:2] == ["diario", "registro"]:
-        return True  # o registro é escrito pelo próprio painel
-    return partes[-1].endswith(".orq-tmp")
+    # Em minúsculas: no Windows e no macOS "Diario/Registro" e "diario/registro" são a
+    # mesma pasta, e o registro não pode nunca ser tratado como uma mudança a registrar.
+    return ignorar(rel)
 
 
 @dataclass
@@ -53,38 +47,104 @@ class Indice:
         self.modulos: dict[str, Modulo] = {}
         self.notas: dict[str, Nota] = {}
         self.midias: dict[str, str] = {}  # nome do arquivo em minúsculas -> caminho relativo
+        self._assinaturas: dict[str, tuple[int, int, int]] = {}
+        self._links: dict[str, set[str]] = {}
+        self._zonas: dict[tuple[str, str], dict[str, Nota]] = {}
+        self._schemas: dict[str, tuple[int, int, int]] | None = None
 
     # ------------------------------------------------------------ carga
 
     def carregar(self) -> None:
-        self.modulos = descobrir(self.vault)
+        self._schemas = None
+        self.recarregar_modulos()
         self.notas = {}
         self.midias = {}
-        for raiz, pastas, arquivos in os.walk(self.vault):
-            base = Path(raiz).relative_to(self.vault).as_posix()
-            prefixo = "" if base == "." else base + "/"
-            pastas[:] = [p for p in pastas if not deve_ignorar(prefixo + p)]
-            for nome in arquivos:
-                rel = prefixo + nome
-                if deve_ignorar(rel):
+        self._assinaturas = {}
+        for rel, caminho, info in arquivos_do_vault(self.vault):
+            if caminho.suffix.lower() == ".md":
+                try:
+                    self.notas[rel] = ler_nota(caminho, self.vault, somente_indice=True)
+                    self._assinaturas[rel] = (info.st_mtime_ns, info.st_size, info.st_ctime_ns)
+                except (OSError, CaminhoInseguro):
                     continue
-                sufixo = Path(nome).suffix.lower()
-                if sufixo == ".md":
-                    try:
-                        self.notas[rel] = ler_nota(self.vault / rel, self.vault)
-                    except OSError:
-                        pass
-                elif sufixo in EXT_MIDIA:
-                    self.midias[nome.lower()] = rel
+            elif caminho.suffix.lower() in EXT_MIDIA:
+                self.midias[caminho.name.lower()] = rel
+        self._reindexar()
 
     def recarregar_modulos(self) -> None:
-        self.modulos = descobrir(self.vault)
+        novos = descobrir(self.vault)
+        for chave, modulo in novos.items():
+            anterior = self.modulos.get(chave)
+            if modulo.invalido and anterior is not None and not anterior.invalido:
+                anterior.avisos = modulo.avisos + ["Usando a última configuração válida até você corrigir o arquivo."]
+                novos[chave] = anterior
+        self.modulos = novos
+        self._reindexar()
+
+    def _reindexar(self) -> None:
+        self._links = {}
+        self._zonas = {}
+        for rel, nota in self.notas.items():
+            self._adicionar_consultas(rel, nota)
+
+    def _adicionar_consultas(self, rel: str, nota: Nota) -> None:
+        for chave in {rel.lower().removesuffix(".md"), nota.caminho.stem.lower()}:
+            self._links.setdefault(chave, set()).add(rel)
+        chave_zona = (rel.split("/", 1)[0], self.zona_de(rel))
+        self._zonas.setdefault(chave_zona, {})[rel] = nota
+
+    def _remover_consultas(self, rel: str, nota: Nota) -> None:
+        for chave in {rel.lower().removesuffix(".md"), nota.caminho.stem.lower()}:
+            encontrados = self._links.get(chave)
+            if encontrados:
+                encontrados.discard(rel)
+                if not encontrados:
+                    self._links.pop(chave, None)
+        for zona in ("itens", "humano", "maquina", "arquivo", ""):
+            grupo = self._zonas.get((rel.split("/", 1)[0], zona))
+            if grupo is not None:
+                grupo.pop(rel, None)
+
+    def sincronizar(self) -> None:
+        """Atualiza o índice comparando datas de modificação, sem reler tudo.
+
+        Usado por quem não tem o vigia de arquivos ligado (o servidor MCP, por
+        exemplo): antes de responder, confere o que mudou no disco desde a última vez.
+        """
+        schemas = {}
+        for pasta in self.vault.iterdir():
+            if pasta.name.startswith((".", "_")):
+                continue
+            try:
+                arquivo = caminho_no_vault(self.vault, pasta / "_modulo.yaml")
+                info = arquivo.stat()
+                schemas[arquivo.relative_to(self.vault).as_posix()] = (info.st_mtime_ns, info.st_size, info.st_ctime_ns)
+            except (CaminhoInseguro, OSError):
+                continue
+        if schemas != self._schemas:
+            self.recarregar_modulos()
+            self._schemas = schemas
+        vistos: set[str] = set()
+        self.midias = {}
+        for rel, caminho, info in arquivos_do_vault(self.vault):
+            if caminho.suffix.lower() in EXT_MIDIA:
+                self.midias[caminho.name.lower()] = rel
+            if caminho.suffix.lower() != ".md":
+                continue
+            vistos.add(rel)
+            assinatura = (info.st_mtime_ns, info.st_size, info.st_ctime_ns)
+            if rel not in self.notas or self._assinaturas.get(rel) != assinatura:
+                self.atualizar(caminho)
+        for rel in [r for r in self.notas if r not in vistos]:
+            self._remover_consultas(rel, self.notas.pop(rel))
+            self._assinaturas.pop(rel, None)
 
     def atualizar(self, caminho: Path) -> Mudanca | None:
         """Relê um arquivo que mudou no disco. Devolve o que mudou (ou None)."""
         try:
-            rel = caminho.resolve().relative_to(self.vault).as_posix()
-        except ValueError:
+            caminho = caminho_no_vault(self.vault, caminho)
+            rel = caminho.relative_to(self.vault).as_posix()
+        except (ValueError, OSError):
             return None
         if deve_ignorar(rel):
             return None
@@ -103,14 +163,30 @@ class Indice:
             if antes is None:
                 return None
             del self.notas[rel]
+            self._remover_consultas(rel, antes)
+            self._assinaturas.pop(rel, None)
             return Mudanca("removido", rel, antes, None)
         try:
-            depois = ler_nota(caminho, self.vault)
-        except OSError:
+            for _tentativa in range(3):
+                antes_info = caminho.stat()
+                depois = ler_nota(caminho, self.vault, somente_indice=True)
+                info = caminho.stat()
+                assinatura_antes = (antes_info.st_mtime_ns, antes_info.st_size, antes_info.st_ctime_ns)
+                assinatura_depois = (info.st_mtime_ns, info.st_size, info.st_ctime_ns)
+                if assinatura_antes == assinatura_depois:
+                    break
+            else:
+                self._assinaturas.pop(rel, None)
+                return None  # escritor ainda ativo: a próxima sincronização tenta de novo
+        except (OSError, CaminhoInseguro):
             return None
+        self._assinaturas[rel] = (info.st_mtime_ns, info.st_size, info.st_ctime_ns)
         if antes is not None and antes.versao == depois.versao:
             return None  # o arquivo foi tocado, mas o conteúdo é o mesmo
+        if antes:
+            self._remover_consultas(rel, antes)
         self.notas[rel] = depois
+        self._adicionar_consultas(rel, depois)
         return Mudanca("editado" if antes else "criado", rel, antes, depois)
 
     # ------------------------------------------------------------ consultas
@@ -118,17 +194,63 @@ class Indice:
     def modulo_de(self, rel: str) -> Modulo | None:
         return self.modulos.get(rel.split("/", 1)[0])
 
-    @staticmethod
-    def zona_de(rel: str) -> str:
-        """Segunda parte do caminho: itens, humano, maquina, arquivo..."""
+    def zona_de(self, rel: str) -> str:
+        """Papel da nota dentro do módulo: itens, humano, maquina, arquivo (ou "").
+
+        Num módulo comum é a segunda parte do caminho. Num módulo montado em cima de
+        uma pasta que já existia (`itens: .`), tudo que não está em humano/, maquina/
+        ou arquivo/ é item, inclusive o que está em subpastas.
+        """
         partes = rel.split("/")
+        modulo = self.modulos.get(partes[0])
+        if modulo is None or len(partes) < 2:
+            return ""
+        if len(partes) > 2 and partes[1] in ZONAS:
+            return partes[1]
+        if modulo.itens_na_raiz:
+            return "" if partes[-1].lower() in NOTAS_DE_CONTRATO else "itens"
+        if len(partes) > 2 and partes[1] == modulo.itens_em:
+            return "itens"
         return partes[1] if len(partes) > 2 else ""
 
     def notas_em(self, modulo_id: str, zona: str) -> list[Nota]:
-        prefixo = f"{modulo_id}/{zona}/"
-        achadas = [n for rel, n in self.notas.items() if rel.startswith(prefixo)]
+        achadas = list(self._zonas.get((modulo_id, zona), {}).values())
         achadas.sort(key=lambda n: n.titulo.lower())
         return achadas
+
+    # ------------------------------------------------------------ pastas
+
+    def pastas_da_raiz(self) -> list[tuple[str, int]]:
+        """Pastas da raiz que têm notas, com a contagem (inclui subpastas)."""
+        contagem: dict[str, int] = {}
+        for rel in self.notas:
+            if "/" in rel:
+                raiz = rel.split("/", 1)[0]
+                contagem[raiz] = contagem.get(raiz, 0) + 1
+        return sorted(contagem.items(), key=lambda par: par[0].lower())
+
+    def conteudo_da_pasta(self, pasta: str) -> tuple[list[tuple[str, int]], list[Nota]]:
+        """O que há dentro de uma pasta: (subpastas com contagem, notas diretas)."""
+        prefixo = pasta.strip("/") + "/" if pasta.strip("/") else ""
+        subpastas: dict[str, int] = {}
+        notas: list[Nota] = []
+        for rel, nota in self.notas.items():
+            if not rel.startswith(prefixo):
+                continue
+            resto = rel[len(prefixo):]
+            if "/" in resto:
+                nome = resto.split("/", 1)[0]
+                subpastas[nome] = subpastas.get(nome, 0) + 1
+            else:
+                notas.append(nota)
+        notas.sort(key=lambda n: n.titulo.lower())
+        return sorted(subpastas.items(), key=lambda par: par[0].lower()), notas
+
+    def fora_dos_modulos(self) -> int:
+        """Quantas notas vivem em pastas que não são módulo (nem o diário)."""
+        return sum(
+            1 for rel in self.notas if "/" in rel and rel.split("/", 1)[0] not in self.modulos and not rel.startswith("diario/")
+        )
 
     def itens(self, modulo_id: str) -> list[Nota]:
         """Registros do módulo (pasta itens/), ordenados por data e depois por título."""
@@ -150,6 +272,12 @@ class Indice:
     def resumo(self, modulo: Modulo, hoje: dt.date | None = None) -> Resumo:
         hoje = hoje or dt.date.today()
         r = Resumo()
+        if not modulo.tem_status:
+            # Sem status não há "em aberto" nem "para hoje": é só uma coleção de notas.
+            notas = self.notas_em(modulo.id, "itens")
+            r.total = len(notas)
+            r.decidir = sum(1 for n in notas if espera_decisao(n, modulo))
+            return r
         for nota in self.notas_em(modulo.id, "itens"):
             r.total += 1
             status = str(nota.campo(modulo.campo_status) or "")
@@ -163,7 +291,7 @@ class Indice:
                 r.hoje += 1
         return r
 
-    def buscar(self, termo: str, limite: int = 60) -> list[Nota]:
+    def buscar(self, termo: str, limite: int | None = 60) -> list[Nota]:
         termo = termo.lower().strip()
         if not termo:
             return []
@@ -178,10 +306,11 @@ class Indice:
     def resolver_link(self, nome: str) -> str | None:
         """Resolve um [[wikilink]] do Obsidian para o caminho relativo da nota."""
         alvo = nome.strip().lower().removesuffix(".md")
-        for rel, nota in self.notas.items():
-            if rel.lower().removesuffix(".md") == alvo or nota.caminho.stem.lower() == alvo:
-                return rel
-        return None
+        encontrados = self._links.get(alvo, set())
+        if len(encontrados) == 1:
+            return next(iter(encontrados))
+        # Um link pelo caminho completo é inequívoco; nomes repetidos não levam à nota errada.
+        return next((r for r in encontrados if r.lower().removesuffix(".md") == alvo), None)
 
 
 def espera_decisao(nota: Nota, modulo: Modulo) -> bool:

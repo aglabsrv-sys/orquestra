@@ -24,6 +24,15 @@
   </div>
 </section>
 
+{% if sem_areas %}
+<div class="faixa convite">
+  {{ icone('lampada', 16) }}
+  <span>Este vault ainda não tem áreas no painel. Escolha quais pastas suas quer ver aqui, ou acrescente uma área pronta.</span>
+  <a class="botao principal" href="/pastas">Ver minhas pastas</a>
+  <a class="botao" href="/ajustes#areas">Acrescentar área</a>
+</div>
+{% endif %}
+
 <section class="carrossel" id="carrossel" aria-label="Áreas do painel">
   <button class="seta esq" type="button" aria-label="Anterior">{{ icone('chevron_esq', 20) }}</button>
   <div class="trilho">

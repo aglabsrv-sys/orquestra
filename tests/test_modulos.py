@@ -10,7 +10,7 @@ from orquestra.modulos import Campo, ValorInvalido, carregar_modulo, converter, 
 
 
 def test_descobre_os_modulos_do_modelo_na_ordem(vault):
-    assert list(descobrir(vault)) == ["tarefas", "conteudo", "radar", "entrada"]
+    assert list(descobrir(vault)) == ["tarefas", "conteudo", "radar", "numeros", "entrada"]
 
 
 def test_le_o_schema_de_tarefas(vault):
@@ -40,7 +40,7 @@ def test_modulo_com_problemas_vira_aviso_e_nao_erro(tmp_path):
     pasta = tmp_path / "financas"
     pasta.mkdir()
     (pasta / "_modulo.yaml").write_text(
-        "campos:\n  valor: {tipo: dinheiro}\n  tipo: {tipo: escolha}\nvisoes:\n  - {tipo: grafico}\n", encoding="utf-8"
+        "campos:\n  valor: {tipo: dinheiro}\n  tipo: {tipo: escolha}\nvisoes:\n  - {tipo: mapa}\n", encoding="utf-8"
     )
     m = carregar_modulo(pasta)
     assert m.nome == "Financas"

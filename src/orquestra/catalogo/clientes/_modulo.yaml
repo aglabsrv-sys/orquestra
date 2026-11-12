@@ -1,0 +1,42 @@
+# Módulo Clientes: quem você atende e em que pé está cada conversa.
+
+nome: Clientes
+descricao: Quem você atende e em que pé está cada conversa.
+icone: pessoas
+ordem: 3
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [contato, proposta, ativo, encerrado]
+    padrao: contato
+    obrigatorio: true
+  contato:
+    tipo: texto
+    rotulo: Como falar
+  valor:
+    tipo: numero
+    rotulo: Valor combinado
+  proximo_contato:
+    tipo: data
+    rotulo: Falar de novo em
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+campo_data: proximo_contato
+
+status:
+  concluidos: [encerrado]
+  decidir: []
+
+visoes:
+  - tipo: kanban
+    nome: Funil
+    agrupar_por: status
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, contato, valor, proximo_contato]

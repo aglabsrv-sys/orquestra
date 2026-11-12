@@ -1,19 +1,34 @@
 {% extends "base.html" %}
 {% import "partes.html" as p %}
 {% block titulo %}{{ nota.titulo }}{% endblock %}
-{% block trilha %}{% if modulo %}<a href="/m/{{ modulo.id }}">{{ modulo.nome }}</a>{% else %}Nota{% endif %}{% endblock %}
+{% block trilha %}{% if modulo and zona %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a>{% else %}<a href="{{ url_pasta(pasta) }}">{{ pasta or 'Pastas' }}</a>{% endif %}{% endblock %}
 {% block observa %}nota:{{ nota.rel }}{% endblock %}
 
 {% block conteudo %}
-<div class="faixa alerta" id="faixa-conflito" hidden>
-  {{ icone('aviso', 16) }} Este arquivo mudou no disco enquanto você editava.
-  <button class="botao" type="button" onclick="location.reload()">Recarregar (descarta o que você digitou)</button>
+<div class="faixa alerta recuperacao-nota" id="faixa-conflito" role="status" hidden>
+  <span>{{ icone('aviso', 16) }} O arquivo mudou no vault. Preserve seu rascunho antes de abrir a versão do disco.</span>
+  <div class="linha-botoes sem-topo">
+    <button class="botao" type="button" id="copiar-rascunho">Copiar meu texto</button>
+    <button class="botao principal" type="button" id="salvar-copia">Salvar uma cópia no vault</button>
+    <button class="botao" type="button" id="recarregar-nota">Descartar rascunho e recarregar</button>
+  </div>
+</div>
+<div class="faixa alerta recuperacao-nota" id="recuperar-rascunho" role="status" hidden>
+  <span>Há um rascunho anterior deste navegador, de <b id="rascunho-quando"></b>. O arquivo do vault continua como está.</span>
+  <div class="linha-botoes sem-topo"><button class="botao principal" type="button" id="retomar-rascunho">Retomar rascunho</button><button class="botao" type="button" id="descartar-rascunho">Descartar este rascunho</button></div>
+</div>
+<div class="faixa alerta recuperacao-nota" id="falha-gravacao" role="alert" hidden>
+  <span id="falha-gravacao-texto">Há alterações que não foram salvas.</span>
+  <div class="linha-botoes sem-topo"><button class="botao principal" type="button" id="repetir-gravacao">Tentar salvar minhas alterações</button><button class="botao" type="button" id="reverter-gravacao">Descartar alterações e recarregar</button></div>
+</div>
+<div class="faixa alerta" id="aviso-rascunho" role="status" hidden>
+  O navegador não conseguiu guardar o rascunho local. Mantenha esta aba aberta e copie seu texto antes de sair.
 </div>
 {% if nota.erro %}
 <div class="faixa alerta">{{ icone('aviso', 16) }} {{ nota.erro }} Para proteger o arquivo, o painel não vai gravar nada nele até isso ser corrigido.</div>
 {% endif %}
 
-<article class="nota" data-rel="{{ nota.rel }}" data-versao="{{ nota.versao }}" data-voltar="{{ '/m/' ~ modulo.id if modulo else '/' }}"{% if nota.erro %} data-travada{% endif %}>
+<article class="nota" data-rel="{{ nota.rel }}" data-versao="{{ nota.versao }}" data-vault-id="{{ vault_id }}" data-meta-original='{{ nota.campos()|tojson }}' data-voltar="{{ '/m/' ~ modulo.id|urlencode if modulo and zona else url_pasta(pasta) }}"{% if nota.erro %} data-travada{% endif %}>
   <div class="nota-principal">
     <div class="nota-topo">
       {% if zona == "humano" %}<span class="et zona-humano">{{ icone('pessoa', 12) }} humano</span>
@@ -38,7 +53,7 @@
     </div>
 
     <div class="texto" id="ver">{% if nota.corpo.strip() %}{{ html }}{% else %}<p class="suave">Sem texto. Clique em “Editar texto” para escrever.</p>{% endif %}</div>
-    <textarea class="editor" id="editor" hidden spellcheck="true">{{ nota.corpo }}</textarea>
+    <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" hidden spellcheck="true">{{ nota.corpo }}</textarea>
   </div>
 
   <aside class="lateral">
@@ -61,7 +76,21 @@
       {% for chave, valor in outros.items() if chave != 'pergunta' %}<dt>{{ chave }}</dt><dd>{{ valor }}</dd>{% endfor %}
     </dl>
     {% endif %}
-    <p class="suave salvo" id="estado-salvo">As propriedades são salvas ao mudar.</p>
+    <p class="suave salvo" id="estado-salvo" role="status" aria-live="polite">As propriedades são salvas ao mudar. O texto é salvo pelo botão Salvar.</p>
   </aside>
 </article>
+<details class="versoes-nota bloco" id="versoes-locais" data-rel="{{ nota.rel }}">
+  <summary>Versões locais de recuperação</summary>
+  <p class="suave pequeno">Versões preservadas por gravações do Orquestra neste computador. Consulte e salve uma cópia; o arquivo aberto não será substituído.</p>
+  <p id="versoes-mensagem" role="status" aria-live="polite">Abra para consultar as versões disponíveis.</p>
+  <div id="versoes-conteudo" hidden>
+    <div class="grade-campos">
+      <label class="campo"><span>Gravação</span><select id="versoes-escolha"></select></label>
+      <label class="campo"><span>Conteúdo preservado</span><select id="versoes-tipo"><option value="antes">Antes da gravação</option><option value="proposta">Proposta de gravação</option></select></label>
+    </div>
+    <label class="campo"><span>Versão completa, incluindo propriedades</span><textarea id="versao-texto" rows="12" readonly spellcheck="false"></textarea></label>
+    <label class="campo"><span>Título da nova nota de recuperação</span><input type="text" id="versao-titulo-copia" value="{{ nota.titulo }} — versão recuperada" maxlength="200" autocomplete="off"></label>
+    <div class="linha-botoes"><button class="botao" type="button" id="copiar-versao">Copiar versão</button><button class="botao principal" type="button" id="salvar-versao-copia">Salvar versão como nova nota</button><a class="botao" id="copia-recuperada" href="#" target="_blank" rel="noopener noreferrer" hidden>Abrir a cópia recuperada</a></div>
+  </div>
+</details>
 {% endblock %}

@@ -19,7 +19,15 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
+from orquestra.aparencia import Aparencia
+from orquestra.aparencia import ler as ler_aparencia
+from orquestra.armazenamento import SEM_CONFERIR, gravar_bytes
+
 PORTA_PADRAO = 8420
+
+
+class ConfigInvalida(ValueError):
+    """Configuração ilegível ou com estrutura diferente da esperada."""
 
 
 def pasta_app() -> Path:
@@ -37,19 +45,66 @@ def _yaml() -> YAML:
 
 def ler_yaml(caminho: Path) -> CommentedMap:
     """Lê um YAML preservando comentários. Arquivo ausente ou vazio vira mapa vazio."""
-    if not caminho.is_file():
-        return CommentedMap()
-    dados = _yaml().load(caminho.read_text(encoding="utf-8-sig"))
-    return dados if isinstance(dados, CommentedMap) else CommentedMap()
+    try:
+        bruto = caminho.read_bytes()
+    except FileNotFoundError:
+        bruto = None
+    try:
+        texto = bruto.decode("utf-8-sig") if bruto is not None else ""
+        from orquestra.notas import simples, validar_aliases
+
+        validar_aliases(texto)
+        dados = _yaml().load(texto)
+        if dados is not None:
+            simples(dados)
+    except (UnicodeError, ValueError, TypeError) as erro:
+        raise ConfigInvalida(f"Não consegui ler {caminho.name}: UTF-8 ou YAML inválido.") from erro
+    except Exception as erro:
+        from ruamel.yaml.error import YAMLError
+
+        if isinstance(erro, YAMLError):
+            raise ConfigInvalida(f"Não consegui ler {caminho.name}: YAML inválido.") from erro
+        raise
+    if dados is not None and not isinstance(dados, CommentedMap):
+        raise ConfigInvalida(f"{caminho.name} precisa conter campos no formato chave: valor.")
+    mapa = dados if isinstance(dados, CommentedMap) else CommentedMap()
+    mapa._orq_original = bruto
+    mapa._orq_caminho = str(caminho.resolve())
+    mapa._orq_serializado = _serializar_yaml(mapa)
+    mapa._orq_prefixo = texto if dados is None else ""
+    return mapa
 
 
-def gravar_yaml(caminho: Path, dados: Any) -> None:
-    caminho.parent.mkdir(parents=True, exist_ok=True)
+def _serializar_yaml(dados: Any) -> str:
     saida = io.StringIO()
     _yaml().dump(dados, saida)
-    temporario = caminho.with_name(f".{caminho.name}.orq-tmp")
-    temporario.write_text(saida.getvalue(), encoding="utf-8")
-    os.replace(temporario, caminho)
+    return saida.getvalue()
+
+
+def gravar_yaml(caminho: Path, dados: Any, *, esperado: object = SEM_CONFERIR) -> None:
+    """Atualiza somente a versão lida por ler_yaml; mapas novos exigem destino novo."""
+    if not isinstance(dados, dict):
+        raise ConfigInvalida("Uma configuração precisa ser um mapa de campos.")
+    mesma_origem = getattr(dados, "_orq_caminho", None) == str(caminho.resolve())
+    original = getattr(dados, "_orq_original", None) if mesma_origem else None
+    if esperado is SEM_CONFERIR:
+        esperado = original
+    serializado = _serializar_yaml(dados)
+    if mesma_origem and original is not None and serializado == dados._orq_serializado:
+        bruto = original
+    else:
+        prefixo = getattr(dados, "_orq_prefixo", "") if mesma_origem else ""
+        texto = (prefixo.rstrip("\r\n") + "\n" if prefixo.strip() else "") + serializado
+        if original is not None and b"\r\n" in original:
+            texto = texto.replace("\r\n", "\n").replace("\n", "\r\n")
+        bruto = texto.encode("utf-8")
+        if original is not None and original.startswith(b"\xef\xbb\xbf"):
+            bruto = b"\xef\xbb\xbf" + bruto
+    gravar_bytes(caminho, bruto, esperado=esperado)
+    if isinstance(dados, CommentedMap):
+        dados._orq_original = bruto
+        dados._orq_caminho = str(caminho.resolve())
+        dados._orq_serializado = serializado
 
 
 def definir_chave(caminho: Path, chave: str, valor: Any) -> None:
@@ -93,32 +148,58 @@ class ConfigPainel:
     tema: str = "brasa"
     porta: int = PORTA_PADRAO
     captura: str = "entrada"  # módulo que recebe a captura rápida
+    dock: list[str] = field(default_factory=list)  # áreas fixadas no dock; vazio = as primeiras
     hosts_permitidos: list[str] = field(default_factory=list)
     backup: ConfigBackup = field(default_factory=ConfigBackup)
+    aparencia: Aparencia = field(default_factory=Aparencia)
 
 
 def ler_config_painel(vault: Path) -> ConfigPainel:
-    bruto = ler_yaml(vault / "orquestra.yaml")
+    arquivo = vault / "orquestra.yaml"
+    bruto = ler_yaml(arquivo)
     cfg = ConfigPainel()
+    # Pasta que ainda não foi preparada (aberta direto com --vault): não fazemos commit
+    # automático num repositório git que pode ser de outra coisa.
+    cfg.backup.auto_commit = arquivo.is_file()
+    for chave in ("nome", "tema", "captura"):
+        if chave in bruto and not isinstance(bruto[chave], str):
+            raise ConfigInvalida(f"orquestra.yaml: '{chave}' precisa ser texto.")
     cfg.nome = str(bruto.get("nome") or cfg.nome)
     cfg.tema = str(bruto.get("tema") or cfg.tema)
     cfg.captura = str(bruto.get("captura") or cfg.captura)
-    try:
-        cfg.porta = int(bruto.get("porta") or cfg.porta)
-    except (TypeError, ValueError):
-        pass
-    hosts = bruto.get("hosts_permitidos") or []
-    if isinstance(hosts, list):
-        cfg.hosts_permitidos = [str(h).lower() for h in hosts]
-    b = bruto.get("backup") or {}
-    if isinstance(b, dict):
-        cfg.backup.auto_commit = bool(b.get("auto_commit", cfg.backup.auto_commit))
-        cfg.backup.push = bool(b.get("push", cfg.backup.push))
-        cfg.backup.push_as = str(b.get("push_as") or cfg.backup.push_as)
-        try:
-            cfg.backup.intervalo_min = max(1, int(b.get("intervalo_min") or cfg.backup.intervalo_min))
-        except (TypeError, ValueError):
-            pass
+    porta = bruto.get("porta", cfg.porta)
+    if isinstance(porta, bool) or not isinstance(porta, int) or not 1 <= porta <= 65535:
+        raise ConfigInvalida("orquestra.yaml: 'porta' precisa ser um inteiro entre 1 e 65535.")
+    cfg.porta = porta
+    fixas = bruto.get("dock", [])
+    if not isinstance(fixas, list) or any(not isinstance(f, str) for f in fixas):
+        raise ConfigInvalida("orquestra.yaml: 'dock' precisa ser uma lista de nomes.")
+    cfg.dock = list(fixas)
+    hosts = bruto.get("hosts_permitidos", [])
+    if not isinstance(hosts, list) or any(not isinstance(h, str) for h in hosts):
+        raise ConfigInvalida("orquestra.yaml: 'hosts_permitidos' precisa ser uma lista de nomes.")
+    cfg.hosts_permitidos = [h.lower() for h in hosts]
+    if bruto.get("aparencia") is not None and not isinstance(bruto["aparencia"], dict):
+        raise ConfigInvalida("orquestra.yaml: 'aparencia' precisa ser um mapa de opções.")
+    cfg.aparencia = ler_aparencia(bruto.get("aparencia"))
+    b = bruto.get("backup", {})
+    if not isinstance(b, dict):
+        raise ConfigInvalida("orquestra.yaml: 'backup' precisa ser um mapa de opções.")
+    for chave in ("auto_commit", "push"):
+        if chave in b and not isinstance(b[chave], bool):
+            raise ConfigInvalida(f"orquestra.yaml: 'backup.{chave}' precisa ser true ou false.")
+    cfg.backup.auto_commit = b.get("auto_commit", cfg.backup.auto_commit)
+    cfg.backup.push = b.get("push", cfg.backup.push)
+    horario = b.get("push_as", cfg.backup.push_as)
+    import re
+
+    if not isinstance(horario, str) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", horario):
+        raise ConfigInvalida("orquestra.yaml: 'backup.push_as' precisa usar HH:MM (00:00 a 23:59).")
+    cfg.backup.push_as = horario
+    intervalo = b.get("intervalo_min", cfg.backup.intervalo_min)
+    if isinstance(intervalo, bool) or not isinstance(intervalo, int) or intervalo < 1:
+        raise ConfigInvalida("orquestra.yaml: 'backup.intervalo_min' precisa ser um inteiro positivo.")
+    cfg.backup.intervalo_min = intervalo
     return cfg
 
 

@@ -5,11 +5,22 @@ tema: brasa            # uma das pastas em _orquestra/temas/
 porta: 8420            # endereço local: http://localhost:8420
 captura: entrada       # módulo que recebe o botão "Capturar"
 
+# Quando há muitas áreas, o dock mostra só algumas e guarda o resto no botão "Áreas".
+# Liste aqui as que você quer sempre à mão; vazio mostra as primeiras.
+dock: []
+
+# Aparência: suas escolhas por cima do tema. Também dá para mudar em Ajustes.
+aparencia:
+  modo: escuro         # escuro | claro | auto (segue o sistema)
+  destaque: ""         # uma cor, como "#7cc4ff"; vazio usa a do tema
+  cantos: medio        # reto | discreto | medio | redondo
+  fonte: sistema       # sistema | serifada | arredondada | mono
+
 # Só preencha se acessar o painel por um nome diferente de localhost ou *.ts.net.
 hosts_permitidos: []
 
 backup:
-  auto_commit: true    # commit local automático quando algo muda
-  intervalo_min: 30    # de quanto em quanto tempo
+  auto_commit: true    # guarda uma versão local quando algo muda (é o seu "desfazer")
+  intervalo_min: 30    # no máximo uma versão a cada tantos minutos; sem mudança, nada é feito
   push: false          # enviar para o repositório remoto (configure um antes; veja a documentação)
   push_as: "03:00"     # horário do envio diário

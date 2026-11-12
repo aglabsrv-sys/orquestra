@@ -12,6 +12,13 @@ from orquestra.painel import Painel
 from orquestra.servidor import criar_app
 
 
+@pytest.fixture(autouse=True)
+def configuracao_isolada(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch):
+    """Inclusive testes de baixo nível guardam locks/recuperação somente no temporário."""
+    monkeypatch.setenv("ORQUESTRA_HOME", str(tmp_path_factory.mktemp("orquestra-home-")))
+    monkeypatch.delenv("ORQUESTRA_VAULT", raising=False)
+
+
 @pytest.fixture
 def vault(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # Nada dos testes pode tocar a configuração real do usuário (~/.orquestra).
@@ -30,6 +37,6 @@ def painel(vault: Path) -> Painel:
 @pytest.fixture
 def cliente(vault: Path):
     app = criar_app(vault, vigiar=False, agendar=False)
-    with TestClient(app, base_url="http://localhost") as c:
+    with TestClient(app, base_url="http://localhost", client=("127.0.0.1", 50000)) as c:
         c.painel = app.state.painel  # atalho para os testes olharem o estado
         yield c

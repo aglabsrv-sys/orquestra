@@ -17,6 +17,19 @@ cores:
   alerta: "#ff7a59"
   ok: "#9bd49b"
 
+# As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
+cores_claras:
+  fundo: "#fbf6f1"
+  superficie: "#ffffff"
+  superficie_alta: "#f4e9df"
+  borda: "#e4d3c4"
+  texto: "#2b1a10"
+  texto_suave: "#7d6656"
+  destaque: "#c2571a"
+  sobre_destaque: "#ffffff"
+  alerta: "#c8371f"
+  ok: "#2f7d3b"
+
 # Paletas das capas em pixel art.
 #   ceu: 4 cores, do alto até o horizonte      astro: sol ou lua
 #   longe / meio / perto: planos de profundidade, do mais distante ao mais próximo
@@ -65,8 +78,13 @@ paletas:
     luz: "#ffe08a"
     brilho: "#ffffff"
 
-# Qual cena e qual paleta cada módulo usa neste tema.
-# Cenas: janela, cidade, montanhas, mar, floresta, espaco
+# O estilo deste tema: fim de tarde e noite quente.
+# `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto
+cenas: [janela, deserto, cidade, montanhas, floresta, mar, ceu, espaco]
+
+# Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
+# para duas áreas nunca ficarem com a mesma capa.
 capas:
   tarefas: {cena: janela, paleta: poente}
   conteudo: {cena: cidade, paleta: brasa}
@@ -74,3 +92,13 @@ capas:
   entrada: {cena: mar, paleta: areia}
   decidir: {cena: montanhas, paleta: poente}
   diario: {cena: floresta, paleta: cobre}
+  pastas: {cena: deserto, paleta: areia}
+  numeros: {cena: ceu, paleta: brasa}
+  notas: {cena: janela, paleta: areia}
+  projetos: {cena: montanhas, paleta: brasa}
+  areas: {cena: floresta, paleta: poente}
+  recursos: {cena: cidade, paleta: cobre}
+  arquivos: {cena: deserto, paleta: poente}
+  clientes: {cena: cidade, paleta: poente}
+  financas: {cena: mar, paleta: brasa}
+  estudos: {cena: janela, paleta: cobre}

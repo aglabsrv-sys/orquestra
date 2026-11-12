@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import shutil
 
-from orquestra import coletores, diario
+from orquestra import coletores, confianca, diario
 from orquestra.modulos import ColetorDef
 from orquestra.notas import ler_nota
 
@@ -27,7 +27,15 @@ def instalar_coletor_falso(painel, monkeypatch, quantos=3):
     (modulo.pasta / "maquina/coletores/falso.py").write_text(COLETOR_FALSO, encoding="utf-8")
     coletor = ColetorDef(script="falso.py", nome="Falso", config={"quantos": quantos})
     modulo.coletores.append(coletor)
+    autorizar_coletor(painel, modulo, coletor)
     return modulo, coletor
+
+
+def autorizar_coletor(painel, modulo, coletor):
+    """Cada versão sintética é aprovada explicitamente, como no fluxo local."""
+    revisao = confianca.resumo(painel.vault, modulo, coletor)
+    assert revisao["assinatura"] and not revisao.get("erro")
+    confianca.autorizar(painel.vault, modulo, coletor, revisao["assinatura"])
 
 
 # ---------------------------------------------------------------- agendamento
@@ -96,6 +104,7 @@ def test_item_arquivado_nao_volta(painel, monkeypatch):
 def test_script_com_erro_vira_mensagem(painel, monkeypatch):
     modulo, coletor = instalar_coletor_falso(painel, monkeypatch)
     (modulo.pasta / "maquina/coletores/falso.py").write_text("raise SystemExit('a fonte está fora do ar')", encoding="utf-8")
+    autorizar_coletor(painel, modulo, coletor)
     resultado = painel.rodar_coletor_agora(modulo, coletor)
     assert not resultado.ok
     assert "fora do ar" in resultado.erro

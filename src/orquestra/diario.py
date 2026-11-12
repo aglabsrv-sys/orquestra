@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from orquestra.notas import Nota, simples
+from orquestra import armazenamento
+from orquestra.caminhos import CaminhoInseguro, caminho_no_vault
 
 PASTA_REGISTRO = "diario/registro"
 PASTA_SESSOES = "diario/sessoes"
@@ -69,22 +71,54 @@ def _curto(valor: object) -> str:
 def registrar(vault: Path, tipo: str, rel: str, detalhe: str = "", autor: str = "externo") -> None:
     """Acrescenta uma linha ao registro do dia."""
     agora = dt.datetime.now()
-    caminho = vault / PASTA_REGISTRO / f"{agora:%Y-%m-%d}.md"
-    caminho.parent.mkdir(parents=True, exist_ok=True)
+    caminho = caminho_no_vault(vault, Path(PASTA_REGISTRO) / f"{agora:%Y-%m-%d}.md")
     limpo = lambda s: str(s).replace("|", "/").replace("\n", " ")  # noqa: E731
     linha = f"- {agora:%H:%M:%S} | {tipo} | {limpo(rel)} | {limpo(detalhe)} | {limpo(autor)}\n"
-    novo = not caminho.exists()
-    with caminho.open("a", encoding="utf-8") as f:
-        if novo:
-            f.write(
-                f"# Registro de {agora:%d/%m/%Y}\n\n"
-                "Gerado automaticamente pelo painel. Formato: hora | ação | arquivo | detalhe | autor.\n\n"
-            )
-        f.write(linha)
+    with armazenamento.trava(caminho):
+        if autor == "externo" and caminho.exists() and _ja_registrado(caminho, tipo, limpo(rel), agora):
+            return
+        # Registro gerado pelo app: append de uma linha sob trava evita reler/regravar o dia inteiro.
+        caminho_no_vault(vault, caminho)
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        with caminho.open("ab") as arquivo:
+            if arquivo.tell() == 0:
+                arquivo.write((f"# Registro de {agora:%d/%m/%Y}\n\n"
+                               "Gerado automaticamente pelo painel. Formato: hora | ação | arquivo | detalhe | autor.\n\n").encode("utf-8"))
+            arquivo.write(linha.encode("utf-8"))
+
+
+def _ja_registrado(caminho: Path, tipo: str, rel: str, agora: dt.datetime, janela: int = 6) -> bool:
+    """Diz se outro processo acabou de registrar esta mesma mudança, com o autor certo.
+
+    Acontece quando o servidor MCP grava uma nota com o painel aberto: o MCP registra
+    "feito pelo agente" e, um instante depois, o vigia do painel vê o mesmo arquivo
+    mudar. Sem esta conferência a mudança apareceria duas vezes, a segunda como "externo".
+    """
+    try:
+        with caminho.open("rb") as arquivo:
+            arquivo.seek(0, 2)
+            arquivo.seek(max(0, arquivo.tell() - 16384))
+            ultimas = arquivo.read().decode("utf-8", errors="replace").splitlines()[-12:]
+    except OSError:
+        return False
+    for linha in ultimas:
+        partes = [p.strip() for p in linha[2:].split(" | ")] if linha.startswith("- ") else []
+        if len(partes) < 5 or partes[1] != tipo or partes[2] != rel or partes[4] == "externo":
+            continue
+        try:
+            hora = dt.datetime.combine(agora.date(), dt.time.fromisoformat(partes[0]))
+        except ValueError:
+            continue
+        if 0 <= (agora - hora).total_seconds() <= janela:
+            return True
+    return False
 
 
 def ler_registro(vault: Path, dia: dt.date) -> list[Entrada]:
-    caminho = vault / PASTA_REGISTRO / f"{dia.isoformat()}.md"
+    try:
+        caminho = caminho_no_vault(vault, Path(PASTA_REGISTRO) / f"{dia.isoformat()}.md")
+    except CaminhoInseguro:
+        return []
     if not caminho.is_file():
         return []
     entradas: list[Entrada] = []
@@ -99,7 +133,10 @@ def ler_registro(vault: Path, dia: dt.date) -> list[Entrada]:
 
 
 def ler_sessoes(vault: Path, dia: dt.date) -> str:
-    caminho = vault / PASTA_SESSOES / f"{dia.isoformat()}.md"
+    try:
+        caminho = caminho_no_vault(vault, Path(PASTA_SESSOES) / f"{dia.isoformat()}.md")
+    except CaminhoInseguro:
+        return ""
     if not caminho.is_file():
         return ""
     return caminho.read_text(encoding="utf-8-sig", errors="replace")
@@ -108,8 +145,13 @@ def ler_sessoes(vault: Path, dia: dt.date) -> str:
 def dias_com_registro(vault: Path) -> list[dt.date]:
     dias: set[dt.date] = set()
     for pasta in (PASTA_REGISTRO, PASTA_SESSOES):
-        for arquivo in (vault / pasta).glob("*.md"):
+        try:
+            diretorio = caminho_no_vault(vault, pasta)
+        except CaminhoInseguro:
+            continue
+        for arquivo in diretorio.glob("*.md"):
             try:
+                caminho_no_vault(vault, arquivo)
                 dias.add(dt.date.fromisoformat(arquivo.stem))
             except ValueError:
                 pass

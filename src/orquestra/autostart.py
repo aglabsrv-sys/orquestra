@@ -12,9 +12,12 @@ nenhum deles pede permissão de administrador:
 from __future__ import annotations
 
 import os
+import plistlib
 import subprocess
 import sys
 from pathlib import Path
+
+from orquestra.armazenamento import atualizar_bytes
 
 ROTULO = "dev.orquestra.painel"
 
@@ -38,38 +41,53 @@ def _conteudo(vault: Path) -> str:
         executavel = Path(comando[0]).with_name("pythonw.exe")
         if executavel.is_file():
             comando[0] = str(executavel)
-        linha = " ".join(f'""{parte}""' for parte in comando)
+        if any("\n" in parte or "\r" in parte or '"' in parte for parte in comando):
+            raise ValueError("O caminho do início automático não pode conter aspas ou quebras de linha.")
+        # WScript.Shell.Run expande %VAR%; escapar como Chr(37) impediria apenas
+        # a expansão do VBS, não a do Run. Recusamos esse caso explicitamente.
+        if any("%" in parte for parte in comando):
+            raise ValueError("O início automático do Windows não aceita caminhos com %. Escolha outra pasta.")
+        linha = subprocess.list2cmdline(comando).replace('"', '""')
         return f'CreateObject("WScript.Shell").Run "{linha}", 0, False\r\n'
     if sys.platform == "darwin":
-        argumentos = "\n".join(f"    <string>{parte}</string>" for parte in comando)
-        return (
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
-            '<plist version="1.0">\n<dict>\n'
-            f"  <key>Label</key><string>{ROTULO}</string>\n"
-            f"  <key>ProgramArguments</key>\n  <array>\n{argumentos}\n  </array>\n"
-            "  <key>RunAtLoad</key><true/>\n"
-            "</dict>\n</plist>\n"
-        )
-    linha = " ".join(f'"{parte}"' for parte in comando)
+        return plistlib.dumps({"Label": ROTULO, "ProgramArguments": comando, "RunAtLoad": True},
+                              fmt=plistlib.FMT_XML).decode("utf-8")
+    def argumento(parte: str) -> str:
+        if any(c in parte for c in ("\n", "\r", "\0")):
+            raise ValueError("O caminho do início automático contém caracteres inválidos.")
+        # Desktop Entry tem duas camadas de escape: valor da chave e argumento
+        # Exec. %% é um percentual literal, nunca um field code da especificação.
+        escapado = parte.replace("\\", "\\\\").replace('"', '\\"').replace("`", "\\`").replace("$", "\\$").replace("%", "%%")
+        return '"' + escapado.replace("\\", "\\\\") + '"'
+    linha = " ".join(argumento(parte) for parte in comando)
     return f"[Desktop Entry]\nType=Application\nName=Orquestra\nExec={linha}\nX-GNOME-Autostart-enabled=true\n"
 
 
 def executar(acao: str, vault: Path) -> str:
+    if acao not in ("status", "ativar", "desativar"):
+        raise ValueError("Use status, ativar ou desativar para o início automático.")
     arquivo = _arquivo()
     if acao == "status":
+        if sys.platform == "darwin" and arquivo.exists():
+            r = subprocess.run(["launchctl", "list", ROTULO], capture_output=True, timeout=15)
+            if r.returncode != 0:
+                return f"Arquivo de início automático presente, mas o macOS não confirmou o carregamento ({arquivo})."
         return f"Início automático ligado ({arquivo})." if arquivo.exists() else "Início automático desligado."
 
     if acao == "ativar":
-        arquivo.parent.mkdir(parents=True, exist_ok=True)
-        arquivo.write_text(_conteudo(vault), encoding="utf-8")
+        conteudo = _conteudo(vault).encode("utf-8")
+        atualizar_bytes(arquivo, lambda anterior: conteudo)
         if sys.platform == "darwin":
-            subprocess.run(["launchctl", "load", str(arquivo)], capture_output=True)
+            r = subprocess.run(["launchctl", "load", str(arquivo)], capture_output=True, timeout=15)
+            if r.returncode != 0:
+                raise RuntimeError("O arquivo foi criado, mas o macOS não ativou o início automático. Confira LaunchAgents e tente novamente.")
         return f"Pronto: o painel vai iniciar junto com o computador.\nArquivo criado: {arquivo}\nPara desfazer: orquestra autostart desativar"
 
     if not arquivo.exists():
         return "O início automático já estava desligado."
     if sys.platform == "darwin":
-        subprocess.run(["launchctl", "unload", str(arquivo)], capture_output=True)
+        r = subprocess.run(["launchctl", "unload", str(arquivo)], capture_output=True, timeout=15)
+        if r.returncode != 0:
+            raise RuntimeError("O macOS não confirmou a desativação. O arquivo foi preservado para você tentar novamente.")
     arquivo.unlink()
     return "Início automático desligado."

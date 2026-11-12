@@ -7,15 +7,16 @@
 <section class="pagina">
   <form class="busca" action="/buscar" method="get">
     {{ icone('busca', 18) }}
-    <input type="search" name="q" value="{{ q }}" placeholder="Buscar em todas as notas..." autofocus autocomplete="off">
+    <input type="search" name="q" value="{{ q }}" aria-label="Buscar em todas as notas" placeholder="Buscar em todas as notas..." autofocus autocomplete="off">
   </form>
   {% if q %}
-  <p class="suave">{{ resultados|length }} resultado(s) para “{{ q }}”.</p>
+  <p class="suave">{{ paginacao.total if paginacao is defined else resultados|length }} resultado(s) para “{{ q }}”.</p>
   <div class="lista-notas sem-margem">
     {% for r in resultados %}
     <a class="linha-nota" href="{{ r.url }}"><b>{{ r.titulo }}</b><span>{{ r.trecho }}</span><small>{{ r.onde }}</small></a>
     {% endfor %}
   </div>
+  {{ p.paginar(paginacao|default(none)) }}
   {% endif %}
 </section>
 {% endblock %}

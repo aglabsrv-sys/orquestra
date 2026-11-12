@@ -13,9 +13,13 @@
     {% if modulo.descricao %}<p>{{ modulo.descricao }}</p>{% endif %}
   </div>
   <div class="cab-numeros">
+    {% if modulo.tem_status %}
     <span><b>{{ resumo.abertos }}</b> em aberto</span>
     {% if modulo.campo_data %}<span><b>{{ resumo.hoje }}</b> para hoje</span>{% endif %}
-    {% if modulo.decidir %}<span><b>{{ resumo.decidir }}</b> para decidir</span>{% endif %}
+    {% else %}
+    <span><b>{{ resumo.total }}</b> {{ 'nota' if resumo.total == 1 else 'notas' }}</span>
+    {% endif %}
+    {% if modulo.decidir or resumo.decidir %}<span><b>{{ resumo.decidir }}</b> para decidir</span>{% endif %}
   </div>
 </section>
 
@@ -25,9 +29,14 @@
   {% endfor %}
   <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano">{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
   <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina">{{ icone('chip', 15) }} Máquina</a>
-  {% if aba != 'maquina' %}
-  <button class="botao principal novo" type="button" id="abrir-novo">{{ icone('mais', 16) }}<span>{{ 'Nova nota' if aba == 'humano' else 'Novo' }}</span></button>
-  {% endif %}
+  <span class="abas-fim">
+    <a class="botao so-icone" href="/m/{{ modulo.id|urlencode }}/personalizar" title="Personalizar esta área" aria-label="Personalizar esta área">{{ icone('ajustes', 17) }}</a>
+    {% if visao is defined and visao.tipo == 'grafico' and aba not in ('humano', 'maquina') %}
+    <button class="botao principal" type="button" id="abrir-numeros">{{ icone('mais', 16) }}<span>Registrar</span></button>
+    {% elif aba != 'maquina' %}
+    <button class="botao principal novo" type="button" id="abrir-novo" aria-label="{{ 'Nova nota sua' if aba == 'humano' else 'Novo item em ' ~ modulo.nome }}">{{ icone('mais', 16) }}<span>{{ 'Nova nota' if aba == 'humano' else 'Novo' }}</span></button>
+    {% endif %}
+  </span>
 </nav>
 
 {% if modulo.avisos %}
@@ -63,8 +72,22 @@
       </span>
       {% else %}<span class="suave">Ainda não rodou.</span>{% endif %}
     </div>
-    <label class="chave" title="Rodar sozinho no horário"><input type="checkbox" data-ativar{% if c.def.ativo %} checked{% endif %}><i></i><span>automático</span></label>
-    <button class="botao" type="button" data-rodar>{{ icone('tocar', 14) }}<span>Rodar agora</span></button>
+    {% set conf = c.confianca|default({}) %}
+    <label class="chave" title="Rodar sozinho no horário"><input type="checkbox" data-ativar{% if c.def.ativo %} checked{% endif %}{% if not conf.confiavel %} disabled{% endif %}><i></i><span>automático</span></label>
+    <button class="botao" type="button" data-rodar{% if not conf.confiavel %} disabled{% endif %}>{{ icone('tocar', 14) }}<span>Rodar agora</span></button>
+    <details class="coletor-confianca" data-confianca='{{ conf|tojson }}'>
+      <summary>{{ 'Versão aprovada neste computador' if conf.confiavel else 'Execução bloqueada: revisar e aprovar esta versão' }}</summary>
+      <p>Este script executa código com as permissões da sua conta e pode acessar arquivos, rede e variáveis de ambiente. Leia os arquivos antes de aprovar. Mudanças no código ou na configuração exigem nova aprovação.</p>
+      {% if conf.erro %}<p class="erro-texto">{{ conf.erro }}</p>{% endif %}
+      <p><b>Script:</b> <code>{{ conf.caminho or c.def.script }}</code></p>
+      <p><b>Assinatura da versão:</b> <code class="hash-confianca">{{ conf.assinatura or 'indisponível' }}</code></p>
+      <p><b>Arquivos incluídos na revisão:</b></p>
+      <ul>{% for arquivo in conf.arquivos|default([]) %}<li><code>{{ arquivo }}</code></li>{% else %}<li>Nenhum arquivo disponível.</li>{% endfor %}</ul>
+      <p><b>Chaves declaradas:</b> {{ conf.requer|default([])|join(', ') or 'nenhuma' }}. Valores de chaves não são exibidos.</p>
+      <pre class="coletor-config">{{ conf.config|default({})|tojson(indent=2) }}</pre>
+      <p class="suave" data-confianca-remota>Para aprovar ou revogar, abra localhost no computador onde o Orquestra está rodando.</p>
+      <button class="botao" type="button" data-confiar="{{ 'revogar' if conf.confiavel else 'confiar' }}" hidden{% if not conf.assinatura %} disabled{% endif %}>{{ 'Revogar aprovação' if conf.confiavel else 'Aprovar esta versão' }}</button>
+    </details>
   </div>
   {% else %}
   <p class="suave">Este módulo não tem coletores. Veja <code>docs/coletores.md</code> para criar um.</p>
@@ -78,6 +101,46 @@
   {% endfor %}
   {% if arquivadas %}<p class="suave">{{ arquivadas }} nota(s) arquivada(s) em <code>{{ modulo.id }}/arquivo/</code>.</p>{% endif %}
 </section>
+
+{# ---------------------------------------------------------------- Gráfico #}
+{% elif visao.tipo == "grafico" %}
+<section class="quadros-numeros">
+  {% for q in quadros %}
+  <article class="numero-quadro{% if q.vazio %} sem-dados{% endif %}">
+    <header>
+      <h3>{{ q.rotulo }}</h3>
+      {% if not q.vazio %}<small class="suave">{{ q.quando }}</small>{% endif %}
+    </header>
+    {% if q.vazio %}
+    <p class="numero-valor suave">—</p>
+    <p class="suave pequeno">Sem registros nos últimos {{ q.dias }} dias.</p>
+    {% else %}
+    <p class="numero-valor" title="{{ q.atual_exato }}">{{ q.atual }}</p>
+    {% if q.variacao %}
+    <p class="numero-variacao {{ q.variacao.direcao }}"><span aria-hidden="true">{{ {'sobe': '▲', 'desce': '▼', 'igual': '＝'}[q.variacao.direcao] }}</span> {{ q.variacao.texto }} <span class="suave">desde {{ q.variacao.desde }}</span></p>
+    {% else %}
+    <p class="numero-variacao suave">Primeiro registro. A linha aparece a partir do segundo dia.</p>
+    {% endif %}
+    <div class="numero-grafico" data-pontos='{{ q.pontos|tojson }}' tabindex="0" role="img" aria-label="{{ q.rotulo }}: {{ q.atual_exato }} em {{ q.ate }}{% if q.variacao %}, {{ q.variacao.texto }} desde {{ q.variacao.desde }}{% endif %}. Use as setas para percorrer os dias.">
+      <svg viewBox="0 0 320 120" preserveAspectRatio="none" aria-hidden="true">
+        <line class="g-grade" x1="6" x2="310" y1="10" y2="10"/>
+        <line class="g-grade" x1="6" x2="310" y1="112" y2="112"/>
+        {% if q.area %}<path class="g-area" d="{{ q.area }}"/>{% endif %}
+        <path class="g-linha" d="{{ q.linha }}"/>
+        <line class="g-guia" x1="0" x2="0" y1="10" y2="112" hidden/>
+      </svg>
+      <i class="g-ponto" style="left:{{ q.fim.x / 3.2 }}%;top:{{ q.fim.y / 1.2 }}%"></i>
+      <i class="g-ponto g-foco" hidden></i>
+      <div class="g-dica" hidden><b></b><span></span></div>
+    </div>
+    <footer class="numero-eixo suave"><span>{{ q.de }}</span><span>mín. {{ q.minimo }} · máx. {{ q.maximo }}</span><span>{{ q.ate }}</span></footer>
+    {% endif %}
+  </article>
+  {% else %}
+  {{ p.vazio("Nenhum número para mostrar", "Este módulo ainda não tem campos do tipo numero. Acrescente em Personalizar (o ícone ao lado das abas).") }}
+  {% endfor %}
+</section>
+{% if quadros %}<p class="suave nota-grafico">Últimos {{ visao.dias }} dias. Os valores exatos de cada dia estão na aba de lista.</p>{% endif %}
 
 {# ---------------------------------------------------------------- Quadro #}
 {% elif visao.tipo == "kanban" %}
@@ -98,7 +161,7 @@
 <section class="tabela-envolta">
   {% if linhas %}
   <table class="tabela">
-    <thead><tr>{% for col in colunas_tabela %}<th data-ordenar>{{ col.rotulo }}</th>{% endfor %}</tr></thead>
+    <thead><tr>{% for col in colunas_tabela %}<th scope="col" data-ordenar aria-sort="none"><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ col.rotulo }}<span aria-hidden="true"> ↕</span></button></th>{% endfor %}</tr></thead>
     <tbody>
       {% for l in linhas %}
       <tr{% if l.cartao.concluido %} class="concluido"{% endif %}>
@@ -118,12 +181,13 @@
   {% endif %}
 </section>
 {% endif %}
+{{ p.paginar(paginacao|default(none)) }}
 {% endblock %}
 
 {% block dialogos %}
-<dialog id="dialogo-novo" class="dialogo" data-modulo="{{ modulo.id }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
+<dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" data-modulo="{{ modulo.id }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
   <form class="dialogo-corpo" method="dialog">
-    <h2>{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
+    <h2 id="titulo-dialogo-novo">{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
     <label class="campo"><span>Título *</span><input type="text" name="titulo" id="novo-titulo" required autocomplete="off"></label>
     {% if aba != 'humano' %}
     <div class="grade-campos">
@@ -139,4 +203,23 @@
     </div>
   </form>
 </dialog>
+
+{% if numericos is defined %}
+<dialog id="dialogo-numeros" class="dialogo" aria-labelledby="titulo-dialogo-numeros" data-modulo="{{ modulo.id }}">
+  <form class="dialogo-corpo" method="dialog">
+    <h2 id="titulo-dialogo-numeros">Registrar números</h2>
+    <p class="suave">Uma nota por dia. Se o dia já tem registro, só os campos preenchidos aqui são atualizados.</p>
+    <label class="campo"><span>Dia</span><input type="date" id="numeros-dia" value="{{ hoje.isoformat() }}" max="{{ hoje.isoformat() }}"></label>
+    <div class="grade-campos">
+      {% for n in numericos %}
+      <label class="campo"><span>{{ n.def.rotulo }}</span><input type="number" step="any" inputmode="decimal" name="{{ n.def.nome }}" value="{{ n.valor }}" data-numero></label>
+      {% endfor %}
+    </div>
+    <div class="dialogo-acoes">
+      <button type="button" class="botao" data-fechar>Cancelar</button>
+      <button type="submit" class="botao principal" id="numeros-salvar">Guardar</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
 {% endblock %}

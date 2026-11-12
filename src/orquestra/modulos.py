@@ -9,14 +9,23 @@ um módulo novo não exige mexer no código: basta criar a pasta e o YAML.
 from __future__ import annotations
 
 import datetime as dt
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from orquestra.config import ler_yaml
+from orquestra.caminhos import CaminhoInseguro, caminho_no_vault
 
 TIPOS_DE_CAMPO = {"texto", "escolha", "data", "lista", "numero", "booleano", "link", "imagem"}
+TIPOS_DE_VISAO = ("kanban", "tabela", "grafico")
 ARQUIVO_MODULO = "_modulo.yaml"
+# Um módulo desligado pelo painel: o arquivo muda de nome e a pasta continua intacta.
+ARQUIVO_DESLIGADO = "_modulo.desligado.yaml"
+# Subpastas com papel fixo dentro de um módulo.
+ZONAS = ("humano", "maquina", "arquivo")
+# Arquivos de instrução para agentes: nunca contam como item de um módulo.
+NOTAS_DE_CONTRATO = {"agents.md", "claude.md", "gemini.md"}
 
 
 class ValorInvalido(ValueError):
@@ -35,10 +44,12 @@ class Campo:
 
 @dataclass
 class Visao:
-    tipo: str  # kanban | tabela
+    tipo: str  # kanban | tabela | grafico
     nome: str
     agrupar_por: str = "status"
     colunas: list[str] = field(default_factory=list)
+    campos: list[str] = field(default_factory=list)  # gráfico: quais números mostrar
+    dias: int = 30  # gráfico: quantos dias para trás
 
 
 @dataclass
@@ -79,10 +90,29 @@ class Modulo:
     acoes: list[Acao] = field(default_factory=list)
     coletores: list[ColetorDef] = field(default_factory=list)
     avisos: list[str] = field(default_factory=list)
+    # Onde ficam os registros. "itens" é o padrão dos módulos do Orquestra; "." diz
+    # que as notas ficam soltas na própria pasta (e nas subpastas), que é como quase
+    # todo vault do Obsidian já é organizado.
+    itens_em: str = "itens"
+    invalido: bool = False
+
+    @property
+    def itens_na_raiz(self) -> bool:
+        return self.itens_em == "."
 
     @property
     def pasta_itens(self) -> Path:
-        return self.pasta / "itens"
+        return self.pasta if self.itens_na_raiz else self.pasta / self.itens_em
+
+    @property
+    def tem_status(self) -> bool:
+        """O módulo tem um campo de status com opções (dá para montar um quadro)."""
+        campo = self.campos.get(self.campo_status)
+        return bool(campo and campo.opcoes)
+
+    @property
+    def campos_numericos(self) -> list[str]:
+        return [c.nome for c in self.campos.values() if c.tipo == "numero"]
 
 
 def rotulo(valor: Any) -> str:
@@ -100,13 +130,33 @@ def _lista(valor: Any) -> list[str]:
 
 
 def carregar_modulo(pasta: Path) -> Modulo:
+    """Um arquivo defeituoso fica visível com diagnóstico, sem derrubar outras áreas."""
+    try:
+        return _carregar_modulo(pasta)
+    except (ValueError, TypeError, AttributeError, KeyError, OSError) as erro:
+        return Modulo(
+            id=pasta.name, pasta=pasta, nome=rotulo(pasta.name),
+            visoes=[Visao("tabela", "Lista")], invalido=True,
+            avisos=[f"Não consegui ler {pasta.name}/{ARQUIVO_MODULO}: {str(erro).splitlines()[0]}"],
+        )
+
+
+def _carregar_modulo(pasta: Path) -> Modulo:
     """Lê o `_modulo.yaml` de uma pasta. É tolerante: problemas viram avisos."""
     avisos: list[str] = []
-    try:
-        bruto = ler_yaml(pasta / ARQUIVO_MODULO)
-    except Exception as e:
-        bruto = {}
-        avisos.append("Não consegui ler o _modulo.yaml: " + str(e).strip().splitlines()[0])
+    bruto = ler_yaml(caminho_no_vault(pasta.parent, pasta / ARQUIVO_MODULO))
+    for chave in ("campos", "status", "capa"):
+        valor = bruto.get(chave)
+        if valor is not None and not isinstance(valor, dict) and not (chave == "capa" and isinstance(valor, str)):
+            raise ValueError(f"'{chave}' precisa ser um mapa de campos.")
+    for chave in ("visoes", "coletores"):
+        if bruto.get(chave) is not None and not isinstance(bruto[chave], list):
+            raise ValueError(f"'{chave}' precisa ser uma lista.")
+    for c in bruto.get("coletores") or []:
+        if not isinstance(c, dict) or not isinstance(c.get("config", {}), dict):
+            raise ValueError("Cada coletor precisa ser um mapa, com 'config' também em formato de mapa.")
+        if "ativo" in c and not isinstance(c["ativo"], bool):
+            raise ValueError("'ativo' precisa ser true ou false, sem aspas.")
 
     m = Modulo(id=pasta.name, pasta=pasta, nome=str(bruto.get("nome") or rotulo(pasta.name)))
     m.descricao = str(bruto.get("descricao") or "")
@@ -116,6 +166,13 @@ def carregar_modulo(pasta: Path) -> Modulo:
         m.ordem = int(bruto.get("ordem", 100))
     except (TypeError, ValueError):
         avisos.append("'ordem' precisa ser um número.")
+    itens_em = str(bruto.get("itens") or "itens").strip().strip("/")
+    if itens_em in ("", "."):
+        m.itens_em = "."
+    elif "/" in itens_em or "\\" in itens_em or itens_em.startswith(".") or itens_em in ZONAS:
+        avisos.append("'itens' precisa ser '.' ou o nome de uma subpasta; usei 'itens'.")
+    else:
+        m.itens_em = itens_em
 
     # ---- campos (schema)
     for nome, definicao in (bruto.get("campos") or {}).items():
@@ -156,19 +213,25 @@ def carregar_modulo(pasta: Path) -> Modulo:
         if not isinstance(v, dict):
             continue
         tipo = str(v.get("tipo") or "tabela")
-        if tipo not in ("kanban", "tabela"):
-            avisos.append(f"Visão '{tipo}' não existe; use kanban ou tabela.")
+        if tipo not in TIPOS_DE_VISAO:
+            avisos.append(f"Visão '{tipo}' não existe; use kanban, tabela ou grafico.")
             continue
+        try:
+            dias = max(2, min(int(v.get("dias") or 30), 3660))
+        except (TypeError, ValueError):
+            dias = 30
         m.visoes.append(
             Visao(
                 tipo=tipo,
-                nome=str(v.get("nome") or rotulo(tipo)),
+                nome=str(v.get("nome") or {"grafico": "Gráfico"}.get(tipo, rotulo(tipo))),
                 agrupar_por=str(v.get("agrupar_por") or m.campo_status),
                 colunas=_lista(v.get("colunas")),
+                campos=_lista(v.get("campos")),
+                dias=dias,
             )
         )
     if not m.visoes:
-        if m.campo_status in m.campos and m.campos[m.campo_status].opcoes:
+        if m.tem_status:
             m.visoes.append(Visao("kanban", "Quadro", m.campo_status))
         m.visoes.append(Visao("tabela", "Lista"))
 
@@ -196,9 +259,17 @@ def carregar_modulo(pasta: Path) -> Modulo:
 def descobrir(vault: Path) -> dict[str, Modulo]:
     """Procura módulos: pastas na raiz do vault que tenham um `_modulo.yaml`."""
     encontrados = []
-    for pasta in sorted(vault.iterdir()):
-        if pasta.is_dir() and not pasta.name.startswith((".", "_")) and (pasta / ARQUIVO_MODULO).is_file():
-            encontrados.append(carregar_modulo(pasta))
+    try:
+        pastas = sorted(vault.iterdir())
+    except OSError:
+        pastas = []
+    for pasta in pastas:
+        try:
+            caminho_no_vault(vault, pasta / ARQUIVO_MODULO)
+            if pasta.is_dir() and not pasta.name.startswith((".", "_")) and (pasta / ARQUIVO_MODULO).is_file():
+                encontrados.append(carregar_modulo(pasta))
+        except (CaminhoInseguro, OSError):
+            continue
     encontrados.sort(key=lambda m: (m.ordem, m.nome.lower()))
     return {m.id: m for m in encontrados}
 
@@ -252,6 +323,8 @@ def converter(campo: Campo, valor: Any) -> Any:
     if campo.tipo == "numero":
         try:
             numero = float(str(valor).replace(",", "."))
+            if not math.isfinite(numero):
+                raise ValueError("Número não finito.")
         except ValueError:
             raise ValorInvalido(f"{campo.rotulo}: precisa ser um número.") from None
         return int(numero) if numero.is_integer() else numero

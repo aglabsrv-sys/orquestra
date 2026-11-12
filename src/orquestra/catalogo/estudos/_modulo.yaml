@@ -1,0 +1,42 @@
+# Módulo Estudos: o que estudar e quando revisar.
+
+nome: Estudos
+descricao: O que estudar, o que revisar e o que já está dominado.
+icone: livro
+ordem: 2
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [para_estudar, estudando, revisar, dominado]
+    padrao: para_estudar
+    obrigatorio: true
+  materia:
+    tipo: texto
+    rotulo: Matéria
+  revisar_em:
+    tipo: data
+    rotulo: Revisar em
+  dificuldade:
+    tipo: escolha
+    opcoes: [facil, media, dificil]
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+campo_data: revisar_em
+
+status:
+  concluidos: [dominado]
+  decidir: []
+
+visoes:
+  - tipo: kanban
+    nome: Quadro
+    agrupar_por: status
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, materia, revisar_em, dificuldade]

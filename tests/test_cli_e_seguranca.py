@@ -5,7 +5,8 @@ from __future__ import annotations
 import datetime as dt
 
 from orquestra import temas
-from orquestra.cli import _datas_relativas, criar_vault
+from orquestra.cli import criar_vault
+from orquestra.preparo import _datas_relativas
 from orquestra.config import ler_config_painel, localizar_vault
 from orquestra.doctor import verificar_vault
 from orquestra.seguranca import host_permitido, nome_do_host
@@ -38,7 +39,7 @@ def test_criar_de_novo_no_mesmo_lugar_nao_sobrescreve(vault):
 def test_doctor_nao_acha_erro_no_vault_modelo(vault):
     itens = verificar_vault(vault)
     assert [i.titulo for i in itens if i.estado == "erro"] == []
-    assert any("4 módulo(s)" in i.titulo for i in itens)
+    assert any("5 módulo(s)" in i.titulo for i in itens)
     assert any("YOUTUBE_API_KEY" in i.detalhe for i in itens)  # avisa da chave que falta
 
 
@@ -85,7 +86,10 @@ def test_nome_do_host():
 def test_hosts_permitidos():
     assert host_permitido("localhost:8420")
     assert host_permitido("127.0.0.1:8420")
-    assert host_permitido("meu-pc.tail1234.ts.net")
+    assert not host_permitido("meu-pc.tail1234.ts.net")
+    assert host_permitido("meu-pc.tail1234.ts.net", ["meu-pc.tail1234.ts.net"])
+    assert not host_permitido("outro-pc.tail1234.ts.net", ["meu-pc.tail1234.ts.net"])
+    assert not host_permitido("meu-pc.tail1234.ts.net", ["*.ts.net"])
     assert host_permitido("painel.casa", ["painel.casa"])
     assert not host_permitido("painel.casa")
     assert not host_permitido("localhost.atacante.com")

@@ -8,11 +8,21 @@ build/
 *.egg-info/
 
 # Segredos: nunca vão para o git
-.env
+.env*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
 
 # Se você criar seu vault dentro da pasta do projeto, ele não entra no repositório do app
 /vault/
 /meu-vault/
+/graphify-out/
+/output/
+/requirements-audit.txt
+*.orq-tmp
+*.orq-backup
 
 # Sistema
 .DS_Store

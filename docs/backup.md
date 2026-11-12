@@ -1,97 +1,154 @@
-# Histórico e backup
+# Histórico, rascunhos e recuperação
 
-O vault é um repositório git próprio, separado do repositório do app. Isso dá
-duas coisas diferentes:
+O Orquestra tem três mecanismos diferentes. Nenhum deles dispensa uma cópia fora
+do computador.
 
-- **Histórico (local):** cada commit é um ponto para onde você pode voltar. É o
-  "desfazer" para qualquer alteração, sua ou de um agente.
-- **Backup (remoto):** uma cópia fora do computador, para o dia em que ele quebrar.
+| Mecanismo | O que preserva | Onde fica |
+|---|---|---|
+| Rascunho do navegador | Texto, título e propriedades ainda não salvos nesta aba | Perfil local do navegador, separado por vault e nota |
+| Recuperação de gravações | Conteúdo anterior e proposta de cada edição feita pelo Orquestra | `~/.orquestra/recuperacao/` ou `ORQUESTRA_HOME/recuperacao/` |
+| Snapshots Git | Arquivos do vault em momentos escolhidos | Referência local `refs/orquestra/backups`; cópia remota opcional |
 
-## Histórico: já vem ligado
+## Com Obsidian aberto
 
-Ao criar o vault, o Orquestra inicia o git e faz o primeiro commit. Com o painel
-aberto, ele faz um commit automático a cada 30 minutos, se algo mudou. Para fazer
-um na hora:
+O painel usa a versão lida do arquivo como pré-condição, coordena suas próprias
+instâncias com locks e publica por arquivo temporário exclusivo. Se encontra uma
+mudança externa, responde com conflito em vez de salvar com uma versão antiga.
+Obsidian e sincronizadores não participam desses locks: ainda existe uma janela de
+corrida entre programas diferentes. Evite editar a mesma nota ao mesmo tempo.
+
+No aviso de conflito, **Copiar meu texto** preserva o texto na área de transferência;
+**Salvar uma cópia no vault** cria outra nota no mesmo diretório com os valores do
+rascunho. **Descartar rascunho e recarregar** pede confirmação antes de abrir o
+conteúdo atual do disco. Se uma gravação falhar, o aviso fica na tela e permite
+salvar novamente as alterações atuais ou descartá-las explicitamente.
+
+Ao reabrir uma nota com rascunho anterior neste navegador, escolha **Retomar
+rascunho**. Se o arquivo mudou desde a versão do rascunho, salve uma cópia; retomar
+não sobrescreve o arquivo. Abas diferentes guardam entradas separadas. O navegador
+pode bloquear armazenamento ou esgotar a quota; nesse caso o painel avisa. A
+limpeza do perfil apaga esses rascunhos. Não use perfis compartilhados para notas
+privadas.
+
+## Versões de recuperação no disco
+
+Antes de publicar uma alteração, o Orquestra preserva arquivos `.antes`, `.proposta`
+e metadados `.json` em subpastas de `~/.orquestra/recuperacao/`. O JSON identifica o
+caminho original, versões e momento; os arquivos de conteúdo podem ser lidos num
+editor de texto. Esse diretório fica fora do vault para não gerar eventos nem ir
+junto do backup público do aplicativo. No Windows, use sua pasta pessoal
+`.orquestra\recuperacao`.
+
+Para recuperar, copie o conteúdo desejado para uma nota nova, confira o resultado
+e só então decida como integrar com a nota atual. Não substitua o arquivo ativo
+sem antes preservar sua versão atual. Arquivos de recuperação não são apagados
+automaticamente; revise o espaço usado e copie versões importantes antes de uma
+limpeza manual. Eles podem conter conteúdo privado e segredos antigos.
+
+Na própria nota, abra **Versões locais de recuperação**, escolha a gravação e
+consulte o conteúdo **antes da gravação** ou a **proposta**. **Copiar versão** copia
+o arquivo completo; **Salvar versão como nova nota** preserva frontmatter e texto
+em outra nota. A nota aberta e seu rascunho não são substituídos.
+
+## Snapshots Git
+
+Em um vault novo, a opção de histórico pode vir marcada. Num vault adotado, fica
+desligada até sua escolha. Se o Git não estiver instalado, o painel informa a
+limitação. **Ajustes > Histórico e backup** mostra a configuração e os destinos
+remotos antes da autorização local. Repositórios/configurações importados não são
+executados automaticamente sem revisão. Mudanças relevantes exigem nova aprovação.
+
+Com histórico aprovado e automático ligado, o painel cria uma versão após mudanças,
+respeitando o intervalo (30 minutos por padrão). Sem mudança não há snapshot. Os
+snapshots usam um índice temporário e a referência **`refs/orquestra/backups`**:
+não movem seu `HEAD`, branch atual ou staging. Isso permite usar o Git do Obsidian
+sem incluir no commit do usuário notas que ainda não pretendia preparar.
+
+Para pedir uma versão agora:
 
 ```bash
-uv run orquestra backup
+uv run --frozen orquestra backup
 ```
 
-Ou em **Ajustes > Histórico e backup**. As opções ficam no `orquestra.yaml`:
+Sem interface gráfica, esse comando prepara um repositório ausente e orienta a
+revisão antes da primeira cópia. Consulte a configuração com
+`uv run --frozen orquestra confiar backup`, confira os arquivos/destinos e repita
+com `--assinatura HASH` usando a assinatura exibida. Para retirar a autorização,
+use `uv run --frozen orquestra confiar backup --revogar`. O aceite fica somente
+nesse computador; uma mudança na configuração exige revisão nova.
+
+Os comandos abaixo são somente de leitura e devem ser usados na pasta do vault:
+
+```bash
+git log --oneline refs/orquestra/backups
+git show refs/orquestra/backups:"tarefas/itens/Minha tarefa.md"
+```
+
+Troque a referência por um hash da lista para consultar uma versão anterior. Evite
+`git checkout` ou `git reset` como primeira tentativa: eles podem substituir trabalho
+atual e alterar staging. Abra a versão anterior e crie uma nota de recuperação.
+
+Os snapshots gravam blobs sem executar filtros de `.gitattributes`. O backup
+mescla regras de ignore com as existentes, exclui nomes comuns de segredos
+e recusa arquivos sensíveis já rastreados. Esse filtro não reconhece todo segredo
+possível dentro de uma nota ou anexo. Confira o que há no vault antes de enviar.
+
+## Cópia externa privada
+
+Crie um repositório **privado** e vazio e configure seu endereço dentro do vault:
+
+```bash
+git remote add origin git@github.com:voce/meu-vault.git
+```
+
+Prefira SSH com uma chave protegida e um agente SSH já configurado. O processo de
+backup desabilita configuração Git global/system e helpers globais de credenciais;
+um gerenciador HTTPS já usado pelo seu terminal pode não funcionar nesse processo.
+Não coloque tokens ou senhas na URL do remoto. Autenticação e envio real ao seu
+provedor precisam ser conferidos no seu ambiente; os testes automatizados usam um
+remoto Git local independente.
+
+Revise o novo destino em Ajustes e autorize a configuração localmente. Envie:
+
+```bash
+uv run --frozen orquestra backup --enviar
+```
+
+O Orquestra envia a referência local para a branch remota **`orquestra-backup`**;
+não usa force push. Divergências e falhas são informadas, sem tratar envio ausente
+como sucesso. Para enviar diariamente, configure:
 
 ```yaml
 backup:
   auto_commit: true
   intervalo_min: 30
+  push: true
+  push_as: "03:00"
 ```
 
-### Voltar atrás
+O painel precisa estar aberto; tarefas atrasadas são retomadas quando ele volta.
+Remoto configurado não comprova que o último envio funcionou. Confira o resultado
+em Ajustes e, periodicamente, teste abrir uma cópia separada do backup.
 
-Dentro da pasta do vault:
+Em outro computador, clone a branch de backup para uma pasta nova:
 
 ```bash
-git log --oneline
+git clone --branch orquestra-backup git@github.com:voce/meu-vault.git MeuVaultRecuperado
 ```
 
-Para ver como um arquivo estava num commit antigo (troque `abc123` e o caminho):
+Na pasta do aplicativo, abra o caminho completo desse vault com `--vault`. As chaves
+em `~/.orquestra/.env`, aprovações de scripts, rascunhos do navegador e recuperação
+local não são transferidos junto: configure/revise-os novamente no novo computador.
 
-```bash
-git show abc123:"tarefas/itens/Minha tarefa.md"
-```
+## Sincronizadores e limites
 
-Para restaurar esse arquivo como estava:
+OneDrive, iCloud, Dropbox e Obsidian Sync podem sincronizar um arquivo durante uma
+gravação. Evite rodar o painel do mesmo vault em dois computadores ao mesmo tempo.
+Não compartilhe `.git` por sincronizador sem entender os conflitos possíveis;
+backup Git e sincronização são mecanismos diferentes. Pastas com metadados Git
+vinculados (worktree/submódulo) ou includes externos de configuração não são aceitas
+pelo backup automático. Use uma cópia independente do vault nesses casos.
 
-```bash
-git checkout abc123 -- "tarefas/itens/Minha tarefa.md"
-```
-
-Se não tem prática com git, peça ao agente: "restaure o arquivo X como estava ontem".
-
-## Backup: enviar para um repositório privado
-
-1. Crie um repositório **privado** e **vazio** no GitHub (ou GitLab, ou outro).
-   Privado mesmo: o vault tem as suas tarefas, ideias e anotações.
-2. Dentro da pasta do vault, ligue os dois (troque pelo endereço do seu repositório):
-
-   ```bash
-   git remote add origin https://github.com/voce/meu-vault.git
-   ```
-
-3. Envie pela primeira vez:
-
-   ```bash
-   uv run orquestra backup --enviar
-   ```
-
-4. Para enviar sozinho todo dia, no `orquestra.yaml`:
-
-   ```yaml
-   backup:
-     push: true
-     push_as: "03:00"
-   ```
-
-Se o computador estava desligado no horário, o envio acontece quando o painel voltar.
-
-## Em outro computador
-
-```bash
-git clone https://github.com/voce/meu-vault.git ~/Orquestra
-```
-
-```bash
-uv run orquestra --vault ~/Orquestra
-```
-
-Faltam só as chaves de API (`~/.orquestra/.env`), que ficam fora do vault e não vão
-no backup: copie à mão.
-
-## O que não entra no backup
-
-O `.gitignore` do vault deixa de fora o estado do painel (`_orquestra/estado.json`),
-a área de trabalho do Obsidian e a lixeira. Segredos nunca devem estar no vault.
-
-## Obsidian Sync, iCloud, Dropbox
-
-Funcionam junto com o git, mas evite abrir o mesmo vault em dois computadores com
-o painel rodando nos dois: os commits automáticos de um e do outro vão brigar.
+As exclusões globais do Git também ficam desligadas. Coloque as regras de
+privacidade no `.gitignore` do próprio vault; não dependa de uma configuração
+global do computador para impedir que um arquivo entre no snapshot.

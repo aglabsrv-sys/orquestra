@@ -1,0 +1,68 @@
+# Módulo Números: uma nota por dia, um campo por número que você acompanha.
+#
+# Cada dia é um arquivo (numeros/itens/AAAA-MM-DD.md) e cada número é um campo do
+# frontmatter. É o mesmo que uma planilha: os dias são as linhas, os campos são as
+# colunas. Quem preenche pode ser você (botão "Registrar hoje"), um coletor ou um
+# agente com acesso às suas contas.
+#
+# Para acompanhar outro número, acrescente um campo do tipo `numero` aqui (ou use
+# "Personalizar" no painel). Ele aparece no gráfico sozinho.
+
+nome: Números
+descricao: O que você acompanha dia a dia, lado a lado.
+icone: grafico
+ordem: 7
+
+campos:
+  dia:
+    tipo: data
+  seguidores:
+    tipo: numero
+  inscritos:
+    tipo: numero
+  receita:
+    tipo: numero
+    rotulo: Receita do dia
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+
+visoes:
+  - tipo: grafico
+    nome: Evolução
+    dias: 30
+  - tipo: tabela
+    nome: Dia a dia
+    colunas: [titulo, seguidores, inscritos, receita]
+
+# Coletores: scripts em numeros/maquina/coletores/. Todos gravam na nota do dia.
+coletores:
+  - script: youtube_canal.py
+    nome: Números do canal no YouTube
+    ativo: false
+    diario_as: "06:00"
+    requer: [YOUTUBE_API_KEY]
+    config:
+      canal: "@GoogleDevelopers"     # troque pelo seu: @nome ou o ID (UC...)
+      campo_inscritos: inscritos     # em que campo guardar cada número
+      campo_visualizacoes: ""        # deixe vazio para não guardar
+
+  - script: cotacoes.py
+    nome: Cotações (dólar, euro, bitcoin)
+    ativo: false
+    diario_as: "18:00"
+    config:
+      # nome do campo: par de moedas. Crie cada campo (tipo numero) em Personalizar.
+      moedas:
+        dolar: USD-BRL
+
+  - script: github_repo.py
+    nome: Estrelas de um repositório no GitHub
+    ativo: false
+    diario_as: "06:00"
+    config:
+      repositorios:
+        - repo: ""                   # dono/nome
+          campo_estrelas: estrelas
+          campo_forks: ""

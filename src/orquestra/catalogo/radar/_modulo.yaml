@@ -1,0 +1,102 @@
+# Módulo Radar: o que os coletores trazem de fora.
+# Coletor não usa IA: só busca e guarda, com status "novo". A triagem vem depois,
+# feita por você na fila Decidir ou por um agente.
+
+nome: Radar
+descricao: O que está acontecendo lá fora, trazido pelos coletores.
+icone: radar
+ordem: 3
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [novo, util, virou_ideia, descartado]
+    padrao: novo
+    obrigatorio: true
+  fonte:
+    tipo: texto            # youtube, rss, tendencias...
+  canal:
+    tipo: texto            # de quem é
+  link:
+    tipo: link
+  miniatura:
+    tipo: imagem
+  publicado_em:
+    tipo: data
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+status:
+  concluidos: [virou_ideia, descartado]
+  decidir: [novo]
+  acoes:
+    - rotulo: Útil
+      definir: {status: util}
+      estilo: principal
+    - rotulo: Descartar
+      definir: {status: descartado}
+      estilo: discreto
+
+visoes:
+  - tipo: kanban
+    nome: Triagem
+    agrupar_por: status
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, fonte, canal, publicado_em, link]
+
+# Coletores: scripts em radar/maquina/coletores/.
+#   ativo: true    roda sozinho no horário (o botão "Rodar agora" funciona sempre)
+#   a_cada: 6h     intervalo (30m, 6h, 1d)   OU   diario_as: "07:00"
+#   config: ...    o que o script recebe
+coletores:
+  - script: youtube_rss.py
+    nome: Canais do YouTube
+    ativo: false
+    a_cada: 6h
+    config:
+      # Troque pelos canais que você acompanha. Aceita @nome, link do canal ou o ID (UC...).
+      canais:
+        - "@GoogleDevelopers"
+        - "@Fireship"
+      maximo_por_canal: 4
+
+  - script: rss.py
+    nome: Blogs e newsletters
+    ativo: false
+    a_cada: 12h
+    config:
+      # Quase tudo tem um feed. Alguns que funcionam sem chave nem cadastro:
+      #   Reddit:    https://www.reddit.com/r/NOME/top/.rss?t=day
+      #   Bluesky:   https://bsky.app/profile/USUARIO/rss
+      #   GitHub:    https://github.com/DONO/REPO/releases.atom
+      #   Podcasts:  o endereço do feed do programa
+      #   Substack:  https://NOME.substack.com/feed
+      feeds:
+        - https://simonwillison.net/atom/everything/
+        - https://blog.google/technology/ai/rss/
+      maximo_por_feed: 4
+
+  - script: google_trends.py
+    nome: Em alta no Google
+    ativo: false
+    diario_as: "07:00"
+    config:
+      pais: BR
+      maximo: 8
+
+  - script: youtube_api.py
+    nome: Busca no YouTube (com chave)
+    ativo: false
+    diario_as: "08:00"
+    requer: [YOUTUBE_API_KEY]   # coloque a chave em ~/.orquestra/.env
+    config:
+      termos:
+        - inteligência artificial para criadores
+      pais: BR
+      idioma: pt
+      maximo_por_termo: 5

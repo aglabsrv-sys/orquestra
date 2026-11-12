@@ -1,0 +1,75 @@
+# Módulo Tarefas.
+# Este arquivo é o contrato do módulo: diz ao painel (e aos agentes) quais campos
+# as notas de tarefas/itens/ têm e como mostrá-las.
+
+nome: Tarefas
+descricao: O que precisa ser feito, hoje e na semana.
+icone: check
+ordem: 1
+
+# Campos do frontmatter. Tipos: texto, escolha, data, lista, numero, booleano, link, imagem.
+campos:
+  status:
+    tipo: escolha
+    opcoes: [a_fazer, fazendo, aguardando, feito]
+    padrao: a_fazer
+    obrigatorio: true
+  prioridade:
+    tipo: escolha
+    opcoes: [alta, media, baixa]
+    padrao: media
+  data:
+    tipo: data
+    rotulo: Para quando
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+
+# Qual campo de data alimenta a faixa da semana e o "para hoje".
+campo_data: data
+
+status:
+  concluidos: [feito]          # não contam como "em aberto"
+  decidir: [aguardando]        # aparecem na fila Decidir
+  acoes:                       # botões da fila Decidir
+    - rotulo: Aprovar e concluir
+      definir: {status: feito}
+      estilo: principal
+    - rotulo: Voltar para a fazer
+      definir: {status: a_fazer}
+
+visoes:
+  - tipo: kanban
+    nome: Quadro
+    agrupar_por: status
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, status, prioridade, data, tags]
+
+# Automações sem IA: scripts em tarefas/maquina/coletores/.
+#   ativo: true    roda sozinho no horário (o botão "Rodar agora" funciona sempre)
+coletores:
+  - script: recorrentes.py
+    nome: Tarefas que se repetem
+    ativo: false
+    diario_as: "05:00"
+    config:
+      # quando: todo dia | dia util | fim de semana | segunda ... domingo | dia 5
+      tarefas:
+        - titulo: Revisar a semana
+          quando: sexta
+          prioridade: media
+        - titulo: Conferir as contas do mês
+          quando: dia 5
+
+  - script: agenda_ics.py
+    nome: Compromissos da agenda
+    ativo: false
+    a_cada: 6h
+    config:
+      # Cole o endereço iCal (.ics) da sua agenda. Veja como achar em docs/coletores.md.
+      agendas: []
+      dias_a_frente: 14

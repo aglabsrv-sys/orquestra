@@ -1,0 +1,43 @@
+# Módulo Finanças: o que entra e o que sai.
+# Uma nota por lançamento.
+
+nome: Finanças
+descricao: O que entra, o que sai e o que ainda vai vencer.
+icone: moeda
+ordem: 6
+
+campos:
+  status:
+    tipo: escolha
+    opcoes: [previsto, pago]
+    padrao: previsto
+    obrigatorio: true
+  tipo:
+    tipo: escolha
+    opcoes: [receita, despesa]
+    padrao: despesa
+  valor:
+    tipo: numero
+  data:
+    tipo: data
+    rotulo: Vence em
+  categoria:
+    tipo: texto
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+
+campo_data: data
+
+status:
+  concluidos: [pago]
+  decidir: []
+
+visoes:
+  - tipo: tabela
+    nome: Lançamentos
+    colunas: [titulo, tipo, valor, data, status, categoria]
+  - tipo: kanban
+    nome: A pagar e pago
+    agrupar_por: status

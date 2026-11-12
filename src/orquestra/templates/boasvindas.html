@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ tema.cores.fundo }}">
+  <title>Boas-vindas · Orquestra</title>
+  <link rel="icon" href="/static/icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ marca }}">
+  <style>{{ estilo|safe }}</style>
+</head>
+<body class="bv">
+  <canvas id="ambiente" width="48" height="27" aria-hidden="true"></canvas>
+
+  <main class="bv-pagina" id="boas-vindas" data-pasta-nova="{{ pasta_nova }}">
+    <header class="bv-capa cab-modulo">
+      <canvas class="capa" width="320" height="180" data-cena="{{ capa.cena }}" data-semente="{{ capa.semente }}" data-paleta='{{ capa.paleta|tojson }}' aria-hidden="true"></canvas>
+      <span class="slide-sombra"></span>
+      <div class="cab-texto">
+        <h1>Orquestra</h1>
+        <p>Suas notas viram um painel. Você, o Obsidian e seus agentes trabalham nos mesmos arquivos.</p>
+      </div>
+    </header>
+
+    {% if erro %}<div class="faixa alerta">{{ icone('aviso', 16) }} {{ erro }}</div>{% endif %}
+    {% if not local %}
+    <div class="faixa alerta">{{ icone('aviso', 16) }} Por segurança, escolher ou criar um vault só funciona no próprio computador. Abra <code>http://localhost:8420</code> nele.</div>
+    {% endif %}
+
+    {# ------------------------------------------------------------ 1. escolher #}
+    <section id="passo-escolha">
+      <h2 class="bv-pergunta">Por onde começamos?</h2>
+      <div class="bv-opcoes">
+        <button class="bv-opcao" type="button" data-modo="existente"{% if not local %} disabled{% endif %}>
+          {{ icone('pasta', 26) }}
+          <b>Já tenho um vault do Obsidian</b>
+          <span>Uso a pasta como ela está. Nenhuma nota muda de lugar: você escolhe o que quer ver no painel.</span>
+        </button>
+        <button class="bv-opcao" type="button" data-modo="novo"{% if not local %} disabled{% endif %}>
+          {{ icone('estrela', 26) }}
+          <b>Criar um vault novo</b>
+          <span>Começo com um modelo pronto, do tamanho que você quiser, e com exemplos para ver funcionando.</span>
+        </button>
+      </div>
+      {% if vault_atual %}
+      <p class="bv-voltar"><a class="link" href="/">{{ icone('seta_esq', 14) }} Voltar para o vault atual</a> <span class="suave">· <code>{{ vault_atual }}</code></span></p>
+      {% endif %}
+    </section>
+
+    {# ------------------------------------------------------------ 2a. já tenho #}
+    <section id="bloco-existente" hidden>
+      <button class="botao discreto bv-trocar" type="button" data-recomecar>{{ icone('seta_esq', 14) }}<span>Voltar</span></button>
+      <h2 class="bv-pergunta">Qual é a pasta do seu vault?</h2>
+      {% if cofres %}
+      <p class="suave">Encontrei {{ 'este cofre' if cofres|length == 1 else 'estes cofres' }} no seu Obsidian:</p>
+      <div class="bv-cofres">
+        {% for c in cofres %}
+        <button class="bv-cofre" type="button" data-caminho="{{ c.caminho }}">
+          {{ icone('pasta', 20) }}
+          <span><b>{{ c.nome }}</b><small>{{ c.caminho }}</small></span>
+          {% if c.ja_e_vault %}<em class="et et-area">já preparado</em>{% elif c.aberto %}<em class="et">aberto agora</em>{% endif %}
+        </button>
+        {% endfor %}
+      </div>
+      <p class="suave">Ou indique outra pasta:</p>
+      {% endif %}
+      <div class="bv-caminho">
+        <input type="text" id="caminho-existente" placeholder="{{ pasta_nova }}" autocomplete="off" spellcheck="false" aria-label="Caminho da pasta do vault">
+        <button class="botao" type="button" data-procurar="caminho-existente">Procurar…</button>
+        <button class="botao principal" type="button" id="analisar">Olhar a pasta</button>
+      </div>
+
+      <div id="analise" hidden>
+        <div class="bloco bv-resumo" id="analise-resumo"></div>
+
+        <div id="analise-pastas-bloco">
+          <h3 class="bv-sub">Quais pastas suas você quer ver no painel?</h3>
+          <p class="suave">Cada pasta marcada vira uma área, com lista, campos e (se as notas têm um status) quadro. O painel só cria um arquivo <code>_modulo.yaml</code> dentro dela. As outras continuam acessíveis em “Pastas”.</p>
+          <div class="bv-pastas" id="analise-pastas"></div>
+        </div>
+      </div>
+    </section>
+
+    {# ------------------------------------------------------------ 2b. novo #}
+    <section id="bloco-novo" hidden>
+      <button class="botao discreto bv-trocar" type="button" data-recomecar>{{ icone('seta_esq', 14) }}<span>Voltar</span></button>
+      <h2 class="bv-pergunta">Onde o vault vai ficar?</h2>
+      <div class="bv-caminho">
+        <input type="text" id="caminho-novo" value="{{ pasta_nova }}" autocomplete="off" spellcheck="false" aria-label="Pasta do vault novo">
+        <button class="botao" type="button" data-procurar="caminho-novo">Procurar…</button>
+      </div>
+      <p class="suave pequeno">Uma pasta nova (ou vazia). Se não existir, eu crio.</p>
+
+      <h3 class="bv-sub">Qual ponto de partida combina com você?</h3>
+      <div class="bv-perfis" role="radiogroup" aria-label="Ponto de partida">
+        {% for pf in perfis %}
+        <label class="bv-perfil">
+          <input type="radio" name="perfil" value="{{ pf.id }}" data-modulos="{{ pf.modulos|join(',') }}"{% if pf.id == 'essencial' %} checked{% endif %}>
+          <b>{{ pf.nome }}</b>
+          <span>{{ pf.descricao }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    {# ------------------------------------------------------------ 3. comum aos dois #}
+    <section id="bloco-comum" hidden>
+      <h3 class="bv-sub" id="titulo-prontos">Áreas do painel</h3>
+      <p class="suave" id="texto-prontos">Marque o que quiser. Dá para acrescentar e tirar áreas depois, em Ajustes.</p>
+      <div class="bv-modulos">
+        {% for m in catalogo %}
+        <label class="bv-modulo">
+          <input type="checkbox" name="modulo" value="{{ m.id }}">
+          {{ icone(m.icone, 18) }}
+          <span><b>{{ m.nome }}</b><small>{{ m.descricao }}</small></span>
+        </label>
+        {% endfor %}
+      </div>
+      <label class="chave bv-chave"><input type="checkbox" id="exemplos"><i></i><span>Incluir notas de exemplo nas áreas novas (dá para apagar depois)</span></label>
+
+      <h3 class="bv-sub">Do seu jeito</h3>
+      <div class="grade-campos">
+        <label class="campo"><span>Nome do painel</span><input type="text" id="nome" value="Orquestra" maxlength="60"></label>
+      </div>
+      <div class="bv-temas" role="radiogroup" aria-label="Tema">
+        {% for t in temas %}
+        <label class="bv-tema" style="--t-fundo:{{ t.cores.fundo }};--t-texto:{{ t.cores.texto }};--t-destaque:{{ t.cores.destaque }};--t-borda:{{ t.cores.borda }}">
+          <input type="radio" name="tema" value="{{ t.id }}" data-cores='{{ t.cores|tojson }}'{% if loop.first %} checked{% endif %}>
+          <span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ t.cores[chave] }}"></i>{% endfor %}</span>
+          <b>{{ t.nome }}</b>
+          <small>{{ t.descricao }}</small>
+        </label>
+        {% endfor %}
+      </div>
+
+      <label class="chave bv-chave"><input type="checkbox" id="backup"><i></i><span>Guardar versões locais do vault (git). Uma cópia externa continua sendo necessária.</span></label>
+      <p class="suave pequeno" id="aviso-backup" hidden></p>
+
+      <div class="bloco bv-vai-criar">
+        <b>O que vou criar</b>
+        <ul id="vai-criar"></ul>
+        <p class="suave pequeno" id="nao-toco">Nada que já existe na pasta é alterado ou apagado.</p>
+      </div>
+
+      <div class="linha-botoes bv-final">
+        <button class="botao principal grande" type="button" id="concluir">Abrir o painel</button>
+      </div>
+    </section>
+
+    {# ------------------------------------------------------------ 4. pronto #}
+    <section id="passo-pronto" hidden>
+      <h2 class="bv-pergunta">Pronto.</h2>
+      <p id="pronto-texto"></p>
+      <ul class="bv-avisos" id="pronto-avisos"></ul>
+      <div class="linha-botoes"><a class="botao principal grande" href="/">Abrir o painel</a></div>
+    </section>
+
+    <p class="suave pequeno bv-rodape">Orquestra {{ versao }} · roda só neste computador, sem conta e sem nuvem.</p>
+  </main>
+
+  <div id="avisos" aria-live="polite"></div>
+  <script src="/static/js/cenas.js?v={{ marca }}"></script>
+  <script src="/static/js/boasvindas.js?v={{ marca }}"></script>
+</body>
+</html>

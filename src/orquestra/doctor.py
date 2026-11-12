@@ -12,11 +12,12 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from orquestra import backup
-from orquestra.config import carregar_env, ler_config_painel, pasta_app
+from orquestra.config import carregar_env, pasta_app
 from orquestra.coletores import caminho_script
 
 MARCAS = {"ok": "[ok]   ", "aviso": "[!]    ", "erro": "[erro] "}
@@ -72,15 +73,22 @@ def verificar_ferramentas() -> list[Item]:
 
 def verificar_vault(vault: Path | None) -> list[Item]:
     if vault is None:
-        return [Item("erro", "Nenhum vault configurado", "Crie um com `orquestra criar` ou aponte um existente com `orquestra --vault CAMINHO`.")]
+        return [Item("erro", "Nenhum vault configurado", "Rode `orquestra` e escolha pela tela, crie um com `orquestra criar` ou prepare um que já existe com `orquestra adotar CAMINHO`.")]
     if not vault.is_dir():
         return [Item("erro", f"A pasta do vault não existe: {vault}", "Confira o caminho em " + str(pasta_app() / "config.yaml"))]
 
     itens = [Item("ok", f"Vault: {vault}")]
     try:
-        teste = vault / ".orquestra-teste.orq-tmp"
-        teste.write_text("ok", encoding="utf-8")
-        teste.unlink()
+        # mkstemp cria exclusivamente: um diagnóstico nunca substitui um arquivo
+        # preexistente, nem segue um link com um nome previsível.
+        descritor, nome = tempfile.mkstemp(prefix=".orquestra-teste-", suffix=".orq-tmp", dir=vault)
+        try:
+            with os.fdopen(descritor, "wb") as arquivo:
+                arquivo.write(b"ok")
+                arquivo.flush()
+                os.fsync(arquivo.fileno())
+        finally:
+            Path(nome).unlink(missing_ok=True)
     except OSError:
         itens.append(Item("erro", "Sem permissão para gravar no vault", "O painel precisa criar e alterar arquivos nessa pasta."))
 
@@ -139,7 +147,7 @@ def verificar_vault(vault: Path | None) -> list[Item]:
     # ---- backup
     if backup.git_disponivel():
         if not backup.e_repositorio(vault):
-            itens.append(Item("aviso", "O vault não tem histórico git", "Rode `orquestra backup` para criar. É o seu 'desfazer' para qualquer alteração de um agente."))
+            itens.append(Item("aviso", "O vault não tem histórico git", "Ligue em Ajustes > Histórico e backup (ou rode `orquestra backup`). É o seu 'desfazer' para qualquer alteração de um agente."))
         elif not backup.tem_remoto(vault):
             itens.append(Item("aviso", "Backup só local", "O histórico existe, mas só neste computador. Veja docs/backup.md para enviar a um repositório privado."))
         else:
