@@ -11,6 +11,7 @@
 - Cenas preparadas sob demanda, sem processamento contínuo em segundo plano ou com movimento reduzido.
 - Contagens dispensam ordenação; renderização de Markdown após salvar sai do laço de eventos do servidor.
 - Política de segurança bloqueia JavaScript inline; scripts do painel continuam servidos localmente.
+- CSS e JavaScript usam hash de conteúdo na URL para renovar o cache mesmo em wheels com datas normalizadas.
 - Carrossel com controles de toque maiores e slides inativos fora do foco; rótulos ARIA, links no texto e contraste do tema claro revisados com axe-core.
 - Roteiro Chromium, benchmark sintético, capturas atualizadas e guia de lançamento.
 

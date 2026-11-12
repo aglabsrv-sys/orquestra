@@ -18,6 +18,7 @@ alguém em uma porta pública: o painel não possui autenticação para esse mod
 | Animações | RAF continuava acordando em modo reduzido ou página oculta; todas as capas eram preparadas de uma vez | Preparação por visibilidade e agendamento na cadência de 12 quadros/s somente quando há cena animável; preferência pode mudar sem recarregar |
 | Servidor | Contagens ordenavam notas sem necessidade e a prévia salva de Markdown usava o laço ASGI | Contagens sem ordenação; edição e renderização trabalham em thread com uma visão coerente do índice |
 | Segurança | CSP permitia JavaScript inline sem ser necessário | `script-src 'self'`; estilos de aparência continuam permitidos |
+| Atualização do pacote | O wheel normaliza mtimes e a marca dos estáticos dependia dessas datas | URLs de CSS e JS identificadas por hash de conteúdo, compartilhado pelo painel e pelo primeiro uso |
 | Acessibilidade | axe-core encontrou alvos pequenos no carrossel, slides inativos no foco, nome ARIA sem papel e contrastes insuficientes no claro | Pontos com alvo de 28 px, slides laterais fora do foco/leitura, região identificada, links sublinhados e contraste revisto em etiquetas, caminhos e código |
 
 A API de personalização aceita `versao` opcional para clientes existentes. O
@@ -67,7 +68,7 @@ Testes Node cobrem reconexão, isolamento entre vaults, consultas sobrepostas e
 retorno pelo cache do navegador; teste ASGI cobre pedidos concorrentes durante
 a renderização de uma nota.
 
-Validação local em clone limpo: **348 testes Python**, **35 testes Node**, as onze
+Validação local em clone limpo: **349 testes Python**, **35 testes Node**, as onze
 jornadas Chromium, Ruff e instalação de wheel/sdist/editável com MCP stdio
 aprovados. A checagem adicional com axe-core 4.14.0 cobriu doze páginas no escuro
 em 1440 px e no claro em 390 px. As violações encontradas nas regras WCAG A/AA

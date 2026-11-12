@@ -34,6 +34,7 @@ from orquestra.indice import EXT_MIDIA, data_de, deve_ignorar, espera_decisao
 from orquestra.modulos import ARQUIVO_DESLIGADO, TIPOS_DE_CAMPO, ValorInvalido, padroes, rotulo, validar
 from orquestra.notas import Conflito, FrontmatterInvalido, simples
 from orquestra.painel import NaoEncontrado, Painel, Recusado
+from orquestra.recursos import marca_estaticos
 from orquestra.seguranca import CapabilityLocal, Protecao
 from orquestra.vigia import Vigia
 
@@ -83,7 +84,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     modelos = Jinja2Templates(directory=PASTA / "templates")
     modelos.env.globals.update(icone=ap.icone, rotulo=rotulo, url_nota=ap.url_nota, url_pasta=ap.url_pasta)
     # Muda sempre que um arquivo de static/ muda, para o navegador não usar CSS/JS antigo.
-    marca = str(int(max(p.stat().st_mtime for p in (PASTA / "static").rglob("*") if p.is_file())))
+    marca = marca_estaticos(PASTA / "static")
 
     def pagina(request: Request, nome: str, ativo: str, status: int = 200, **extra: Any) -> HTMLResponse:
         hoje = dt.date.today()

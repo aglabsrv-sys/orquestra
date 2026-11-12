@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import threading
 
 import httpx
@@ -264,3 +265,16 @@ def test_personalizacao_de_aba_antiga_nao_sobrescreve_configuracao_nova(app_leve
     assert schema.read_bytes() == atual
     segunda = cliente.put("/api/modulos/tarefas", json={"versao": primeira.json()["versao"], "descricao": "Escolhas revisadas"})
     assert segunda.status_code == 200
+
+
+def test_marca_de_css_e_js_depende_do_conteudo_mesmo_com_datas_normalizadas(tmp_path):
+    from orquestra.recursos import marca_estaticos
+
+    css = tmp_path / "app.css"
+    css.write_text("body{color:red}", encoding="utf-8")
+    primeira = marca_estaticos(tmp_path)
+    os.utime(css, (1580601600, 1580601600))
+    assert marca_estaticos(tmp_path) == primeira
+    css.write_text("body{color:tan}", encoding="utf-8")  # mesmo tamanho; timestamp também igual
+    os.utime(css, (1580601600, 1580601600))
+    assert marca_estaticos(tmp_path) != primeira
