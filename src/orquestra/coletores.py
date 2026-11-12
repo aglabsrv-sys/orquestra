@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import logging
 import os
 import re
 import shutil
@@ -28,6 +29,7 @@ import sys
 import tempfile
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -48,6 +50,8 @@ CHAVES_RESERVADAS = {"id", "titulo", "corpo", "campos", "atualizar"}
 CAMPOS_DE_CONTROLE = {"origem", "coletor", "id_externo", "coletado_em", "criado_em", "_orquestra_coleta"}
 _execucoes: dict[str, set[threading.Event]] = {}
 _trava_execucoes = threading.Lock()
+registro = logging.getLogger(__name__)
+ERRO_SAIDA_EXCESSIVA = "O coletor excedeu 4 MB de saída e foi interrompido. Reduza a quantidade de itens ou mensagens."
 
 
 @dataclass
@@ -131,11 +135,20 @@ def _job_windows(processo: subprocess.Popen):
         _fields_ = [("basico", Basico), ("io", ctypes.c_uint64 * 6), ("memoria_processo", ctypes.c_size_t),
                     ("memoria_job", ctypes.c_size_t), ("pico_processo", ctypes.c_size_t), ("pico_job", ctypes.c_size_t)]
 
+    class Contabilidade(ctypes.Structure):
+        _fields_ = [("usuario", ctypes.c_int64), ("kernel", ctypes.c_int64),
+                    ("usuario_periodo", ctypes.c_int64), ("kernel_periodo", ctypes.c_int64),
+                    ("faltas_pagina", w.DWORD), ("total", w.DWORD), ("ativos", w.DWORD), ("encerrados", w.DWORD)]
+
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.CreateJobObjectW.argtypes = [ctypes.c_void_p, w.LPCWSTR]
     kernel.CreateJobObjectW.restype = w.HANDLE
     kernel.SetInformationJobObject.argtypes = [w.HANDLE, ctypes.c_int, ctypes.c_void_p, w.DWORD]
     kernel.AssignProcessToJobObject.argtypes = [w.HANDLE, w.HANDLE]
+    kernel.TerminateJobObject.argtypes = [w.HANDLE, w.UINT]
+    kernel.TerminateJobObject.restype = w.BOOL
+    kernel.QueryInformationJobObject.argtypes = [w.HANDLE, ctypes.c_int, ctypes.c_void_p, w.DWORD, ctypes.POINTER(w.DWORD)]
+    kernel.QueryInformationJobObject.restype = w.BOOL
     kernel.CloseHandle.argtypes = [w.HANDLE]
     job = kernel.CreateJobObjectW(None, None)
     if not job:
@@ -145,7 +158,26 @@ def _job_windows(processo: subprocess.Popen):
     if not kernel.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)) or not kernel.AssignProcessToJobObject(job, w.HANDLE(processo._handle)):
         kernel.CloseHandle(job)
         raise OSError("Não consegui acompanhar os processos filhos do coletor. Tente iniciar o painel diretamente pelo terminal.")
-    return lambda: kernel.CloseHandle(job)
+
+    def encerrar():
+        try:
+            if not kernel.TerminateJobObject(job, 1):
+                raise OSError("Não consegui interromper o grupo de processos do coletor.")
+            limite = time.monotonic() + 10
+            while True:
+                estado = Contabilidade()
+                if not kernel.QueryInformationJobObject(job, 1, ctypes.byref(estado), ctypes.sizeof(estado), None):
+                    raise OSError("Não consegui confirmar o encerramento dos processos do coletor.")
+                if not estado.ativos:
+                    return
+                if time.monotonic() >= limite:
+                    raise OSError("O grupo de processos do coletor não encerrou dentro do prazo.")
+                time.sleep(0.01)
+        finally:
+            # KILL_ON_JOB_CLOSE continua valendo inclusive se a confirmação falhar.
+            kernel.CloseHandle(job)
+
+    return encerrar
 
 
 def _executar_limitado(comando: list[str], pasta: Path, ambiente: dict[str, str], cancelamento: threading.Event | None = None) -> tuple[bytes, bytes, int, str]:
@@ -182,31 +214,54 @@ def _executar_limitado(comando: list[str], pasta: Path, ambiente: dict[str, str]
                 erro = "A execução foi interrompida porque o vault foi fechado."
                 break
             if excesso.wait(0.03):
-                erro = "O coletor excedeu 4 MB de saída e foi interrompido. Reduza a quantidade de itens ou mensagens."
+                erro = ERRO_SAIDA_EXCESSIVA
                 break
             if time.monotonic() - inicio >= TEMPO_LIMITE:
                 erro = f"O coletor passou de {TEMPO_LIMITE}s e foi interrompido. Reduza o trabalho por execução."
                 break
     finally:
-        if fechar_job:
-            fechar_job()
-        elif os.name != "nt":
-            try:
-                os.killpg(processo.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        elif processo.poll() is None:
-            subprocess.run([str(Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32" / "taskkill.exe"), "/PID", str(processo.pid), "/T", "/F"], capture_output=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
-        if processo.poll() is None:
-            processo.kill()
-        processo.wait(timeout=10)
-        for thread in threads:
-            if thread.ident is not None:
-                thread.join(timeout=2)
-        for canal in (processo.stdout, processo.stderr):
-            if canal and not canal.closed:
-                canal.close()
+        try:
+            if fechar_job:
+                fechar_job()
+            elif os.name != "nt":
+                try:
+                    os.killpg(processo.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            elif processo.poll() is None:
+                subprocess.run([str(Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32" / "taskkill.exe"), "/PID", str(processo.pid), "/T", "/F"], capture_output=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+        finally:
+            if processo.poll() is None:
+                processo.kill()
+            processo.wait(timeout=10)
+            for thread in threads:
+                if thread.ident is not None:
+                    thread.join(timeout=2)
+            for canal in (processo.stdout, processo.stderr):
+                if canal and not canal.closed:
+                    canal.close()
+    # O processo pode ter acabado antes de o loop observar o sinal dos leitores.
+    # Ainda assim, saída truncada nunca pode ser importada como coleta completa.
+    if excesso.is_set() and not erro:
+        erro = ERRO_SAIDA_EXCESSIVA
     return bytes(saidas[0]), bytes(saidas[1]), processo.returncode, erro
+
+
+@contextmanager
+def _pasta_temporaria():
+    temporaria = tempfile.TemporaryDirectory(prefix="orquestra-coletor-")
+    try:
+        yield temporaria.name
+    finally:
+        try:
+            temporaria.cleanup()
+        except OSError as erro:
+            if getattr(erro, "winerror", None) not in (32, 33):
+                raise
+            # Mesmo após todos os processos terminarem, antivírus/indexadores
+            # podem reter o diretório por instantes. Não substituir o resultado
+            # da execução por essa falha de limpeza de um snapshot descartável.
+            registro.warning("O snapshot temporário do coletor ficou ocupado e foi preservado na pasta temporária do sistema.")
 
 
 def cancelar_execucoes(vault: Path) -> None:
@@ -249,7 +304,7 @@ def _rodar_autorizado(vault: Path, modulo: Modulo, coletor: ColetorDef, cancelam
                          "ORQUESTRA_MODULO": str(caminho_no_vault(vault, modulo.pasta)), "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1"})
         # Executa a cópia dos bytes que compõem o hash; mudanças concorrentes no
         # vault e caches .pyc não podem trocar código após a autorização.
-        with tempfile.TemporaryDirectory(prefix="orquestra-coletor-") as temporaria:
+        with _pasta_temporaria() as temporaria:
             pasta = Path(temporaria)
             for nome, dados in arquivos.items():
                 destino = pasta / nome

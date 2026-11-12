@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import io
 import json
 import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI, Request
@@ -181,6 +183,111 @@ def test_saida_excessiva_e_interrompida_sem_importacao_parcial(codigo, monkeypat
     monkeypatch.setattr(coletores, "LIMITE_SAIDA", 512)
     itens, erro = coletores.rodar_script(vault, modulo, coletor)
     assert itens == [] and "excedeu" in erro
+
+
+@pytest.mark.parametrize("winerror", [32, 33])
+def test_snapshot_ocupado_na_limpeza_preserva_limite_apos_encerrar_processo(codigo, monkeypatch, caplog, winerror):
+    vault, modulo, coletor, script = codigo
+    script.write_text('print(\'{"id":"x","titulo":"Não importar parcialmente"}\')\nprint("x" * 10000)', encoding="utf-8")
+    aprovar(vault, modulo, coletor)
+    monkeypatch.setattr(coletores, "LIMITE_SAIDA", 512)
+    iniciar = coletores.subprocess.Popen
+    criar_temporaria = coletores.tempfile.TemporaryDirectory
+    processos = []
+    temporarias = []
+
+    def iniciar_processo(*args, **kwargs):
+        processo = iniciar(*args, **kwargs)
+        processos.append(processo)
+        return processo
+
+    def criar_snapshot(*args, **kwargs):
+        temporaria = criar_temporaria(*args, **kwargs)
+        temporarias.append(temporaria)
+
+        def limpar():
+            assert processos and all(p.poll() is not None for p in processos)
+            assert all(p.stdout.closed and p.stderr.closed for p in processos)
+            erro = PermissionError("snapshot ainda ocupado")
+            erro.winerror = winerror
+            raise erro
+
+        return SimpleNamespace(name=temporaria.name, cleanup=limpar)
+
+    monkeypatch.setattr(coletores, "subprocess", SimpleNamespace(**{**vars(coletores.subprocess), "Popen": iniciar_processo}))
+    monkeypatch.setattr(coletores, "tempfile", SimpleNamespace(TemporaryDirectory=criar_snapshot))
+    try:
+        itens, erro = coletores.rodar_script(vault, modulo, coletor)
+        assert itens == [] and "excedeu" in erro
+        assert "snapshot ainda ocupado" not in erro
+        assert "snapshot temporário" in caplog.text
+    finally:
+        for temporaria in temporarias:
+            temporaria.cleanup()
+
+
+def test_limpeza_nao_oculta_erro_distinto_de_bloqueio_windows(tmp_path, monkeypatch):
+    def limpar():
+        raise PermissionError("permissão negada")
+
+    monkeypatch.setattr(coletores, "tempfile", SimpleNamespace(TemporaryDirectory=lambda **kwargs: SimpleNamespace(name=str(tmp_path), cleanup=limpar)))
+    with pytest.raises(PermissionError, match="permissão negada"), coletores._pasta_temporaria():
+        pass
+
+
+@pytest.fixture
+def processo_rapido(monkeypatch):
+    chamadas = []
+    threads = []
+
+    class ThreadImediata:
+        ident = None
+
+        def __init__(self, target, args, daemon):
+            self.target = target
+            self.args = args
+            threads.append(self)
+
+        def start(self):
+            self.ident = 1
+            self.target(*self.args)
+
+        def is_alive(self):
+            return False
+
+        def join(self, timeout):
+            chamadas.append("join")
+
+    processo = SimpleNamespace(
+        stdout=io.BytesIO(b'{"id":"x","titulo":"Nao importar parcialmente"}\n' + b"x" * 10000),
+        stderr=io.BytesIO(), returncode=0, poll=lambda: 0,
+        wait=lambda timeout: chamadas.append("wait"),
+    )
+    monkeypatch.setattr(coletores, "threading", SimpleNamespace(Thread=ThreadImediata, Event=coletores.threading.Event, Lock=coletores.threading.Lock))
+    monkeypatch.setattr(coletores, "subprocess", SimpleNamespace(**{**vars(coletores.subprocess), "Popen": lambda *args, **kwargs: processo}))
+    monkeypatch.setattr(coletores, "_job_windows", lambda processo: lambda: None)
+    return processo, threads, chamadas
+
+
+def test_saida_excessiva_de_processo_ja_concluido_nao_importa_prefixo(codigo, processo_rapido, monkeypatch):
+    vault, modulo, coletor, _ = codigo
+    aprovar(vault, modulo, coletor)
+    monkeypatch.setattr(coletores, "LIMITE_SAIDA", 512)
+    itens, erro = coletores.rodar_script(vault, modulo, coletor)
+    assert itens == [] and "excedeu" in erro
+
+
+def test_falha_ao_encerrar_job_ainda_aguarda_processo_e_leitores(tmp_path, processo_rapido, monkeypatch):
+    processo, threads, chamadas = processo_rapido
+
+    def encerrar():
+        raise OSError("falha ao confirmar encerramento")
+
+    monkeypatch.setattr(coletores, "_job_windows", lambda processo: encerrar)
+    with pytest.raises(OSError, match="falha ao confirmar encerramento"):
+        coletores._executar_limitado(["coletor"], tmp_path, {})
+    assert chamadas == ["wait", "join", "join"]
+    assert len(threads) == 2 and processo.stdout.closed and processo.stderr.closed
 
 
 def test_timeout_encerra_tambem_processo_filho(codigo, tmp_path, monkeypatch):

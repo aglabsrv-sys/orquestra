@@ -231,7 +231,12 @@ def test_indice_nao_carimba_assinatura_de_versao_que_nao_conseguiu_ler(pequeno, 
         nota = ler_original(caminho_lido, vault_lido, **kwargs)
         if caminho_lido == caminho:
             leituras += 1
-            caminho.write_text("Versão em movimento " + "x" * leituras + "\n", encoding="utf-8")
+            # Já a primeira alteração precisa mudar o tamanho: trocar só 0 por
+            # x pode manter a assinatura no mesmo instante do relógio NTFS.
+            # O cenário é um escritor detectável em todas as três tentativas.
+            novo_texto = "Versão em movimento " + "x" * (leituras + 1) + "\n"
+            assert len(novo_texto.encode("utf-8")) != len(nota.corpo.encode("utf-8"))
+            caminho.write_text(novo_texto, encoding="utf-8")
         return nota
 
     monkeypatch.setattr(modulo_indice, "ler_nota", escritor_continuo)
