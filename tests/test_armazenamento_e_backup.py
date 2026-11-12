@@ -8,6 +8,7 @@ import json
 import shlex
 import subprocess
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -559,7 +560,9 @@ def test_doctor_preserva_arquivo_com_antigo_nome_fixo(tmp_path, monkeypatch):
 
 
 def test_plist_mac_valido_com_metacaracteres_e_falha_launchctl(tmp_path, monkeypatch):
-    monkeypatch.setattr(sys, "platform", "darwin")
+    # Simula somente o autostart: armazenamento precisa usar as primitivas do
+    # sistema real, inclusive quando este teste de plist roda em Linux.
+    monkeypatch.setattr(autostart, "sys", SimpleNamespace(platform="darwin", executable=sys.executable))
     monkeypatch.setattr(autostart, "_comando", lambda vault: ["/Python & teste/python", "-m", "orquestra", str(vault)])
     vault = tmp_path / 'P&D "acentos ação"'
     assert plistlib.loads(autostart._conteudo(vault).encode())["ProgramArguments"][-1] == str(vault)
@@ -575,7 +578,7 @@ def test_plist_mac_valido_com_metacaracteres_e_falha_launchctl(tmp_path, monkeyp
 
 
 def test_desktop_linux_escapa_exec_sem_field_codes(tmp_path, monkeypatch):
-    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(autostart, "sys", SimpleNamespace(platform="linux", executable=sys.executable))
     partes = ["/path com espaço/python", "-m", "orquestra", 'P&D com "aspas" $variavel `cmd` 100% \\fim']
     monkeypatch.setattr(autostart, "_comando", lambda vault: partes)
     exec_linha = next(l[5:] for l in autostart._conteudo(tmp_path).splitlines() if l.startswith("Exec="))

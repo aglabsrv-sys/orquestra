@@ -429,7 +429,19 @@ def test_vigia_real_edicao_rename_pasta_nova_e_tema(pequeno, monkeypatch):
             nota = vault / "tarefas/itens/A.md"
             nota.write_text("Editada externamente.\n", encoding="utf-8")
             await esperar(lambda: painel.indice.notas["tarefas/itens/A.md"].corpo == "Editada externamente.\n")
-            assert not fila.empty()  # o worker também conseguiu publicar para a fila do loop
+            # O worker atualiza o índice antes de registrar o diário e agendar a
+            # entrega no loop. Ver o índice pronto não garante que a fila já foi
+            # atendida; aguardamos a notificação concreta, sem assumir a ordem
+            # de execução das duas threads ou aceitar um evento não relacionado.
+            async def receber_edicao():
+                while True:
+                    evento = await fila.get()
+                    if evento.get("tipo") == "nota" and evento.get("rel") == "tarefas/itens/A.md":
+                        return evento
+
+            evento = await asyncio.wait_for(receber_edicao(), timeout=5)
+            assert evento["acao"] == "editado"
+            assert evento["versao"] == painel.indice.notas["tarefas/itens/A.md"].versao
             renomeada = nota.with_name("Renomeada.md")
             nota.rename(renomeada)
             await esperar(lambda: "tarefas/itens/Renomeada.md" in painel.indice.notas and "tarefas/itens/A.md" not in painel.indice.notas)

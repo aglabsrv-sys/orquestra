@@ -7,7 +7,7 @@ antigas já instaladas.
 
 ## Relatar uma vulnerabilidade
 
-Use [Report a vulnerability no GitHub](https://github.com/antoniogsouzaag/orquestra/security/advisories/new)
+Use [Report a vulnerability no GitHub](https://github.com/aglabsrv-sys/orquestra/security/advisories/new)
 quando o relato privado estiver habilitado. Se essa opção não estiver disponível,
 abra uma issue contendo apenas “preciso de um canal privado para um relato de
 segurança”, sem prova de exploração, dados do vault ou segredos. O mantenedor

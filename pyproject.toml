@@ -33,10 +33,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/antoniogsouzaag/orquestra"
-Repository = "https://github.com/antoniogsouzaag/orquestra"
-Issues = "https://github.com/antoniogsouzaag/orquestra/issues"
-Documentation = "https://github.com/antoniogsouzaag/orquestra#readme"
+Homepage = "https://github.com/aglabsrv-sys/orquestra"
+Repository = "https://github.com/aglabsrv-sys/orquestra"
+Issues = "https://github.com/aglabsrv-sys/orquestra/issues"
+Documentation = "https://github.com/aglabsrv-sys/orquestra#readme"
 
 [project.scripts]
 orquestra = "orquestra.cli:main"

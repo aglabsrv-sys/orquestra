@@ -51,7 +51,7 @@ Leva uns dez minutos. Você precisa de duas ferramentas gratuitas: o **uv**
 ### Baixar e abrir (todos os sistemas)
 
 ```bash
-git clone https://github.com/antoniogsouzaag/orquestra.git
+git clone https://github.com/aglabsrv-sys/orquestra.git
 ```
 
 ```bash

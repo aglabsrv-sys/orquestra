@@ -5,6 +5,7 @@ import os
 import socket
 import subprocess
 import sys
+from types import SimpleNamespace
 import time
 import urllib.request
 
@@ -163,7 +164,7 @@ def test_autostart_status_e_desativar_dispensam_vault(comando, monkeypatch, tmp_
     arquivo = tmp_path / "inicialização simulada" / "orquestra.desktop"
     monkeypatch.setattr(autostart, "_arquivo", lambda: arquivo)
     # Simula apenas o arquivo; nenhum serviço de login é iniciado ou alterado.
-    monkeypatch.setattr(autostart.sys, "platform", "linux")
+    monkeypatch.setattr(autostart, "sys", SimpleNamespace(platform="linux", executable=sys.executable))
     monkeypatch.delenv("ORQUESTRA_VAULT", raising=False)
     perdido = tmp_path / "vault que não existe mais"
     arquivo.parent.mkdir()
