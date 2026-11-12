@@ -30,6 +30,7 @@ plataforma que não foi efetivamente testada.
 
 | Data | Registro |
 |---|---|
+| 12/11/2026 | [Sincronização e revisão integrada para a comunidade](sincronizacao-comunidade-2026-11-12.md) |
 | 12/11/2026 | [Integrações e formulários locais](revisao-integracoes-2026-11-12.md) |
 | 12/11/2026 | [Revisão para lançamento e cobertura visual](revisao-lancamento-2026-11-12.md) |
 | 12/11/2026 | [Foco, hábitos e desempenho](refino-foco-habitos-desempenho-2026-11-12.md) |

@@ -188,6 +188,9 @@ As telas e áreas disponíveis dependem do perfil e do que você acrescentar em 
 | **Números** | Área opcional com uma nota por dia e um gráfico de cada número que você acompanha. |
 | **Pastas** | O vault como ele é no disco, inclusive o que não é área do painel. |
 | **Diário** | O que mudou no vault e o que cada agente fez, com autor e horário. |
+| **Agenda** | Datas das suas notas em mês, semana, dia ou lista; crie e edite compromissos no vault. |
+| **Hábitos e metas** | Área opcional com meta semanal, marcação diária e histórico em notas Markdown. |
+| **Pomodoro** | Foco e pausas, com duração configurável e continuidade ao navegar na mesma aba. |
 | **Temas** | Três temas, cada um com o seu estilo de capas em pixel art animadas (nove cenas desenhadas por código), em modo claro e escuro. |
 | **Automações sem IA** | Tarefas recorrentes, agenda, cotações e feeds: scripts que você revisa, aprova e pode agendar. Serviços externos podem ter limites ou custos. |
 
