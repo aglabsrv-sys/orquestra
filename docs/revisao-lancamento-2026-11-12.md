@@ -67,6 +67,15 @@ Testes Node cobrem reconexão, isolamento entre vaults, consultas sobrepostas e
 retorno pelo cache do navegador; teste ASGI cobre pedidos concorrentes durante
 a renderização de uma nota.
 
+Validação local em clone limpo: **348 testes Python**, **35 testes Node**, as onze
+jornadas Chromium, Ruff e instalação de wheel/sdist/editável com MCP stdio
+aprovados. A checagem adicional com axe-core 4.14.0 cobriu doze páginas no escuro
+em 1440 px e no claro em 390 px. As violações encontradas nas regras WCAG A/AA
+selecionadas foram corrigidas. Resultados automáticos e verificações incompletas
+de contraste sobre imagens não equivalem a certificação; leitores de tela e
+dispositivos físicos ainda exigem uma passagem real. Gitleaks verificou a árvore
+e o histórico alcançável sem encontrar segredos.
+
 ## Critérios para disponibilizar à comunidade
 
 - Confirmar os checks do commit exato, incluindo o novo job Chromium, empacotamento e scanner de segredos.
