@@ -149,6 +149,7 @@ class ConfigPainel:
     porta: int = PORTA_PADRAO
     captura: str = "entrada"  # módulo que recebe a captura rápida
     dock: list[str] = field(default_factory=list)  # áreas fixadas no dock; vazio = as primeiras
+    ordem_pastas: list[str] = field(default_factory=list)
     hosts_permitidos: list[str] = field(default_factory=list)
     backup: ConfigBackup = field(default_factory=ConfigBackup)
     aparencia: Aparencia = field(default_factory=Aparencia)
@@ -175,6 +176,10 @@ def ler_config_painel(vault: Path) -> ConfigPainel:
     if not isinstance(fixas, list) or any(not isinstance(f, str) for f in fixas):
         raise ConfigInvalida("orquestra.yaml: 'dock' precisa ser uma lista de nomes.")
     cfg.dock = list(fixas)
+    ordem = bruto.get("ordem_pastas", [])
+    if not isinstance(ordem, list) or any(not isinstance(m, str) for m in ordem):
+        raise ConfigInvalida("orquestra.yaml: 'ordem_pastas' precisa ser uma lista de nomes.")
+    cfg.ordem_pastas = list(dict.fromkeys(ordem))
     hosts = bruto.get("hosts_permitidos", [])
     if not isinstance(hosts, list) or any(not isinstance(h, str) for h in hosts):
         raise ConfigInvalida("orquestra.yaml: 'hosts_permitidos' precisa ser uma lista de nomes.")

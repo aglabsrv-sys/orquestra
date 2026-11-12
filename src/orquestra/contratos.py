@@ -75,6 +75,7 @@ class ConfiarBackup(Pedido):
 
 
 class Configuracao(Pedido):
+    ordem_pastas: list[str] | None = Field(default=None, max_length=500)
     nome: str | None = Field(default=None, max_length=60)
     captura: str | None = None
     auto_commit: bool | None = None

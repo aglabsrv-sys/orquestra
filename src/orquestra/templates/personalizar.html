@@ -6,14 +6,16 @@
 {% block conteudo %}
 <section class="pagina" id="personalizar" data-modulo="{{ modulo.id }}" data-versao="{{ modulo.versao }}">
   <header class="pagina-topo">
-    <h1>Personalizar</h1>
+    <div><span class="sobretitulo">{{ modulo.nome }}</span><h1>Personalizar pasta</h1></div>
     <a class="botao" href="/m/{{ modulo.id|urlencode }}">{{ icone('seta_esq', 15) }}<span>Voltar</span></a>
   </header>
-  <p class="suave">Ajuste a aparência e os campos de {{ modulo.nome }}. As mudanças só entram em vigor ao salvar.</p>
+  <p class="suave personalizar-intro">Ajuste a aparência e os campos de {{ modulo.nome }}. As mudanças só entram em vigor ao salvar.</p>
   <p class="faixa alerta" id="p-novidades" role="status" hidden>A configuração mudou no disco. Suas escolhas continuam nesta tela; copie-as e reabra Personalizar para revisar a versão atual antes de salvar.</p>
 
-  <h2 class="grupo-titulo">{{ icone('editar', 18) }} Aparência</h2>
-  <div class="bloco">
+  <nav class="personalizar-nav" aria-label="Personalização da pasta"><a href="#p-identidade">Aparência</a><a href="#p-propriedades">Propriedades</a><a href="#p-visoes">Visualizações</a></nav>
+  <h2 class="grupo-titulo" id="p-identidade">{{ icone('editar', 18) }} Aparência</h2>
+  <div class="bloco personalizar-identidade">
+    <div class="personalizar-previa">{{ p.capa(capa) }}<span>{{ modulo.nome }}</span></div>
     <div class="grade-campos">
       <label class="campo"><span>Nome no painel</span><input type="text" id="p-nome" value="{{ modulo.nome }}" maxlength="60" required autocomplete="off"></label>
       <label class="campo"><span>Ícone</span>
@@ -36,16 +38,16 @@
     <p id="p-capa-estado" role="status"></p>
   </div>
 
-  <h2 class="grupo-titulo">{{ icone('check', 18) }} Campos das notas</h2>
+  <h2 class="grupo-titulo" id="p-propriedades">{{ icone('check', 18) }} Propriedades das notas</h2>
   <div class="bloco">
     <p class="suave" id="ajuda-campos">Cada campo é uma propriedade da nota, também visível no Obsidian. Para o tipo <b>escolha</b>, separe as opções por vírgulas, na ordem das colunas do quadro.</p>
     <div class="campos-editor" id="p-campos">
-      {% for c in campos %}
+      {% for c in campos if c.nome != 'origem' and c.tipo not in ('imagem', 'link') %}
       <div class="campo-editor" data-original="{{ c.nome }}">
         <label class="campo"><span>Nome do campo</span><input type="text" value="{{ c.nome }}" data-nome readonly aria-describedby="ajuda-nome-campo" aria-label="Nome do campo {{ c.nome }}"></label>
         <label class="campo"><span>Tipo de {{ c.nome }}</span><select data-tipo>{% for t in tipos %}<option value="{{ t }}"{% if t == c.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
         <label class="campo campo-editor-opcoes"{% if c.tipo != 'escolha' %} hidden{% endif %}><span>Opções de {{ c.nome }}</span><input type="text" value="{{ c.opcoes|join(', ') }}" data-opcoes placeholder="Ex.: a fazer, fazendo, feito" aria-describedby="ajuda-campos"{% if c.tipo != 'escolha' %} hidden{% endif %}></label>
-        <label class="remover"><input type="checkbox" data-remover aria-label="Remover o campo {{ c.nome }} da área"><span>Remover da área <small class="suave">· os valores nas notas serão preservados</small></span></label>
+        <label class="remover"><input type="checkbox" data-remover aria-label="Remover o campo {{ c.nome }} da área"><span>Ocultar esta propriedade</span></label>
       </div>
       {% endfor %}
     </div>
@@ -56,7 +58,7 @@
     <p class="campo-ajuda">Mudar o nome de uma opção não altera as notas que já usam a antiga: elas aparecem com um aviso até você atualizar.</p>
   </div>
 
-  <h2 class="grupo-titulo">{{ icone('grafico', 18) }} Como mostrar</h2>
+  <h2 class="grupo-titulo" id="p-visoes">{{ icone('grafico', 18) }} Visualizações</h2>
   <div class="bloco">
     {% if modulo.tem_status %}
     <label class="campo"><span id="rotulo-concluidos">Opções de “{{ modulo.campo_status }}” que contam como concluído</span>
@@ -71,7 +73,7 @@
     <p class="suave pequeno">A lista aparece sempre.</p>
   </div>
 
-  <div class="linha-botoes">
+  <div class="linha-botoes personalizar-salvar">
     <button class="botao principal" type="button" id="p-salvar">Salvar alterações</button>
     <a class="botao" href="/m/{{ modulo.id|urlencode }}">Cancelar</a>
   </div>

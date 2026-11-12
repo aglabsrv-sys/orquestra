@@ -186,26 +186,4 @@
   document.addEventListener('visibilitychange',atualizarVideos);
   if (movimento.addEventListener) movimento.addEventListener('change',atualizarVideos);
 
-  var form = $('#variaveis-form');
-  if (form) {
-    var estado = $('#variaveis-estado'), lista = $('#variaveis-lista');
-    async function carregar() {
-      try {
-        var dados = await local('/api/variaveis'); lista.replaceChildren();
-        dados.nomes.forEach(function (nome) {
-          var li = document.createElement('li'), b = document.createElement('button');
-          li.textContent = nome + ' · configurada '; b.textContent = 'Excluir'; b.className = 'botao pequeno'; b.type = 'button';
-          b.onclick = async function () { b.disabled = true; try { await local('/api/variaveis', {nome: nome, valor: null}); await carregar(); } catch (e) { estado.textContent = e.message; b.disabled = false; } };
-          li.appendChild(b); lista.appendChild(li);
-        });
-      } catch (erro) { estado.textContent = erro.message; }
-    }
-    form.onsubmit = async function (ev) {
-      ev.preventDefault(); var b = $('button[type=submit]', form); b.disabled = true;
-      try { await local('/api/variaveis', {nome: $('#variavel-nome').value, valor: $('#variavel-valor').value}); form.reset(); estado.textContent = 'Variável salva.'; await carregar(); }
-      catch (erro) { estado.textContent = erro.message; }
-      finally { b.disabled = false; }
-    }; carregar();
-  }
-
 })();

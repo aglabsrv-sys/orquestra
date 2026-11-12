@@ -92,8 +92,12 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator("#caminho-novo").fill(str(vault))
     page.locator("#bv-proximo").click()
     page.locator('.bv-perfil:has(input[value="criador"])').click()
-    page.locator("#bv-proximo").click()
     page.locator("#exemplos").check()
+    assert page.locator(".bv-perfil").count() == 3
+    page.locator("#bv-proximo").click()
+    capa_inicial = page.locator('.bv-capa canvas').get_attribute('data-paleta')
+    page.locator('.bv-tema:has(input[value="mare"])').click()
+    assert page.locator('.bv-capa canvas').get_attribute('data-paleta') != capa_inicial
     for _ in range(8):
         if page.locator("#concluir").is_visible():
             break
@@ -104,6 +108,38 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator('#passo-pronto a[href="/"]').click(timeout=20000)
     page.wait_for_url(base + "/", timeout=20000)
     expect(page.locator(".carrossel")).to_be_visible()
+
+    # A capa é a mesma instância ao alternar visões; o histórico continua navegável.
+    page.goto(base + "/m/tarefas", wait_until="domcontentloaded")
+    page.evaluate("window.__capaPersistente=document.querySelector('.cab-modulo canvas')")
+    page.locator('.abas a[href="?aba=v1"]').click()
+    expect(page.locator('.tabela-envolta')).to_be_visible()
+    assert page.evaluate("window.__capaPersistente===document.querySelector('.cab-modulo canvas')")
+    page.go_back()
+    expect(page.locator('.quadro')).to_be_visible()
+    assert page.evaluate("window.__capaPersistente===document.querySelector('.cab-modulo canvas')")
+
+    page.goto(base + "/pastas", wait_until="domcontentloaded")
+    page.locator('#arvore-pastas a[data-pasta="tarefas"]').click()
+    expect(page.locator('#pasta-painel')).to_have_attribute('data-rel', 'tarefas')
+    page.locator('[data-pasta-visao="grafo"]').click()
+    expect(page.locator('#grafo-estado')).to_contain_text('notas')
+
+    page.goto(base + "/ajustes/variaveis", wait_until="domcontentloaded")
+    page.locator('#variavel-adicionar').click()
+    page.locator('#variavel-nome').fill('DEMONSTRACAO_API_KEY')
+    page.locator('#variavel-valor').fill('valor-ficticio-sem-acesso-externo')
+    page.locator('#variaveis-form button[type="submit"]').click()
+    expect(page.locator('#variaveis-lista')).to_contain_text('DEMONSTRACAO_API_KEY')
+    assert 'valor-ficticio-sem-acesso-externo' not in page.content()
+
+    page.goto(base + "/ajustes/areas", wait_until="domcontentloaded")
+    primeira = page.locator('.area-linha').first.get_attribute('data-modulo')
+    with page.expect_response(lambda r: r.url.endswith('/api/config') and r.request.method == 'POST') as reordenacao:
+        page.locator('.area-linha').first.locator('[data-mover="1"]').click()
+    assert reordenacao.value.status == 200
+    page.reload(wait_until="domcontentloaded")
+    assert page.locator('.area-linha').nth(1).get_attribute('data-modulo') == primeira
 
     rotas = ("/", "/m/tarefas", "/m/tarefas?aba=v1", "/m/tarefas?aba=humano", "/m/tarefas?aba=maquina",
              "/m/conteudo", "/m/numeros", "/m/radar", "/m/entrada", "/ajustes", "/m/tarefas/personalizar",
@@ -138,14 +174,15 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         url = link.get_attribute("href")
         page.goto(base + url, wait_until="domcontentloaded")
         nota = {"url": url, "rel": page.locator(".nota").get_attribute("data-rel")}
-        page.locator("#editar").click()
+        page.locator("#ver").dblclick()
         page.locator("#editor").fill("Texto revisado pelo navegador.")
         with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as envio:
-            page.locator("#salvar").click()
+            page.locator("#editor").press("Escape")
         assert envio.value.status == 200
         expect(page.locator("#editor")).to_be_hidden()
         expect(page.locator("#ver")).to_contain_text("Texto revisado pelo navegador.")
         assert "Texto revisado" in (vault / nota["rel"]).read_text(encoding="utf-8")
+        page.locator("#nota-propriedades > summary").click()
         page.locator("#consultar-versoes").click()
         expect(page.locator("#versoes-conteudo")).to_be_visible()
         expect(page.locator("#versao-texto")).to_have_value(re.compile("Texto original"))

@@ -5,27 +5,25 @@
 {% block observa %}tudo{% endblock %}
 
 {% block conteudo %}
-<section class="pagina larga">
-  <header class="pagina-topo">
-    <h1 class="caminho-pasta">
-      {% if trilha %}
-        {% for parte in trilha %}{% if not loop.last %}<a href="{{ parte.url }}">{{ parte.nome }}</a><span class="barra">/</span>{% else %}{{ parte.nome }}{% endif %}{% endfor %}
-      {% else %}Pastas{% endif %}
-    </h1>
-    <div class="linha-botoes sem-topo">
-      {% if modulo and trilha|length == 1 %}<a class="botao" href="/m/{{ modulo.id|urlencode }}">{{ icone(modulo.icone, 15) }}<span>Ver como área do painel</span></a>{% endif %}
-      {% if pode_criar %}<button class="botao principal" type="button" id="abrir-nota-pasta">{{ icone('mais', 16) }}<span>Nova nota aqui</span></button>{% endif %}
-    </div>
-  </header>
-
-  {% if not rel %}
-  <p class="explica">{{ icone('pasta', 15) }} <span>O seu vault como ele é no disco. As pastas marcadas como <b>área</b> já aparecem no painel com quadro, lista e campos. Qualquer outra pode virar área com <b>Mostrar no painel</b>: nenhuma nota muda de lugar, o painel só passa a entender os campos que elas já têm.</span></p>
-  {% endif %}
-
+<section class="explorador" data-pasta="{{ rel }}">
+  <aside class="explorador-lateral" aria-label="Arquivos do cofre">
+    <header><a href="/pastas" class="explorador-nome">{{ icone('pasta', 17) }} {{ cfg.nome }}</a><a class="botao pequeno so-icone" href="/ajustes/vault" title="Gerenciar cofres" aria-label="Gerenciar cofres">{{ icone('ajustes', 16) }}</a></header>
+    <a class="explorador-busca" href="/buscar">{{ icone('busca', 15) }} Buscar no cofre</a>
+    <nav id="arvore-pastas" aria-label="Pastas e notas"><p class="campo-ajuda">Carregando arquivos…</p></nav>
+    <p id="arvore-estado" class="campo-ajuda" role="status"></p>
+  </aside>
+  <div id="pasta-painel" class="explorador-painel" data-rel="{{ rel }}">
+    <header class="explorador-topo"><div class="explorador-titulo"><span class="sobretitulo">{{ 'Pasta' if rel else 'Seu cofre' }}</span><h1>{{ trilha[-1].nome if trilha else cfg.nome }}</h1></div><div class="linha-botoes sem-topo">
+      <div class="segmentos" role="group" aria-label="Visualização dos arquivos"><button type="button" data-pasta-visao="notas" aria-pressed="true">Notas</button><button type="button" data-pasta-visao="grafo" aria-pressed="false">Grafo</button></div>
+      {% if modulo and trilha|length == 1 %}<a class="botao pequeno" href="/m/{{ modulo.id|urlencode }}">{{ icone(modulo.icone, 15) }} Ver painel</a>{% endif %}
+      {% if pode_criar %}<button class="botao principal pequeno" type="button" id="abrir-nota-pasta">{{ icone('mais', 16) }} Nova nota</button>{% endif %}
+    </div></header>
+    {% if trilha %}<nav class="explorador-trilha" aria-label="Pasta atual"><a href="/pastas">Cofre</a>{% for parte in trilha %}<span>/</span><a href="{{ parte.url }}"{% if loop.last %} aria-current="page"{% endif %}>{{ parte.nome }}</a>{% endfor %}</nav>{% endif %}
+    <div id="pasta-notas">
   {% if pastas %}
-  <div class="grade-pastas">
+  <div class="pastas-linhas">
     {% for f in pastas %}
-    <div class="pasta-cartao{% if f.modulo %} e-area{% endif %}">
+    <div class="pasta-cartao pasta-linha{% if f.modulo %} e-area{% endif %}">
       <a class="pasta-link" href="{{ f.url }}">
         {{ icone(f.modulo.icone if f.modulo else 'pasta', 20) }}
         <span class="pasta-nome">{{ f.nome }}</span>
@@ -47,7 +45,7 @@
     {% for n in notas %}
     <a class="linha-nota com-lado" href="{{ n.url }}">
       <span class="linha-principal"><b>{{ n.titulo }}</b>{% if n.trecho %}<span>{{ n.trecho }}</span>{% endif %}</span>
-      <small>{% if n.origem and n.origem != 'humano' %}{{ n.origem }} · {% endif %}{{ n.quando }}</small>
+      <small>{{ n.quando }}</small>
     </a>
     {% endfor %}
   </div>
@@ -55,10 +53,14 @@
   {{ p.vazio("Pasta vazia", "Não há notas aqui ainda. Crie a primeira com o botão acima, ou escreva no Obsidian: ela aparece sozinha.") }}
   {% endif %}
   {{ p.paginar(paginacao|default(none)) }}
+    </div>
+    <section id="pasta-grafo" class="pasta-grafo" hidden aria-label="Grafo de ligações entre notas"><div class="grafo-controles"><span id="grafo-estado" class="campo-ajuda" role="status"></span><button type="button" class="botao pequeno" id="grafo-centralizar">Centralizar</button></div><canvas id="grafo-canvas" tabindex="0" aria-label="Ligações entre notas. Use a lista abaixo para abrir uma nota pelo teclado."></canvas><details class="grafo-lista"><summary>Notas do grafo</summary><ul id="grafo-notas"></ul></details></section>
+  </div>
 </section>
 {% endblock %}
 
 {% block dialogos %}
+<div id="pastas-dialogos">
 <dialog id="dialogo-nota-pasta" class="dialogo" aria-labelledby="titulo-nota-pasta" aria-describedby="nota-pasta-ajuda" data-pasta="{{ rel }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-nota-pasta">Nova nota{% if rel %} em {{ trilha[-1].nome }}{% endif %}</h2>
@@ -85,4 +87,8 @@
     </div>
   </div>
 </dialog>
+</div>
 {% endblock %}
+
+
+{% block scripts %}<script src="/static/js/pastas.js?v={{ marca }}"></script>{% endblock %}

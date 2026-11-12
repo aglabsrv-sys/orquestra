@@ -8,7 +8,7 @@
   <header class="pagina-topo"><h1>Ajustes</h1></header>
   <p class="config-resumo suave" id="estado-config" role="status" aria-live="polite">As preferências são salvas ao mudar. Organize suas áreas e deixe o painel do seu jeito.</p>
   <nav class="navega-ajustes" aria-label="Seções dos ajustes">
-    <a href="/ajustes/painel"{% if secao == "painel" %} aria-current="page"{% endif %}>Painel</a><a href="/ajustes/areas"{% if secao == "areas" %} aria-current="page"{% endif %}>Pastas</a><a href="/ajustes/aparencia"{% if secao == "aparencia" %} aria-current="page"{% endif %}>Aparência</a><a href="/ajustes/backup"{% if secao == "backup" %} aria-current="page"{% endif %}>Backup</a><a href="/ajustes/coletores"{% if secao == "coletores" %} aria-current="page"{% endif %}>Coletores</a><a href="/ajustes/acesso"{% if secao == "acesso" %} aria-current="page"{% endif %}>Celular</a><a href="/ajustes/vault"{% if secao == "vault" %} aria-current="page"{% endif %}>Vault</a>
+    <a href="/ajustes/painel"{% if secao == "painel" %} aria-current="page"{% endif %}>Painel</a><a href="/ajustes/areas"{% if secao == "areas" %} aria-current="page"{% endif %}>Pastas</a><a href="/ajustes/aparencia"{% if secao == "aparencia" %} aria-current="page"{% endif %}>Aparência</a><a href="/ajustes/backup"{% if secao == "backup" %} aria-current="page"{% endif %}>Backup</a><a href="/ajustes/coletores"{% if secao == "coletores" %} aria-current="page"{% endif %}>Coletores</a><a href="/ajustes/acesso"{% if secao == "acesso" %} aria-current="page"{% endif %}>Celular</a><a href="/ajustes/vault"{% if secao == "vault" %} aria-current="page"{% endif %}>Cofres</a>
   <a href="/ajustes/variaveis"{% if secao == "variaveis" %} aria-current="page"{% endif %}>Variáveis</a></nav>
 
   {% if secao == "painel" %}
@@ -29,11 +29,13 @@
   {% endif %}
   {% if secao == "areas" %}
   <h2 class="grupo-titulo" id="areas">{{ icone('pasta', 18) }} Pastas do painel</h2>
-  <div class="bloco">
+  <p class="campo-ajuda">Arraste pela alça para organizar a navegação. Pelo teclado, use os botões mover para cima ou para baixo.</p>
+  <div class="bloco areas-ordenaveis" id="areas-ordem" aria-label="Ordem das pastas">
     {% for a in areas %}
-    <div class="area-linha" data-modulo="{{ a.modulo.id }}">
-      {{ icone(a.modulo.icone, 18) }}
+    <div class="area-linha" draggable="true" data-modulo="{{ a.modulo.id }}">
+      <span class="arraste-alca" aria-hidden="true" title="Arrastar para reordenar">⠿</span>{{ icone(a.modulo.icone, 18) }}
       <span class="area-nome"><b>{{ a.modulo.nome }}</b><small class="suave">{{ a.modulo.id }}/ · {{ a.itens }} {{ 'item' if a.itens == 1 else 'itens' }}{% if a.propria %} · pasta sua{% endif %}</small></span>
+      <span class="ordem-acoes"><button class="botao pequeno so-icone" type="button" data-mover="-1" aria-label="Mover {{ a.modulo.nome }} para cima">↑</button><button class="botao pequeno so-icone" type="button" data-mover="1" aria-label="Mover {{ a.modulo.nome }} para baixo">↓</button></span>
       <a class="botao pequeno" href="/m/{{ a.modulo.id|urlencode }}/personalizar">Personalizar</a>
       <button class="botao pequeno discreto" type="button" data-desligar aria-label="Tirar {{ a.modulo.nome }} do painel" title="Tira a área do painel. A pasta e as notas continuam no vault.">Tirar do painel</button>
     </div>
@@ -176,7 +178,10 @@
 
   {% endif %}
   {% if secao == "vault" %}
-  <h2 class="grupo-titulo" id="vault-secao">{{ icone('pasta', 18) }} Vault</h2>
+  <h2 class="grupo-titulo" id="vault-secao">{{ icone('pasta', 18) }} Gerenciar cofres</h2>
+  <div class="cofre-atual bloco"><span class="et">Cofre atual</span><h3>{{ cfg.nome }}</h3><code>{{ vault }}</code><p class="suave">{{ n_notas }} notas · Orquestra {{ versao }}</p><a class="botao pequeno" href="{{ link_obsidian }}">{{ icone('externo', 15) }} Abrir no Obsidian</a></div>
+  {% if pode_trocar %}<div class="cofres-acoes"><a class="pronto" href="/boas-vindas?modo=novo">{{ icone('mais', 22) }}<b>Criar novo cofre</b><small>Um espaço novo para suas notas e projetos.</small></a><a class="pronto" href="/boas-vindas?modo=existente">{{ icone('pasta', 22) }}<b>Abrir pasta como cofre</b><small>Use uma pasta existente, inclusive do Obsidian.</small></a></div>{% endif %}
+  <details class="bloco cofre-avancado"><summary>Inicialização e informações do aplicativo</summary>
   <div class="bloco">
     <p>O terminal mantém o Orquestra funcionando. Fechá-lo encerra o painel e os coletores. Para voltar: <code>uv run --frozen orquestra</code>.</p>
     <p>Para iniciar ao entrar no computador: <code>uv run --frozen orquestra autostart ativar</code>. Desligar: <code>uv run --frozen orquestra autostart desativar</code>.</p>
@@ -186,25 +191,30 @@
       <a class="botao" href="{{ link_obsidian }}">{{ icone('externo', 15) }}<span>Abrir no Obsidian</span></a>
       {% if pode_trocar %}<a class="botao" href="/boas-vindas">{{ icone('atualizar', 15) }}<span>Trocar de vault</span></a>{% endif %}
     </div>
+  </div></details>
     {% for nome, aviso in avisos %}<p class="erro-texto">{{ icone('aviso', 14) }} {{ nome }}: {{ aviso }}</p>{% endfor %}
-  </div>
   {% endif %}
   {% if secao == "variaveis" %}
-  <h2 class="grupo-titulo">Variáveis e secrets</h2>
+  <header class="pagina-topo variaveis-topo"><div><h2 class="grupo-titulo">Variáveis</h2><p class="suave">Conexões prontas para seus coletores, com as chaves fora das notas.</p></div><button type="button" class="botao principal" id="variavel-adicionar">{{ icone('mais', 16) }} Nova variável</button></header>
+  <div class="variaveis-barra"><label class="campo"><span class="somente-leitor">Buscar variável</span><input type="search" id="variavel-busca" placeholder="Buscar pelo nome…" autocomplete="off"></label><span class="et" id="variaveis-contagem"></span></div>
   <div class="bloco">
     <p class="suave">Guardadas no .env local, fora do vault e do backup. Valores nunca são devolvidos ao navegador. Somente coletores com a chave declarada em “requer” a recebem.</p>
-    <p class="campo-ajuda">Arquivo em texto no seu perfil do sistema. Proteja sua conta e seu disco. Não é um cofre criptografado.</p>
-    <form id="variaveis-form" autocomplete="off">
-      <div class="grade-campos"><label class="campo"><span>Nome</span><input id="variavel-nome" required pattern="[A-Z][A-Z0-9_]{1,79}" placeholder="YOUTUBE_API_KEY" spellcheck="false"></label>
-      <label class="campo"><span>Valor</span><input id="variavel-valor" type="password" required maxlength="8192" autocomplete="new-password"></label></div>
-      <button class="botao principal" type="submit">Guardar variável</button>
-    </form><ul id="variaveis-lista"></ul><p id="variaveis-estado" role="status"></p>
+
+<ul id="variaveis-lista" class="variaveis-lista"></ul><p id="variaveis-estado" role="status"></p>
   </div>
   {% endif %}
 </section>
 {% endblock %}
 
 {% block dialogos %}
+{% if secao == 'variaveis' %}
+<dialog id="variavel-dialogo" class="dialogo" aria-labelledby="variavel-titulo"><div class="dialogo-corpo"><h2 id="variavel-titulo">Nova variável</h2><p class="suave">O valor fica neste computador e não volta a ser exibido.</p>
+    <form id="variaveis-form" autocomplete="off">
+      <div class="grade-campos"><label class="campo"><span>Nome</span><input id="variavel-nome" required pattern="[A-Z][A-Z0-9_]{1,79}" placeholder="YOUTUBE_API_KEY" spellcheck="false"></label>
+      <label class="campo"><span>Valor</span><input id="variavel-valor" type="password" required maxlength="8192" autocomplete="new-password"></label></div>
+      <label class="chave"><input type="checkbox" id="variavel-revelar"><i></i><span>Mostrar valor enquanto digito</span></label><p id="variavel-form-estado" class="campo-erro" role="status"></p><div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button class="botao principal" type="submit">Guardar variável</button></div>
+    </form></div></dialog>
+{% endif %}
 <dialog id="dialogo-area" class="dialogo" aria-labelledby="titulo-dialogo-area">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-dialogo-area">Nova área em branco</h2>

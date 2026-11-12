@@ -89,7 +89,8 @@ function paginaNota(responder) {
     return {
       value, textContent: "", dataset: {}, disabled: false, hidden: false, type: "text", name: "",
       addEventListener: (tipo, cb) => { ouvintes[tipo] = cb; },
-      disparar(tipo) { ouvintes[tipo]({ target: this }); }, focus() {},
+      disparar(tipo, dados = {}) { return ouvintes[tipo]({ target: this, ...dados }); }, focus() {},
+      closest: () => null,
       classList: { toggle: (nome, ativo) => ativo ? classes.add(nome) : classes.delete(nome), contains: nome => classes.has(nome) },
       querySelectorAll: () => []
     };
@@ -105,7 +106,7 @@ function paginaNota(responder) {
   const fetch = async (url, opcoes) => url === "/api/local/capacidade" ? { ok: true, json: async () => ({ token: "local" }) } : responder(url, opcoes);
   runInNewContext(fonte, { window, document, fetch, localStorage: storage, location: { reload() {} }, setTimeout, clearTimeout, console });
   eventos.DOMContentLoaded();
-  return { propriedade, editor: elementos.get("#editor"), estado: elementos.get("#estado-salvo"), salvar: elementos.get("#salvar"), avisos };
+  return { propriedade, eventos, ver: elementos.get("#ver"), editar: elementos.get("#editar"), editor: elementos.get("#editor"), estado: elementos.get("#estado-salvo"), salvar: elementos.get("#salvar"), avisos };
 }
 
 test("digitar após salvar propriedade troca tudo salvo por rascunho e desfazer restaura salvo", async () => {
@@ -130,4 +131,42 @@ test("estado salvando prevalece sobre novas edições e falha continua visível 
   pagina.editor.value += " Mais texto"; pagina.editor.disparar("input");
   assert.equal(pagina.estado.textContent, "Há alterações que não foram salvas.");
   assert.equal(pagina.estado.classList.contains("erro-texto"), true);
+});
+
+
+
+test("duplo clique abre editor e Escape salva pela fila sem aviso de sucesso", async () => {
+  const envios = [];
+  const pagina = paginaNota(async (url, opcoes) => {
+    envios.push(JSON.parse(opcoes.body));
+    return { ok: true, json: async () => ({versao: "v2", html: "<p>Texto novo</p>"}) };
+  });
+  pagina.ver.disparar("dblclick");
+  assert.equal(pagina.editor.hidden, false);
+  pagina.editor.value = "Texto novo"; pagina.editor.disparar("input");
+  pagina.editor.disparar("keydown", {key: "Escape", preventDefault() {}}); await tick();
+  assert.equal(envios.length, 1);
+  assert.equal(envios[0].corpo, "Texto novo");
+  assert.equal(pagina.editor.hidden, true);
+  assert.equal(pagina.estado.textContent, "Tudo salvo no vault.");
+  assert.deepEqual(pagina.avisos, []);
+});
+
+test("clique fora salva texto depois da propriedade em andamento", async () => {
+  const envios = []; let concluir;
+  const pagina = paginaNota((url, opcoes) => {
+    envios.push(JSON.parse(opcoes.body));
+    if (envios.length === 1) return new Promise(resolve => {concluir=resolve;});
+    return Promise.resolve({ok: true, json: async () => ({versao:"v3",html:"<p>Texto novo</p>"})});
+  });
+  pagina.ver.disparar("dblclick");
+  pagina.propriedade.value="feito"; pagina.propriedade.disparar("change"); await tick();
+  pagina.editor.value="Texto novo"; pagina.editor.disparar("input");
+  pagina.eventos.pointerdown({target:{closest:()=>null}});
+  assert.equal(envios.length,1);
+  concluir({ok:true,json:async()=>({versao:"v2"})}); await tick(); await tick();
+  assert.equal(envios.length,2);
+  assert.equal(envios[1].versao,"v2");
+  assert.equal(envios[1].corpo,"Texto novo");
+  assert.equal(pagina.editor.hidden,true);
 });

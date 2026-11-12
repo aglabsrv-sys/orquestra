@@ -26,7 +26,7 @@
 <nav class="abas" aria-label="Visões do módulo">
   <div class="abas-visoes">
   {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos">Progresso</a>{% endif %}
-  {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir">Aprovação de criativos</a>{% endif %}
+  {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir?modulo=conteudo">Aprovação de criativos</a>{% endif %}
   {% for v in modulo.visoes %}
   <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}"{% if aba == 'v' ~ loop.index0 %} aria-current="page"{% endif %}>{{ v.nome }}</a>
   {% endfor %}
@@ -45,11 +45,12 @@
   </span>
 </nav>
 
+<div id="modulo-painel" tabindex="-1">
 {% if modulo.avisos %}
 <div class="faixa alerta" role="status">{{ icone('aviso', 16) }} <span><strong>A configuração desta área precisa de revisão.</strong> {{ modulo.avisos|join(' ') }}</span></div>
 {% endif %}
 
-{% if modulo.id == 'conteudo' and aba != 'maquina' %}<div class="linha-botoes"><span class="suave pequeno">Envie o criativo em Miniatura e use “Em aprovação”. Ele aparece em Para decidir, com preview.</span>{% if 'em_aprovacao' not in modulo.decidir %}<button class="botao pequeno" type="button" id="preparar-aprovacao">Ativar aprovação neste pipeline</button>{% endif %}<span role="status" id="aprovacao-estado"></span></div>{% endif %}
+
 
 {# ---------------------------------------------------------------- Humano #}
 {% if aba == "humano" %}
@@ -192,9 +193,11 @@
 </section>
 {% endif %}
 {{ p.paginar(paginacao|default(none)) }}
+</div>
 {% endblock %}
 
 {% block dialogos %}
+<div id="modulo-dialogos">
 <dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" aria-describedby="novo-ajuda" data-modulo="{{ modulo.id }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-dialogo-novo">{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
@@ -202,7 +205,7 @@
     <label class="campo"><span>Título <span class="obrigatorio">Obrigatório</span></span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" placeholder="Dê um nome fácil de encontrar" autocomplete="off"></label>
     {% if aba != 'humano' %}
     <div class="grade-campos">
-      {% for campo in modulo.campos.values() if campo.nome != 'origem' %}
+      {% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') %}
       {{ p.entrada(campo, padroes.get(campo.nome, ''), 'data-novo') }}
       {% endfor %}
     </div>
@@ -233,4 +236,5 @@
   </form>
 </dialog>
 {% endif %}
+</div>
 {% endblock %}

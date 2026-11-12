@@ -424,8 +424,10 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         outros = {}
         if modulo and zona in ("itens", "arquivo"):
             for campo in modulo.campos.values():
+                if campo.nome == "origem" or campo.tipo in ("imagem", "link"):
+                    continue
                 campos.append({"def": campo, "valor": ap.valor_para_formulario(nota, campo.nome, campo.tipo)})
-            conhecidos = set(modulo.campos) | {"titulo"}
+            conhecidos = {c["def"].nome for c in campos} | {"titulo"}
             outros = {k: v for k, v in nota.campos().items() if k not in conhecidos}
         else:
             outros = {k: v for k, v in nota.campos().items() if k != "titulo"}
@@ -447,14 +449,19 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             html=ap.render_markdown(nota.corpo, painel.indice),
             avisos=validar(modulo, nota.meta) if modulo and zona == "itens" else [],
             imagem=imagem,
+            campo_imagem=next((c.nome for c in modulo.campos.values() if c.tipo == "imagem"), "") if modulo else "",
             link_obsidian="obsidian://open?path=" + quote(str(nota.caminho), safe=""),
         )
 
     @app.get("/decidir", response_class=HTMLResponse)
     @leitura
-    def decidir(request: Request):
+    def decidir(request: Request, modulo: str = ""):
         hoje = dt.date.today()
+        aprovacao = modulo == "conteudo"
         pendentes = [(m, n) for m in painel.indice.modulos.values() for n in painel.indice.itens(m.id) if espera_decisao(n, m)]
+        if modulo:
+            painel.modulo(modulo)
+            pendentes = [(m, n) for m, n in pendentes if m.id == modulo]
         selecionadas, paginacao = paginar(request, pendentes)
         grupos: dict[str, dict] = {}
         for modulo, nota in selecionadas:
@@ -462,7 +469,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             c["trecho"] = ap.trecho(nota, 180)
             c["por_status"] = str(nota.campo(modulo.campo_status) or "") in modulo.decidir
             grupos.setdefault(modulo.id, {"modulo": modulo, "cartoes": []})["cartoes"].append(c)
-        return pagina(request, "decidir.html", "decidir", grupos=list(grupos.values()), total=len(pendentes), paginacao=paginacao)
+        return pagina(request, "decidir.html", "decidir", grupos=list(grupos.values()), total=len(pendentes), paginacao=paginacao, aprovacao=aprovacao)
 
     @app.get("/diario", response_class=HTMLResponse)
     @leitura
@@ -611,6 +618,49 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         await asyncio.to_thread(gravar_yaml, caminho, dados)
         await asyncio.to_thread(painel.recarregar_tudo)
         return {"ok": True}
+
+    @app.get("/api/pastas/arvore")
+    @leitura
+    def arvore_pastas(request: Request, rel: str = ""):
+        rel = rel.strip("/")
+        pasta = painel.caminho_seguro(rel)
+        if not pasta.is_dir() or (rel and deve_ignorar(rel + "/x.md")):
+            raise NaoEncontrado(rel)
+        subpastas, notas = painel.indice.conteudo_da_pasta(rel)
+        nomes = dict(subpastas)
+        for filho in pasta.iterdir():
+            caminho = (rel + "/" + filho.name).strip("/")
+            if filho.is_dir() and not filho.is_symlink() and not deve_ignorar(caminho + "/x.md"):
+                nomes.setdefault(filho.name, 0)
+        return {
+            "pastas": [{"nome": n, "rel": (rel + "/" + n).strip("/"), "url": ap.url_pasta((rel + "/" + n).strip("/")), "notas": nomes[n]} for n in sorted(nomes, key=str.casefold)],
+            "notas": [{"titulo": n.titulo, "rel": n.rel, "url": ap.url_nota(n.rel)} for n in notas[:300]],
+            "total_notas": len(notas),
+        }
+
+    @app.get("/api/pastas/grafo")
+    @leitura
+    def grafo_pastas(request: Request, rel: str = ""):
+        import re
+        rel = rel.strip("/")
+        if rel:
+            pasta = painel.caminho_seguro(rel)
+            if not pasta.is_dir() or deve_ignorar(rel + "/x.md"):
+                raise NaoEncontrado(rel)
+        notas = [n for n in painel.indice.notas.values() if not rel or n.rel.startswith(rel + "/")]
+        selecionadas = sorted(notas, key=lambda n: n.rel.casefold())[:600]
+        ids = {n.rel for n in selecionadas}
+        ligacoes = set()
+        for n in selecionadas:
+            for alvo in re.finditer(r"\[\[([^\]|#]+)(?:[^\]]*)\]\]", n.corpo):
+                destino = painel.indice.resolver_link(alvo.group(1).strip())
+                if destino in ids and destino != n.rel:
+                    ligacoes.add(tuple(sorted((n.rel, destino))))
+                if len(ligacoes) >= 3000:
+                    break
+            if len(ligacoes) >= 3000:
+                break
+        return {"limitado": len(notas) > len(selecionadas) or len(ligacoes) >= 3000, "notas": [{"id": n.rel, "titulo": n.titulo, "url": ap.url_nota(n.rel)} for n in selecionadas], "ligacoes": sorted(ligacoes), "total": len(notas)}
 
     @app.get("/pastas", response_class=HTMLResponse)
     @app.get("/pastas/{rel:path}", response_class=HTMLResponse)
@@ -850,7 +900,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_tema(request: Request):
         dados = await corpo_json(request, contratos.Tema)
         await asyncio.to_thread(painel.definir_tema, dados["tema"])
-        return {"ok": True}
+        return {"ok": True, "estilo": aparencia.estilo(painel.tema, painel.config.aparencia)}
 
     @app.post("/api/backup")
     async def api_backup(request: Request):
@@ -1090,6 +1140,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             captura=dados.get("captura") if isinstance(dados.get("captura"), str) else None,
             auto_commit=dados.get("auto_commit") if isinstance(dados.get("auto_commit"), bool) else None,
             visual=dados.get("aparencia") if isinstance(dados.get("aparencia"), dict) else None,
+            ordem_pastas=dados.get("ordem_pastas"),
         )
         return {"ok": True, "estilo": aparencia.estilo(painel.tema, painel.config.aparencia)}
 

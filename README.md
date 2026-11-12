@@ -14,7 +14,7 @@ nela; e você abre no Obsidian quando quiser.
 
 - **Roda no seu computador.** O painel não exige conta nem envia suas notas para uma nuvem própria. Os dados são arquivos seus; coletores e agentes opcionais podem acessar serviços externos.
 - **Aproveita o Obsidian que você já tem.** Aponte para o seu vault: nenhuma nota muda de lugar, e as pastas que você escolher viram quadros e listas.
-- **Do seu jeito.** Comece pelo essencial, pelo método PARA, por um perfil de criador, de estudos ou de negócio. Depois mude tudo pela tela, sem escrever código: áreas, campos, tema, modo claro ou escuro, cor de destaque, cantos e letra.
+- **Do seu jeito.** Comece pelo essencial, por conteúdo ou por negócio e escolha os módulos na mesma tela. Depois mude tudo pela tela, sem escrever código: áreas, campos, tema, modo claro ou escuro, cor de destaque, cantos e letra.
 - **Funciona com qualquer agente, e sem nenhum.** Claude, Codex, Gemini: basta dar acesso à pasta. As regras ficam num `AGENTS.md`. Quem só quer se organizar não precisa de IA.
 - **Separa o que você disse do que a IA escreveu.** Um resumo da máquina nunca vira "fala sua".
 - **Abre no celular** pela sua rede privada do Tailscale.
@@ -123,7 +123,10 @@ Os ajustes têm páginas próprias, incluindo tamanho da fonte, variáveis e ace
 - **GitHub:** em Ajustes → Backup, o login oficial usa o GitHub CLI instalado no
   computador. Escolha um repositório privado; a vinculação não envia notas. Revise
   e autorize o destino antes do primeiro backup.
-- **Variáveis:** painel local para adicionar e excluir chaves sem exibir os valores.
+- **Variáveis:** busca, criação e atualização em modal, sem exibir os valores já salvos.
+- **Cofres:** em Ajustes → Cofres, crie um novo ou abra uma pasta existente.
+- **Pastas:** árvore lateral com ramos sob demanda e grafo das ligações entre notas.
+- **Notas:** duplo clique ou Enter abre a edição; Escape ou clique fora salva. Propriedades e recuperação ficam recolhidas.
   Elas ficam em `~/.orquestra/.env`, fora do vault, disponíveis aos coletores que as
   declaram em `requer`. O arquivo é texto local, não um cofre criptografado.
 
@@ -168,7 +171,9 @@ Detalhes em [docs/vault-existente.md](docs/vault-existente.md).
 ## O que vem pronto
 
 Um vault novo nasce de um **perfil**, que é só uma lista de áreas. Depois você
-acrescenta e tira áreas à vontade, em Ajustes.
+acrescenta e tira áreas à vontade, em Ajustes. A tela inicial oferece três pontos de
+partida compactos (Essencial, Criador e Negócio); os demais perfis também continuam
+disponíveis pela linha de comando.
 
 | Perfil | Áreas |
 |---|---|
