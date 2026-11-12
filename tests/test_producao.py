@@ -250,7 +250,7 @@ def test_dock_mobile_mantem_area_atual_e_acesso_a_todas_as_telas(app_leve):
     dock = resposta.context["dock"]
     mobile = [m for m in dock["barra"] if m["no_mobile"]]
     assert len(mobile) <= 2 and any(m["id"] == "estudos" for m in mobile)
-    assert {i["id"] for i in dock["gaveta"]} == set(painel.indice.modulos) | {"ajustes", "diario", "pastas"}
+    assert {i["id"] for i in dock["gaveta"]} == set(painel.indice.modulos) | {"ajustes", "diario", "pastas", "calendario"}
 
 
 def test_personalizacao_de_aba_antiga_nao_sobrescreve_configuracao_nova(app_leve):
