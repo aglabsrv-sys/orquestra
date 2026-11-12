@@ -176,6 +176,27 @@ def test_inferir_descobre_campos_status_e_data(cofre):
     assert "status" in adocao.inferir(cofre / "3. Recursos", com_quadro=True)["campos"]
 
 
+@pytest.mark.parametrize("nome_pasta,campo,opcoes", [
+    ("1. Projetos", "status", ["ideia", "em andamento", "concluido"]),
+    ("Categorias", "categoria", ["zebra", "alfa"]),
+])
+def test_inferencia_ordena_os_arquivos_selecionados_independente_do_filesystem(cofre, monkeypatch, nome_pasta, campo, opcoes):
+    pasta = cofre / nome_pasta
+    if campo == "categoria":
+        pasta.mkdir()
+        for numero, valor in enumerate(["zebra", "alfa", "zebra", "alfa"]):
+            (pasta / f"{numero}.md").write_text(f"---\ncategoria: {valor}\n---\nTexto.\n", encoding="utf-8")
+    selecionados = list(adocao.arquivos_do_vault(pasta))
+    monkeypatch.setattr(adocao, "arquivos_do_vault", lambda _pasta: iter(selecionados))
+    primeira = adocao.inferir(pasta)
+    monkeypatch.setattr(adocao, "arquivos_do_vault", lambda _pasta: reversed(selecionados))
+    invertida = adocao.inferir(pasta)
+
+    assert invertida == primeira
+    assert invertida["campos"][campo]["opcoes"] == opcoes
+    assert intacto(cofre)
+
+
 def test_estilos_de_organizacao():
     assert adocao.detectar_estilo(["10-19 Vida", "20-29 Trabalho", "30-39 Estudos"], ["a"]) == "johnny"
     assert adocao.detectar_estilo(["Atlas", "Calendar", "Efforts"], ["a"]) == "ace"

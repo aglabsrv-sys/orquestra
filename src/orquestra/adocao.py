@@ -93,6 +93,10 @@ def notas_da_pasta(pasta: Path, limite: int = LIMITE_DA_AMOSTRA) -> list[Path]:
             achadas.append(caminho)
             if len(achadas) >= limite:
                 break
+    # Mantém a amostra limitada, mas a primeira aparição de campos e opções não
+    # pode depender da ordem de enumeração do filesystem. Só ordena as notas
+    # selecionadas; não amplia a varredura para montar um inventário completo.
+    achadas.sort(key=lambda caminho: (caminho.relative_to(pasta).as_posix().casefold(), caminho.relative_to(pasta).as_posix()))
     return achadas
 
 
