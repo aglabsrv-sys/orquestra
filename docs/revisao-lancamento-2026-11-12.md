@@ -18,6 +18,7 @@ alguém em uma porta pública: o painel não possui autenticação para esse mod
 | Animações | RAF continuava acordando em modo reduzido ou página oculta; todas as capas eram preparadas de uma vez | Preparação por visibilidade e agendamento na cadência de 12 quadros/s somente quando há cena animável; preferência pode mudar sem recarregar |
 | Servidor | Contagens ordenavam notas sem necessidade e a prévia salva de Markdown usava o laço ASGI | Contagens sem ordenação; edição e renderização trabalham em thread com uma visão coerente do índice |
 | Segurança | CSP permitia JavaScript inline sem ser necessário | `script-src 'self'`; estilos de aparência continuam permitidos |
+| Acessibilidade | axe-core encontrou alvos pequenos no carrossel, slides inativos no foco, nome ARIA sem papel e contrastes insuficientes no claro | Pontos com alvo de 28 px, slides laterais fora do foco/leitura, região identificada, links sublinhados e contraste revisto em etiquetas, caminhos e código |
 
 A API de personalização aceita `versao` opcional para clientes existentes. O
 painel sempre envia a versão; clientes próprios devem encaminhar a versão da

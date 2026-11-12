@@ -82,8 +82,12 @@
     function ativar(i) {
       if (i === atual) return;
       atual = i;
-      slides.forEach(function (s, k) { s.classList.toggle("ativo", k === i); });
-      pontos.forEach(function (p, k) { p.classList.toggle("ativo", k === i); });
+      slides.forEach(function (s, k) {
+        s.classList.toggle("ativo", k === i);
+        s.tabIndex = k === i ? 0 : -1;
+        s.setAttribute("aria-hidden", k === i ? "false" : "true");
+      });
+      pontos.forEach(function (p, k) { p.classList.toggle("ativo", k === i); p.setAttribute("aria-current", k === i ? "true" : "false"); });
       setaEsq.disabled = i === 0;
       setaDir.disabled = i === slides.length - 1;
       window.Orquestra.ambiente($(".capa", slides[i]));

@@ -11,6 +11,7 @@
 - Cenas preparadas sob demanda, sem processamento contínuo em segundo plano ou com movimento reduzido.
 - Contagens dispensam ordenação; renderização de Markdown após salvar sai do laço de eventos do servidor.
 - Política de segurança bloqueia JavaScript inline; scripts do painel continuam servidos localmente.
+- Carrossel com controles de toque maiores e slides inativos fora do foco; rótulos ARIA, links no texto e contraste do tema claro revisados com axe-core.
 - Roteiro Chromium, benchmark sintético, capturas atualizadas e guia de lançamento.
 
 Evidências e limites em [Revisão de lançamento](docs/revisao-lancamento-2026-11-12.md).

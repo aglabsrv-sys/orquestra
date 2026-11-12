@@ -202,6 +202,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
 
     page.goto(base, wait_until="domcontentloaded")
     page.wait_for_timeout(350)
+    assert page.locator('.slide[aria-hidden="true"]').evaluate_all("els => els.every(e=>e.tabIndex===-1)")
+    assert page.locator(".pontos button").evaluate_all("els => els.every(e=>{ const r=e.getBoundingClientRect(); return r.width>=24 && r.height>=24; })")
     quadros = page.evaluate("window.__quadros")
     page.wait_for_timeout(450)
     assert page.evaluate("window.__quadros") == quadros, "Animação continua em movimento reduzido"
