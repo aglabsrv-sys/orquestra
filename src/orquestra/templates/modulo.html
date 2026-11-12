@@ -24,6 +24,7 @@
 </section>
 
 <nav class="abas" aria-label="Visões do módulo">
+  <div class="abas-visoes">
   {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos">Progresso</a>{% endif %}
   {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir">Aprovação de criativos</a>{% endif %}
   {% for v in modulo.visoes %}
@@ -33,6 +34,7 @@
   <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano"{% if aba == 'humano' %} aria-current="page"{% endif %}>{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
   {% endif %}
   <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina"{% if aba == 'maquina' %} aria-current="page"{% endif %}>{{ icone('chip', 15) }} Máquina</a>
+  </div>
   <span class="abas-fim">
     <a class="botao so-icone" href="/m/{{ modulo.id|urlencode }}/personalizar" title="Personalizar esta área" aria-label="Personalizar esta área">{{ icone('ajustes', 17) }}</a>
     {% if visao is defined and visao.tipo == 'grafico' and aba not in ('humano', 'maquina') %}
@@ -153,12 +155,12 @@
 {% elif visao.tipo == "kanban" %}
 <section class="quadro" data-campo="{{ visao.agrupar_por }}">
   {% for col in colunas %}
-  <div class="coluna{% if col.concluida %} concluida{% endif %}" data-valor="{{ col.valor }}">
+  <div class="coluna{% if col.concluida %} concluida{% endif %}" data-valor="{{ col.valor }}" data-total="{{ col.total }}">
     <header><h3>{{ col.rotulo }}</h3><span class="conta">{{ col.total }}</span></header>
     <div class="cartoes" role="group" aria-label="Itens em {{ col.rotulo }}">
       {% for c in col.cartoes %}{{ p.cartao(c, opcoes, visao.agrupar_por, arrastavel=True) }}{% endfor %}
     </div>
-    {% if col.total > col.cartoes|length %}<p class="suave mais">+{{ col.total - col.cartoes|length }} na lista</p>{% endif %}
+    <p class="suave mais"{% if col.total <= col.cartoes|length %} hidden{% endif %}>+{{ col.total - col.cartoes|length }} na lista</p>
   </div>
   {% endfor %}
 </section>

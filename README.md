@@ -23,8 +23,20 @@ nela; e você abre no Obsidian quando quiser.
 |---|---|
 | ![Módulo Tarefas](docs/img/tarefas.png) | ![Módulo Conteúdo](docs/img/conteudo.png) |
 
-Capturas de 11/11/2026 com dados de demonstração. Veja as mudanças posteriores e
-a cobertura de testes na [revisão para lançamento](docs/revisao-lancamento-2026-11-12.md).
+<details>
+<summary>Veja também no celular</summary>
+
+| Início | Tarefas |
+|---|---|
+| ![Início em tela de 390 px](docs/img/inicio-mobile.png) | ![Quadro de tarefas em tela de 390 px, com criação e navegação acessíveis](docs/img/tarefas-mobile.png) |
+
+Capturas com notas fictícias do catálogo. No celular, **Todas as áreas** abre a
+lista completa, incluindo Ajustes, Pastas e Diário.
+
+</details>
+
+Capturas de 12/11/2026 com dados de demonstração. As telas novas de Agenda e
+Hábitos estão descritas nos [guias](docs/README.md).
 
 ## Instalação
 
@@ -305,7 +317,8 @@ Para trocar de vault com o painel aberto: Ajustes > Vault > Trocar de vault.
 
 ## Documentação
 
-O [índice da documentação](docs/README.md) separa guias de uso e registros de revisão.
+O [índice dos guias](docs/README.md) reúne uso, desenvolvimento e histórico das
+revisões. As mudanças recentes ficam no [changelog](CHANGELOG.md).
 
 | | |
 |---|---|
@@ -336,7 +349,7 @@ com testes executados e limites de validação de cada rodada.
 
 Versão 0.4. Funciona e tem testes automatizados, mas é novo: faça backup.
 
-- Testado no **Windows 10** com Chrome. macOS e Linux usam o mesmo código, mas ainda não foram testados em máquina real; relatos são bem-vindos.
+- Uso manual anterior no **Windows 10** com Chrome; nesta revisão, **Linux com Chromium** e larguras de 1440, 390 e 320 px. A CI verifica Python em Windows, macOS e Linux. Emulação de largura não substitui Safari/iOS, Android e uso real do Obsidian em cada sistema.
 - A leitura da lista de cofres do Obsidian, o acesso por Tailscale e o início automático no macOS/Linux foram escritos seguindo a documentação de cada sistema e ainda precisam de confirmação de quem usa.
 - Só pastas da raiz do vault viram área do painel; subpastas aparecem dentro da área e em "Pastas".
 

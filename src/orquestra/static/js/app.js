@@ -17,6 +17,7 @@
     if (e.detail.removido && typeof e.detail.rel === "string") minhasRemovidas[e.detail.rel] = Date.now() + 2000;
   });
   var arrastando = null;
+  var personalizacaoPendente = function () { return false; };
 
   function caminho(rel) { return rel.split("/").map(encodeURIComponent).join("/"); }
 
@@ -86,8 +87,12 @@
     function ativar(i) {
       if (i === atual) return;
       atual = i;
-      slides.forEach(function (s, k) { s.classList.toggle("ativo", k === i); });
-      pontos.forEach(function (p, k) { p.classList.toggle("ativo", k === i); });
+      slides.forEach(function (s, k) {
+        s.classList.toggle("ativo", k === i);
+        s.tabIndex = k === i ? 0 : -1;
+        s.setAttribute("aria-hidden", k === i ? "false" : "true");
+      });
+      pontos.forEach(function (p, k) { p.classList.toggle("ativo", k === i); p.setAttribute("aria-current", k === i ? "true" : "false"); });
       setaEsq.disabled = i === 0;
       setaDir.disabled = i === slides.length - 1;
       window.Orquestra.ambiente($(".capa", slides[i]));
@@ -196,8 +201,14 @@
 
   // ---------------------------------------------------------------- quadro
 
-  function contar(quadro) {
-    $$(".coluna", quadro).forEach(function (col) { $(".conta", col).textContent = $$(".cartao", col).length; });
+  function contar(quadro, origem, destino) {
+    origem.dataset.total = Number(origem.dataset.total) - 1;
+    destino.dataset.total = Number(destino.dataset.total) + 1;
+    $$(".coluna", quadro).forEach(function (col) {
+      var total = Number(col.dataset.total), restantes = Math.max(0, total - $$(".cartao", col).length), mais = $(".mais", col);
+      $(".conta", col).textContent = total;
+      if (mais) { mais.hidden = !restantes; mais.textContent = "+" + restantes + " na lista"; }
+    });
   }
 
   function mudarCampo(cartao, campo, valor) {
@@ -212,22 +223,29 @@
 
     function mover(cartao, coluna) {
       var origem = cartao.closest(".coluna"), seletor = $(".mudar-status", cartao);
-      if (origem === coluna) return;
+      if (origem === coluna || cartao.getAttribute("aria-busy") === "true") return;
+      cartao.setAttribute("aria-busy", "true");
+      var arrastavel = cartao.draggable;
+      cartao.draggable = false;
+      if (seletor) seletor.disabled = true;
       $(".cartoes", coluna).prepend(cartao);
-      contar(q);
+      contar(q, origem, coluna);
       mudarCampo(cartao, campo, coluna.dataset.valor)
         .then(function () { if (seletor) seletor.value = coluna.dataset.valor; })
         .catch(function (erro) { // não deu: volta o cartão para onde estava
           $(".cartoes", origem).prepend(cartao);
           if (seletor) seletor.value = origem.dataset.valor;
-          contar(q);
+          contar(q, coluna, origem);
           mostrarErro(erro);
+        }).finally(function () {
+          cartao.removeAttribute("aria-busy"); cartao.draggable = arrastavel;
+          if (seletor) seletor.disabled = false;
         });
     }
 
     q.addEventListener("dragstart", function (e) {
       var cartao = e.target.closest && e.target.closest(".cartao");
-      if (!cartao) return;
+      if (!cartao || cartao.getAttribute("aria-busy") === "true") { e.preventDefault(); return; }
       arrastando = cartao;
       cartao.classList.add("arrastando");
       e.dataTransfer.effectAllowed = "move";
@@ -584,7 +602,7 @@
     document.addEventListener("click", function (e) { if (!caixa.hidden && !caixa.contains(e.target)) abrir(false); });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && !caixa.hidden) { abrir(false); botao.focus(); }
-      else if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey && !e.altKey && !digitando(e) && !$("dialog[open]")) { e.preventDefault(); abrir(caixa.hidden); }
+      else if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey && !e.altKey && !digitando(e) && !$("dialog[open]") && botao.getClientRects().length) { e.preventDefault(); abrir(caixa.hidden); }
     });
   }
 
@@ -659,6 +677,21 @@
     var raiz = $("#personalizar");
     if (!raiz) return;
     var lista = $("#p-campos"), modelo = $("#p-modelo-campo");
+    function retrato() {
+      return JSON.stringify($$("input, select, textarea", raiz).map(function (el) {
+        return el.type === "checkbox" ? el.checked : el.value;
+      }));
+    }
+    var original = retrato(), estado = $("#p-estado");
+    personalizacaoPendente = function () { return retrato() !== original; };
+    function atualizarPendencia() {
+      if (estado) estado.textContent = personalizacaoPendente() ? "Há alterações para salvar." : "As mudanças só entram em vigor ao salvar.";
+    }
+    raiz.addEventListener("input", atualizarPendencia);
+    raiz.addEventListener("change", atualizarPendencia);
+    window.addEventListener("beforeunload", function (e) {
+      if (personalizacaoPendente()) { e.preventDefault(); e.returnValue = ""; }
+    });
 
     function ligar(linha) {
       var tipo = $("[data-tipo]", linha), opcoes = $("[data-opcoes]", linha), tirar = $("[data-tirar]", linha);
@@ -666,13 +699,14 @@
       function mostrarOpcoes() { grupoOpcoes.hidden = tipo.value !== "escolha"; opcoes.hidden = grupoOpcoes.hidden; opcoes.disabled = grupoOpcoes.hidden; }
       tipo.onchange = function () { mostrarOpcoes(); if (!grupoOpcoes.hidden) opcoes.focus(); };
       mostrarOpcoes();
-      if (tirar) tirar.onclick = function () { linha.remove(); };
+      if (tirar) tirar.onclick = function () { linha.remove(); atualizarPendencia(); };
     }
     $$(".campo-editor", lista).forEach(ligar);
     $("#p-novo-campo").onclick = function () {
       var linha = modelo.content.firstElementChild.cloneNode(true);
       lista.appendChild(linha);
       ligar(linha);
+      atualizarPendencia();
       $("[data-nome]", linha).focus();
     };
 
@@ -691,15 +725,23 @@
         campos.push({ nome: nome, tipo: $("[data-tipo]", linha).value, opcoes: $("[data-opcoes]", linha).value });
       });
       var dados = {
+        versao: raiz.dataset.versao,
         nome: $("#p-nome").value, descricao: $("#p-descricao").value, icone: $("#p-icone").value, cena: $("#p-cena").value,
         capa: $("#p-capa").value || null,
         campos: campos, remover: remover, quadro: $("#p-quadro").checked, grafico: $("#p-grafico").checked
       };
       if ($("#p-concluidos")) dados.concluidos = $("#p-concluidos").value;
       var botao = $("#p-salvar");
+      var enviado = retrato();
       var concluir = window.OrquestraInterface.ocupado(botao, "Salvando…");
       api("PUT", "/api/modulos/" + encodeURIComponent(raiz.dataset.modulo), dados)
-        .then(function (r) { location.href = r.url; })
+        .then(function (r) {
+          if (r.versao) raiz.dataset.versao = r.versao;
+          original = enviado;
+          atualizarPendencia();
+          if (personalizacaoPendente()) { avisar("Área salva. Há novas alterações para salvar nesta tela."); return; }
+          location.href = r.url;
+        })
         .catch(mostrarErro).finally(concluir);
     };
   }
@@ -978,14 +1020,16 @@
     resumoTemporizador = 0;
     if (resumoEmVoo || !resumoPendente) return;
     resumoPendente = false; resumoEmVoo = true;
-    fetch("/api/resumo").then(function (r) {
+    fetch("/api/resumo", { cache: "no-store" }).then(function (r) {
       if (!r.ok) throw new Error("Não consegui atualizar os contadores.");
       return r.json();
     }).then(function (dados) {
       if (!dados || typeof dados !== "object" || Array.isArray(dados)) return;
-      Object.keys(dados.selos || {}).forEach(function (id) {
-        // A mesma área pode aparecer no dock e na gaveta: atualiza os dois.
-        $$('[data-selo-de="' + id + '"] .selo').forEach(function (selo) { selo.textContent = dados.selos[id]; selo.hidden = !dados.selos[id]; });
+      if (document.body.dataset.vaultId && dados.vault_id !== document.body.dataset.vaultId) { recarregarLogo(true, true); return; }
+      // Nomes de pastas podem conter aspas: não os interpolar em seletores CSS.
+      $$("[data-selo-de]").forEach(function (item) {
+        var numero = (dados.selos || {})[item.dataset.seloDe], selo = $(".selo", item);
+        if (selo && numero !== undefined) { selo.textContent = numero; selo.hidden = !numero; }
       });
       $$('[data-conta="decidir"]').forEach(function (el) { el.textContent = dados.decidir; });
       $$('[data-conta="hoje"]').forEach(function (el) { el.textContent = dados.hoje; });
@@ -997,11 +1041,13 @@
   }
 
   var temporizador = 0, avisouNovidade = false;
-  function ocupado() { return notaSuja || !!arrastando || !!$("dialog[open]") || (document.activeElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable)); }
-  function recarregarLogo(resumoJaSolicitado) {
+  function ocupado() { return notaSuja || personalizacaoPendente() || !!arrastando || !!$("dialog[open]") || (document.activeElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable)); }
+  function recarregarLogo(resumoJaSolicitado, reconexao) {
     if (!resumoJaSolicitado) atualizarSelos();
     clearTimeout(temporizador);
     temporizador = setTimeout(function () {
+      if (reconexao && !ocupado()) { location.reload(); return; }
+      if (personalizacaoPendente() && $("#p-novidades")) { $("#p-novidades").hidden = false; return; }
       // Atualização explícita preserva foco, rolagem e formulários.
       // A pessoa está no meio de algo: não tiramos a tela debaixo dela.
       if (notaSuja && $("#faixa-conflito")) { $("#faixa-conflito").hidden = false; return; }
@@ -1009,12 +1055,34 @@
     }, 450);
   }
 
+  var fonteAoVivo = null, cicloAoVivoLigado = false;
   function aoVivo() {
     if (!window.EventSource) return;
-    var fonte = new EventSource("/eventos");
+    if (fonteAoVivo) fonteAoVivo.close();
+    var fonte = new EventSource("/eventos"), abriu = false, houveFalha = false;
+    fonteAoVivo = fonte;
+    var estado = $("#estado-conexao");
+    fonte.onerror = function () {
+      houveFalha = true;
+      if (estado) { estado.hidden = false; estado.textContent = "Reconectando…"; }
+    };
+    fonte.onopen = function () {
+      if (estado) { estado.hidden = true; estado.textContent = ""; }
+      atualizarSelos();
+      // Eventos não têm replay. Após qualquer interrupção, conferir a página
+      // inteira, preservando editores, formulários e diálogos com trabalho pendente.
+      if (abriu || houveFalha) recarregarLogo(true, true);
+      abriu = true;
+    };
+    if (!cicloAoVivoLigado) {
+      cicloAoVivoLigado = true;
+      window.addEventListener("pagehide", function () { if (fonteAoVivo) fonteAoVivo.close(); });
+      window.addEventListener("pageshow", function (e) { if (e.persisted) { aoVivo(); recarregarLogo(false, true); } });
+    }
     fonte.onmessage = function (mensagem) {
       var ev;
       try { ev = JSON.parse(mensagem.data); } catch (e) { return; }
+      if (!ev || typeof ev !== "object") return;
       // Pequena espera: a resposta da nossa própria gravação pode chegar depois do evento.
       setTimeout(function () {
         if (ev.tipo === "config") { recarregarLogo(); return; }

@@ -213,9 +213,10 @@ class Indice:
             return "itens"
         return partes[1] if len(partes) > 2 else ""
 
-    def notas_em(self, modulo_id: str, zona: str) -> list[Nota]:
+    def notas_em(self, modulo_id: str, zona: str, *, ordenar: bool = True) -> list[Nota]:
         achadas = list(self._zonas.get((modulo_id, zona), {}).values())
-        achadas.sort(key=lambda n: n.titulo.lower())
+        if ordenar:
+            achadas.sort(key=lambda n: n.titulo.lower())
         return achadas
 
     def registros_em(self, modulo_id: str, zona: str = "itens"):

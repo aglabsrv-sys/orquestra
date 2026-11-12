@@ -176,6 +176,14 @@ página atual, como informa seu nome acessível. Faça medições com notas sint
 em diferentes sistemas; um benchmark de arquivos pequenos não representa anexos
 grandes, sistemas de sincronização ou uma unidade de rede.
 
+Contagens pedem notas sem ordenação; listas continuam ordenadas. O navegador
+agrupa consultas de resumo e limita pedidos simultâneos. Reconexão SSE exige
+ressincronização porque o canal não mantém um histórico de eventos. Formulários
+pendentes bloqueiam a recarga automática; a personalização envia a versão do YAML
+lido e recebe conflito se o arquivo mudou. As cenas só são preparadas ao entrar
+na área visível e não mantêm um laço ativo quando a página está oculta ou o usuário
+prefere movimento reduzido.
+
 O watcher usa `PollingObserverVFS` com um único emissor recursivo. A enumeração
 poda diretórios ignorados e links antes de descer e compara metadados, sem reler o
 conteúdo de todas as notas. O intervalo de consulta é 0,75 s, com debounce de

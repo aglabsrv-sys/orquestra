@@ -1,94 +1,96 @@
-# Revisão para lançamento — 12/11/2026
+# Revisão de lançamento — 12 de novembro de 2026
 
-Esta rodada corrige problemas de jornadas, segurança, documentação e apresentação.
-A checagem visual completa ainda não terminou; este registro separa o que foi
-observado no navegador do que foi conferido por código e testes.
+Revisão da versão 0.4 sobre `285a87b6ba0c55039b7fd76362dd23f0938e6822`.
+O produto permanece um aplicativo pessoal local, com acesso remoto pela rede
+privada. Distribuir o código à comunidade é diferente de hospedar o vault de
+alguém em uma porta pública: o painel não possui autenticação para esse modelo.
 
-## O que foi observado
+## Achados e correções
 
-O app foi aberto no Chrome com um vault sintético separado da configuração pessoal,
-sem agendador, contas externas ou envio de backups. Foram obtidas capturas reais
-de Hábitos em desktop (1425 × 897) e emulação de iPhone SE (375 × 667 CSS pixels).
-A captura mobile tem resolução física 750 × 1334; não é um teste em iPhone físico.
+| Área | Achado | Resultado |
+| --- | --- | --- |
+| Mobile | Dock de cinco áreas mais controles do sistema escondia destinos em 320/390 px | Dois atalhos, preservando a área atual; gaveta com todos os destinos, inclusive Ajustes |
+| Abas | “Novo” e Personalizar ficavam depois das abas, fora da parte visível | Ações permanecem visíveis; apenas as visões rolam horizontalmente |
+| Conexão | Eventos perdidos durante uma queda não eram recuperados | Indicador discreto de reconexão e revisão da página ao reconectar, inclusive após falha inicial e retorno pelo cache do navegador |
+| Atualização | Cada evento disparava nova consulta de resumo | Debounce de 180 ms e, no máximo, um pedido em curso; rajadas acumuladas geram uma consulta posterior |
+| Personalizar | Sair do campo permitia recarga automática e uma aba antiga podia regravar escolhas anteriores | Alterações pendentes protegem a tela mesmo sem foco; a versão lida do YAML acompanha o formulário, e mudanças externas retornam 409 sem gravar |
+| Kanban | Movimentar um cartão fazia a contagem usar apenas os cartões visíveis | Totais independentes do limite de 80 cartões; seletor e arraste ficam bloqueados durante a gravação do cartão |
+| Animações | RAF continuava acordando em modo reduzido ou página oculta; todas as capas eram preparadas de uma vez | Preparação por visibilidade e agendamento na cadência de 12 quadros/s somente quando há cena animável; preferência pode mudar sem recarregar |
+| Servidor | Contagens ordenavam notas sem necessidade e a prévia salva de Markdown usava o laço ASGI | Contagens sem ordenação; edição e renderização trabalham em thread com uma visão coerente do índice |
+| Segurança | CSP permitia JavaScript inline sem ser necessário | `script-src 'self'`; estilos de aparência continuam permitidos |
+| Atualização do pacote | O wheel normaliza mtimes e a marca dos estáticos dependia dessas datas | URLs de CSS e JS identificadas por hash de conteúdo, compartilhado pelo painel e pelo primeiro uso |
+| Acessibilidade | axe-core encontrou alvos pequenos no carrossel, slides inativos no foco, nome ARIA sem papel e contrastes insuficientes no claro | Pontos com alvo de 28 px, slides laterais fora do foco/leitura, região identificada, links sublinhados e contraste revisto em etiquetas, caminhos e código |
 
-As imagens abaixo registram o levantamento, **antes dos ajustes finais** de
-compactação e cabeçalho:
+A API de personalização aceita `versao` opcional para clientes existentes. O
+painel sempre envia a versão; clientes próprios devem encaminhar a versão da
+configuração que leram para receber a mesma proteção contra formulários antigos.
+Não há migração dos arquivos do usuário nem dependência nova de runtime.
 
-- [Hábitos em desktop](img/revisoes/habitos-desktop-antes-2026-11-12.png).
-- [Hábitos em mobile](img/revisoes/habitos-mobile-antes-2026-11-12.png).
+## Desempenho medido
 
-O topo mobile cortava a trilha e deixava pouco espaço para o nome. Os cartões e o
-histórico ocupavam mais altura do que o necessário. Foram ajustados truncamento,
-distribuição dos controles, margens e limite de largura do mapa. O tamanho da fonte
-agora também afeta os controles comuns; campos crescem com essa escolha e mantêm
-alvo de toque mínimo no celular. A regra que impunha duas colunas em todos os
-formulários mobile foi removida, devolvendo espaço às datas e aos horários.
+Linux, Python 3.12.14, 10.000 notas de 1.036 bytes no módulo Tarefas. Um aquecimento
+e sete amostras por rota, via TestClient, sem navegador, watcher ou agendamentos.
+As duas execuções usam o mesmo script e as mesmas notas. A coluna anterior mede
+o índice antes da remoção das ordenações; o restante da revisão visual já estava
+na árvore de trabalho. Os JSONs podem ser reproduzidos com o comando abaixo.
 
-A captura nativa do controle do computador falhou com `window capture timed out`.
-Foi possível obter os dois registros pelo comando de captura do próprio Chrome.
-Depois disso, a ferramenta encerrou o controle por não conseguir determinar a URL
-atual com confiança suficiente para aplicar sua política. Nenhum novo comando de
-interface foi executado após esse encerramento.
+| Operação | Mediana anterior | Mediana corrigida |
+| --- | ---: | ---: |
+| Início | 111,12 ms | 58,08 ms |
+| Lista de tarefas | 117,07 ms | 86,11 ms |
+| Quadro | 121,34 ms | 95,67 ms |
+| Resumo ao vivo | 63,46 ms | 32,98 ms |
+| Busca | 85,33 ms | 70,59 ms |
 
-Portanto, os ajustes finais de CSS, os formulários e as demais telas **ainda não
-têm aprovação visual nesta rodada**. Os prints anteriores do README foram mantidos
-com sua data; não foram substituídos por imagens simuladas ou capturas antigas
-apresentadas como novas.
+A carga inicial foi de 5,23 s para 4,97 s; essa variação isolada não demonstra
+ganho de inicialização. O HTML permaneceu com o mesmo tamanho nas duas medições:
+47.926 bytes na lista e 72.467 no quadro. Não foram medidos memória, disco de rede,
+Safari/iOS, sincronizadores ou notas com anexos grandes. Os resultados não são um SLA.
 
-## Correções de jornadas e código
+```bash
+uv run --frozen python scripts/medir_desempenho.py --notas 10000 --amostras 7
+```
 
-| Problema | Comportamento corrigido |
-|---|---|
-| Clique no fundo fechava um formulário alterado | Botões e backdrop respeitam o evento de cancelamento e a confirmação de alterações pendentes. Clicar no espaço interno não fecha o modal. |
-| Enter na busca/Pomodoro acionava o slide da home | O carrossel ignora controles interativos, teclas já tratadas e combinações com modificadores. |
-| Salvar durante upload podia criar uma nota sem miniatura | O envio bloqueia o submit e os botões correspondentes; trata uploads simultâneos, falha e saída da página. |
-| Ajudas e estados desapareciam em modais | Apenas dicas de campos ficam sob demanda; explicações gerais e estados de upload permanecem visíveis. |
-| Marcar hábito após virar a semana conservava dias antigos | O período é remontado quando a data civil da resposta muda. A descrição acessível do dia também é atualizada. |
-| Vídeo continuava após ativar movimento reduzido | A reprodução responde imediatamente à preferência e à visibilidade da aba. |
-| Login GitHub não correspondia ao isolamento do backup | O push admite somente o helper oficial `gh` para HTTPS no host `github.com`; mantém bloqueados helpers herdados e hooks. Nenhum token passa pelo app. |
-| Personalizar tipos de Hábitos podia converter registros | Criar, editar e marcar conferem o schema atual antes da escrita e recusam tipos incompatíveis. |
-| Data extrema em nota externa podia derrubar a Agenda | Datas fora do intervalo navegável são ignoradas antes do cálculo de término. |
-| Upload iniciado em outro vault podia cair no atual | A operação binária exige o vínculo do vault e reconfere confinamento na gravação, inclusive diante de junction/symlink trocado. |
+## Jornada e aparência
 
-## Organização e documentação
+O roteiro de navegador cria um vault do zero, a partir do perfil Criador, e
+verifica quinze rotas em 1440, 390 e 320 px. Usa arquivos fictícios e configuração
+temporária. Verifica criação/edição, recuperação local, conflito externo e cópia,
+personalização pendente, números, decisão, captura com falha e repetição, totais
+do Kanban e parada/retomada de animações. A gaveta é exercitada com teclado.
 
-- README com navegação coerente, limites das integrações e data das capturas.
-- Guias de temas, backup e módulos alinhados a tamanho da fonte, seleção de cenas,
-  upload, consulta de recuperação, GitHub e módulos de Agenda/Hábitos.
-- [Índice da documentação](README.md) separa guias atuais dos relatórios datados.
-- CONTRIBUTING descreve validação visual com dados fictícios e evidência por fluxo.
-- A CI confere destinos de links e imagens locais com um script sem dependências.
-- Removidos caches descartáveis e o inventário gerado de auditoria. Ambientes,
-  distribuições e trabalho útil em andamento foram preservados. Caches e saídas
-  de diagnóstico ficam ignorados pelo Git.
+![Quadro no celular com ações e gaveta acessíveis](img/tarefas-mobile.png)
 
-## Gates locais
+O grupo opcional `browser` contém Playwright. Usuários do painel não precisam
+instalá-lo. O job Chromium da CI executa o mesmo roteiro descrito em
+[Contribuir](../CONTRIBUTING.md), sem coletores, backups ou credenciais reais.
+Testes Node cobrem reconexão, isolamento entre vaults, consultas sobrepostas e
+retorno pelo cache do navegador; teste ASGI cobre pedidos concorrentes durante
+a renderização de uma nota.
 
-- JavaScript: **49 testes passaram**, incluindo cinco jornadas de modal/teclado/
-  upload/movimento e um caso de virada de semana em Hábitos.
-- Ruff e destinos de links/imagens locais passaram.
-- Auditoria do `uv.lock` com `pip-audit`: nenhuma vulnerabilidade conhecida encontrada
-  na consulta desta rodada. Isso não substitui revisão de lógica ou garante ausência
-  de falhas futuras.
-- Wheel, pacote fonte, instalação em caminho Unicode, CLI e MCP stdio passaram.
-  Há criação e leitura de compromisso e criação/marcação de hábito no pacote instalado.
-- Regressão Python integrada: **404 passaram, 1 ignorado**, em 428,95 segundos.
-  A execução usa vaults sintéticos e não altera configurações ou dados pessoais.
-- A distribuição final foi reconstruída; **132 recursos** de templates, catálogo
-  e arquivos estáticos foram comparados com a fonte e estavam idênticos. O pacote
-  fonte também inclui os guias e as duas capturas identificadas da revisão.
+A passagem real pelo primeiro PR revelou falta de `pull-requests: read` no
+scanner de segredos: a consulta dos commits retornava 403. A permissão foi
+declarada somente nesse job, mantendo todo acesso em leitura. A suíte completa
+roda em PRs e pushes para `main`, evitando duas execuções iguais a cada push de
+branch com PR aberto.
 
-## O que falta para fechar o lançamento
+Validação local em clone limpo: **349 testes Python**, **35 testes Node**, as onze
+jornadas Chromium, Ruff e instalação de wheel/sdist/editável com MCP stdio
+aprovados. A checagem adicional com axe-core 4.14.0 cobriu doze páginas no escuro
+em 1440 px e no claro em 390 px. As violações encontradas nas regras WCAG A/AA
+selecionadas foram corrigidas. Resultados automáticos e verificações incompletas
+de contraste sobre imagens não equivalem a certificação; leitores de tela e
+dispositivos físicos ainda exigem uma passagem real. Gitleaks verificou a árvore
+e o histórico alcançável sem encontrar segredos.
 
-1. Reabrir uma sessão de navegador controlável e conferir os ajustes finais de
-   Hábitos em desktop, 375/390 px e janela estreita de 320 px.
-2. Completar criação, edição, validação, cancelamento com rascunho e falha de rede
-   nos formulários de Notas, Tarefas, Conteúdo, Agenda, Hábitos e personalização.
-3. Conferir home, onboarding, busca, Para decidir, Diário, arquivos e todas as
-   seções de Ajustes; navegação por teclado, tema claro/escuro e fonte ampliada.
-4. Gerar os prints finais dessas telas a partir da versão revisada.
-5. Executar a CI remota e o uso real em outro vault e em Linux. GitHub/Tailscale/
-   agenda externos e início automático continuam exigindo validação no ambiente
-   real; os testes locais não conectaram contas nem enviaram dados externos.
+## Critérios para disponibilizar à comunidade
 
-Nenhum push, merge, deploy ou publicação foi feito nesta rodada.
+- Confirmar os checks do commit exato, incluindo o novo job Chromium, empacotamento e scanner de segredos.
+- Conferir instalação de wheel, sdist e checkout editável com `scripts/verificar_pacote.py`.
+- Validar Tailscale Serve e Obsidian reais nos sistemas divulgados como suportados; não inferir isso de testes de API ou largura emulada.
+- Revisar a versão e preparar a tag/release com as instruções de atualização. O repositório continua privado até a etapa de publicação escolhida pelo mantenedor.
+- Repetir auditoria de dependências e histórico antes de tornar o código público. A auditoria local desta revisão não encontrou vulnerabilidades conhecidas nas dependências consultadas.
+
+Os limites de conservação de arquivos e execução de scripts continuam descritos
+em [Segurança](../SECURITY.md) e [Backup](backup.md). Não foram usados vaults,
+tokens, remotos de backup ou integrações reais do usuário.

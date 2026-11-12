@@ -885,8 +885,8 @@
 
   // ---------------------------------------------------------------- execução
 
-  var preferencia = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
-  var ativas = [], parado = preferencia && preferencia.matches, agendado = 0;
+  var ativas = [], movimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  var parado = movimento && movimento.matches;
 
   function preparar(canvas) {
     if (canvas._cena) return canvas._cena;
@@ -908,44 +908,60 @@
 
   // Uma cena só é animada se estiver na tela e, dentro do carrossel, se for o slide ativo.
   function deveAnimar(cena) {
-    if (!cena.visivel || document.hidden || !cena.canvas.isConnected) return false;
+    if (!cena.visivel || document.hidden) return false;
     var slide = cena.canvas.closest(".slide");
     return !slide || slide.classList.contains("ativo");
   }
 
-  var observador = "IntersectionObserver" in window
-    ? new IntersectionObserver(function (itens) { itens.forEach(function (i) { if (i.target._cena) i.target._cena.visivel = i.isIntersecting; }); acordar(); }) : null;
   function iniciar(raiz) {
+    var observador = "IntersectionObserver" in window
+      ? new IntersectionObserver(function (itens) {
+        itens.forEach(function (i) {
+          if (i.isIntersecting && !i.target._cena) adicionar(i.target);
+          if (i.target._cena) i.target._cena.visivel = i.isIntersecting;
+        });
+        pintarAmbiente();
+        atualizarAnimacao();
+      })
+      : null;
+    function adicionar(canvas) {
+      try { ativas.push(preparar(canvas)); }
+      catch (e) { if (window.console) console.error("Cena não pôde ser desenhada:", e); }
+    }
     (raiz || document).querySelectorAll("canvas[data-cena]").forEach(function (canvas) {
-      if (canvas._cena) return;
-      try {
-        var cena = preparar(canvas);
-        ativas.push(cena);
-        if (observador) observador.observe(canvas); else cena.visivel = true;
-      } catch (e) { if (window.console) console.error("Cena não pôde ser desenhada:", e); }
+      if (canvas._cena || canvas._observada) return;
+      canvas._observada = true;
+      if (observador) observador.observe(canvas);
+      else { adicionar(canvas); if (canvas._cena) canvas._cena.visivel = true; }
     });
-    acordar();
+    atualizarAnimacao();
   }
 
-  var ultimo = 0, fonteAmbiente = null;
+  var quadro = 0, espera = 0, fonteAmbiente = null;
   function ambienteAnimado() { return fonteAmbiente && fonteAmbiente.isConnected && fonteAmbiente.tagName === "VIDEO" && !fonteAmbiente.paused; }
-  function temTrabalho() { return !document.hidden && !parado && (ativas.some(deveAnimar) || ambienteAnimado()); }
-  function acordar() { if (!agendado && temTrabalho()) agendado = requestAnimationFrame(laco); }
+  function podeAnimar() { return !parado && !document.hidden && (ativas.some(deveAnimar) || ambienteAnimado()); }
+  function atualizarAnimacao() {
+    if (!podeAnimar()) {
+      clearTimeout(espera); cancelAnimationFrame(quadro);
+      espera = quadro = 0;
+      return;
+    }
+    if (espera || quadro) return;
+    // Acordar somente na cadência das cenas, sem um laço ocioso de 60 Hz.
+    espera = setTimeout(function () { espera = 0; quadro = requestAnimationFrame(laco); }, 1000 / QPS);
+  }
   function laco(agora) {
-    agendado = 0;
-    ativas = ativas.filter(function (c) { if (c.canvas.isConnected) return true; if (observador) observador.unobserve(c.canvas); return false; });
-    if (!temTrabalho()) return;
-    if (agora - ultimo < 1000 / QPS) { acordar(); return; }
-    ultimo = agora;
-    if (!parado) for (var i = 0; i < ativas.length; i++) if (deveAnimar(ativas[i])) ativas[i].quadro(agora / 1000);
+    quadro = 0;
+    if (!podeAnimar()) return;
+    for (var i = 0; i < ativas.length; i++) if (deveAnimar(ativas[i])) ativas[i].quadro(agora / 1000);
     pintarAmbiente();
-    acordar();
+    atualizarAnimacao();
   }
 
   // O fundo da página copia a capa ativa em baixíssima resolução; o CSS desfoca.
   function pintarAmbiente() {
     var alvo = document.getElementById("ambiente");
-    if (!alvo || !fonteAmbiente || document.hidden || !fonteAmbiente.isConnected) return;
+    if (!alvo || !fonteAmbiente) return;
     try {
       if (fonteAmbiente.tagName === "IMG" && !fonteAmbiente.complete) return;
       alvo.getContext("2d").drawImage(fonteAmbiente, 0, 0, alvo.width, alvo.height);
@@ -953,19 +969,19 @@
     } catch (e) { /* imagem de outro site ou ainda carregando */ }
   }
   function ambiente(elemento) {
-    if (fonteAmbiente) { fonteAmbiente.removeEventListener("load", pintarAmbiente); fonteAmbiente.removeEventListener("play", acordar); }
+    if (fonteAmbiente) { fonteAmbiente.removeEventListener("load", pintarAmbiente); fonteAmbiente.removeEventListener("play", atualizarAnimacao); fonteAmbiente.removeEventListener("pause", atualizarAnimacao); }
     fonteAmbiente = elemento || null;
-    if (fonteAmbiente) { fonteAmbiente.addEventListener("load", pintarAmbiente); fonteAmbiente.addEventListener("play", acordar); }
-    pintarAmbiente(); acordar();
+    if (fonteAmbiente) { fonteAmbiente.addEventListener("load", pintarAmbiente); fonteAmbiente.addEventListener("play", atualizarAnimacao); fonteAmbiente.addEventListener("pause", atualizarAnimacao); }
+    pintarAmbiente(); atualizarAnimacao();
   }
-  document.addEventListener("visibilitychange", function () { if (document.hidden && agendado) { cancelAnimationFrame(agendado); agendado = 0; } else acordar(); });
-  if (preferencia && preferencia.addEventListener) preferencia.addEventListener("change", function (e) { parado = e.matches; if (parado && agendado) { cancelAnimationFrame(agendado); agendado = 0; } else acordar(); });
 
   window.Orquestra = { iniciarCenas: iniciar, ambiente: ambiente, cenas: Object.keys(CENAS) };
   document.addEventListener("DOMContentLoaded", function () {
     iniciar(document);
     var capa = document.querySelector(".cab-modulo .capa");
     if (capa) ambiente(capa);
-    acordar();
+    atualizarAnimacao();
   });
+  document.addEventListener("visibilitychange", atualizarAnimacao);
+  if (movimento && movimento.addEventListener) movimento.addEventListener("change", function (e) { parado = e.matches; atualizarAnimacao(); });
 })();

@@ -18,10 +18,10 @@ function tela(responder = async () => ({ok:true,json:async()=>({selos:{},hoje:3,
     addEventListener(n,fn) {(ouvintes[n] ||= []).push(fn);}
   };
   function EventSource() {stream=this;}
-  const window = {EventSource,OrquestraInterface:{avisar:t=>avisos.push(t)}};
+  const window = {EventSource,addEventListener(){},OrquestraInterface:{avisar:t=>avisos.push(t)}};
   runInNewContext(fonte, {
     window,document,EventSource,Date,console,
-    fetch(url) {pedidos.push(url); return responder(url);},
+    fetch(url) {pedidos.push(url); return Promise.resolve(responder(url)).then(r => ({...r, json:async()=>({vault_id:"sintetico",...await r.json()})}));},
     setTimeout(fn,ms) {timers.set(++numero,{fn,at:agora+ms}); return numero;},
     clearTimeout(id) {timers.delete(id);},
     location:{reload(){recargas++;}}

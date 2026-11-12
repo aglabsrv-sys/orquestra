@@ -27,7 +27,7 @@ HOSTS_LOCAIS = {"localhost", "127.0.0.1", "::1"}
 METODOS_DE_LEITURA = {"GET", "HEAD", "OPTIONS"}
 LIMITE_CORPO = 2 * 1024 * 1024
 _CSP = (
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
     "img-src 'self' http: https: data:; media-src 'self' http: https:; connect-src 'self'; "
     "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 )

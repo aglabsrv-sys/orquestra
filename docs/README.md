@@ -20,7 +20,7 @@ feitas em versões e datas específicas.
 | Acessar o painel pelo celular | [Tailscale](tailscale.md) |
 
 Para contribuir, veja [CONTRIBUTING](../CONTRIBUTING.md), [arquitetura](arquitetura.md)
-e a [política de segurança](../SECURITY.md).
+e a [política de segurança](../SECURITY.md). As mudanças ficam no [changelog](../CHANGELOG.md).
 
 ## Registros de revisão
 
@@ -30,6 +30,7 @@ plataforma que não foi efetivamente testada.
 
 | Data | Registro |
 |---|---|
+| 12/11/2026 | [Integrações e formulários locais](revisao-integracoes-2026-11-12.md) |
 | 12/11/2026 | [Revisão para lançamento e cobertura visual](revisao-lancamento-2026-11-12.md) |
 | 12/11/2026 | [Foco, hábitos e desempenho](refino-foco-habitos-desempenho-2026-11-12.md) |
 | 12/11/2026 | [Agenda](refino-agenda-2026-11-12.md) |
