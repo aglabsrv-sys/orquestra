@@ -3,12 +3,13 @@
 {% block observa %}inicio{% endblock %}
 
 {% block conteudo %}
+<h1 class="somente-leitor">Início de {{ cfg.nome }}</h1>
 <section class="semana" aria-label="Próximos dias">
   <div class="dias">
     {% for d in semana %}
-    <a class="dia{% if d.hoje %} ativo{% endif %}" href="/dia/{{ d.iso }}" title="{{ d.n }} em aberto">
+    <a class="dia{% if d.hoje %} ativo{% endif %}" href="/dia/{{ d.iso }}" title="{{ d.n }} em aberto" aria-label="{{ d.nome }}, dia {{ d.num }}: {{ d.n }} em aberto"{% if d.hoje %} aria-current="date"{% endif %}>
       <span>{{ d.nome }}</span> <b>{{ d.num }}</b>
-      {% if d.n %}<i class="ponto"></i>{% endif %}
+      {% if d.n %}<i class="ponto" aria-hidden="true"></i>{% endif %}
     </a>
     {% endfor %}
   </div>

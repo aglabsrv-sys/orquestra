@@ -155,7 +155,22 @@ def cores(tema: dict[str, Any], aparencia: Aparencia, claro: bool) -> dict[str, 
     base = dict(tema.get("cores_claras") or claras_a_partir_de(tema["cores"])) if claro else dict(tema["cores"])
     if aparencia.destaque:
         base["destaque"] = legivel_sobre(aparencia.destaque, base["fundo"])
-        base["sobre_destaque"] = texto_sobre(base["destaque"])
+    superficies = [base[chave] for chave in ("fundo", "superficie", "superficie_alta")]
+    # As mesmas cores aparecem em links, ajuda, alertas e etiquetas. A paleta
+    # precisa funcionar também nas superfícies elevadas e nos fundos tingidos,
+    # especialmente no modo claro. Só a saída CSS muda; o tema do vault é intacto.
+    for chave in ("texto", "texto_suave", "destaque", "alerta", "ok"):
+        original = base[chave]
+        alvo = "#000000" if claro else "#ffffff"
+        for passo in range(101):
+            ajustada = misturar(original, alvo, passo / 100)
+            fundos = superficies
+            if chave in ("destaque", "alerta", "ok"):
+                fundos = [*superficies, *(misturar(fundo, ajustada, 0.20) for fundo in superficies)]
+            if all(contraste(ajustada, fundo) >= 4.5 for fundo in fundos):
+                break
+        base[chave] = ajustada
+    base["sobre_destaque"] = texto_sobre(base["destaque"])
     return base
 
 
@@ -165,6 +180,8 @@ def _variaveis(paleta: dict[str, str], claro: bool) -> str:
     # A sombra e o brilho de fundo pesam demais numa tela clara.
     partes.append("--sombra:" + ("rgb(60 45 30 / 0.28)" if claro else "#000"))
     partes.append("--ambiente:" + ("0.22" if claro else "0.5"))
+    partes.append("--campo-borda:" + legivel_sobre(paleta["borda"], paleta["fundo"], 3.0))
+    partes.append("--sobre-alerta:" + texto_sobre(paleta["alerta"]))
     return ";".join(partes)
 
 

@@ -6,7 +6,7 @@
 
 {% block conteudo %}
 <div class="faixa alerta recuperacao-nota" id="faixa-conflito" role="status" hidden>
-  <span>{{ icone('aviso', 16) }} O arquivo mudou no vault. Preserve seu rascunho antes de abrir a versão do disco.</span>
+  <span>{{ icone('aviso', 16) }} <strong>O arquivo mudou fora desta aba.</strong> Preserve seu rascunho antes de abrir a versão do disco.</span>
   <div class="linha-botoes sem-topo">
     <button class="botao" type="button" id="copiar-rascunho">Copiar meu texto</button>
     <button class="botao principal" type="button" id="salvar-copia">Salvar uma cópia no vault</button>
@@ -25,10 +25,11 @@
   O navegador não conseguiu guardar o rascunho local. Mantenha esta aba aberta e copie seu texto antes de sair.
 </div>
 {% if nota.erro %}
-<div class="faixa alerta">{{ icone('aviso', 16) }} {{ nota.erro }} Para proteger o arquivo, o painel não vai gravar nada nele até isso ser corrigido.</div>
+<div class="faixa alerta" role="alert">{{ icone('aviso', 16) }} <span><strong>Esta nota está protegida contra alterações.</strong> {{ nota.erro }} Corrija o arquivo no Obsidian para voltar a editar pelo painel.</span></div>
 {% endif %}
 
 <article class="nota" data-rel="{{ nota.rel }}" data-versao="{{ nota.versao }}" data-vault-id="{{ vault_id }}" data-meta-original='{{ nota.campos()|tojson }}' data-voltar="{{ '/m/' ~ modulo.id|urlencode if modulo and zona else url_pasta(pasta) }}"{% if nota.erro %} data-travada{% endif %}>
+  <h1 class="somente-leitor">Nota: {{ nota.titulo }}</h1>
   <div class="nota-principal">
     <div class="nota-topo">
       {% if zona == "humano" %}<span class="et zona-humano">{{ icone('pessoa', 12) }} humano</span>
@@ -36,14 +37,14 @@
       {% elif zona == "arquivo" %}<span class="et">{{ icone('caixa', 12) }} arquivada</span>{% endif %}
       <span class="suave caminho">{{ nota.rel }}</span>
     </div>
-    <input class="nota-titulo" id="nota-titulo" value="{{ nota.titulo }}" aria-label="Título"{% if nota.erro %} disabled{% endif %}>
+    <input class="nota-titulo" id="nota-titulo" value="{{ nota.titulo }}" aria-label="Título da nota" aria-describedby="estado-salvo" maxlength="500"{% if nota.erro %} disabled{% endif %}>
 
     {% if imagem %}<img class="nota-imagem" src="{{ imagem }}" alt="">{% endif %}
 
     <div class="nota-acoes">
       {% if not nota.erro %}
       <button class="botao" type="button" id="editar">{{ icone('editar', 15) }}<span>Editar texto</span></button>
-      <button class="botao principal" type="button" id="salvar" hidden>Salvar</button>
+      <button class="botao principal" type="button" id="salvar" title="Salvar texto (Ctrl+S ou Cmd+S)" hidden>Salvar texto</button>
       <button class="botao" type="button" id="cancelar" hidden>Cancelar</button>
       {% endif %}
       <a class="botao" href="{{ link_obsidian }}" title="Abrir este arquivo no Obsidian">{{ icone('externo', 15) }}<span>Obsidian</span></a>
@@ -53,30 +54,30 @@
     </div>
 
     <div class="texto" id="ver">{% if nota.corpo.strip() %}{{ html }}{% else %}<p class="suave">Sem texto. Clique em “Editar texto” para escrever.</p>{% endif %}</div>
-    <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" hidden spellcheck="true">{{ nota.corpo }}</textarea>
+    <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" aria-describedby="estado-salvo" maxlength="1000000" hidden spellcheck="true">{{ nota.corpo }}</textarea>
   </div>
 
   <aside class="lateral">
     {% if avisos %}
-    <div class="aviso-schema">{{ icone('aviso', 15) }}<div>{% for a in avisos %}<p>{{ a }}</p>{% endfor %}</div></div>
+    <div class="aviso-schema" role="status">{{ icone('aviso', 15) }}<div><strong>Revise estas propriedades</strong>{% for a in avisos %}<p>{{ a }}</p>{% endfor %}</div></div>
     {% endif %}
     {% if campos %}
-    <h3>Propriedades</h3>
-    <fieldset{% if nota.erro or zona == 'arquivo' %} disabled{% endif %}>
+    <h2 id="titulo-propriedades">Propriedades</h2>
+    <fieldset aria-labelledby="titulo-propriedades" aria-describedby="estado-salvo"{% if nota.erro or zona == 'arquivo' %} disabled{% endif %}>
       {% for c in campos %}{{ p.entrada(c.def, c.valor) }}{% endfor %}
     </fieldset>
     {% endif %}
     {% if nota.campo('pergunta') %}
-    <h3>Pergunta do agente</h3>
+    <h2>Pergunta do agente</h2>
     <p class="cartao-pergunta">{{ nota.campo('pergunta') }}</p>
     {% endif %}
     {% if outros %}
-    <h3>Outros campos</h3>
+    <h2>Outros campos</h2>
     <dl class="outros">
       {% for chave, valor in outros.items() if chave != 'pergunta' %}<dt>{{ chave }}</dt><dd>{{ valor }}</dd>{% endfor %}
     </dl>
     {% endif %}
-    <p class="suave salvo" id="estado-salvo" role="status" aria-live="polite">As propriedades são salvas ao mudar. O texto é salvo pelo botão Salvar.</p>
+    <p class="suave salvo" id="estado-salvo" role="status" aria-live="polite" aria-atomic="true">As propriedades são salvas ao mudar. Para salvar o texto, use Salvar texto ou Ctrl+S / Cmd+S.</p>
   </aside>
 </article>
 <details class="versoes-nota bloco" id="versoes-locais" data-rel="{{ nota.rel }}">
@@ -88,7 +89,7 @@
       <label class="campo"><span>Gravação</span><select id="versoes-escolha"></select></label>
       <label class="campo"><span>Conteúdo preservado</span><select id="versoes-tipo"><option value="antes">Antes da gravação</option><option value="proposta">Proposta de gravação</option></select></label>
     </div>
-    <label class="campo"><span>Versão completa, incluindo propriedades</span><textarea id="versao-texto" rows="12" readonly spellcheck="false"></textarea></label>
+    <label class="campo"><span id="versao-texto-rotulo">Versão completa, incluindo propriedades</span><textarea id="versao-texto" rows="12" readonly spellcheck="false" aria-labelledby="versao-texto-rotulo" aria-describedby="versao-ajuda"></textarea><small class="campo-ajuda" id="versao-ajuda">Esta prévia é somente leitura. Copie o conteúdo ou salve como uma nova nota.</small></label>
     <label class="campo"><span>Título da nova nota de recuperação</span><input type="text" id="versao-titulo-copia" value="{{ nota.titulo }} — versão recuperada" maxlength="200" autocomplete="off"></label>
     <div class="linha-botoes"><button class="botao" type="button" id="copiar-versao">Copiar versão</button><button class="botao principal" type="button" id="salvar-versao-copia">Salvar versão como nova nota</button><a class="botao" id="copia-recuperada" href="#" target="_blank" rel="noopener noreferrer" hidden>Abrir a cópia recuperada</a></div>
   </div>

@@ -18,20 +18,9 @@
   // ---------------------------------------------------------------- avisos
 
   function avisar(texto, tipo, acao) {
-    var caixa = $("#avisos");
-    if (!caixa) return;
-    var el = document.createElement("div");
-    el.className = "aviso" + (tipo ? " " + tipo : "");
-    el.textContent = texto;
-    if (acao) {
-      var botao = document.createElement("button");
-      botao.textContent = acao.rotulo;
-      botao.onclick = acao.fazer;
-      el.appendChild(botao);
-    }
-    caixa.appendChild(el);
-    setTimeout(function () { el.remove(); }, acao ? 12000 : tipo === "erro" ? 6000 : 2600);
+    return window.OrquestraInterface.avisar(texto, tipo, acao);
   }
+  function confirmar(opcoes) { return window.OrquestraInterface.confirmar(opcoes); }
 
   // ---------------------------------------------------------------- API
 
@@ -50,11 +39,15 @@
       if (token) headers["X-Orquestra-Local"] = token;
       return fetch(url, { method: metodo, headers: headers, credentials: "same-origin", body: JSON.stringify(corpo || {}) });
     })
-      .catch(function () { throw new Error("Sem conexão com o painel. Ele está rodando?"); })
+      .catch(function () { throw new Error("Sem conexão com o painel. Confira se o Orquestra está aberto. Mantenha esta aba aberta para tentar novamente."); })
       .then(function (resp) {
-        return resp.json().catch(function () { return {}; }).then(function (dados) {
+        return resp.json().catch(function () {
+          if (resp.ok) throw new Error("O painel respondeu em um formato inesperado. Mantenha esta aba aberta e confira o resultado antes de tentar novamente.");
+          return {};
+        }).then(function (dados) {
+          if (!dados || typeof dados !== "object" || Array.isArray(dados)) throw new Error("O painel respondeu em um formato inesperado. Mantenha esta aba aberta e confira o resultado antes de tentar novamente.");
           if (!resp.ok) {
-            var erro = new Error(dados.erro || "Erro " + resp.status);
+            var erro = new Error(window.OrquestraInterface.mensagemErro(typeof dados.erro === "string" ? { message: dados.erro } : null, resp.status));
             erro.conflito = !!dados.conflito;
             throw erro;
           }
@@ -64,7 +57,7 @@
       });
   }
   function mostrarErro(erro) {
-    if (!erro.cancelado) avisar(erro.message, "erro");
+    if (!erro || !erro.cancelado) avisar(window.OrquestraInterface.mensagemErro(erro), "erro");
   }
 
   // ---------------------------------------------------------------- relógio
@@ -152,12 +145,13 @@
     var texto = $("#captura-texto"), salvar = $("#captura-salvar");
     function mostrar() { dialogo.showModal(); texto.focus(); }
     function guardar() {
+      if (salvar.disabled) return;
       if (!texto.value.trim()) { texto.focus(); return; }
-      salvar.disabled = true;
+      var concluir = window.OrquestraInterface.ocupado(salvar, "Guardando…");
       api("POST", "/api/captura", { texto: texto.value })
         .then(function () { texto.value = ""; dialogo.close(); avisar("Guardado na entrada."); })
         .catch(mostrarErro)
-        .then(function () { salvar.disabled = false; });
+        .finally(concluir);
     }
     abrir.onclick = mostrar;
     salvar.onclick = guardar;
@@ -174,12 +168,13 @@
     abrir.onclick = function () { dialogo.showModal(); titulo.focus(); };
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (salvar.disabled) return;
       var campos = {};
       $$("[data-novo]", form).forEach(function (el) { campos[el.name] = el.type === "checkbox" ? el.checked : el.value; });
-      salvar.disabled = true;
+      var concluir = window.OrquestraInterface.ocupado(salvar, "Criando…");
       api("POST", "/api/notas", { modulo: dialogo.dataset.modulo, zona: dialogo.dataset.zona, titulo: titulo.value, campos: campos, corpo: $("#novo-corpo").value })
         .then(function () { location.reload(); })
-        .catch(function (erro) { salvar.disabled = false; mostrarErro(erro); });
+        .catch(mostrarErro).finally(concluir);
     });
   }
 
@@ -321,8 +316,15 @@
       armazenamentoAvisado = true;
       $("#aviso-rascunho").hidden = false;
     }
+    function atualizarEstadoSalvo() {
+      if (!estado) return;
+      var mensagem = estadoFila.erro ? "Há alterações que não foram salvas." : estadoFila.ativa || estadoFila.pendentes ? "Salvando…" : diferentes() ? "Há alterações no rascunho." : "Tudo salvo no vault.";
+      if (estado.textContent !== mensagem) estado.textContent = mensagem;
+      estado.classList.toggle("erro-texto", !!estadoFila.erro);
+    }
     function guardarRascunho() {
       notaSuja = !!diferentes() || !!estadoFila.pendentes;
+      atualizarEstadoSalvo();
       if (!rascunhos) { if (notaSuja) avisarArmazenamento(); return; }
       try {
         if (notaSuja) rascunhos.guardar(Object.assign(dadosAtuais(), { metaOriginal: metaOriginal }));
@@ -348,10 +350,7 @@
       return api("PUT", url, envio);
     }, function (e) {
       estadoFila = e;
-      if (estado) {
-        estado.textContent = e.erro ? "Há alterações que não foram salvas." : e.ativa || e.pendentes ? "Salvando…" : diferentes() ? "Há alterações no rascunho." : "Tudo salvo no vault.";
-        estado.classList.toggle("erro-texto", !!e.erro);
-      }
+      atualizarEstadoSalvo();
       falha.hidden = !e.erro;
       if (e.erro) {
         $("#falha-gravacao-texto").textContent = e.erro.message;
@@ -403,8 +402,8 @@
     if (bEditar) {
       bEditar.onclick = function () { modoEdicao(true); };
       bSalvar.onclick = salvarTexto;
-      bCancelar.onclick = function () {
-        if (editor.value !== original && !confirm("Descartar as alterações deste texto?")) return;
+      bCancelar.onclick = async function () {
+        if (editor.value !== original && !await confirmar({ titulo: "Descartar alterações do texto?", texto: "O texto volta à última versão salva. As propriedades já salvas continuam como estão.", confirmar: "Descartar texto", perigoso: true })) return;
         editor.value = original; guardarRascunho(); modoEdicao(false);
       };
       editor.addEventListener("input", guardarRascunho);
@@ -420,8 +419,8 @@
       if (bloqueioExterno || !fila.descartar()) return;
       gravar(dadosAtuais(), function (r) { if (typeof r.html === "string") ver.innerHTML = r.html; });
     };
-    function reverter() {
-      if (!confirm("Descartar o rascunho desta aba e ler novamente o arquivo do vault?")) return;
+    async function reverter() {
+      if (!await confirmar({ titulo: "Descartar rascunho desta aba?", texto: "Suas alterações não salvas serão descartadas. A página abrirá novamente a versão atual do arquivo no vault.", confirmar: "Descartar e recarregar", perigoso: true })) return;
       if (!fila.descartar()) return;
       if (rascunhos) {
         try { rascunhos.limpar(); if (recuperado) rascunhos.remover(recuperado.chave); } catch (e) { avisarArmazenamento(); }
@@ -478,8 +477,8 @@
           faixa.hidden = !bloqueioExterno;
           recuperacao.hidden = true; modoEdicao(true); guardarRascunho();
         };
-        $("#descartar-rascunho").onclick = function () {
-          if (!confirm("Descartar apenas o rascunho de " + new Date(disponiveis[0].quando).toLocaleString("pt-BR") + " desta nota?")) return;
+        $("#descartar-rascunho").onclick = async function () {
+          if (!await confirmar({ titulo: "Descartar rascunho anterior?", texto: "Apenas o rascunho desta nota, de " + new Date(disponiveis[0].quando).toLocaleString("pt-BR") + ", será removido deste navegador. O arquivo no vault será preservado.", confirmar: "Descartar rascunho", perigoso: true })) return;
           rascunhos.remover(disponiveis.shift().chave);
           recuperacao.hidden = !disponiveis.length;
           if (disponiveis.length) $("#rascunho-quando").textContent = new Date(disponiveis[0].quando).toLocaleString("pt-BR");
@@ -488,10 +487,12 @@
     } catch (e) { rascunhos = null; }
 
     var bArquivar = $("#arquivar");
-    if (bArquivar) bArquivar.onclick = function () {
+    if (bArquivar) bArquivar.onclick = async function () {
       if (notaSuja || estadoFila.pendentes) { avisar("Salve ou preserve seu rascunho antes de arquivar.", "erro"); return; }
-      if (!confirm("Arquivar esta nota? Ela vai para a pasta arquivo/ do módulo.")) return;
-      api("POST", "/api/arquivar/" + caminho(rel), { versao: versao }).then(function () { location.href = raiz.dataset.voltar || "/"; }).catch(mostrarErro);
+      if (!await confirmar({ titulo: "Arquivar esta nota?", texto: "A nota será movida para a pasta arquivo/ desta área. Você pode consultá-la depois nas notas arquivadas.", confirmar: "Arquivar nota" })) return;
+      if (notaSuja || estadoFila.pendentes) { avisar("Salve ou preserve seu rascunho antes de arquivar.", "erro"); return; }
+      bArquivar.disabled = true;
+      api("POST", "/api/arquivar/" + caminho(rel), { versao: versao }).then(function () { location.href = raiz.dataset.voltar || "/"; }).catch(function (erro) { bArquivar.disabled = false; mostrarErro(erro); });
     };
 
     var historico = $("#versoes-locais");
@@ -644,7 +645,10 @@
 
     function ligar(linha) {
       var tipo = $("[data-tipo]", linha), opcoes = $("[data-opcoes]", linha), tirar = $("[data-tirar]", linha);
-      tipo.onchange = function () { opcoes.hidden = tipo.value !== "escolha"; if (!opcoes.hidden) opcoes.focus(); };
+      var grupoOpcoes = $(".campo-editor-opcoes", linha) || opcoes;
+      function mostrarOpcoes() { grupoOpcoes.hidden = tipo.value !== "escolha"; opcoes.hidden = grupoOpcoes.hidden; opcoes.disabled = grupoOpcoes.hidden; }
+      tipo.onchange = function () { mostrarOpcoes(); if (!grupoOpcoes.hidden) opcoes.focus(); };
+      mostrarOpcoes();
       if (tirar) tirar.onclick = function () { linha.remove(); };
     }
     $$(".campo-editor", lista).forEach(ligar);
@@ -656,6 +660,12 @@
     };
 
     $("#p-salvar").onclick = function () {
+      if (this.disabled) return;
+      var invalido = $$("input, select, textarea", raiz).filter(function (campo) {
+        var linha = campo.closest(".campo-editor"), remover = linha && $("[data-remover]", linha);
+        return !campo.disabled && !(remover && remover.checked) && !campo.checkValidity();
+      })[0];
+      if (invalido) { invalido.reportValidity(); invalido.focus(); return; }
       var campos = [], remover = [];
       $$(".campo-editor", lista).forEach(function (linha) {
         var nome = $("[data-nome]", linha).value.trim(), marcado = $("[data-remover]", linha);
@@ -669,10 +679,10 @@
       };
       if ($("#p-concluidos")) dados.concluidos = $("#p-concluidos").value;
       var botao = $("#p-salvar");
-      botao.disabled = true;
+      var concluir = window.OrquestraInterface.ocupado(botao, "Salvando…");
       api("PUT", "/api/modulos/" + encodeURIComponent(raiz.dataset.modulo), dados)
         .then(function (r) { location.href = r.url; })
-        .catch(function (erro) { botao.disabled = false; mostrarErro(erro); });
+        .catch(mostrarErro).finally(concluir);
     };
   }
 
@@ -739,11 +749,15 @@
           confiar.hidden = !token;
           $("[data-confianca-remota]", linha).hidden = !!token;
         });
-        confiar.onclick = function () {
+        confiar.onclick = async function () {
           var conf = JSON.parse(revisao.dataset.confianca || "{}");
           var acao = confiar.dataset.confiar;
-          var mensagem = acao === "revogar" ? "Revogar a execução de “" + dados.script + "” neste computador?" : "Aprovar a execução de “" + dados.script + "” com as permissões da sua conta?\n\nArquivos:\n" + (conf.arquivos || []).join("\n") + "\n\nChaves declaradas: " + ((conf.requer || []).join(", ") || "nenhuma") + "\n\nAssinatura: " + conf.assinatura + "\n\nConfira o código e a configuração exibidos antes de continuar.";
-          if (!confirm(mensagem)) return;
+          if (!await confirmar({
+            titulo: acao === "revogar" ? "Revogar autorização do coletor?" : "Autorizar a execução do coletor?",
+            texto: acao === "revogar" ? "“" + dados.script + "” deixará de ter autorização para rodar neste computador." : "“" + dados.script + "” poderá executar com as permissões da sua conta. Confira o código e a configuração antes de autorizar.",
+            detalhes: acao === "revogar" ? "" : "Arquivos:\n" + (conf.arquivos || []).join("\n") + "\n\nChaves declaradas: " + ((conf.requer || []).join(", ") || "nenhuma") + "\n\nAssinatura: " + conf.assinatura,
+            confirmar: acao === "revogar" ? "Revogar autorização" : "Autorizar coletor", perigoso: acao !== "revogar"
+          })) return;
           confiar.disabled = true;
           api("POST", "/api/coletores/confiar", { modulo: dados.modulo, script: dados.script, assinatura: conf.assinatura, acao: acao })
             .then(function () { location.reload(); })
@@ -756,7 +770,7 @@
         texto.textContent = "Rodando...";
         api("POST", "/api/coletores/rodar", dados)
           .then(function (r) { avisar(r.novos + " novos, " + r.repetidos + " já conhecidos."); setTimeout(function () { location.reload(); }, 900); })
-          .catch(function (erro) { mostrarErro(erro); setTimeout(function () { location.reload(); }, 1800); })
+          .catch(mostrarErro)
           .then(function () { texto.textContent = antes; rodar.disabled = false; });
       };
       ativar.onchange = function () {
@@ -768,6 +782,21 @@
   }
 
   function ajustes() {
+    // Um único ponto de entrada no Tab; setas e Home/End seguem o padrão de rádio.
+    $$("[role='radiogroup']").forEach(function (grupo) {
+      var radios = $$("[role='radio']", grupo), escolhido = radios.filter(function (r) { return r.getAttribute("aria-checked") === "true"; })[0] || radios[0];
+      radios.forEach(function (radio) {
+        radio.tabIndex = radio === escolhido ? 0 : -1;
+        radio.addEventListener("keydown", function (e) {
+          var deslocamento = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+          if (!deslocamento && e.key !== "Home" && e.key !== "End") return;
+          e.preventDefault();
+          var destino = e.key === "Home" ? radios[0] : e.key === "End" ? radios[radios.length - 1] : radios[(radios.indexOf(radio) + deslocamento + radios.length) % radios.length];
+          radios.forEach(function (r) { r.tabIndex = r === destino ? 0 : -1; });
+          destino.focus(); destino.click();
+        });
+      });
+    });
     $$("[data-tema]").forEach(function (b) {
       b.onclick = function () { api("POST", "/api/tema", { tema: b.dataset.tema }).then(function () { location.reload(); }).catch(mostrarErro); };
     });
@@ -787,18 +816,34 @@
     });
 
     // Aparência: cada escolha é gravada e a página recarrega já com o novo visual.
-    function visual(chave, valor) {
+    function visual(chave, valor, botao) {
       var dados = { aparencia: {} };
       dados.aparencia[chave] = valor;
-      api("POST", "/api/config", dados).then(function () { location.reload(); }).catch(mostrarErro);
+      var grupo = botao && botao.closest("[role='radiogroup']"), opcoes = grupo ? $$("[role='radio']", grupo) : [];
+      var anteriores = opcoes.map(function (opcao) { return opcao.getAttribute("aria-checked"); });
+      if (grupo) grupo.setAttribute("aria-busy", "true");
+      opcoes.forEach(function (opcao) { opcao.disabled = true; opcao.setAttribute("aria-checked", opcao === botao ? "true" : "false"); });
+      api("POST", "/api/config", dados).then(function () { location.reload(); }).catch(function (erro) {
+        opcoes.forEach(function (opcao, i) { opcao.disabled = false; opcao.setAttribute("aria-checked", anteriores[i]); });
+        if (grupo) grupo.removeAttribute("aria-busy");
+        if (botao) botao.focus(); mostrarErro(erro);
+      });
     }
-    $$("[data-visual]").forEach(function (b) { b.onclick = function () { visual(b.dataset.visual, b.dataset.valor); }; });
+    $$("[data-visual]").forEach(function (b) { b.onclick = function () { if (!b.disabled && b.getAttribute("aria-checked") !== "true") visual(b.dataset.visual, b.dataset.valor, b); }; });
     var corLivre = $("#cor-livre");
     if (corLivre) corLivre.addEventListener("change", function () { visual("destaque", corLivre.value); });
 
     // Painel: nome e captura são gravados ao mudar, como as propriedades de uma nota.
     function config(dados, mensagem) {
-      return api("POST", "/api/config", dados).then(function () { avisar(mensagem || "Salvo."); }).catch(mostrarErro);
+      var estadoConfig = $("#estado-config");
+      if (estadoConfig) { estadoConfig.textContent = "Salvando suas preferências…"; estadoConfig.classList.remove("erro-texto"); }
+      return api("POST", "/api/config", dados).then(function () {
+        if (estadoConfig) estadoConfig.textContent = mensagem || "Preferências salvas.";
+        avisar(mensagem || "Preferências salvas."); return true;
+      }).catch(function (erro) {
+        if (estadoConfig) { estadoConfig.textContent = window.OrquestraInterface.mensagemErro(erro); estadoConfig.classList.add("erro-texto"); }
+        mostrarErro(erro); return false;
+      });
     }
     var nome = $("#cfg-nome"), captura = $("#cfg-captura"), auto = $("#cfg-auto-commit"), ligar = $("#ligar-historico");
     var revisaoBackup = $("#revisao-backup"), confiarBackup = $("#confiar-backup");
@@ -808,21 +853,39 @@
         if (ligar) ligar.hidden = !token;
         $("[data-backup-remoto]", revisaoBackup).hidden = !!token;
       });
-      if (confiarBackup) confiarBackup.onclick = function () {
+      if (confiarBackup) confiarBackup.onclick = async function () {
         var conf = JSON.parse(revisaoBackup.dataset.confiancaBackup || "{}");
         var acao = confiarBackup.dataset.acao;
         var destinos = (conf.remotos || []).map(function (r) { return r.nome + " (" + r.tipo + "): " + r.destino; }).join("\n") || "Nenhum destino remoto";
-        if (!confirm((acao === "revogar" ? "Revogar a autorização de backup?" : "Autorizar esta configuração Git e estes destinos para o backup do vault?") + "\n\n" + destinos + "\n\nArquivos: " + (conf.arquivos || []).join(", ") + "\nAssinatura: " + conf.assinatura)) return;
+        if (!await confirmar({ titulo: acao === "revogar" ? "Revogar autorização de backup?" : "Autorizar configuração de backup?", texto: acao === "revogar" ? "O backup só poderá rodar novamente depois de uma nova autorização neste computador." : "Confira a configuração Git e os destinos abaixo antes de autorizar os backups deste vault.", detalhes: destinos + "\n\nArquivos: " + (conf.arquivos || []).join(", ") + "\nAssinatura: " + conf.assinatura, confirmar: acao === "revogar" ? "Revogar autorização" : "Autorizar backup" })) return;
         confiarBackup.disabled = true;
         api("POST", "/api/backup/confiar", { acao: acao, assinatura: conf.assinatura }).then(function () { location.reload(); }).catch(function (erro) { confiarBackup.disabled = false; mostrarErro(erro); });
       };
     }
-    if (nome) nome.addEventListener("change", function () { if (nome.value.trim()) config({ nome: nome.value }).then(function () { location.reload(); }); });
-    if (captura) captura.addEventListener("change", function () { config({ captura: captura.value }).then(function () { location.reload(); }); });
-    if (auto) auto.addEventListener("change", function () { config({ auto_commit: auto.checked }, auto.checked ? "Commit automático ligado." : "Commit automático desligado."); });
-    if (ligar) ligar.onclick = function () {
+    if (nome) nome.addEventListener("change", function () {
+      var erroNome = $("#erro-cfg-nome"), valido = !!nome.value.trim() && nome.checkValidity();
+      var mensagem = nome.value.trim() ? (nome.validationMessage || "Use um nome de até 60 caracteres.") : "Informe um nome para o painel.";
+      nome.setAttribute("aria-invalid", valido ? "false" : "true");
+      if (erroNome) { erroNome.textContent = valido ? "" : mensagem; erroNome.hidden = valido; }
+      if (!valido) {
+        var estadoConfig = $("#estado-config");
+        if (estadoConfig) { estadoConfig.textContent = "O nome do painel não foi salvo. " + mensagem; estadoConfig.classList.add("erro-texto"); }
+        return;
+      }
+      nome.disabled = true;
+      config({ nome: nome.value }).then(function (ok) { if (ok) location.reload(); else nome.disabled = false; });
+    });
+    if (captura) captura.addEventListener("change", function () {
+      captura.disabled = true;
+      config({ captura: captura.value }).then(function (ok) { if (ok) location.reload(); else captura.disabled = false; });
+    });
+    if (auto) auto.addEventListener("change", function () {
+      var proximo = auto.checked; auto.disabled = true;
+      config({ auto_commit: proximo }, proximo ? "Backup automático ligado." : "Backup automático desligado.").then(function (ok) { if (!ok) auto.checked = !proximo; auto.disabled = false; });
+    });
+    if (ligar) ligar.onclick = async function () {
       var conf = JSON.parse(revisaoBackup.dataset.confiancaBackup || "{}");
-      if (!confirm("Preparar um repositório Git local neste vault? Depois, você revisará a configuração criada antes do primeiro snapshot.\n\n" + (conf.assinatura ? "Assinatura da preparação: " + conf.assinatura : "Ainda não há configuração Git para aprovar. Esta etapa apenas prepara o repositório."))) return;
+      if (!await confirmar({ titulo: "Preparar o histórico local?", texto: "Será criado um repositório Git neste vault. Depois, você revisará a configuração antes de autorizar o primeiro backup.", detalhes: conf.assinatura ? "Assinatura da preparação: " + conf.assinatura : "Esta etapa prepara o repositório. Nenhum destino remoto será autorizado agora.", confirmar: "Preparar histórico" })) return;
       ligar.disabled = true;
       api("POST", "/api/backup/iniciar", { assinatura: conf.assinatura }).then(function () { location.reload(); }).catch(function (erro) { ligar.disabled = false; mostrarErro(erro); });
     };
@@ -837,12 +900,13 @@
       };
     });
     $$("[data-desligar]").forEach(function (b) {
-      b.onclick = function () {
+      b.onclick = async function () {
         var linha = b.closest(".area-linha");
-        if (!confirm("Tirar “" + $("b", linha).textContent + "” do painel? A pasta e as notas continuam no vault, e você pode trazê-la de volta em Pastas.")) return;
+        if (!await confirmar({ titulo: "Retirar esta área do painel?", texto: "“" + $("b", linha).textContent + "” deixará de aparecer na navegação. A pasta e as notas continuam no vault; você pode adicionar a área novamente em Pastas.", confirmar: "Retirar do painel" })) return;
+        b.disabled = true;
         api("POST", "/api/modulos/" + encodeURIComponent(linha.dataset.modulo) + "/desligar", {})
           .then(function () { location.reload(); })
-          .catch(mostrarErro);
+          .catch(function (erro) { b.disabled = false; mostrarErro(erro); });
       };
     });
     var dArea = $("#dialogo-area"), abrirArea = $("#abrir-area-branco");

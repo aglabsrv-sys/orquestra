@@ -10,7 +10,7 @@ os testes de JavaScript. Veja a instalação no [README](README.md).
 uv sync --locked
 uv run --frozen python -m pytest -q
 uv run --frozen ruff check src tests scripts
-node --test tests/js/notas-seguras.test.cjs
+node --test tests/js/*.test.cjs
 uv build
 uv run --frozen python scripts/verificar_pacote.py dist
 ```

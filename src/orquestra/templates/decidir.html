@@ -19,14 +19,14 @@
       {{ p.cartao(c) }}
       <div class="fila-acoes">
         {% if c.pergunta %}
-        <button class="botao principal" type="button" data-responder>Responder</button>
+        <button class="botao principal" type="button" data-responder aria-label="Responder sobre {{ c.titulo }}">Responder</button>
         {% endif %}
         {% if c.por_status %}
         {% for a in g.modulo.acoes %}
         <button class="botao{% if a.estilo == 'principal' and not c.pergunta %} principal{% elif a.estilo == 'discreto' %} discreto{% endif %}" type="button" data-acao='{{ a.definir|tojson }}'>{{ a.rotulo }}</button>
         {% endfor %}
         {% endif %}
-        <a class="botao discreto" href="{{ c.url }}">Abrir</a>
+        <a class="botao discreto" href="{{ c.url }}" aria-label="Abrir {{ c.titulo }}">Abrir</a>
       </div>
     </div>
     {% endfor %}

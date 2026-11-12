@@ -11,6 +11,7 @@
   <style>{{ estilo|safe }}</style>
 </head>
 <body data-vault-id="{{ vault_id }}" data-observa="{% block observa %}{% endblock %}">
+  <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
   <canvas id="ambiente" width="48" height="27" aria-hidden="true"></canvas>
 
   <header class="topo">
@@ -30,7 +31,7 @@
   </header>
 
   {% for aviso in avisos_config|default([]) %}<div class="faixa alerta" role="status">{{ icone('aviso', 16) }} {{ aviso }}</div>{% endfor %}
-  <main>{% block conteudo %}{% endblock %}</main>
+  <main id="conteudo" tabindex="-1">{% block conteudo %}{% endblock %}</main>
 
   {# Dock: só ícones. O nome aparece ao passar o mouse. Com muitas áreas, parte delas fica no botão "Áreas". #}
   <nav class="dock" aria-label="Navegação">
@@ -87,10 +88,11 @@
     </form>
   </dialog>
   {% block dialogos %}{% endblock %}
-  <div id="avisos" aria-live="polite"></div>
+  <div id="avisos" aria-live="off" aria-label="Notificações"></div>
 
   <script src="/static/js/cenas.js?v={{ marca }}"></script>
   <script src="/static/js/notas-seguras.js?v={{ marca }}"></script>
+  <script src="/static/js/interface.js?v={{ marca }}"></script>
   <script src="/static/js/app.js?v={{ marca }}"></script>
 </body>
 </html>

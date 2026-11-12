@@ -14,18 +14,18 @@
 {# Cartão de uma nota. Com `opcoes`, mostra um seletor para mudar o status. #}
 {% macro cartao(c, opcoes=None, campo_status="status", arrastavel=False) %}
 <article class="cartao{% if c.concluido %} concluido{% endif %}" data-rel="{{ c.rel }}" data-versao="{{ c.versao }}"{% if arrastavel %} draggable="true"{% endif %}>
-  {% if c.imagem %}<a class="cartao-img" href="{{ c.url }}" draggable="false"><img src="{{ c.imagem }}" alt="" loading="lazy" draggable="false"></a>{% endif %}
+  {% if c.imagem %}<a class="cartao-img" href="{{ c.url }}" draggable="false" aria-label="Abrir {{ c.titulo }}"><img src="{{ c.imagem }}" alt="" loading="lazy" draggable="false"></a>{% endif %}
   <a class="cartao-titulo" href="{{ c.url }}" draggable="false">{{ c.titulo }}</a>
   {% if c.pergunta %}<p class="cartao-pergunta">{{ icone('sino', 13) }} {{ c.pergunta }}</p>{% endif %}
   {% if c.trecho %}<p class="cartao-trecho">{{ c.trecho }}</p>{% endif %}
   <div class="etiquetas">
     {% for e in c.etiquetas %}<span class="et {{ e.classe }}">{{ e.texto }}</span>{% endfor %}
     {% if c.origem and c.origem != "humano" %}<span class="et et-origem" title="Criado por {{ c.origem }}">{{ icone('chip', 12) }}{{ c.origem }}</span>{% endif %}
-    {% if c.com_aviso %}<span class="et et-aviso" title="Há campos fora do schema do módulo">{{ icone('aviso', 12) }}</span>{% endif %}
-    {% if c.link %}<a class="et et-link" href="{{ c.link }}" target="_blank" rel="noopener noreferrer" draggable="false" title="Abrir link">{{ icone('externo', 12) }}</a>{% endif %}
+    {% if c.com_aviso %}<span class="et et-aviso" role="img" aria-label="Propriedades da nota precisam de revisão" title="Há propriedades fora das opções desta área">{{ icone('aviso', 12) }}</span>{% endif %}
+    {% if c.link %}<a class="et et-link" href="{{ c.link }}" target="_blank" rel="noopener noreferrer" draggable="false" title="Abrir link em nova aba" aria-label="Abrir link de {{ c.titulo }} em nova aba">{{ icone('externo', 12) }}</a>{% endif %}
     {% if opcoes %}
-    <select class="mudar-status" data-campo="{{ campo_status }}" aria-label="Mudar {{ campo_status }}">
-      {% if c.status not in opcoes %}<option value="{{ c.status or '' }}" selected>{{ rotulo(c.status) if c.status else '—' }}</option>{% endif %}
+    <select class="mudar-status" data-campo="{{ campo_status }}" aria-label="{{ rotulo(campo_status) }} de {{ c.titulo }}">
+      {% if c.status not in opcoes %}<option value="{{ c.status or '' }}" selected>{{ rotulo(c.status) if c.status else 'Não definido' }}</option>{% endif %}
       {% for o in opcoes %}<option value="{{ o }}"{% if o == c.status %} selected{% endif %}>{{ rotulo(o) }}</option>{% endfor %}
     </select>
     {% endif %}
@@ -35,29 +35,32 @@
 
 {# Campo de formulário gerado a partir do schema do módulo. #}
 {% macro entrada(campo, valor="", marca="data-campo") %}
+{% set id = (marca ~ '-' ~ campo.nome)|urlencode %}
+{% set dica = {'lista': 'Separe os itens por vírgulas. Exemplo: trabalho, pessoal.', 'link': 'Informe um endereço completo, começando por https:// ou http://.', 'imagem': 'Use o caminho da imagem no vault ou um endereço completo na web.'}.get(campo.tipo, '') %}
 <label class="campo{% if campo.tipo == 'booleano' %} campo-linha{% endif %}">
-  <span>{{ campo.rotulo }}{% if campo.obrigatorio %} *{% endif %}</span>
+  <span id="{{ id }}-rotulo">{{ campo.rotulo }}{% if campo.obrigatorio and campo.tipo != 'booleano' %} <span class="obrigatorio">Obrigatório</span>{% endif %}</span>
   {% if campo.tipo == "escolha" %}
-  <select name="{{ campo.nome }}" {{ marca }}>
-    {% if not campo.obrigatorio or not valor %}<option value="">—</option>{% endif %}
+  <select name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
+    {% if not campo.obrigatorio or not valor %}<option value="">{{ 'Selecione uma opção' if campo.obrigatorio else 'Não definido' }}</option>{% endif %}
     {% for o in campo.opcoes %}<option value="{{ o }}"{% if o == valor %} selected{% endif %}>{{ rotulo(o) }}</option>{% endfor %}
-    {% if valor and valor not in campo.opcoes %}<option value="{{ valor }}" selected>{{ valor }} (fora do schema)</option>{% endif %}
+    {% if valor and valor not in campo.opcoes %}<option value="{{ valor }}" selected>{{ valor }} (valor atual fora das opções)</option>{% endif %}
   </select>
   {% elif campo.tipo == "data" %}
-  <input type="date" name="{{ campo.nome }}" value="{{ valor }}" {{ marca }}>
+  <input type="date" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% elif campo.tipo == "numero" %}
-  <input type="number" step="any" name="{{ campo.nome }}" value="{{ valor }}" {{ marca }}>
+  <input type="number" step="any" inputmode="decimal" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% elif campo.tipo == "booleano" %}
-  <input type="checkbox" name="{{ campo.nome }}"{% if valor %} checked{% endif %} {{ marca }}>
+  <input type="checkbox" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo"{% if valor %} checked{% endif %} {{ marca }}>
   {% elif campo.tipo == "lista" %}
-  <input type="text" name="{{ campo.nome }}" value="{{ valor }}" placeholder="separe por vírgulas" {{ marca }}>
+  <input type="text" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" placeholder="trabalho, pessoal" aria-describedby="{{ id }}-ajuda" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% elif campo.tipo == "link" %}
-  <input type="url" name="{{ campo.nome }}" value="{{ valor }}" placeholder="https://" {{ marca }}>
+  <input type="url" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" placeholder="https://exemplo.com" aria-describedby="{{ id }}-ajuda" autocapitalize="none" spellcheck="false" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% elif campo.tipo == "imagem" %}
-  <input type="text" name="{{ campo.nome }}" value="{{ valor }}" placeholder="caminho no vault ou https://" {{ marca }}>
+  <input type="text" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" placeholder="anexos/imagem.jpg" aria-describedby="{{ id }}-ajuda" autocapitalize="none" spellcheck="false" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% else %}
-  <input type="text" name="{{ campo.nome }}" value="{{ valor }}" {{ marca }}>
+  <input type="text" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% endif %}
+  {% if dica %}<small class="campo-ajuda" id="{{ id }}-ajuda">{{ dica }}</small>{% endif %}
 </label>
 {% endmacro %}
 

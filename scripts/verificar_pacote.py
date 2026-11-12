@@ -20,7 +20,7 @@ from orquestra.mcp_servidor import criar_servidor
 from orquestra.painel import Painel
 
 pacote = Path(preparo.__file__).parent
-for relativo in ("templates/boasvindas.html", "static/icone.svg", "static/js/notas-seguras.js", "catalogo/perfis.yaml", "modelo_vault/orquestra.yaml"):
+for relativo in ("templates/base.html", "templates/boasvindas.html", "static/icone.svg", "static/css/app.css", "static/js/notas-seguras.js", "static/js/interface.js", "static/js/app.js", "static/js/boasvindas.js", "catalogo/perfis.yaml", "modelo_vault/orquestra.yaml"):
     assert (pacote / relativo).is_file(), relativo
 vault = Path.cwd() / "Meu vault com espaços e acentos"
 preparo.preparar(vault, preparo.modulos_do_perfil("essencial"), exemplos=False, com_backup=False)

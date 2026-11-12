@@ -5,18 +5,25 @@
 
 {% block conteudo %}
 <section class="pagina">
-  <form class="busca" action="/buscar" method="get">
+  <header class="pagina-topo"><h1>Buscar notas</h1></header>
+  <p class="explica" id="busca-ajuda">Procure por palavras no título ou no texto das notas do seu vault.</p>
+  <form class="busca" action="/buscar" method="get" role="search">
     {{ icone('busca', 18) }}
-    <input type="search" name="q" value="{{ q }}" aria-label="Buscar em todas as notas" placeholder="Buscar em todas as notas..." autofocus autocomplete="off">
+    <input type="search" name="q" value="{{ q }}" aria-label="Buscar em todas as notas" aria-describedby="busca-ajuda" placeholder="Título ou trecho da nota" autocomplete="off">
+    <button class="botao principal" type="submit">Buscar</button>
   </form>
   {% if q %}
   <p class="suave">{{ paginacao.total if paginacao is defined else resultados|length }} resultado(s) para “{{ q }}”.</p>
   <div class="lista-notas sem-margem">
     {% for r in resultados %}
     <a class="linha-nota" href="{{ r.url }}"><b>{{ r.titulo }}</b><span>{{ r.trecho }}</span><small>{{ r.onde }}</small></a>
+    {% else %}
+    {{ p.vazio("Nenhuma nota encontrada", "Tente uma palavra mais curta, confira a grafia ou busque outro trecho da nota.") }}
     {% endfor %}
   </div>
   {{ p.paginar(paginacao|default(none)) }}
+  {% else %}
+  {{ p.vazio("Encontre o que você já escreveu", "Digite uma palavra acima e pressione Enter ou toque em Buscar.") }}
   {% endif %}
 </section>
 {% endblock %}

@@ -37,7 +37,7 @@ jobs:
       - run: uv sync --locked
       - run: uv run --frozen ruff check src tests scripts
       - run: uv run --frozen python -m pytest -q
-      - run: node --test tests/js/notas-seguras.test.cjs
+      - run: node --test tests/js/*.test.cjs
       - run: uv build
       - run: uv run --frozen python scripts/verificar_pacote.py dist
 

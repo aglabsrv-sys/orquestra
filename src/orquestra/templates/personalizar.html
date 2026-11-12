@@ -9,12 +9,12 @@
     <h1>Personalizar</h1>
     <a class="botao" href="/m/{{ modulo.id|urlencode }}">{{ icone('seta_esq', 15) }}<span>Voltar</span></a>
   </header>
-  <p class="suave">Tudo aqui é gravado em <code>{{ modulo.id }}/_modulo.yaml</code>. Você também pode editar esse arquivo à mão, ou pedir a um agente.</p>
+  <p class="suave">Ajuste a aparência e os campos de {{ modulo.nome }}. As mudanças só entram em vigor ao salvar.</p>
 
   <h2 class="grupo-titulo">{{ icone('editar', 18) }} Aparência</h2>
   <div class="bloco">
     <div class="grade-campos">
-      <label class="campo"><span>Nome</span><input type="text" id="p-nome" value="{{ modulo.nome }}" maxlength="60"></label>
+      <label class="campo"><span>Nome da área</span><input type="text" id="p-nome" value="{{ modulo.nome }}" maxlength="60" required autocomplete="off"></label>
       <label class="campo"><span>Ícone</span>
         <select id="p-icone">
           {% if modulo.icone not in icones %}<option value="{{ modulo.icone }}" selected>{{ rotulo(modulo.icone) }}</option>{% endif %}
@@ -33,28 +33,30 @@
 
   <h2 class="grupo-titulo">{{ icone('check', 18) }} Campos das notas</h2>
   <div class="bloco">
-    <p class="suave">Cada campo vira uma propriedade no topo da nota (o frontmatter, que o Obsidian também mostra). Em <b>escolha</b>, escreva as opções separadas por vírgula, na ordem em que devem aparecer no quadro.</p>
+    <p class="suave" id="ajuda-campos">Cada campo é uma propriedade da nota, também visível no Obsidian. Para o tipo <b>escolha</b>, separe as opções por vírgulas, na ordem das colunas do quadro.</p>
     <div class="campos-editor" id="p-campos">
       {% for c in campos %}
       <div class="campo-editor" data-original="{{ c.nome }}">
-        <input type="text" value="{{ c.nome }}" data-nome disabled aria-label="Nome do campo">
-        <select data-tipo aria-label="Tipo de {{ c.nome }}">{% for t in tipos %}<option value="{{ t }}"{% if t == c.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
-        <input type="text" value="{{ c.opcoes|join(', ') }}" data-opcoes placeholder="opções, separadas por vírgula" aria-label="Opções de {{ c.nome }}"{% if c.tipo != 'escolha' %} hidden{% endif %}>
-        <label class="remover" title="Tira o campo do módulo. O valor continua nas notas que já têm."><input type="checkbox" data-remover><span>remover</span></label>
+        <label class="campo"><span>Nome do campo</span><input type="text" value="{{ c.nome }}" data-nome readonly aria-describedby="ajuda-nome-campo" aria-label="Nome do campo {{ c.nome }}"></label>
+        <label class="campo"><span>Tipo de {{ c.nome }}</span><select data-tipo>{% for t in tipos %}<option value="{{ t }}"{% if t == c.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+        <label class="campo campo-editor-opcoes"{% if c.tipo != 'escolha' %} hidden{% endif %}><span>Opções de {{ c.nome }}</span><input type="text" value="{{ c.opcoes|join(', ') }}" data-opcoes placeholder="Ex.: a fazer, fazendo, feito" aria-describedby="ajuda-campos"{% if c.tipo != 'escolha' %} hidden{% endif %}></label>
+        <label class="remover"><input type="checkbox" data-remover aria-label="Remover o campo {{ c.nome }} da área"><span>Remover da área <small class="suave">· os valores nas notas serão preservados</small></span></label>
       </div>
       {% endfor %}
     </div>
     <div class="linha-botoes">
       <button class="botao" type="button" id="p-novo-campo">{{ icone('mais', 15) }}<span>Novo campo</span></button>
     </div>
-    <p class="suave pequeno">Mudar o nome de uma opção não altera as notas que já usam a antiga: elas aparecem com um aviso até você atualizar.</p>
+    <p class="campo-ajuda" id="ajuda-nome-campo">O nome de um campo existente é fixo para preservar a ligação com as notas. Você pode criar outro campo e remover o anterior da área.</p>
+    <p class="campo-ajuda">Mudar o nome de uma opção não altera as notas que já usam a antiga: elas aparecem com um aviso até você atualizar.</p>
   </div>
 
   <h2 class="grupo-titulo">{{ icone('grafico', 18) }} Como mostrar</h2>
   <div class="bloco">
     {% if modulo.tem_status %}
-    <label class="campo"><span>Opções de “{{ modulo.campo_status }}” que contam como concluído</span>
-      <input type="text" id="p-concluidos" value="{{ modulo.concluidos|join(', ') }}" placeholder="feito, cancelado">
+    <label class="campo"><span id="rotulo-concluidos">Opções de “{{ modulo.campo_status }}” que contam como concluído</span>
+      <input type="text" id="p-concluidos" value="{{ modulo.concluidos|join(', ') }}" placeholder="feito, cancelado" aria-labelledby="rotulo-concluidos" aria-describedby="ajuda-concluidos">
+      <small class="campo-ajuda" id="ajuda-concluidos">Separe por vírgulas os nomes exatos das opções que encerram um item.</small>
     </label>
     {% endif %}
     <label class="campo campo-linha"><span>Quadro (colunas por {{ modulo.campo_status }}){% if not pode_quadro %} <small class="suave">· precisa de um campo “{{ modulo.campo_status }}” do tipo escolha</small>{% endif %}</span>
@@ -65,17 +67,17 @@
   </div>
 
   <div class="linha-botoes">
-    <button class="botao principal" type="button" id="p-salvar">Salvar</button>
+    <button class="botao principal" type="button" id="p-salvar">Salvar alterações</button>
     <a class="botao" href="/m/{{ modulo.id|urlencode }}">Cancelar</a>
   </div>
 </section>
 
 <template id="p-modelo-campo">
   <div class="campo-editor novo">
-    <input type="text" data-nome placeholder="nome_do_campo" aria-label="Nome do campo">
-    <select data-tipo aria-label="Tipo">{% for t in tipos %}<option value="{{ t }}"{% if t == 'texto' %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
-    <input type="text" data-opcoes placeholder="opções, separadas por vírgula" aria-label="Opções" hidden>
-    <button class="botao discreto pequeno" type="button" data-tirar>tirar</button>
+    <label class="campo"><span>Nome do novo campo</span><input type="text" data-nome placeholder="nome_do_campo" required autocomplete="off" aria-describedby="ajuda-campos"></label>
+    <label class="campo"><span>Tipo</span><select data-tipo>{% for t in tipos %}<option value="{{ t }}"{% if t == 'texto' %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <label class="campo campo-editor-opcoes" hidden><span>Opções</span><input type="text" data-opcoes placeholder="Ex.: a fazer, fazendo, feito" aria-describedby="ajuda-campos" hidden></label>
+    <button class="botao discreto pequeno" type="button" data-tirar>Remover novo campo</button>
   </div>
 </template>
 {% endblock %}

@@ -12,6 +12,8 @@
   var modo = "";      // "existente" ou "novo"
   var analise = null; // resposta de /api/boas-vindas/analisar
   var capacidade = null;
+  var numeroAnalise = 0, numeroProcura = 0, preparando = false;
+  var reduzirMovimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function el(tag, classe, texto) {
     var e = document.createElement(tag);
@@ -21,9 +23,48 @@
   }
 
   function avisar(texto, tipo) {
-    var caixa = $("#avisos"), a = el("div", "aviso" + (tipo ? " " + tipo : ""), texto);
-    caixa.appendChild(a);
-    setTimeout(function () { a.remove(); }, tipo === "erro" ? 7000 : 2600);
+    if (tipo === "erro") {
+      var erro = $("#bv-erro");
+      erro.textContent = texto;
+      erro.hidden = false;
+      erro.scrollIntoView({ behavior: reduzirMovimento ? "auto" : "smooth", block: "nearest" });
+      return;
+    }
+    window.OrquestraInterface.avisar(texto, tipo);
+  }
+
+  function limparErro() {
+    $("#bv-erro").hidden = true;
+    $("#bv-erro").textContent = "";
+  }
+
+  function estado(texto) { $("#bv-estado").textContent = texto || ""; }
+
+  function erroCampo(id, mensagem) {
+    var campo = $("#" + id), detalhe = $("#erro-" + id);
+    if (!campo || !detalhe) return;
+    detalhe.textContent = mensagem || "";
+    detalhe.hidden = !mensagem;
+    if (mensagem) campo.setAttribute("aria-invalid", "true");
+    else campo.removeAttribute("aria-invalid");
+  }
+
+  function etapa(numero) {
+    $$("[data-etapa]").forEach(function (item) {
+      if (Number(item.dataset.etapa) === numero) item.setAttribute("aria-current", "step");
+      else item.removeAttribute("aria-current");
+    });
+  }
+
+  function invalidarAnalise() {
+    numeroAnalise += 1;
+    analise = null;
+    $("#analisar").disabled = false;
+    $("#analisar").textContent = "Olhar a pasta";
+    $("#bloco-existente").removeAttribute("aria-busy");
+    $("#analise").hidden = true;
+    $("#bloco-comum").hidden = true;
+    estado("");
   }
 
   function api(url, corpo) {
@@ -32,12 +73,12 @@
       .then(function (r) { return r.token || r.capacidade || ""; })
       .catch(function () { capacidade = null; return ""; });
     return capacidade.then(function (token) {
-      if (!token) throw new Error("Escolher ou criar um vault exige acesso direto: abra localhost no computador onde o Orquestra está rodando.");
+      if (!token) { capacidade = null; throw new Error("Escolher ou criar um vault exige acesso direto: abra localhost no computador onde o Orquestra está rodando."); }
       return fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "X-Orquestra-Local": token }, credentials: "same-origin", body: JSON.stringify(corpo || {}) });
     })
       .then(function (resp) {
         return resp.json().catch(function () { return {}; }).then(function (dados) {
-          if (!resp.ok) throw new Error(dados.erro || "Erro " + resp.status);
+          if (!resp.ok) throw new Error(dados.erro || window.OrquestraInterface.mensagemErro(null, resp.status));
           return dados;
         });
       }).catch(function (erro) { if (erro instanceof TypeError) throw new Error("Sem conexão com o Orquestra. Ele está rodando?"); throw erro; });
@@ -55,7 +96,13 @@
   // ---------------------------------------------------------------- passos
 
   function mostrar(qual) {
+    if (preparando) return;
+    invalidarAnalise();
+    numeroProcura += 1;
+    limparErro();
+    ["caminho-existente", "caminho-novo", "nome"].forEach(function (id) { erroCampo(id, ""); });
     modo = qual;
+    etapa(qual ? 2 : 1);
     $("#passo-escolha").hidden = !!qual;
     $("#bloco-existente").hidden = qual !== "existente";
     $("#bloco-novo").hidden = qual !== "novo";
@@ -77,7 +124,7 @@
       $("#concluir").textContent = "Abrir o painel";
     }
     resumir();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: reduzirMovimento ? "auto" : "smooth" });
     focar(qual === "novo" ? "#caminho-novo" : qual === "existente" ? "#caminho-existente" : "[data-modo]");
   }
 
@@ -91,18 +138,36 @@
   // ---------------------------------------------------------------- análise de uma pasta que já existe
 
   function analisar() {
+    if (preparando || modo !== "existente") return;
     var caminho = $("#caminho-existente").value.trim(), botao = $("#analisar");
-    if (!caminho) { $("#caminho-existente").focus(); return; }
+    limparErro();
+    if (!caminho) { erroCampo("caminho-existente", "Informe o caminho da pasta ou use Procurar."); $("#caminho-existente").focus(); return; }
+    erroCampo("caminho-existente", "");
+    invalidarAnalise();
+    var numero = numeroAnalise;
     botao.disabled = true;
+    botao.textContent = "Lendo a pasta…";
+    $("#bloco-existente").setAttribute("aria-busy", "true");
+    estado("Lendo suas pastas e notas. Nenhum arquivo está sendo alterado.");
     api("/api/boas-vindas/analisar", { caminho: caminho })
       .then(function (dados) {
+        if (numero !== numeroAnalise || modo !== "existente" || $("#caminho-existente").value.trim() !== caminho) return;
         if (!dados.existe) throw new Error("Essa pasta não existe. Confira o caminho, ou volte e escolha “Criar um vault novo”.");
         analise = dados;
         $("#caminho-existente").value = dados.caminho;
         desenharAnalise();
       })
-      .catch(function (erro) { avisar(erro.message, "erro"); })
-      .then(function () { botao.disabled = false; });
+      .catch(function (erro) {
+        if (numero !== numeroAnalise || modo !== "existente") return;
+        erroCampo("caminho-existente", erro.message);
+        avisar(erro.message, "erro");
+        estado("Não foi possível ler a pasta. Confira o caminho e tente novamente.");
+      })
+      .finally(function () {
+        if (numero !== numeroAnalise) return;
+        botao.disabled = false; botao.textContent = "Olhar a pasta";
+        $("#bloco-existente").removeAttribute("aria-busy");
+      });
   }
 
   function desenharAnalise() {
@@ -150,6 +215,9 @@
       else {
         var q = el("label", "bv-quadro");
         var cq = el("input"); cq.type = "checkbox"; cq.dataset.quadro = p.pasta;
+        cq.setAttribute("aria-label", "Incluir quadro em " + p.pasta);
+        cq.disabled = true;
+        caixa.addEventListener("change", function () { cq.disabled = !caixa.checked; if (!caixa.checked) cq.checked = false; });
         q.appendChild(cq); q.appendChild(el("span", "", "com quadro"));
         q.title = "Acrescenta um campo de status (a fazer, fazendo, feito). As notas atuais ficam numa coluna “sem status”.";
         lado.appendChild(q);
@@ -169,13 +237,14 @@
     $("#texto-prontos").textContent = "Opcional. Cada uma é uma pasta nova no vault, com campos e instruções para agentes. Suas pastas não são tocadas.";
     var avisoGit = $("#aviso-backup");
     avisoGit.hidden = !a.tem_git;
-    avisoGit.textContent = a.tem_git ? "Esta pasta já é um repositório git. Se você marcar a opção acima, o painel passa a fazer commits automáticos nele." : "";
+    avisoGit.textContent = a.tem_git ? "Esta pasta já usa Git. O histórico do Orquestra é separado da sua branch. Configurações existentes precisam ser revisadas e autorizadas em Ajustes antes do backup." : "";
 
     $("#analise").hidden = false;
     $("#bloco-comum").hidden = false;
     $("#concluir").textContent = "Abrir o painel";
+    estado("Pasta lida. Confira as áreas e as opções antes de abrir o painel.");
     resumir();
-    $("#analise").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("#analise").scrollIntoView({ behavior: reduzirMovimento ? "auto" : "smooth", block: "start" });
     focar("#analise-resumo");
   }
 
@@ -203,6 +272,7 @@
     var lista = $("#vai-criar");
     if (!lista) return;
     var e = escolhas(), itens = [];
+    $("#resumo-caminho").textContent = e.caminho || "Escolha uma pasta acima";
     var jaVault = analise && analise.ja_e_vault && modo === "existente";
     if (!jaVault) {
       itens.push("orquestra.yaml e a pasta _orquestra/ (configuração e temas do painel)");
@@ -224,9 +294,20 @@
   // ---------------------------------------------------------------- concluir
 
   function concluir() {
+    if (preparando) return;
     var e = escolhas(), botao = $("#concluir");
-    if (!e.caminho) { avisar("Diga qual é a pasta.", "erro"); return; }
+    limparErro();
+    var idCaminho = modo === "novo" ? "caminho-novo" : "caminho-existente";
+    if (!e.caminho) { erroCampo(idCaminho, "Informe a pasta onde o vault vai ficar."); focar("#" + idCaminho); return; }
+    if (!e.nome) { erroCampo("nome", "Dê um nome para o painel."); focar("#nome"); return; }
+    erroCampo(idCaminho, ""); erroCampo("nome", "");
     if (modo === "existente" && !analise) { analisar(); return; }
+    numeroProcura += 1;
+    preparando = true;
+    var controles = $$("input, select, button", raiz).filter(function (c) { return !c.disabled; });
+    controles.forEach(function (c) { c.disabled = true; });
+    raiz.setAttribute("aria-busy", "true");
+    estado("Preparando o vault. Aguarde nesta tela para acompanhar o resultado.");
     botao.disabled = true;
     var antes = botao.textContent;
     botao.textContent = "Preparando…";
@@ -241,10 +322,19 @@
         lista.textContent = "";
         avisos.forEach(function (a) { lista.appendChild(el("li", "", a)); });
         $("#passo-pronto").hidden = false;
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        etapa(3); estado("Seu vault está pronto. Confira os avisos antes de continuar.");
+        raiz.removeAttribute("aria-busy");
+        window.scrollTo({ top: 0, behavior: reduzirMovimento ? "auto" : "smooth" });
         focar("#passo-pronto h2");
       })
-      .catch(function (erro) { avisar(erro.message, "erro"); botao.disabled = false; botao.textContent = antes; });
+      .catch(function (erro) {
+        preparando = false;
+        controles.forEach(function (c) { c.disabled = false; });
+        raiz.removeAttribute("aria-busy");
+        avisar(erro.message, "erro");
+        estado("A preparação não terminou. Confira o aviso e tente novamente.");
+        botao.textContent = antes;
+      });
   }
 
   // ---------------------------------------------------------------- ligações
@@ -256,20 +346,28 @@
   });
   $$("[data-procurar]").forEach(function (b) {
     b.onclick = function () {
+      if (preparando) return;
+      var numero = ++numeroProcura, modoInicial = modo;
+      var campo = $("#" + b.dataset.procurar), valorInicial = campo.value;
       b.disabled = true;
       api("/api/boas-vindas/procurar", {})
         .then(function (r) {
-          if (!r.caminho) return;
-          $("#" + b.dataset.procurar).value = r.caminho;
+          if (!r.caminho || numero !== numeroProcura || modo !== modoInicial || campo.value !== valorInicial) return;
+          campo.value = r.caminho;
+          erroCampo(campo.id, ""); limparErro(); resumir();
           if (b.dataset.procurar === "caminho-existente") analisar();
+          else campo.focus();
         })
-        .catch(function (erro) { avisar(erro.message, "erro"); })
-        .then(function () { b.disabled = false; });
+        .catch(function (erro) { if (numero === numeroProcura && modo === modoInicial) avisar(erro.message, "erro"); })
+        .then(function () { if (!preparando) b.disabled = false; });
     };
   });
   $("#analisar").onclick = analisar;
   $("#caminho-existente").addEventListener("keydown", function (e) { if (e.key === "Enter") analisar(); });
-  $("#caminho-existente").addEventListener("input", function () { analise = null; $("#analise").hidden = true; $("#bloco-comum").hidden = true; });
+  $("#caminho-existente").addEventListener("input", invalidarAnalise);
+  ["caminho-existente", "caminho-novo", "nome"].forEach(function (id) {
+    $("#" + id).addEventListener("input", function () { erroCampo(id, ""); limparErro(); resumir(); });
+  });
   $$('input[name="perfil"]').forEach(function (r) { r.onchange = aplicarPerfil; });
   $("#concluir").onclick = concluir;
   raiz.addEventListener("change", resumir);

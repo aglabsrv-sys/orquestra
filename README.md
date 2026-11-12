@@ -248,6 +248,9 @@ As correções de segurança, recuperação, desempenho e qualidade da versão 0
 descritas em [Preparação para produção](docs/preparacao-producao-2026-11-11.md), com
 testes executados e os limites de validação de cada plataforma.
 
+O refinamento de formulários, alertas, navegação e primeira experiência está em
+[Revisão de UI e UX](docs/revisao-ui-ux-2026-11-11.md), com capturas e validação.
+
 Versão 0.4. Funciona e tem testes automatizados, mas é novo: faça backup.
 
 - Testado no **Windows 10** com Chrome. macOS e Linux usam o mesmo código, mas ainda não foram testados em máquina real; relatos são bem-vindos.

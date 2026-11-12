@@ -22,10 +22,18 @@
       </div>
     </header>
 
-    {% if erro %}<div class="faixa alerta">{{ icone('aviso', 16) }} {{ erro }}</div>{% endif %}
+    {% if erro %}<div class="faixa alerta" role="alert">{{ icone('aviso', 16) }} {{ erro }}</div>{% endif %}
     {% if not local %}
-    <div class="faixa alerta">{{ icone('aviso', 16) }} Por segurança, escolher ou criar um vault só funciona no próprio computador. Abra <code>http://localhost:8420</code> nele.</div>
+    <div class="faixa alerta" role="status">{{ icone('aviso', 16) }} Por segurança, escolher ou criar um vault só funciona no próprio computador. Abra o endereço localhost do Orquestra nele.</div>
     {% endif %}
+
+    <ol class="bv-progresso" aria-label="Etapas da configuração">
+      <li aria-current="step" data-etapa="1"><span>1</span> Escolher o vault</li>
+      <li data-etapa="2"><span>2</span> Preparar o painel</li>
+      <li data-etapa="3"><span>3</span> Começar a usar</li>
+    </ol>
+    <p class="bv-estado campo-ajuda" id="bv-estado" role="status" aria-live="polite" aria-atomic="true"></p>
+    <div class="faixa alerta" id="bv-erro" role="alert" hidden></div>
 
     {# ------------------------------------------------------------ 1. escolher #}
     <section id="passo-escolha">
@@ -64,11 +72,14 @@
       </div>
       <p class="suave">Ou indique outra pasta:</p>
       {% endif %}
+      <label class="campo" for="caminho-existente"><span>Caminho completo da pasta</span></label>
       <div class="bv-caminho">
-        <input type="text" id="caminho-existente" placeholder="{{ pasta_nova }}" autocomplete="off" spellcheck="false" aria-label="Caminho da pasta do vault">
+        <input type="text" id="caminho-existente" placeholder="{{ pasta_nova }}" autocomplete="off" spellcheck="false" required aria-describedby="ajuda-caminho-existente erro-caminho-existente">
         <button class="botao" type="button" data-procurar="caminho-existente">Procurar…</button>
         <button class="botao principal" type="button" id="analisar">Olhar a pasta</button>
       </div>
+      <p class="campo-ajuda" id="ajuda-caminho-existente">Selecione a pasta que contém suas notas Markdown. Olhar a pasta apenas lê os arquivos.</p>
+      <p class="campo-erro" id="erro-caminho-existente" hidden></p>
 
       <div id="analise" hidden>
         <div class="bloco bv-resumo" id="analise-resumo"></div>
@@ -85,11 +96,13 @@
     <section id="bloco-novo" hidden>
       <button class="botao discreto bv-trocar" type="button" data-recomecar>{{ icone('seta_esq', 14) }}<span>Voltar</span></button>
       <h2 class="bv-pergunta">Onde o vault vai ficar?</h2>
+      <label class="campo" for="caminho-novo"><span>Pasta para o novo vault</span></label>
       <div class="bv-caminho">
-        <input type="text" id="caminho-novo" value="{{ pasta_nova }}" autocomplete="off" spellcheck="false" aria-label="Pasta do vault novo">
+        <input type="text" id="caminho-novo" value="{{ pasta_nova }}" autocomplete="off" spellcheck="false" required aria-describedby="ajuda-caminho-novo erro-caminho-novo">
         <button class="botao" type="button" data-procurar="caminho-novo">Procurar…</button>
       </div>
-      <p class="suave pequeno">Uma pasta nova (ou vazia). Se não existir, eu crio.</p>
+      <p class="campo-ajuda" id="ajuda-caminho-novo">Use uma pasta nova ou vazia. O Orquestra cria a pasta se ela ainda não existir.</p>
+      <p class="campo-erro" id="erro-caminho-novo" hidden></p>
 
       <h3 class="bv-sub">Qual ponto de partida combina com você?</h3>
       <div class="bv-perfis" role="radiogroup" aria-label="Ponto de partida">
@@ -120,7 +133,7 @@
 
       <h3 class="bv-sub">Do seu jeito</h3>
       <div class="grade-campos">
-        <label class="campo"><span>Nome do painel</span><input type="text" id="nome" value="Orquestra" maxlength="60"></label>
+        <label class="campo"><span id="rotulo-nome">Nome do painel</span><input type="text" id="nome" value="Orquestra" maxlength="60" required aria-labelledby="rotulo-nome" aria-describedby="ajuda-nome erro-nome"><small class="campo-ajuda" id="ajuda-nome">Aparece no topo do painel. Você pode mudar depois em Ajustes.</small><small class="campo-erro" id="erro-nome" hidden></small></label>
       </div>
       <div class="bv-temas" role="radiogroup" aria-label="Tema">
         {% for t in temas %}
@@ -136,8 +149,9 @@
       <label class="chave bv-chave"><input type="checkbox" id="backup"><i></i><span>Guardar versões locais do vault (git). Uma cópia externa continua sendo necessária.</span></label>
       <p class="suave pequeno" id="aviso-backup" hidden></p>
 
-      <div class="bloco bv-vai-criar">
-        <b>O que vou criar</b>
+      <div class="bloco bv-vai-criar" aria-labelledby="titulo-vai-criar">
+        <b id="titulo-vai-criar">Confira antes de continuar</b>
+        <p class="campo-ajuda">Pasta escolhida: <code id="resumo-caminho"></code></p>
         <ul id="vai-criar"></ul>
         <p class="suave pequeno" id="nao-toco">Nada que já existe na pasta é alterado ou apagado.</p>
       </div>
@@ -158,8 +172,9 @@
     <p class="suave pequeno bv-rodape">Orquestra {{ versao }} · roda só neste computador, sem conta e sem nuvem.</p>
   </main>
 
-  <div id="avisos" aria-live="polite"></div>
+  <div id="avisos" aria-label="Notificações" aria-live="off"></div>
   <script src="/static/js/cenas.js?v={{ marca }}"></script>
+  <script src="/static/js/interface.js?v={{ marca }}"></script>
   <script src="/static/js/boasvindas.js?v={{ marca }}"></script>
 </body>
 </html>

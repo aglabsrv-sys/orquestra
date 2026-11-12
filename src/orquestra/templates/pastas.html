@@ -34,7 +34,7 @@
       {% if f.modulo %}
       <a class="et et-area" href="/m/{{ f.modulo.id|urlencode }}" title="Abrir a área {{ f.modulo.nome }}">área do painel</a>
       {% elif f.pode_adotar %}
-      <button class="botao pequeno" type="button" data-adotar="{{ f.nome }}">{{ 'Religar no painel' if f.desligada else 'Mostrar no painel' }}</button>
+      <button class="botao pequeno" type="button" data-adotar="{{ f.nome }}" aria-label="{{ 'Religar ' if f.desligada else 'Mostrar ' }}{{ f.nome }} no painel">{{ 'Religar no painel' if f.desligada else 'Mostrar no painel' }}</button>
       {% endif %}
     </div>
     {% endfor %}
@@ -59,23 +59,24 @@
 {% endblock %}
 
 {% block dialogos %}
-<dialog id="dialogo-nota-pasta" class="dialogo" aria-labelledby="titulo-nota-pasta" data-pasta="{{ rel }}">
+<dialog id="dialogo-nota-pasta" class="dialogo" aria-labelledby="titulo-nota-pasta" aria-describedby="nota-pasta-ajuda" data-pasta="{{ rel }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-nota-pasta">Nova nota{% if rel %} em {{ trilha[-1].nome }}{% endif %}</h2>
-    <label class="campo"><span>Título *</span><input type="text" id="nota-pasta-titulo" required autocomplete="off"></label>
-    <label class="campo"><span>Texto</span><textarea id="nota-pasta-corpo" rows="5" placeholder="Opcional"></textarea></label>
+    <p class="suave" id="nota-pasta-ajuda">A nota será criada nesta pasta como um arquivo Markdown, disponível também no Obsidian.</p>
+    <label class="campo"><span>Título <span class="obrigatorio">Obrigatório</span></span><input type="text" id="nota-pasta-titulo" required maxlength="500" autocomplete="off" placeholder="Dê um nome fácil de encontrar"></label>
+    <label class="campo"><span>Texto <span class="campo-opcional">Opcional</span></span><textarea id="nota-pasta-corpo" rows="5" maxlength="1000000" placeholder="Escreva aqui; Markdown também funciona"></textarea></label>
     <div class="dialogo-acoes">
       <button type="button" class="botao" data-fechar>Cancelar</button>
-      <button type="submit" class="botao principal" id="nota-pasta-salvar">Criar</button>
+      <button type="submit" class="botao principal" id="nota-pasta-salvar">Criar nota</button>
     </div>
   </form>
 </dialog>
 
-<dialog id="dialogo-adotar" class="dialogo" aria-labelledby="titulo-dialogo-adotar">
+<dialog id="dialogo-adotar" class="dialogo" aria-labelledby="titulo-dialogo-adotar" aria-describedby="adotar-ajuda">
   <div class="dialogo-corpo">
     <h2 id="titulo-dialogo-adotar">Mostrar “<span id="adotar-nome"></span>” no painel</h2>
-    <p class="suave">Nenhuma nota é alterada nem movida. O painel cria um único arquivo na pasta, o <code>_modulo.yaml</code>, dizendo quais campos as suas notas usam.</p>
-    <div id="adotar-achados" class="achados"></div>
+    <p class="suave" id="adotar-ajuda">Nenhuma nota é alterada nem movida. O painel cria um único arquivo na pasta, o <code>_modulo.yaml</code>, dizendo quais campos as suas notas usam.</p>
+    <div id="adotar-achados" class="achados" role="status" aria-live="polite"></div>
     <label class="campo campo-linha" id="adotar-linha-quadro"><span>Quero um quadro com “a fazer, fazendo, feito”</span><input type="checkbox" id="adotar-quadro"></label>
     <p class="suave pequeno">Depois dá para mudar tudo em “Personalizar”, ou tirar a pasta do painel em Ajustes.</p>
     <div class="dialogo-acoes">

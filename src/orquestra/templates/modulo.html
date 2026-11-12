@@ -25,10 +25,10 @@
 
 <nav class="abas" aria-label="Visões do módulo">
   {% for v in modulo.visoes %}
-  <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}">{{ v.nome }}</a>
+  <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}"{% if aba == 'v' ~ loop.index0 %} aria-current="page"{% endif %}>{{ v.nome }}</a>
   {% endfor %}
-  <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano">{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
-  <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina">{{ icone('chip', 15) }} Máquina</a>
+  <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano"{% if aba == 'humano' %} aria-current="page"{% endif %}>{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
+  <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina"{% if aba == 'maquina' %} aria-current="page"{% endif %}>{{ icone('chip', 15) }} Máquina</a>
   <span class="abas-fim">
     <a class="botao so-icone" href="/m/{{ modulo.id|urlencode }}/personalizar" title="Personalizar esta área" aria-label="Personalizar esta área">{{ icone('ajustes', 17) }}</a>
     {% if visao is defined and visao.tipo == 'grafico' and aba not in ('humano', 'maquina') %}
@@ -40,7 +40,7 @@
 </nav>
 
 {% if modulo.avisos %}
-<div class="faixa alerta">{{ icone('aviso', 16) }} O _modulo.yaml tem avisos: {{ modulo.avisos|join(' ') }}</div>
+<div class="faixa alerta" role="status">{{ icone('aviso', 16) }} <span><strong>A configuração desta área precisa de revisão.</strong> {{ modulo.avisos|join(' ') }}</span></div>
 {% endif %}
 
 {# ---------------------------------------------------------------- Humano #}
@@ -73,7 +73,7 @@
       {% else %}<span class="suave">Ainda não rodou.</span>{% endif %}
     </div>
     {% set conf = c.confianca|default({}) %}
-    <label class="chave" title="Rodar sozinho no horário"><input type="checkbox" data-ativar{% if c.def.ativo %} checked{% endif %}{% if not conf.confiavel %} disabled{% endif %}><i></i><span>automático</span></label>
+    <label class="chave" title="Rodar sozinho no horário"><input type="checkbox" data-ativar aria-label="Execução automática de {{ c.def.nome }}"{% if c.def.ativo %} checked{% endif %}{% if not conf.confiavel %} disabled{% endif %}><i aria-hidden="true"></i><span>automático</span></label>
     <button class="botao" type="button" data-rodar{% if not conf.confiavel %} disabled{% endif %}>{{ icone('tocar', 14) }}<span>Rodar agora</span></button>
     <details class="coletor-confianca" data-confianca='{{ conf|tojson }}'>
       <summary>{{ 'Versão aprovada neste computador' if conf.confiavel else 'Execução bloqueada: revisar e aprovar esta versão' }}</summary>
@@ -148,7 +148,7 @@
   {% for col in colunas %}
   <div class="coluna{% if col.concluida %} concluida{% endif %}" data-valor="{{ col.valor }}">
     <header><h3>{{ col.rotulo }}</h3><span class="conta">{{ col.total }}</span></header>
-    <div class="cartoes">
+    <div class="cartoes" role="group" aria-label="Itens em {{ col.rotulo }}">
       {% for c in col.cartoes %}{{ p.cartao(c, opcoes, visao.agrupar_por, arrastavel=True) }}{% endfor %}
     </div>
     {% if col.total > col.cartoes|length %}<p class="suave mais">+{{ col.total - col.cartoes|length }} na lista</p>{% endif %}
@@ -161,6 +161,7 @@
 <section class="tabela-envolta">
   {% if linhas %}
   <table class="tabela">
+    <caption class="somente-leitor">Notas de {{ modulo.nome }}. Os botões no cabeçalho ordenam os itens desta página.</caption>
     <thead><tr>{% for col in colunas_tabela %}<th scope="col" data-ordenar aria-sort="none"><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ col.rotulo }}<span aria-hidden="true"> ↕</span></button></th>{% endfor %}</tr></thead>
     <tbody>
       {% for l in linhas %}
@@ -169,7 +170,7 @@
         {% if c.tipo == "titulo" %}<td class="cel-titulo"><a href="{{ l.cartao.url }}">{{ c.texto }}</a></td>
         {% elif c.tipo == "escolha" %}<td><span class="et {{ c.classe }}">{{ c.texto }}</span></td>
         {% elif c.tipo == "data" %}<td data-ordem="{{ c.ordem }}">{{ c.texto }}</td>
-        {% elif c.tipo == "link" %}<td><a class="link" href="{{ c.texto }}" target="_blank" rel="noopener noreferrer">abrir {{ icone('externo', 12) }}</a></td>
+        {% elif c.tipo == "link" %}<td><a class="link" href="{{ c.texto }}" target="_blank" rel="noopener noreferrer" aria-label="Abrir link de {{ l.cartao.titulo }} em nova aba">abrir {{ icone('externo', 12) }}</a></td>
         {% else %}<td>{{ c.texto }}</td>{% endif %}
         {% endfor %}
       </tr>
@@ -185,10 +186,11 @@
 {% endblock %}
 
 {% block dialogos %}
-<dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" data-modulo="{{ modulo.id }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
+<dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" aria-describedby="novo-ajuda" data-modulo="{{ modulo.id }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-dialogo-novo">{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
-    <label class="campo"><span>Título *</span><input type="text" name="titulo" id="novo-titulo" required autocomplete="off"></label>
+    <p class="suave" id="novo-ajuda">Crie uma nota no vault. Você pode editar o texto e as propriedades depois.</p>
+    <label class="campo"><span>Título <span class="obrigatorio">Obrigatório</span></span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" placeholder="Dê um nome fácil de encontrar" autocomplete="off"></label>
     {% if aba != 'humano' %}
     <div class="grade-campos">
       {% for campo in modulo.campos.values() if campo.nome != 'origem' %}
@@ -196,20 +198,20 @@
       {% endfor %}
     </div>
     {% endif %}
-    <label class="campo"><span>Texto</span><textarea name="corpo" id="novo-corpo" rows="4" placeholder="Opcional"></textarea></label>
+    <label class="campo"><span>Texto <span class="campo-opcional">Opcional</span></span><textarea name="corpo" id="novo-corpo" rows="4" maxlength="1000000" placeholder="Acrescente contexto, ideias ou próximos passos"></textarea></label>
     <div class="dialogo-acoes">
       <button type="button" class="botao" data-fechar>Cancelar</button>
-      <button type="submit" class="botao principal" id="novo-salvar">Criar</button>
+      <button type="submit" class="botao principal" id="novo-salvar">Criar nota</button>
     </div>
   </form>
 </dialog>
 
 {% if numericos is defined %}
-<dialog id="dialogo-numeros" class="dialogo" aria-labelledby="titulo-dialogo-numeros" data-modulo="{{ modulo.id }}">
+<dialog id="dialogo-numeros" class="dialogo" aria-labelledby="titulo-dialogo-numeros" aria-describedby="numeros-ajuda" data-modulo="{{ modulo.id }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-dialogo-numeros">Registrar números</h2>
-    <p class="suave">Uma nota por dia. Se o dia já tem registro, só os campos preenchidos aqui são atualizados.</p>
-    <label class="campo"><span>Dia</span><input type="date" id="numeros-dia" value="{{ hoje.isoformat() }}" max="{{ hoje.isoformat() }}"></label>
+    <p class="suave" id="numeros-ajuda">Uma nota por dia. Se já houver registro nessa data, só os campos preenchidos aqui serão atualizados. Deixe os outros em branco para mantê-los.</p>
+    <label class="campo"><span>Dia <span class="obrigatorio">Obrigatório</span></span><input type="date" id="numeros-dia" required value="{{ hoje.isoformat() }}" max="{{ hoje.isoformat() }}"></label>
     <div class="grade-campos">
       {% for n in numericos %}
       <label class="campo"><span>{{ n.def.rotulo }}</span><input type="number" step="any" inputmode="decimal" name="{{ n.def.nome }}" value="{{ n.valor }}" data-numero></label>
