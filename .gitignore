@@ -22,6 +22,8 @@ service-account*.json
 /graphify-out/
 /output/
 /requirements-audit.txt
+/.test-tmp/
+/.uv-test-cache/
 *.orq-tmp
 *.orq-backup
 

@@ -2,6 +2,8 @@
 
 **Um painel local para organizar seu trabalho em cima de uma pasta de arquivos markdown, com ou sem agentes de IA.**
 
+Feito com carinho por **Claude Fable 5.2, GPT 6.1 Sol e AGLABS**.
+
 Você já usa ChatGPT, Claude ou Gemini todo dia, mas cada conversa começa do zero e
 nada fica organizado em lugar nenhum. O Orquestra resolve isso com uma ideia simples:
 suas tarefas, seus projetos e suas anotações são arquivos de texto numa pasta. O
@@ -32,6 +34,9 @@ Capturas com notas fictícias do catálogo. No celular, **Todas as áreas** abre
 lista completa, incluindo Ajustes, Pastas e Diário.
 
 </details>
+
+Capturas de 12/11/2026 com dados de demonstração. As telas novas de Agenda e
+Hábitos estão descritas nos [guias](docs/README.md).
 
 ## Instalação
 
@@ -92,6 +97,55 @@ navegador também nessas vezes, use `uv run --frozen orquestra iniciar --abrir`.
 > Algo não funcionou? Rode `uv run --frozen orquestra doctor`. Ele confere a instalação e
 > explica, em português, o que falta.
 
+## Recursos
+
+O primeiro uso é dividido em passos: pasta, modelo, módulos, aparência e revisão.
+Ao terminar, o painel explica como manter o processo aberto e iniciar com o computador.
+Os ajustes têm páginas próprias, incluindo tamanho da fonte, variáveis e acesso pelo celular.
+
+- **Pomodoro:** ícone de cronômetro ao lado da busca, com tela própria, mostrador
+  de progresso, foco e pausas. O timer continua ao navegar na mesma aba. Ajuste
+  as durações pelo botão de ajustes da própria tela.
+- **Agenda:** visões de mês, semana, dia e lista, com busca, filtros, cores e
+  criação/edição de eventos nos arquivos do vault. Clique nos dias da home para
+  abrir o dia, ou em Agenda no menu inferior. Detalhes em [docs/agenda.md](docs/agenda.md). “Conectar agenda”
+  ensina a obter o link iCal e guarda o endereço no `.env` local. A importação é de
+  leitura, com as limitações descritas em [guia dos novos fluxos](docs/experiencia-comunidade.md).
+- **Hábitos e metas:** pasta/módulo com visões Progresso e Lista, modelos de academia
+  3×, leitura 5× e caminhada 4×, registro diário e mapa de treze semanas. Crie e
+  ajuste a meta pela própria tela; cada hábito continua sendo uma nota no vault.
+  “Áreas” continua disponível para quem usa o método PARA.
+- **Criativos:** em Conteúdo, envie uma miniatura e use `em_aprovacao`. O preview
+  aparece em Para decidir, com Aprovar criativo e Pedir ajustes. Pipelines existentes
+  têm o botão “Ativar aprovação neste pipeline”, que preserva suas opções anteriores.
+- **Capas:** escolha cenas animadas por preview ou envie imagens e vídeos de até
+  2 MB. Os vídeos ficam em loop, sem áudio, pausados fora da tela.
+- **GitHub:** em Ajustes → Backup, o login oficial usa o GitHub CLI instalado no
+  computador. Escolha um repositório privado; a vinculação não envia notas. Revise
+  e autorize o destino antes do primeiro backup.
+- **Variáveis:** painel local para adicionar e excluir chaves sem exibir os valores.
+  Elas ficam em `~/.orquestra/.env`, fora do vault, disponíveis aos coletores que as
+  declaram em `requer`. O arquivo é texto local, não um cofre criptografado.
+
+Detalhes, limites e comandos em [Experiência da comunidade](docs/experiencia-comunidade.md).
+
+## Encerrar, iniciar automaticamente e remover
+
+Fechar o terminal encerra o processo. Para reabrir: `uv run --frozen orquestra`.
+Em Ajustes → Vault, “Iniciar com o computador” configura a inicialização **ao entrar
+na sua conta do sistema**. Também é possível executar:
+
+```bash
+uv run --frozen orquestra autostart ativar
+uv run --frozen orquestra autostart status
+uv run --frozen orquestra autostart desativar
+```
+
+`uv run --frozen orquestra desinstalar` (ou `uninstall`) explica a remoção.
+Com `--confirmar`, remove a entrada de início automático. Depois encerre o processo
+e remova a pasta clonada pelo gerenciador de arquivos. O comando preserva o vault,
+os backups e `~/.orquestra`, inclusive suas variáveis; não apaga suas notas.
+
 ## Já usa o Obsidian?
 
 Você não precisa reorganizar nada. Ao escolher o seu vault:
@@ -134,6 +188,9 @@ As telas e áreas disponíveis dependem do perfil e do que você acrescentar em 
 | **Números** | Área opcional com uma nota por dia e um gráfico de cada número que você acompanha. |
 | **Pastas** | O vault como ele é no disco, inclusive o que não é área do painel. |
 | **Diário** | O que mudou no vault e o que cada agente fez, com autor e horário. |
+| **Agenda** | Datas das suas notas em mês, semana, dia ou lista; crie e edite compromissos no vault. |
+| **Hábitos e metas** | Área opcional com meta semanal, marcação diária e histórico em notas Markdown. |
+| **Pomodoro** | Foco e pausas, com duração configurável e continuidade ao navegar na mesma aba. |
 | **Temas** | Três temas, cada um com o seu estilo de capas em pixel art animadas (nove cenas desenhadas por código), em modo claro e escuro. |
 | **Automações sem IA** | Tarefas recorrentes, agenda, cotações e feeds: scripts que você revisa, aprova e pode agendar. Serviços externos podem ter limites ou custos. |
 
@@ -141,9 +198,9 @@ As telas e áreas disponíveis dependem do perfil e do que você acrescentar em 
 
 1. **Olhe em volta.** Arraste um cartão no quadro, abra uma nota, aperte `C` para capturar uma ideia.
 2. **Ajuste as áreas.** Em **Ajustes**, acrescente uma área pronta, crie uma em branco ou tire do painel o que não usa (a pasta fica). O ícone ao lado das abas de cada área abre **Personalizar**: nome, ícone, capa, campos e opções.
-3. **Diga quem você é.** Em cada área, a aba **Humano** guarda o que você decide: como prioriza, sua voz, o que te interessa. É o que os agentes leem antes de agir.
+3. **Diga quem você é.** Nas áreas com a aba **Humano**, registre como prioriza, sua voz e o que te interessa. É o que os agentes leem antes de agir. Entrada fica dedicada à captura e não mostra essa aba.
 4. **Conecte um agente** (opcional). Abra o Claude Code ou o Codex na pasta do vault e peça: "leia o AGENTS.md e processe a minha entrada". Veja [docs/agentes.md](docs/agentes.md). Para apps de conversa, use o [conector MCP](docs/mcp.md).
-5. **Revise e aprove os coletores** (opcional). Scripts executam com as permissões da sua conta. A aprovação local vale para uma versão de código e configuração; depois, escolha se quer agendamento. Veja [docs/coletores.md](docs/coletores.md).
+5. **Conheça os coletores** (opcional). As versões originais distribuídas com o app podem rodar sem aprovação adicional. Personalizações exigem revisão local de código e configuração; o agendamento é uma escolha separada. Scripts executam com as permissões da sua conta. Veja [docs/coletores.md](docs/coletores.md).
 6. **Abra no celular.** Siga [docs/tailscale.md](docs/tailscale.md).
 
 ## Como funciona
@@ -177,8 +234,9 @@ Gravar o vídeo principal da semana.
 
 Você edita no painel, no Obsidian ou pede a um agente: é o mesmo arquivo. O painel
 confere a versão antes de gravar e avisa quando encontra uma alteração externa.
-Mudanças no disco costumam aparecer em cerca de um segundo, dependendo do disco
-e da carga do computador.
+Mudanças no disco atualizam os contadores e avisam quando há novidades na tela.
+Use **Atualizar** para abrir o conteúdo novo, preservando seu formulário até essa
+escolha.
 Em conflito, você pode copiar o rascunho ou salvá-lo como outra nota. Rascunhos
 pendentes também ficam neste navegador, separados por vault e por aba; armazenamento
 privado, quota ou limpeza do navegador podem impedir essa recuperação.
@@ -274,6 +332,9 @@ revisões. As mudanças recentes ficam no [changelog](CHANGELOG.md).
 | [Celular com Tailscale](docs/tailscale.md) | Acesso remoto sem expor nada à internet |
 | [Temas e aparência](docs/temas.md) | Claro e escuro, cor de destaque, cantos, letra, capas e como criar um tema |
 | [Coletores](docs/coletores.md) | As automações gratuitas que vêm prontas e como escrever a sua |
+| [Agenda](docs/agenda.md) | Mês, semana, dia e lista; compromissos no vault e conexão iCal |
+| [Pomodoro e Hábitos](docs/foco-e-habitos.md) | Timer próprio e metas semanais com mapa de atividade |
+| [Experiência da comunidade](docs/experiencia-comunidade.md) | Primeiros passos, variáveis, GitHub, celular e limites das integrações |
 | [Histórico e backup](docs/backup.md) | Versões locais quando algo muda, envio diário, e como desfazer |
 | [Arquitetura](docs/arquitetura.md) | Como o código está organizado, para estudar ou contribuir |
 
@@ -285,20 +346,9 @@ revisões. As mudanças recentes ficam no [changelog](CHANGELOG.md).
 
 ## Estado do projeto
 
-A [revisão de lançamento de 12/11](docs/revisao-lancamento-2026-11-12.md) registra
-os ajustes de desktop/mobile, reconexão, proteção da personalização e medições
-reproduzíveis com 10 mil notas. Inclui um roteiro automatizado no Chromium que
-cria seu próprio vault de teste e verifica as jornadas sem usar arquivos pessoais.
-
-As correções de segurança, recuperação, desempenho e qualidade da versão 0.4 estão
-descritas em [Preparação para produção](docs/preparacao-producao-2026-11-11.md), com
-testes executados e os limites de validação de cada plataforma.
-
-O refinamento de formulários, alertas, navegação e primeira experiência está em
-[Revisão de UI e UX](docs/revisao-ui-ux-2026-11-11.md), com capturas e validação.
-
-A verificação dos comandos, instalação, MCP e exemplos dos guias está em
-[Revisão de comandos e MCP](docs/revisao-comandos-mcp-2026-11-11.md).
+As verificações de segurança, recuperação, interface, desempenho, comandos e
+instalação estão nos [registros de revisão](docs/README.md#registros-de-revisão),
+com testes executados e limites de validação de cada rodada.
 
 Versão 0.4. Funciona e tem testes automatizados, mas é novo: faça backup.
 
@@ -318,7 +368,7 @@ O código é comentado em português e feito para ser lido. Comece pelo
 ```bash
 uv sync --locked
 uv run --frozen python -m pytest
-uv run --frozen ruff check src tests scripts
+uv run --frozen ruff check src tests scripts .github/scripts
 node --test tests/js/*.test.cjs
 ```
 

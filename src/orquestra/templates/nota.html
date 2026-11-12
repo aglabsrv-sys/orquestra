@@ -80,8 +80,9 @@
     <p class="suave salvo" id="estado-salvo" role="status" aria-live="polite" aria-atomic="true">As propriedades são salvas ao mudar. Para salvar o texto, use Salvar texto ou Ctrl+S / Cmd+S.</p>
   </aside>
 </article>
-<details class="versoes-nota bloco" id="versoes-locais" data-rel="{{ nota.rel }}">
-  <summary>Versões locais de recuperação</summary>
+<button class="botao pequeno" type="button" id="consultar-versoes">Consultar recuperação</button>
+<section hidden class="versoes-nota bloco" id="versoes-locais" data-rel="{{ nota.rel }}">
+  <h2 class="sub">Versões locais de recuperação</h2>
   <p class="suave pequeno">Versões preservadas por gravações do Orquestra neste computador. Consulte e salve uma cópia; o arquivo aberto não será substituído.</p>
   <p id="versoes-mensagem" role="status" aria-live="polite">Abra para consultar as versões disponíveis.</p>
   <div id="versoes-conteudo" hidden>
@@ -93,5 +94,5 @@
     <label class="campo"><span>Título da nova nota de recuperação</span><input type="text" id="versao-titulo-copia" value="{{ nota.titulo }} — versão recuperada" maxlength="200" autocomplete="off"></label>
     <div class="linha-botoes"><button class="botao" type="button" id="copiar-versao">Copiar versão</button><button class="botao principal" type="button" id="salvar-versao-copia">Salvar versão como nova nota</button><a class="botao" id="copia-recuperada" href="#" target="_blank" rel="noopener noreferrer" hidden>Abrir a cópia recuperada</a></div>
   </div>
-</details>
+</section>
 {% endblock %}

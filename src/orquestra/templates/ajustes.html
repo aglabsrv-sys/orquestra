@@ -8,9 +8,10 @@
   <header class="pagina-topo"><h1>Ajustes</h1></header>
   <p class="config-resumo suave" id="estado-config" role="status" aria-live="polite">As preferências são salvas ao mudar. Organize suas áreas e deixe o painel do seu jeito.</p>
   <nav class="navega-ajustes" aria-label="Seções dos ajustes">
-    <a href="#painel">Painel</a><a href="#areas">Áreas</a><a href="#aparencia-secao">Aparência</a><a href="#backup-secao">Backup</a><a href="#coletores-secao">Coletores</a><a href="#vault-secao">Vault</a>
-  </nav>
+    <a href="/ajustes/painel"{% if secao == "painel" %} aria-current="page"{% endif %}>Painel</a><a href="/ajustes/areas"{% if secao == "areas" %} aria-current="page"{% endif %}>Pastas</a><a href="/ajustes/aparencia"{% if secao == "aparencia" %} aria-current="page"{% endif %}>Aparência</a><a href="/ajustes/backup"{% if secao == "backup" %} aria-current="page"{% endif %}>Backup</a><a href="/ajustes/coletores"{% if secao == "coletores" %} aria-current="page"{% endif %}>Coletores</a><a href="/ajustes/acesso"{% if secao == "acesso" %} aria-current="page"{% endif %}>Celular</a><a href="/ajustes/vault"{% if secao == "vault" %} aria-current="page"{% endif %}>Vault</a>
+  <a href="/ajustes/variaveis"{% if secao == "variaveis" %} aria-current="page"{% endif %}>Variáveis</a></nav>
 
+  {% if secao == "painel" %}
   <h2 class="grupo-titulo" id="painel">{{ icone('editar', 18) }} Painel</h2>
   <div class="bloco">
     <div class="grade-campos">
@@ -25,7 +26,9 @@
     </div>
   </div>
 
-  <h2 class="grupo-titulo" id="areas">{{ icone('pasta', 18) }} Áreas do painel</h2>
+  {% endif %}
+  {% if secao == "areas" %}
+  <h2 class="grupo-titulo" id="areas">{{ icone('pasta', 18) }} Pastas do painel</h2>
   <div class="bloco">
     {% for a in areas %}
     <div class="area-linha" data-modulo="{{ a.modulo.id }}">
@@ -58,6 +61,8 @@
     <a class="botao" href="/pastas">{{ icone('pasta', 15) }}<span>Mostrar uma pasta minha</span></a>
   </div>
 
+  {% endif %}
+  {% if secao == "aparencia" %}
   <h2 class="grupo-titulo" id="aparencia-secao">{{ icone('paleta', 18) }} Tema e aparência</h2>
   <div class="temas">
     {% for t in temas %}
@@ -102,11 +107,17 @@
         {% for f, pilha in visual.fontes.items() %}<button type="button" role="radio" aria-checked="{{ 'true' if cfg.aparencia.fonte == f else 'false' }}" data-visual="fonte" data-valor="{{ f }}" style="font-family:{{ pilha }}">{{ visual.nomes[f] }}</button>{% endfor %}
       </div>
     </div>
+    <div class="ap-linha"><span class="ap-rotulo">Tamanho da fonte</span><div class="segmentos" role="radiogroup" aria-label="Tamanho da fonte">
+      {% for valor, nome in [('pequena', 'Pequena'), ('padrao', 'Padrão'), ('grande', 'Grande')] %}<button type="button" role="radio" aria-checked="{{ 'true' if cfg.aparencia.tamanho == valor else 'false' }}" data-visual="tamanho" data-valor="{{ valor }}">{{ nome }}</button>{% endfor %}
+    </div></div>
     <p class="suave pequeno">Valem para qualquer tema. As letras são as do seu computador: nada é baixado. No modo claro, uma cor de destaque muito suave é escurecida um pouco para continuar legível.</p>
   </div>
 
   <p class="suave">Cada tema é uma pasta em <code>_orquestra/temas/</code>. Para criar o seu, copie uma delas e edite o <code>tema.yaml</code>, ou peça a um agente: “crie um tema verde-escuro com capas de floresta”.</p>
 
+  {% endif %}
+  {% if secao == "backup" %}
+  <div class="linha-botoes"><button class="botao" type="button" id="github-conectar">Login no GitHub</button><button class="botao pequeno" type="button" data-guia="github">Como funciona</button></div>
   <h2 class="grupo-titulo" id="backup-secao">{{ icone('nuvem', 18) }} Histórico e backup</h2>
   {% set conf_backup = confianca_backup|default({}) %}
   <div class="bloco" id="revisao-backup" data-confianca-backup='{{ conf_backup|tojson }}'>
@@ -142,6 +153,8 @@
     <p class="suave pequeno">Snapshots ficam em <code>refs/orquestra/backups</code>, sem mover sua branch ou staging. O envio usa a branch remota <code>orquestra-backup</code>. Uma versão local no mesmo disco não substitui cópia externa.</p>
   </div>
 
+  {% endif %}
+  {% if secao == "coletores" %}
   <h2 class="grupo-titulo" id="coletores-secao">{{ icone('radar', 18) }} Coletores</h2>
   <div class="bloco">
     {% for c in coletores %}
@@ -152,14 +165,22 @@
     {% else %}<p class="suave">Nenhum coletor configurado.</p>{% endfor %}
   </div>
 
+  {% endif %}
+  {% if secao == "acesso" %}
   <h2 class="grupo-titulo">{{ icone('celular', 18) }} Acesso</h2>
   <div class="bloco">
+    <button class="botao" type="button" data-guia="celular">Conecte seu celular</button>
     <p>Você está acessando por <code>{{ host }}</code>. O painel escuta apenas neste computador (127.0.0.1).</p>
     <p>Para abrir no celular, use o Tailscale: <code>tailscale serve --bg {{ cfg.porta }}</code>. Nunca use Funnel nem abra a porta no roteador: o painel não tem senha.</p>
   </div>
 
+  {% endif %}
+  {% if secao == "vault" %}
   <h2 class="grupo-titulo" id="vault-secao">{{ icone('pasta', 18) }} Vault</h2>
   <div class="bloco">
+    <p>O terminal mantém o Orquestra funcionando. Fechá-lo encerra o painel e os coletores. Para voltar: <code>uv run --frozen orquestra</code>.</p>
+    <p>Para iniciar ao entrar no computador: <code>uv run --frozen orquestra autostart ativar</code>. Desligar: <code>uv run --frozen orquestra autostart desativar</code>.</p>
+    <div class="linha-botoes"><button class="botao" type="button" data-autostart="ativar">Iniciar com o computador</button><button class="botao pequeno" type="button" data-autostart="desativar">Desligar início automático</button></div><p id="autostart-estado" role="status"></p>
     <p><code>{{ vault }}</code> · {{ n_notas }} notas · Orquestra {{ versao }}</p>
     <div class="linha-botoes">
       <a class="botao" href="{{ link_obsidian }}">{{ icone('externo', 15) }}<span>Abrir no Obsidian</span></a>
@@ -167,6 +188,19 @@
     </div>
     {% for nome, aviso in avisos %}<p class="erro-texto">{{ icone('aviso', 14) }} {{ nome }}: {{ aviso }}</p>{% endfor %}
   </div>
+  {% endif %}
+  {% if secao == "variaveis" %}
+  <h2 class="grupo-titulo">Variáveis e secrets</h2>
+  <div class="bloco">
+    <p class="suave">Guardadas no .env local, fora do vault e do backup. Valores nunca são devolvidos ao navegador. Somente coletores com a chave declarada em “requer” a recebem.</p>
+    <p class="campo-ajuda">Arquivo em texto no seu perfil do sistema. Proteja sua conta e seu disco. Não é um cofre criptografado.</p>
+    <form id="variaveis-form" autocomplete="off">
+      <div class="grade-campos"><label class="campo"><span>Nome</span><input id="variavel-nome" required pattern="[A-Z][A-Z0-9_]{1,79}" placeholder="YOUTUBE_API_KEY" spellcheck="false"></label>
+      <label class="campo"><span>Valor</span><input id="variavel-valor" type="password" required maxlength="8192" autocomplete="new-password"></label></div>
+      <button class="botao principal" type="submit">Guardar variável</button>
+    </form><ul id="variaveis-lista"></ul><p id="variaveis-estado" role="status"></p>
+  </div>
+  {% endif %}
 </section>
 {% endblock %}
 

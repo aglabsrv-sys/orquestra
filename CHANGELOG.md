@@ -2,6 +2,14 @@
 
 ## Em desenvolvimento
 
+- Agenda com visões de mês, semana, dia e lista, filtros e edição de eventos em notas Markdown.
+- Hábitos e metas semanais com marcação diária, histórico e preservação dos registros ao editar.
+- Pomodoro com pausas, duração configurável e prazo preservado ao navegar na mesma aba.
+- Onboarding por etapas e Ajustes separados por assunto, com variáveis guardadas fora do vault.
+- Assistentes locais para GitHub privado, iCal e Tailscale, com limites de integração declarados nos guias.
+- Capas em imagem/vídeo, aprovação de criativos e revisão explícita de coletores personalizados.
+- Atualizações externas oferecem recarga explícita; reconexões ressincronizam páginas sem trabalho pendente.
+- Transições entre páginas só são habilitadas sem preferência por movimento reduzido.
 - Navegação do celular com dois atalhos, área atual e gaveta completa, sem destinos cortados.
 - Criação e personalização acessíveis ao lado das abas em telas pequenas; navegação identifica a página atual.
 - Reconexão ressincroniza a página, preservando rascunhos, formulários e diálogos abertos.
@@ -16,5 +24,6 @@
 - Roteiro Chromium, benchmark sintético, capturas atualizadas e guia de lançamento.
 - CI sem execução duplicada entre branch e PR; scanner de segredos com a leitura de commits do PR declarada no próprio job.
 
-Evidências e limites em [Revisão de lançamento](docs/revisao-lancamento-2026-11-12.md).
+Evidências e limites em [Sincronização e revisão da comunidade](docs/sincronizacao-comunidade-2026-11-12.md)
+e [Revisão de lançamento anterior](docs/revisao-lancamento-2026-11-12.md).
 A versão publicada continua sendo a indicada pelo aplicativo; esta seção não representa um lançamento já feito.

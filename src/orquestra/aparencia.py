@@ -1,12 +1,13 @@
 """Aparência: o que a pessoa escolhe por cima do tema.
 
-O tema (tema.yaml) define as cores e as capas. A aparência são quatro escolhas
+O tema (tema.yaml) define as cores e as capas. A aparência são cinco escolhas
 pessoais, guardadas em `aparencia:` no orquestra.yaml:
 
     modo      escuro | claro | auto (segue o sistema)
     destaque  uma cor em hexadecimal; vazio usa a do tema
     cantos    reto | discreto | medio | redondo
     fonte     sistema | serifada | arredondada | mono
+    tamanho   pequena | padrao | grande
 
 Tudo vira variáveis de CSS escritas no topo de cada página (`estilo`). O arquivo de
 estilos não sabe qual é o tema nem o modo: ele só usa as variáveis.
@@ -29,6 +30,7 @@ FONTES = {
     "arredondada": 'ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI Variable Display", "Trebuchet MS", system-ui, sans-serif',
     "mono": 'ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace',
 }
+TAMANHOS = {"pequena": "14px", "padrao": "16px", "grande": "18px"}
 NOMES = {
     "escuro": "Escuro", "claro": "Claro", "auto": "Igual ao sistema",
     "reto": "Retos", "discreto": "Discretos", "medio": "Médios", "redondo": "Redondos",
@@ -46,6 +48,7 @@ class Aparencia:
     destaque: str = ""
     cantos: str = "medio"
     fonte: str = "sistema"
+    tamanho: str = "padrao"
 
 
 def ler(bruto: Any) -> Aparencia:
@@ -59,6 +62,8 @@ def ler(bruto: Any) -> Aparencia:
         a.cantos = str(bruto["cantos"])
     if str(bruto.get("fonte")) in FONTES:
         a.fonte = str(bruto["fonte"])
+    if str(bruto.get("tamanho")) in TAMANHOS:
+        a.tamanho = str(bruto["tamanho"])
     if _COR.fullmatch(str(bruto.get("destaque") or "")):
         a.destaque = str(bruto["destaque"]).lower()
     return a
@@ -67,7 +72,7 @@ def ler(bruto: Any) -> Aparencia:
 def validar(dados: dict[str, Any]) -> dict[str, str]:
     """Confere o que veio da tela de Ajustes. Devolve só as chaves válidas; erro vira ValueError."""
     limpo: dict[str, str] = {}
-    for chave, opcoes in (("modo", MODOS), ("cantos", CANTOS), ("fonte", FONTES)):
+    for chave, opcoes in (("modo", MODOS), ("cantos", CANTOS), ("fonte", FONTES), ("tamanho", TAMANHOS)):
         if chave in dados:
             if str(dados[chave]) not in opcoes:
                 raise ValueError(f"'{dados[chave]}' não é uma opção de {chave}. Opções: {', '.join(opcoes)}.")
@@ -189,7 +194,7 @@ def estilo(tema: dict[str, Any], aparencia: Aparencia) -> str:
     """O bloco de CSS do topo da página. Só entram cores em hexadecimal e valores desta lista."""
     escuro = _variaveis(cores(tema, aparencia, False), False)
     claro = _variaveis(cores(tema, aparencia, True), True)
-    fixas = f"--cantos:{CANTOS[aparencia.cantos]};--fonte:{FONTES[aparencia.fonte]}"
+    fixas = f"--cantos:{CANTOS[aparencia.cantos]};--fonte:{FONTES[aparencia.fonte]};--tamanho-fonte:{TAMANHOS[aparencia.tamanho]}"
     if aparencia.modo == "claro":
         return f":root{{{claro};{fixas}}}"
     if aparencia.modo == "auto":

@@ -34,6 +34,17 @@ apagar a linha do código não o remove do histórico Git.
   pode ler outros arquivos acessíveis à conta. A assinatura aprovada cobre os arquivos/configuração apresentados;
   mudanças exigem nova aprovação. Não aprove módulos recebidos de desconhecidos
   sem ler seu código. Não existe sandbox de sistema operacional para coletores.
+  Originais idênticos ao catálogo da instalação podem executar sem aceite adicional:
+  são comparados os bytes de todos os auxiliares, configuração e chaves declaradas.
+  A revogação local tem precedência. Instale o próprio Orquestra apenas de fontes confiáveis.
+- Variáveis, login GitHub, vínculo de repositório, upload de mídia, início automático
+  e liberação do hostname Tailscale exigem capacidade local. O `.env` fica fora do
+  vault, não devolve valores pela API e não é criptografado. As ACLs do perfil no
+  Windows e a proteção da conta/disco continuam relevantes. Não exponha o perfil
+  local como compartilhamento de rede.
+- Uploads limitam-se a 2 MB, assinatura de formatos de mídia e caminhos gerados pelo
+  servidor. Essa rota aceita octet-stream; as outras alterações continuam em JSON.
+  A detecção de formato não substitui antivírus nem valida/transcodifica todo o arquivo.
 - Agentes que recebem acesso direto à pasta podem alterar qualquer arquivo que a
   conta permite. As regras de `AGENTS.md` orientam esses agentes; a proteção de
   escrita do conector MCP aplica-se às ferramentas desse conector.

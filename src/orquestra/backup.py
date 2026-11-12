@@ -9,6 +9,7 @@ import json
 import os
 import re
 import secrets
+import shlex
 import shutil
 import stat
 import subprocess
@@ -191,13 +192,21 @@ def git(vault: Path, *args: str, tempo: int = 120, ambiente: dict[str, str] | No
             raise ErroBackup("A execução Git recebeu variáveis não autorizadas.")
         env.update(ambiente)
     _validar_criticos_git(raiz, pasta_git)
+    credenciais = []
+    # O backup ignora helpers herdados. No envio, permite apenas o helper oficial
+    # instalado, para o host exato do login oferecido na interface. O token nunca
+    # passa pelo app, por argumentos de processo ou pela configuração do vault.
+    if args and args[0] == "push" and (gh := shutil.which("gh")):
+        executavel = shlex.quote(Path(gh).resolve().as_posix())
+        credenciais = ["-c", "credential.https://github.com.helper=", "-c",
+                       f"credential.https://github.com.helper=!{executavel} auth git-credential"]
     return subprocess.run(
         ["git", f"--git-dir={pasta_git}", f"--work-tree={raiz}",
          "-c", f"core.hooksPath={hooks.resolve()}", "-c", "core.fsmonitor=false",
          "-c", "log.showSignature=false", "-c", "core.logAllRefUpdates=true",
          "-c", "commit.gpgSign=false", "-c", "credential.helper=", "-c", "core.sshCommand=ssh",
          "-c", "protocol.ext.allow=never", "-c", "protocol.file.allow=always",
-         "-c", f"core.attributesFile={os.devnull}", *args], cwd=raiz,
+         "-c", f"core.attributesFile={os.devnull}", *credenciais, *args], cwd=raiz,
         capture_output=True, text=texto, encoding="utf-8" if texto else None,
         errors="replace" if texto else None, timeout=tempo, env=env, input=entrada,
     )

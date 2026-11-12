@@ -36,7 +36,9 @@ jobs:
         with:
           node-version: '24'
       - run: uv sync --locked
-      - run: uv run --frozen ruff check src tests scripts
+      - run: uv run --frozen ruff check src tests scripts .github/scripts
+      - name: Links e imagens da documentação
+        run: uv run --frozen python .github/scripts/verificar_docs.py
       - run: uv run --frozen python -m pytest -q
       - run: node --test tests/js/*.test.cjs
       - run: uv build

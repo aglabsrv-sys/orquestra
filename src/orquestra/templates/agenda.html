@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block titulo %}Agenda · {{ cal.titulo }}{% endblock %}
+{% block trilha %}Agenda{% endblock %}
+{% block observa %}tudo{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/calendario.css?v={{ marca }}">{% endblock %}
+{% block scripts %}<script src="/static/js/calendario.js?v={{ marca }}"></script>{% endblock %}
+
+{% macro evento(e, classe='') %}
+<button type="button" class="cal-evento cal-cor-{{ e.cor }} {{ classe }}{% if e.concluido %} cal-concluido{% endif %}" data-evento="{{ e.rel }}" data-versao="{{ e.versao }}" draggable="{{ 'true' if e.editavel else 'false' }}" title="{{ e.titulo }} · {{ e.hora or 'Sem horário' }} · {{ e.pasta }}">
+  {% if e.hora %}<span class="cal-evento-hora">{{ e.hora }}</span>{% endif %}<span class="cal-evento-titulo">{{ e.titulo }}</span>
+</button>
+{% endmacro %}
+
+{% block conteudo %}
+<section class="calendario" id="calendario" data-vault-id="{{ vault_id }}" data-data="{{ cal.data }}" data-visao="{{ cal.visao }}" aria-label="Agenda do vault">
+  <header class="cal-cabecalho">
+    <div class="cal-identidade"><span class="cal-emblema">{{ icone('calendario', 20) }}</span><div><h1>Agenda</h1><p class="suave">Seu tempo, no mesmo lugar.</p></div></div>
+    <div class="cal-acoes"><button class="botao pequeno" type="button" data-guia="agenda" aria-label="Conectar agenda">{{ icone('nuvem', 14) }}<span>Conectar agenda</span></button><button class="botao principal" type="button" data-cal-novo>{{ icone('mais', 16) }}<span>Novo evento</span></button></div>
+  </header>
+  <div class="cal-barra">
+    <div class="cal-periodo"><h2 id="cal-periodo-titulo">{{ cal.titulo }}</h2><nav aria-label="Navegar no calendário"><a class="botao so-icone pequeno" href="{{ cal.anterior }}" data-cal-nav aria-label="Período anterior">{{ icone('seta_esq', 16) }}</a><a class="botao pequeno" href="{{ cal.url_hoje }}" data-cal-nav>Hoje</a><a class="botao so-icone pequeno" href="{{ cal.proximo }}" data-cal-nav aria-label="Próximo período">{{ icone('seta_dir', 16) }}</a></nav></div>
+    <nav class="cal-visoes" aria-label="Visões da agenda">{% for v in cal.visoes %}<a href="{{ v.url }}" data-cal-nav{% if v.id == cal.visao %} aria-current="page"{% endif %}>{{ v.nome }}</a>{% endfor %}</nav>
+  </div>
+  <form class="cal-filtros" id="cal-filtros" action="/agenda/{{ cal.data }}" method="get" role="search" aria-label="Filtrar agenda">
+    <input type="hidden" name="visao" value="{{ cal.visao }}">
+    <label class="cal-busca">{{ icone('busca', 16) }}<span class="somente-leitor">Buscar eventos</span><input type="search" name="q" value="{{ cal.filtros.q }}" placeholder="Buscar eventos…" maxlength="200" autocomplete="off"></label>
+    <select name="pasta" aria-label="Filtrar por pasta"><option value="">Todas as pastas</option>{% for m in cal.pastas %}<option value="{{ m.id }}"{% if cal.filtros.pasta == m.id %} selected{% endif %}>{{ m.nome }}</option>{% endfor %}</select>
+    <button class="botao pequeno" type="button" data-cal-filtros>{{ icone('ajustes', 15) }}<span>Filtros</span>{% if cal.filtros.categoria or cal.filtros.cor or cal.filtros.tag or cal.filtros.concluidos %}<i class="cal-filtro-ativo" aria-label="Filtros ativos"></i>{% endif %}</button>
+    <button class="botao pequeno cal-aplicar" type="submit">Buscar</button>
+    {% if cal.filtros.q or cal.filtros.pasta or cal.filtros.categoria or cal.filtros.cor or cal.filtros.tag or cal.filtros.concluidos %}<a class="cal-limpar" href="/agenda/{{ cal.data }}?visao={{ cal.visao }}" data-cal-nav>Limpar</a>{% endif %}
+    <span class="cal-contagem" role="status">{{ cal.total }} {{ 'evento' if cal.total == 1 else 'eventos' }}</span>
+  </form>
+  {% if cal.limitado %}<p class="faixa alerta" role="status">Exibindo os primeiros 500 eventos. Refine a busca ou selecione uma pasta.</p>{% endif %}
+  <p class="somente-leitor" id="cal-instrucao">Selecione um evento para editar. Você também pode arrastar para outra data ou usar o formulário, inclusive pelo teclado.</p>
+
+  {% if cal.visao == 'mes' %}
+  <div class="cal-mes" aria-labelledby="cal-periodo-titulo" aria-describedby="cal-instrucao">
+    <div class="cal-semana-nomes" aria-hidden="true">{% for n in ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'] %}<span>{{ n }}</span>{% endfor %}</div>
+    <div class="cal-mes-grade">{% for d in cal.dias %}
+      <div class="cal-celula{% if d.fora %} cal-fora{% endif %}{% if d.hoje %} cal-hoje{% endif %}" data-cal-data="{{ d.iso }}">
+        <div class="cal-dia-topo"><a href="/agenda/{{ d.iso }}?visao=dia" data-cal-nav aria-label="Abrir dia {{ d.iso }}"{% if d.hoje %} aria-current="date"{% endif %}>{{ d.num }}</a><button class="cal-adicionar" type="button" data-cal-novo="{{ d.iso }}" aria-label="Novo evento em {{ d.iso }}">+</button></div>
+        <div class="cal-celula-eventos">{% for e in d.eventos[:3] %}{{ evento(e) }}{% endfor %}</div>
+        {% if d.eventos|length > 3 %}<a class="cal-mais" href="/agenda/{{ d.iso }}?visao=dia" data-cal-nav>+{{ d.eventos|length - 3 }} mais</a>{% endif %}
+      </div>
+    {% endfor %}</div>
+  </div>
+  {% elif cal.visao in ('semana', 'dia') %}
+  <div class="cal-tempo-rolagem" tabindex="0" role="region" aria-label="Grade de horários{% if cal.visao == 'semana' %}; role horizontalmente no celular{% endif %}">
+    <div class="cal-tempo cal-tempo-{{ cal.visao }}" style="--cal-dias:{{ cal.dias|length }}">
+      <div class="cal-tempo-cab"><span class="cal-fuso">LOCAL</span>{% for d in cal.dias %}<a href="/agenda/{{ d.iso }}?visao=dia" data-cal-nav class="{% if d.hoje %}cal-hoje{% endif %}"><span>{{ d.nome }}</span><b>{{ d.num }}</b></a>{% endfor %}</div>
+      <div class="cal-sem-hora"><span class="cal-fuso">Sem horário</span>{% for d in cal.dias %}<div data-cal-data="{{ d.iso }}">{% for e in d.eventos if e.dia_inteiro %}{{ evento(e) }}{% endfor %}</div>{% endfor %}</div>
+      <div class="cal-horas-grade"><div class="cal-regua" aria-hidden="true">{% for h in cal.horas %}<span>{{ '%02d'|format(h) }}:00</span>{% endfor %}</div>{% for d in cal.dias %}<div class="cal-coluna-tempo" data-cal-data="{{ d.iso }}">
+        {% for h in cal.horas %}<button type="button" tabindex="-1" class="cal-faixa-hora" data-cal-novo="{{ d.iso }}" data-cal-hora="{{ '%02d'|format(h) }}:00" aria-label="Novo evento em {{ d.iso }} às {{ h }} horas"></button>{% endfor %}
+        {% for e in d.blocos %}<div class="cal-bloco-posicao" style="top:{{ e.topo }}px;height:{{ e.altura }}px;left:{{ e.esquerda }}%;width:{{ e.largura }}%">{{ evento(e, 'cal-evento-bloco') }}</div>{% endfor %}
+      </div>{% endfor %}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="cal-lista" aria-labelledby="cal-periodo-titulo">{% for d in cal.dias if d.eventos %}<section class="cal-lista-dia"><header><b>{{ d.num }}</b><span>{{ d.nome }}</span>{% if d.hoje %}<small>Hoje</small>{% endif %}</header><div>{% for e in d.eventos %}<button type="button" class="cal-lista-evento cal-cor-{{ e.cor }}{% if e.concluido %} cal-concluido{% endif %}" data-evento="{{ e.rel }}" data-versao="{{ e.versao }}"><time>{{ e.hora or 'Dia inteiro' }}{% if e.hora_fim %}–{{ e.hora_fim }}{% endif %}</time><i class="cal-ponto"></i><span><b>{{ e.titulo }}</b><small>{{ e.pasta }}{% for t in e.tags[:3] %} · #{{ t }}{% endfor %}</small></span><em>{{ e.categoria }}</em></button>{% endfor %}</div></section>{% else %}<div class="cal-vazio">{{ icone('calendario', 28) }}<h3>Nenhum evento neste período</h3><p>Escolha outra data, limpe os filtros ou acrescente um compromisso.</p><button class="botao" type="button" data-cal-novo>Criar evento</button></div>{% endfor %}</div>
+  {% endif %}
+  <footer class="cal-rodape"><span>{{ icone('pasta', 13) }} Datas dos seus arquivos · horários locais</span><span>Importações iCal são de leitura.</span></footer>
+  <script type="application/json" id="cal-eventos">{{ cal.eventos|tojson }}</script>
+  <dialog id="cal-filtros-dialogo" class="dialogo" aria-labelledby="cal-filtros-titulo"><div class="dialogo-corpo"><h2 id="cal-filtros-titulo">Filtrar eventos</h2>
+    <label class="campo"><span>Categoria</span><select name="categoria" form="cal-filtros"><option value="">Todas</option>{% for c in cal.categorias %}<option{% if c == cal.filtros.categoria %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></label>
+    <label class="campo"><span>Cor</span><select name="cor" form="cal-filtros"><option value="">Todas</option>{% for valor, nome in cal.cores.items() %}<option value="{{ valor }}"{% if valor == cal.filtros.cor %} selected{% endif %}>{{ nome }}</option>{% endfor %}</select></label>
+    <label class="campo"><span>Tag</span><select name="tag" form="cal-filtros"><option value="">Todas</option>{% for t in cal.tags %}<option{% if t == cal.filtros.tag %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <label class="chave"><input type="checkbox" name="concluidos" value="1" form="cal-filtros"{% if cal.filtros.concluidos %} checked{% endif %}><i></i><span>Incluir concluídos</span></label>
+    <div class="dialogo-acoes"><button class="botao" type="button" data-cal-fechar>Cancelar</button><button class="botao principal" type="submit" form="cal-filtros">Aplicar filtros</button></div>
+  </div></dialog>
+</section>
+{% endblock %}
+
+{% block dialogos %}
+<dialog id="cal-evento-dialogo" class="dialogo cal-editor" aria-labelledby="cal-editor-titulo" aria-describedby="cal-editor-ajuda"><form class="dialogo-corpo" id="cal-evento-form">
+  <h2 id="cal-editor-titulo">Novo evento</h2><p class="suave" id="cal-editor-ajuda">Salvo como nota na pasta Agenda pessoal. A pasta é criada no primeiro evento.</p>
+  <label class="campo"><span>Título</span><input id="cal-titulo" required maxlength="500" autocomplete="off" placeholder="O que está nos seus planos?"></label>
+  <label class="chave"><input type="checkbox" id="cal-dia-inteiro"><i></i><span>Dia inteiro</span></label>
+  <div class="grade-campos"><label class="campo"><span>Início</span><input type="datetime-local" id="cal-inicio" required></label><label class="campo"><span>Término</span><input type="datetime-local" id="cal-fim" required></label></div>
+  <div class="grade-campos"><label class="campo"><span>Categoria</span><input id="cal-categoria" list="cal-categorias" maxlength="60" placeholder="Compromisso"><datalist id="cal-categorias">{% for c in cal.categorias_evento %}<option value="{{ c }}">{% endfor %}</datalist></label><label class="campo"><span>Tags</span><input id="cal-tags" placeholder="pessoal, trabalho" maxlength="1600"></label></div>
+  <fieldset class="cal-cores"><legend>Cor</legend>{% for valor, nome in cal.cores.items() %}<label class="cal-cor-{{ valor }}" title="{{ nome }}"><input type="radio" name="cal-cor" value="{{ valor }}" aria-label="{{ nome }}"{% if loop.first %} checked{% endif %}><span></span></label>{% endfor %}</fieldset>
+  <label class="campo"><span>Descrição <small class="suave">Opcional</small></span><textarea id="cal-corpo" rows="3" maxlength="1000000" placeholder="Contexto, local ou próximos passos"></textarea></label>
+  <p id="cal-editor-estado" role="status" aria-live="polite"></p>
+  <div class="dialogo-acoes"><a class="botao discreto pequeno" id="cal-abrir-nota" href="#" hidden>Abrir nota</a><button class="botao discreto pequeno" type="button" id="cal-arquivar" hidden>Arquivar</button><button class="botao" type="button" data-cal-fechar>Cancelar</button><button class="botao principal" type="submit" id="cal-salvar">Criar evento</button></div>
+</form></dialog>
+{% endblock %}

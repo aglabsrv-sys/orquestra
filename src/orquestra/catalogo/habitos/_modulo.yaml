@@ -1,0 +1,18 @@
+nome: Hábitos e metas
+descricao: Pequenos passos, registrados dia após dia.
+icone: pulso
+ordem: 6
+campos:
+  meta_semanal:
+    tipo: numero
+    rotulo: Vezes por semana
+    padrao: 3
+  registros:
+    tipo: lista
+    rotulo: Dias realizados
+  tags:
+    tipo: lista
+visoes:
+  - tipo: tabela
+    nome: Hábitos
+    colunas: [titulo, meta_semanal]

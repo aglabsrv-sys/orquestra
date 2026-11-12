@@ -291,6 +291,9 @@ def _main(argv: list[str] | None = None) -> None:
     a = sub.add_parser("autostart", parents=[comum], help="início automático com o computador")
     a.add_argument("acao", choices=["ativar", "desativar", "status"])
 
+    remover = sub.add_parser("desinstalar", aliases=["uninstall"], parents=[comum], help="desliga o início automático e orienta a remoção preservando suas notas")
+    remover.add_argument("--confirmar", action="store_true", help="remover a entrada de início automático; preserva vault, configurações e secrets")
+
     args = p.parse_args(argv)
     comando = args.comando or "iniciar"
     if args.vault is not None and not args.vault.strip():
@@ -321,6 +324,11 @@ def _main(argv: list[str] | None = None) -> None:
         fazer_backup(args)
     elif comando == "confiar":
         confiar(args)
+    elif comando in ("desinstalar", "uninstall"):
+        if args.confirmar:
+            from orquestra import autostart
+            print(autostart.executar("desativar"))
+        print("Encerre o painel com Ctrl+C. Para remover o início automático, use orquestra desinstalar --confirmar. Depois remova a pasta clonada do programa pelo seu gerenciador de arquivos. Seu vault e ~/.orquestra são preservados; confira seus backups antes de removê-los manualmente.")
     elif comando == "autostart":
         from orquestra import autostart
 

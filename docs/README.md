@@ -1,36 +1,42 @@
-# Guias do Orquestra
+# Documentação do Orquestra
 
-O [README principal](../README.md) começa pela instalação e pela escolha do vault.
+Comece pela [instalação e primeiros passos](../README.md). Os guias abaixo
+descrevem o comportamento atual; os relatórios no final registram verificações
+feitas em versões e datas específicas.
 
-## Usar e personalizar
+## Guias de uso
 
-| Guia | Quando consultar |
-| --- | --- |
-| [Vault existente](vault-existente.md) | Conectar suas pastas sem reorganizar as notas |
-| [Áreas e campos](modulos.md) | Escolher módulos, listas, quadros e propriedades |
-| [Aparência](temas.md) | Temas, cores, fontes e capas |
-| [Agentes](agentes.md) | Dar contexto e regras aos agentes locais |
-| [MCP](mcp.md) | Conectar um app por stdio |
-| [Coletores](coletores.md) | Revisar, autorizar e agendar automações |
-| [Backup e recuperação](backup.md) | Preservar versões e recuperar arquivos |
-| [Celular](tailscale.md) | Acessar pela rede privada |
+| Preciso de… | Guia |
+|---|---|
+| Aproveitar minhas notas sem reorganizar o vault | [Vault existente](vault-existente.md) |
+| Entender tarefas, humano/máquina e integrações | [Experiência da comunidade](experiencia-comunidade.md) |
+| Criar ou ajustar uma pasta do painel | [Módulos](modulos.md) |
+| Organizar compromissos e conectar um calendário | [Agenda](agenda.md) |
+| Usar o timer e acompanhar metas semanais | [Pomodoro e hábitos](foco-e-habitos.md) |
+| Escolher cores, fonte, cenas ou minha própria capa | [Temas e aparência](temas.md) |
+| Conectar Claude, Codex ou outro agente | [Agentes](agentes.md) e [MCP](mcp.md) |
+| Configurar rotinas e fontes de dados | [Coletores](coletores.md) |
+| Recuperar uma edição ou manter uma cópia externa | [Histórico e backup](backup.md) |
+| Acessar o painel pelo celular | [Tailscale](tailscale.md) |
 
-## Desenvolver e lançar
+Para contribuir, veja [CONTRIBUTING](../CONTRIBUTING.md), [arquitetura](arquitetura.md)
+e a [política de segurança](../SECURITY.md). As mudanças ficam no [changelog](../CHANGELOG.md).
 
-| Documento | Conteúdo |
-| --- | --- |
-| [Contribuir](../CONTRIBUTING.md) | Ambiente, testes, navegador e empacotamento |
-| [Arquitetura](arquitetura.md) | Domínio, índice, arquivos, segurança e interface |
-| [Segurança](../SECURITY.md) | Modelo de confiança e relato de falhas |
-| [Changelog](../CHANGELOG.md) | Mudanças ainda não publicadas |
-| [Revisão de lançamento — 12/11/2026](revisao-lancamento-2026-11-12.md) | Correções, medições, jornadas e critérios para publicação |
+## Registros de revisão
 
-## Revisões anteriores
+Os resultados abaixo valem para a árvore e os testes descritos em cada documento.
+Não equivalem à aprovação de um release futuro, de serviços externos ou de uma
+plataforma que não foi efetivamente testada.
 
-Os registros abaixo descrevem os testes executados em suas respectivas versões;
-não substituem as verificações do commit que será lançado.
-
-- [Preparação de produção — 11/11/2026](preparacao-producao-2026-11-11.md)
-- [Interface e formulários — 11/11/2026](revisao-ui-ux-2026-11-11.md)
-- [Comandos e MCP — 11/11/2026](revisao-comandos-mcp-2026-11-11.md)
-- [Primeira revisão open source — 11/11/2026](revisao-open-source-2026-11-11.md)
+| Data | Registro |
+|---|---|
+| 12/11/2026 | [Sincronização e revisão integrada para a comunidade](sincronizacao-comunidade-2026-11-12.md) |
+| 12/11/2026 | [Integrações e formulários locais](revisao-integracoes-2026-11-12.md) |
+| 12/11/2026 | [Revisão para lançamento e cobertura visual](revisao-lancamento-2026-11-12.md) |
+| 12/11/2026 | [Foco, hábitos e desempenho](refino-foco-habitos-desempenho-2026-11-12.md) |
+| 12/11/2026 | [Agenda](refino-agenda-2026-11-12.md) |
+| 12/11/2026 | [Recursos da comunidade](revisao-comunidade-2026-11-12.md) |
+| 11/11/2026 | [Comandos, instalação e MCP](revisao-comandos-mcp-2026-11-11.md) |
+| 11/11/2026 | [Interface e experiência](revisao-ui-ux-2026-11-11.md) |
+| 11/11/2026 | [Segurança, recuperação e preparação](preparacao-producao-2026-11-11.md) |
+| 11/11/2026 | [Diagnóstico inicial de código aberto](revisao-open-source-2026-11-11.md) |

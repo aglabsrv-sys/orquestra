@@ -41,6 +41,7 @@ ICONES = {
     "chevron_dir": '<path d="m9 6 6 6-6 6"/>',
     "chevron_esq": '<path d="m15 6-6 6 6 6"/>',
     "busca": '<circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/>',
+    "cronometro": '<circle cx="12" cy="14" r="7.5"/><path d="M10 2h4M12 2v4M17.5 7.5 19 6M12 10v4l2.5 1.5"/>',
     "paleta": '<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-.5-1.5-.5-2.5S14.5 15 16 15h2a3 3 0 0 0 3-3c0-5-4-9-9-9z"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16" cy="10" r="1"/>',
     "pasta": '<path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>',
     "pessoa": '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
@@ -290,6 +291,7 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
             }
         )
     sistema = [
+        {"id": "calendario", "nome": "Agenda", "icone": "calendario", "url": "/agenda", "selo": 0},
         {"id": "decidir", "nome": "Decidir", "icone": "sino", "url": "/decidir", "selo": total_decidir},
         {"id": "diario", "nome": "Diário", "icone": "pulso", "url": "/diario", "selo": 0},
         {"id": "pastas", "nome": "Pastas", "icone": "pasta", "url": "/pastas", "selo": 0},
@@ -307,8 +309,8 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
         atual = next((m for m in modulos if m["ativo"]), None)
         if atual and atual not in barra:
             barra = [*barra, atual]
-        sistema_barra = [s for s in sistema if s["id"] == "decidir"]
-        gaveta = [*modulos, *[s for s in sistema if s["id"] != "decidir"]]
+        sistema_barra = [s for s in sistema if s["id"] in {"decidir", "calendario"}]
+        gaveta = [*modulos, *[s for s in sistema if s["id"] not in {"decidir", "calendario"}]]
     escondidos = [i for i in gaveta if i not in barra]
     # A largura do navegador não chega ao servidor. O CSS alterna a mesma barra
     # para dois atalhos no celular, mantendo a área atual e todas as demais na gaveta.

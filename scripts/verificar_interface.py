@@ -42,19 +42,46 @@ def conferir_layout(page) -> None:
     dock = page.locator(".dock")
     if dock.count():
         assert dock.locator(".dock-item").evaluate_all("els => els.every(e => { const r=e.getBoundingClientRect(); return !r.width || (r.left>=0 && r.right<=innerWidth && r.bottom<=innerHeight); })"), "Navegação esconde destinos"
-        assert page.locator('.dock [aria-current="page"], #abrir-gaveta.ativo-mobile').count() or urlsplit(page.url).path == "/buscar"
+        caminho = urlsplit(page.url).path
+        opcional = caminho == "/m/habitos" and not dock.locator('a[href="/m/habitos"]').count()
+        assert page.locator('.dock [aria-current="page"], #abrir-gaveta.ativo-mobile, #abrir-foco[aria-current="page"]').count() or caminho == "/buscar" or opcional, page.url
     novo = page.locator("#abrir-novo")
     if novo.count():
         assert novo.evaluate("e => { const r=e.getBoundingClientRect(); return r.left>=0 && r.right<=innerWidth; }")
+
+
+def aguardar_vigia(page, vault: Path) -> None:
+    """Confirma um ciclo real do polling, além de abrir a conexão SSE.
+
+    O Linux pode criar/editar a nota pela API e apagá-la antes de o primeiro
+    snapshot vê-la. O marcador na raiz não afeta a página do módulo em teste.
+    """
+    page.wait_for_function("window.__fonteAoVivo && window.__fonteAoVivo.readyState===1")
+    marcador = vault / f"Sonda do monitor {time.monotonic_ns()}.md"
+    marcador.write_text("Arquivo sintético para sincronizar a observação.\n", encoding="utf-8")
+    for acao in ("criado", "removido"):
+        page.wait_for_function(
+            "([rel, acao]) => window.__eventos.some(e => e.rel===rel && e.acao===acao)",
+            arg=[marcador.name, acao], timeout=8000,
+        )
+        if acao == "criado":
+            marcador.unlink()
 
 
 def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     contexto = browser.new_context(viewport={"width": 1440, "height": 960}, reduced_motion="reduce")
     contexto.set_default_timeout(8000)
     # Contar chamadas reais de RAF permite detectar animação ociosa no modo reduzido.
-    contexto.add_init_script("""window.__quadros=0;
+    contexto.add_init_script("""window.__quadros=0; window.__eventos=[];
       const raf=window.requestAnimationFrame.bind(window);
-      window.requestAnimationFrame=cb=>{window.__quadros++;return raf(cb);};""")
+      window.requestAnimationFrame=cb=>{window.__quadros++;return raf(cb);};
+      const Fonte=window.EventSource;
+      window.EventSource=class extends Fonte {
+        constructor(...args) {
+          super(...args); window.__fonteAoVivo=this;
+          this.addEventListener('message', e => window.__eventos.push(JSON.parse(e.data)));
+        }
+      };""")
     page = contexto.new_page()
     erros = []
     page.on("pageerror", lambda erro: erros.append(str(erro)))
@@ -63,17 +90,26 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator('[data-modo="novo"]').click()
     vault = raiz / "Vault de demonstração"
     page.locator("#caminho-novo").fill(str(vault))
+    page.locator("#bv-proximo").click()
     page.locator('.bv-perfil:has(input[value="criador"])').click()
+    page.locator("#bv-proximo").click()
     page.locator("#exemplos").check()
+    for _ in range(8):
+        if page.locator("#concluir").is_visible():
+            break
+        page.locator("#bv-proximo").click()
     if page.locator("#backup").is_checked():
         page.locator("label:has(#backup)").click()
     page.locator("#concluir").click()
+    page.locator('#passo-pronto a[href="/"]').click(timeout=20000)
     page.wait_for_url(base + "/", timeout=20000)
     expect(page.locator(".carrossel")).to_be_visible()
 
     rotas = ("/", "/m/tarefas", "/m/tarefas?aba=v1", "/m/tarefas?aba=humano", "/m/tarefas?aba=maquina",
              "/m/conteudo", "/m/numeros", "/m/radar", "/m/entrada", "/ajustes", "/m/tarefas/personalizar",
-             "/buscar?q=vídeo", "/pastas", "/decidir", "/diario")
+             "/buscar?q=vídeo", "/pastas", "/decidir", "/diario", "/agenda", "/agenda?visao=semana",
+             "/agenda?visao=dia", "/agenda?visao=lista", "/foco", "/m/habitos",
+             *["/ajustes/" + s for s in ("painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis")])
     for largura in (1440, 390, 320):
         page.set_viewport_size({"width": largura, "height": 900})
         for rota in rotas:
@@ -110,19 +146,23 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         expect(page.locator("#editor")).to_be_hidden()
         expect(page.locator("#ver")).to_contain_text("Texto revisado pelo navegador.")
         assert "Texto revisado" in (vault / nota["rel"]).read_text(encoding="utf-8")
-        page.locator("#versoes-locais summary").click()
+        page.locator("#consultar-versoes").click()
         expect(page.locator("#versoes-conteudo")).to_be_visible()
         expect(page.locator("#versao-texto")).to_have_value(re.compile("Texto original"))
         if largura != 320:
             # Prints da próxima largura usam apenas as demonstrações do catálogo.
             page.goto(base + "/m/tarefas?aba=v1", wait_until="domcontentloaded")
+            aguardar_vigia(page, vault)
             (vault / nota["rel"]).unlink()
+            expect(page.get_by_role("button", name="Atualizar", exact=True)).to_be_visible(timeout=8000)
+            page.get_by_role("button", name="Atualizar", exact=True).click()
             expect(page.get_by_role("link", name=titulo, exact=True)).not_to_be_visible(timeout=8000)
 
     # Conflito real com edição externa: conservar rascunho e recuperar como cópia.
     page.locator("#editar").click()
     page.locator("#editor").fill("Meu rascunho ainda não salvo.")
     arquivo = vault / nota["rel"]
+    aguardar_vigia(page, vault)
     arquivo.write_text(arquivo.read_text(encoding="utf-8") + "\nAlteração externa.\n", encoding="utf-8")
     expect(page.locator("#faixa-conflito")).to_be_visible(timeout=8000)
     with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as conflito:
@@ -144,6 +184,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator("#p-descricao").fill("Descrição pendente")
     page.locator("h1").click()
     schema = vault / "tarefas/_modulo.yaml"
+    aguardar_vigia(page, vault)
     schema.write_text(schema.read_text(encoding="utf-8") + "\n# Alteração externa para testar atualização ao vivo.\n", encoding="utf-8")
     expect(page.locator("#p-novidades")).to_be_visible(timeout=8000)
     expect(page.locator("#p-descricao")).to_have_value("Descrição pendente")
@@ -200,6 +241,105 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     expect(page.locator(f'.cartao[data-rel="{rel}"] .mudar-status')).to_be_enabled()
     assert int(coluna.locator(".conta").inner_text()) == total - 1
 
+    # Agenda: validação, falha recuperável, escrita Markdown e edição no mesmo fluxo.
+    page.goto(base + "/agenda?visao=lista", wait_until="domcontentloaded")
+    page.locator(".cal-acoes [data-cal-novo]").click()
+    if page.locator("#cal-dia-inteiro").is_checked():
+        page.locator("label:has(#cal-dia-inteiro)").click()
+    dia = page.locator("#cal-inicio").input_value()[:10]
+    page.locator("#cal-titulo").fill("Encontro da comunidade")
+    page.locator("#cal-inicio").fill(dia + "T14:00")
+    page.locator("#cal-fim").fill(dia + "T13:00")
+    page.locator("#cal-salvar").click()
+    expect(page.locator("#cal-editor-estado")).to_contain_text("posterior")
+    page.locator("#cal-fim").fill(dia + "T15:00")
+    page.route("**/api/agenda/eventos", lambda route: route.abort())
+    page.locator("#cal-salvar").click()
+    expect(page.locator("#cal-editor-estado")).to_contain_text("Sem conexão")
+    expect(page.locator("#cal-titulo")).to_have_value("Encontro da comunidade")
+    page.unroute("**/api/agenda/eventos")
+    with page.expect_response(lambda r: r.url.endswith("/api/agenda/eventos")) as evento:
+        page.locator("#cal-salvar").click()
+    assert evento.value.status == 200
+    rel_evento = evento.value.json()["rel"]
+    assert "Encontro da comunidade" in (vault / rel_evento).name
+    assert "14:00" in (vault / rel_evento).read_text(encoding="utf-8")
+    expect(page.locator("#cal-evento-dialogo")).to_be_hidden()
+    evento_ui = page.locator("[data-evento]").filter(has_text="Encontro da comunidade")
+    evento_ui.click()
+    page.locator("#cal-titulo").fill("Encontro revisado")
+    with page.expect_response(lambda r: r.url.endswith("/api/agenda/eventos")) as edicao:
+        page.locator("#cal-salvar").click()
+    assert edicao.value.status == 200
+    expect(page.locator("[data-evento]").filter(has_text="Encontro revisado")).to_be_visible()
+    assert "Encontro revisado" in (vault / edicao.value.json()["rel"]).read_text(encoding="utf-8")
+
+    # Hábitos: ativação opcional, meta, marcação de hoje e edição preservam registros.
+    page.goto(base + "/m/habitos", wait_until="domcontentloaded")
+    page.locator(".habitos-cabecalho [data-habito-novo]").click()
+    page.locator("#habito-titulo").fill("Ler com a comunidade")
+    page.route("**/api/habitos", lambda route: route.abort())
+    page.locator("#habito-salvar").click()
+    expect(page.locator("#habito-editor-estado")).to_contain_text("Sem conexão")
+    expect(page.locator("#habito-titulo")).to_have_value("Ler com a comunidade")
+    page.unroute("**/api/habitos")
+    with page.expect_response(lambda r: r.url.endswith("/api/habitos")) as habito:
+        page.locator("#habito-salvar").click()
+    assert habito.value.status == 200
+    card = page.locator("[data-habito]").filter(has_text="Ler com a comunidade")
+    expect(card).to_be_visible()
+    with page.expect_response(lambda r: r.url.endswith("/api/habitos/marcar")) as marcado:
+        card.locator("[data-habito-marcar]").click()
+    assert marcado.value.status == 200
+    expect(card.locator("[data-habito-marcar]")).to_have_attribute("aria-pressed", "true")
+    registros = marcado.value.json()["item"]["registros"]
+    assert registros and registros[0] in (vault / marcado.value.json()["rel"]).read_text(encoding="utf-8")
+    card.locator("[data-habito-editar]").click()
+    page.locator("#habito-titulo").fill("Leitura diária")
+    with page.expect_response(lambda r: r.url.endswith("/api/habitos")) as habito_editado:
+        page.locator("#habito-salvar").click()
+    assert habito_editado.value.status == 200
+    expect(page.locator("[data-habito]").filter(has_text="Leitura diária")).to_be_visible()
+    assert habito_editado.value.json()["item"]["registros"] == registros
+
+    # Pomodoro conserva intenção e prazo ao navegar na mesma sessão.
+    page.goto(base + "/foco", wait_until="domcontentloaded")
+    page.locator("#foco-tarefa").fill("Revisar o projeto")
+    page.locator("#foco-iniciar").click()
+    expect(page.locator("#foco-acao")).to_contain_text("Pausar")
+    prazo = page.evaluate("JSON.parse(sessionStorage.getItem('orquestra:foco:v2:'+document.body.dataset.vaultId)).fim")
+    page.goto(base + "/agenda", wait_until="domcontentloaded")
+    page.goto(base + "/foco", wait_until="domcontentloaded")
+    expect(page.locator("#foco-tarefa")).to_have_value("Revisar o projeto")
+    expect(page.locator("#foco-acao")).to_contain_text("Pausar")
+    assert page.evaluate("JSON.parse(sessionStorage.getItem('orquestra:foco:v2:'+document.body.dataset.vaultId)).fim") == prazo
+    page.locator("#foco-iniciar").click()
+
+    # Capturas atuais das novas páginas, em dados sintéticos e três larguras.
+    if capturas:
+        for largura in (1440, 390, 320):
+            page.set_viewport_size({"width": largura, "height": 900})
+            for nome, rota in (("agenda", "/agenda?visao=lista"), ("habitos", "/m/habitos"), ("foco", "/foco")):
+                page.goto(base + rota, wait_until="domcontentloaded")
+                conferir_layout(page)
+                page.screenshot(path=str(capturas / f"{nome}-{largura}.png"), full_page=True)
+
+    # Modo claro e fonte ampliada também passam pelo formulário e persistem no vault.
+    page.goto(base + "/ajustes/aparencia", wait_until="domcontentloaded")
+    for chave, valor in (("modo", "claro"), ("tamanho", "grande")):
+        botao = page.locator(f'[data-visual="{chave}"][data-valor="{valor}"]')
+        with page.expect_response(lambda r: r.url.endswith("/api/config")) as visual:
+            botao.click()
+        assert visual.value.status == 200
+        expect(botao).to_be_enabled()
+    for rota in ("/agenda?visao=semana", "/m/habitos", "/foco"):
+        page.goto(base + rota, wait_until="domcontentloaded")
+        conferir_layout(page)
+        assert page.evaluate("getComputedStyle(document.documentElement).fontSize") == "18px"
+        if capturas:
+            nome = urlsplit(page.url).path.strip("/").replace("/", "-")
+            page.screenshot(path=str(capturas / f"{nome}-claro-fonte-grande-320.png"), full_page=True)
+
     page.goto(base, wait_until="domcontentloaded")
     page.wait_for_timeout(350)
     assert page.locator('.slide[aria-hidden="true"]').evaluate_all("els => els.every(e=>e.tabIndex===-1)")
@@ -222,7 +362,9 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     contexto.close()
     return {"rotas_por_largura": len(rotas), "larguras": [1440, 390, 320], "erros_javascript": erros,
             "jornadas": ["primeiro uso", "navegação e gaveta", "criar e editar", "recuperação", "conflito externo e cópia",
-                         "personalização pendente", "números", "decisão", "falha e repetição de captura", "contagem do Kanban", "animação e movimento reduzido"]}
+                         "personalização pendente", "números", "decisão", "falha e repetição de captura", "contagem do Kanban",
+                         "agenda e falha recuperável", "hábitos e preservação de registros", "Pomodoro ao navegar",
+                         "modo claro e fonte ampliada", "animação e movimento reduzido"]}
 
 
 def main() -> None:

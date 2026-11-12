@@ -27,7 +27,7 @@ def entrada():
     return env.get_template("partes.html").module.entrada
 
 
-@pytest.mark.parametrize("url", ["/m/tarefas", "/pastas", "/n/tarefas/itens/Responder%20coment%C3%A1rios%20do%20%C3%BAltimo%20v%C3%ADdeo.md"])
+@pytest.mark.parametrize("url", ["/foco", "/m/habitos", "/m/tarefas", "/pastas", "/n/tarefas/itens/Responder%20coment%C3%A1rios%20do%20%C3%BAltimo%20v%C3%ADdeo.md"])
 def test_dialogos_e_ajudas_apontam_para_elementos_unicos(cliente, url):
     resposta = cliente.get(url)
     assert resposta.status_code == 200

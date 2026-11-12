@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}{{ modulo.nome }}{% endblock %}
+{% block trilha %}{{ modulo.nome }}{% endblock %}
+{% block observa %}modulo:habitos{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/habitos.css?v={{ marca }}">{% endblock %}
+{% block scripts %}<script src="/static/js/habitos.js?v={{ marca }}"></script>{% endblock %}
+{% block conteudo %}
+<section class="habitos-pagina" id="habitos-pagina" data-hoje="{{ hoje_habitos }}">
+  <header class="habitos-cabecalho"><div><span class="habitos-sobrancelha">CONSTÂNCIA, SEM PRESSA</span><h1>{{ modulo.nome }}</h1><p class="suave">Pequenos passos. Um dia de cada vez.</p></div><button class="botao principal" type="button" data-habito-novo>{{ icone('mais',16) }}<span>Novo hábito</span></button></header>
+  <nav class="habitos-abas" aria-label="Visões de Hábitos e metas"><div><a href="/m/habitos"{% if aba == 'progresso' %} aria-current="page"{% endif %}>{{ icone('pulso',15) }} Progresso</a><a href="/m/habitos?aba=lista"{% if aba == 'lista' %} aria-current="page"{% endif %}>{{ icone('check',15) }} Lista</a>{% if instalado %}<a href="/m/habitos?aba=humano">Humano</a><a href="/m/habitos?aba=maquina">Máquina</a>{% endif %}</div>{% if instalado %}<a href="/m/habitos/personalizar" class="habitos-personalizar" aria-label="Personalizar Hábitos e metas">{{ icone('ajustes',17) }}</a>{% endif %}</nav>
+  <div class="habitos-resumo"><div><span class="habitos-status-ponto"></span><b data-habitos-hoje>{{ resumo_habitos.hoje }}</b><span>de <b data-habitos-total>{{ resumo_habitos.total }}</b> marcados hoje</span></div><span><b data-habitos-metas>{{ resumo_habitos.metas }}</b> metas alcançadas nesta semana</span></div>
+  <div class="habitos-grade{% if aba == 'lista' %} habitos-lista{% endif %}" id="habitos-grade">{% for item in itens %}{% include "habito-card.html" %}{% endfor %}</div>
+  {% if not itens %}<div class="habitos-vazio" id="habitos-vazio"><div class="habitos-vazio-simbolo">{{ icone('pulso',30) }}</div><h2>Qual hábito você quer cultivar?</h2><p>Escolha um modelo abaixo ou crie o seu. Tudo fica em notas na pasta <code>habitos/</code>, junto do seu vault.</p><button class="botao" type="button" data-habito-novo>Começar do meu jeito</button></div>{% endif %}
+  <section class="habitos-modelos"><header><div><h2>Um ponto de partida</h2><p class="suave">Modelos simples para adaptar ao seu ritmo.</p></div><span class="habitos-modelos-nota">Você confirma cada realização.</span></header><div class="habitos-modelos-grade">{% for m in modelos %}<button type="button" data-habito-modelo="{{ m.id }}" class="habito-modelo">{{ icone(m.icone,20) }}<span><b>{{ m.titulo }}</b><small>{{ m.meta }} dias por semana</small></span><span class="habito-modelo-mais">+</span></button>{% endfor %}</div></section>
+  <footer class="habitos-rodape">{{ icone('pasta',13) }} <span>Uma nota por hábito · editável no Obsidian · a semana começa na segunda</span></footer>
+  <script type="application/json" id="habitos-dados">{{ {'itens':itens,'modelos':modelos}|tojson }}</script>
+</section>
+{% endblock %}
+{% block dialogos %}
+<dialog id="habito-editor" class="dialogo" aria-labelledby="habito-editor-titulo"><form class="dialogo-corpo" id="habito-form"><h2 id="habito-editor-titulo">Novo hábito</h2><p class="suave">Escolha algo possível de repetir. A meta pode mudar com você.</p><label class="campo"><span>O que você quer cultivar?</span><input type="text" id="habito-titulo" required maxlength="120" placeholder="Ex.: caminhar por 20 minutos" autocomplete="off"></label>
+<fieldset class="habito-meta-opcoes"><legend>Quantos dias por semana?</legend><div>{% for i in range(1,8) %}<label><input type="radio" name="habito-meta" value="{{ i }}"{% if i == 3 %} checked{% endif %}><span>{{ i }}</span></label>{% endfor %}</div><small class="campo-ajuda">Uma marcação por dia. Sem escolher dias fixos.</small></fieldset>
+<label class="campo"><span>Tags <small class="suave">Opcional</small></span><input type="text" id="habito-tags" maxlength="720" placeholder="saúde, pessoal"></label><p id="habito-editor-estado" role="status"></p><div class="dialogo-acoes"><button type="button" class="botao" data-habito-fechar>Cancelar</button><button type="submit" class="botao principal" id="habito-salvar">Criar hábito</button></div></form></dialog>
+{% endblock %}

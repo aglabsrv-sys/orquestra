@@ -7,7 +7,7 @@
 <section class="semana" aria-label="Próximos dias">
   <div class="dias">
     {% for d in semana %}
-    <a class="dia{% if d.hoje %} ativo{% endif %}" href="/dia/{{ d.iso }}" title="{{ d.n }} em aberto" aria-label="{{ d.nome }}, dia {{ d.num }}: {{ d.n }} em aberto"{% if d.hoje %} aria-current="date"{% endif %}>
+    <a class="dia{% if d.hoje %} ativo{% endif %}" href="/agenda/{{ d.iso }}?visao=dia" title="{{ d.n }} em aberto" aria-label="{{ d.nome }}, dia {{ d.num }}: {{ d.n }} em aberto"{% if d.hoje %} aria-current="date"{% endif %}>
       <span>{{ d.nome }}</span> <b>{{ d.num }}</b>
       {% if d.n %}<i class="ponto" aria-hidden="true"></i>{% endif %}
     </a>
@@ -30,7 +30,7 @@
   {{ icone('lampada', 16) }}
   <span>Este vault ainda não tem áreas no painel. Escolha quais pastas suas quer ver aqui, ou acrescente uma área pronta.</span>
   <a class="botao principal" href="/pastas">Ver minhas pastas</a>
-  <a class="botao" href="/ajustes#areas">Acrescentar área</a>
+  <a class="botao" href="/ajustes/areas">Acrescentar área</a>
 </div>
 {% endif %}
 

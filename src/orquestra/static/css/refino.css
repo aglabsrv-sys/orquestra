@@ -1,0 +1,66 @@
+/* Controles usam o tema também no menu nativo. A ajuda não desloca campos. */
+html { font-size: var(--tamanho-fonte, 16px); }
+body { font-size: 1rem; }
+.acesso-foco { position:relative; }
+.acesso-foco[aria-current],.acesso-foco[data-rodando] { color:var(--destaque); border-color:var(--destaque); }
+#foco-indicador { position:absolute; right:4px; top:4px; width:5px; height:5px; border-radius:50%; background:var(--destaque); }
+.grade-campos { align-items: start; }
+.campo { min-width: 0; align-content: start; }
+.campo > span:first-child { min-height: 20px; }
+.campo input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]), .campo select { height: max(42px,2.625rem); min-height: 42px; box-sizing: border-box; margin: 0; }
+input, select, textarea { background: color-mix(in srgb, var(--superficie) 92%, var(--destaque) 8%); color: var(--texto); border-color: var(--borda); }
+select option { color: var(--texto); background: var(--superficie); }
+.campo-ajuda { line-height: 1.45; font-size: 11px; }
+.campo input.upload-discreto { font-size:11px; max-width:100%; border:0; height:26px; min-height:26px; padding:0; background:transparent; color:transparent; }
+.upload-discreto::file-selector-button { border:1px solid var(--borda); border-radius:6px; color:var(--texto-suave); background:var(--superficie); padding:4px 8px; margin-right:6px; cursor:pointer; }
+.dialogo .campo:has(.campo-ajuda) { position: relative; }
+.dialogo .campo > .campo-ajuda { display: none; }
+.dialogo .campo:focus-within > .campo-ajuda,
+.dialogo .campo > .campo-ajuda[role=status] { display: block; }
+.topo .trilha { flex:1; }
+.topo .marca { min-width:0; max-width:32ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.topo .topo-dir { flex:none; }
+.campo > span { font-size:.78125rem; }
+.campo-ajuda { font-size:.6875rem; }
+.campo-opcional { font-size:.6875rem; }
+.campo-erro { font-size:.78125rem; }
+.obrigatorio { font-size:.65625rem; }
+.botao { font-size:.84375rem; }
+input, select, textarea { font-size:.9375rem; }
+.explica { display: flex; align-items: flex-start; gap: 10px; }
+.explica > .icone { flex: 0 0 auto; margin-top: 3px; }
+.navega-ajustes [aria-current=page] { color: var(--destaque); border-color: var(--destaque); }
+.cenas-grade { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.cenas-grade button { position: relative; height: 110px; overflow: hidden; border: 1px solid var(--borda); border-radius: 12px; color: var(--texto); background: var(--superficie); }
+.cenas-grade button span { position: absolute; bottom: 8px; left: 8px; padding: 3px 8px; background: var(--fundo); border-radius: 6px; }
+.agenda-dias { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 6px; margin: 20px 0; }
+.agenda-dias a { padding: 12px 4px; text-align: center; border: 1px solid var(--borda); border-radius: 10px; }
+.agenda-dias [aria-current=date] { color: var(--destaque); border-color: var(--destaque); }
+.bv-pagina { padding-top:20px; }
+.bv-capa { min-height:100px; max-height:130px; }
+.bv-sub { margin-top:14px; }
+.bv-modulo { padding:8px 10px; }
+.bv-modulo small { display:none; }
+.bv-perfis { gap:8px; }
+.bv-perfil { padding:10px; }
+@media(prefers-reduced-motion:no-preference) { @view-transition { navigation: auto; } }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration:100ms; }
+@media(prefers-reduced-motion:reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation:none; } }
+@media(max-width:600px) { .cenas-grade { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:520px) {
+  .topo { gap:8px; }
+  .topo .aqui,.topo .barra { display:none; }
+  .topo .topo-dir { gap:6px; }
+  input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea { font-size:max(16px,1rem); }
+  .campo input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),.campo select { height:max(44px,2.75rem); min-height:44px; }
+}
+@media(max-width:360px) { .topo .relogio { display:none; } }
+@media(max-width:600px) {
+  .bv-perfis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .bv-perfil span { font-size:11px; line-height:1.3; }
+  .bv-temas { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .bv-tema { padding:10px 6px; }
+  .bv-tema small { display:none; }
+  .bv-capa .cab-texto h1 { font-size:32px; }
+  .bv-pergunta { margin:12px 0; font-size:24px; }
+}

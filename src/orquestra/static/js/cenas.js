@@ -938,7 +938,8 @@
   }
 
   var quadro = 0, espera = 0, fonteAmbiente = null;
-  function podeAnimar() { return !parado && !document.hidden && ativas.some(deveAnimar); }
+  function ambienteAnimado() { return fonteAmbiente && fonteAmbiente.isConnected && fonteAmbiente.tagName === "VIDEO" && !fonteAmbiente.paused; }
+  function podeAnimar() { return !parado && !document.hidden && (ativas.some(deveAnimar) || ambienteAnimado()); }
   function atualizarAnimacao() {
     if (!podeAnimar()) {
       clearTimeout(espera); cancelAnimationFrame(quadro);
@@ -968,8 +969,9 @@
     } catch (e) { /* imagem de outro site ou ainda carregando */ }
   }
   function ambiente(elemento) {
+    if (fonteAmbiente) { fonteAmbiente.removeEventListener("load", pintarAmbiente); fonteAmbiente.removeEventListener("play", atualizarAnimacao); fonteAmbiente.removeEventListener("pause", atualizarAnimacao); }
     fonteAmbiente = elemento || null;
-    if (elemento && elemento.tagName === "IMG" && !elemento.complete) elemento.addEventListener("load", pintarAmbiente, { once: true });
+    if (fonteAmbiente) { fonteAmbiente.addEventListener("load", pintarAmbiente); fonteAmbiente.addEventListener("play", atualizarAnimacao); fonteAmbiente.addEventListener("pause", atualizarAnimacao); }
     pintarAmbiente(); atualizarAnimacao();
   }
 

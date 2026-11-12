@@ -9,6 +9,12 @@ existe o que avaliar.
 
 ## Antes de executar: revise o código
 
+Os originais distribuídos com a instalação podem executar sem aceite extra enquanto
+código, auxiliares, configuração e chaves declaradas coincidirem exatamente com o
+catálogo instalado. Uma revogação explícita continua bloqueando o original. As
+orientações de aprovação abaixo se aplicam a versões personalizadas ou importadas
+que não correspondam integralmente ao catálogo.
+
 Coletores executam Python com as permissões da sua conta. Eles podem ler arquivos,
 acessar rede e receber as chaves declaradas na configuração. O processo recebe um
 ambiente básico e somente os segredos listados em `requer`, mas isso não impede
@@ -36,7 +42,7 @@ segredos no código, logs ou argumentos de comando.
 | `google_trends.py` | assuntos em alta no Google no seu país | não |
 | `youtube_api.py` | busca de vídeos por termo | sim (gratuita) |
 
-Todos vêm desligados e precisam de aprovação de versão. Para configurar, edite `radar/_modulo.yaml`:
+Todos vêm com o agendamento desligado. Personalizar a configuração exige aprovação da nova versão. Para configurar, edite `radar/_modulo.yaml`:
 
 ```yaml
 coletores:
@@ -67,12 +73,12 @@ volta.
 
 Sem `a_cada` ou `diario_as`, não há execução automática, mesmo com `ativo: true`.
 O comando `coletar` é manual e também considera coletores com o agendamento
-desligado; todos continuam exigindo aprovação local da versão. Para selecionar
+desligado; versões personalizadas continuam exigindo aprovação local. Para selecionar
 outro vault, acrescente `--vault "CAMINHO COMPLETO"`.
 
 ## Automações que vêm com os outros módulos
 
-Todas sem IA e desligadas até você revisar, aprovar e ligar (aba **Máquina** do módulo). Serviços externos podem ter limites ou custos próprios.
+Todas sem IA e com agendamento desligado. Ligue na aba **Máquina**; se personalizar, revise e aprove a nova assinatura. Serviços externos podem ter limites ou custos próprios.
 
 | Módulo | Script | O que faz | Precisa de chave? |
 |---|---|---|---|
