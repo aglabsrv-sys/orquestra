@@ -6,7 +6,7 @@ acontece com a sua pasta, passo a passo.
 
 ## Pela tela
 
-Rode `uv run orquestra`. Se ainda não há vault escolhido, a tela de boas-vindas abre
+Na pasta do aplicativo, rode `uv run --frozen orquestra`. Se ainda não há vault escolhido, a tela de boas-vindas abre
 sozinha. Se já há um, vá em **Ajustes > Vault > Trocar de vault**.
 
 1. Escolha **Já tenho um vault do Obsidian**.
@@ -22,7 +22,7 @@ sozinha. Se já há um, vá em **Ajustes > Vault > Trocar de vault**.
 Pela linha de comando, o equivalente é:
 
 ```bash
-uv run orquestra adotar "C:\caminho\do\vault" --pastas "Projetos,Leituras" --modulos entrada
+uv run --frozen orquestra adotar "C:\caminho\do\vault" --pastas "Projetos,Leituras" --modulos entrada
 ```
 
 ## O que é criado na sua pasta
@@ -92,14 +92,17 @@ Só para orientar a sugestão; nenhum deles é obrigatório.
 
 ## Histórico (git) e sincronização
 
-Num vault novo, o painel liga o histórico em git: é o "desfazer" para qualquer
-alteração. Num vault que já existia ele **não liga sozinho**, porque você pode já
+Num vault novo, a opção de histórico local pode vir marcada. O primeiro snapshot
+preserva o estado inicial; as versões seguintes dependem das gravações e do
+intervalo configurado. Num vault que já existia ele **não liga sozinho**, porque você pode já
 sincronizar a pasta por OneDrive, iCloud, Obsidian Sync ou um git seu.
 
-- Para ligar: marque a opção na tela de boas-vindas, ou use **Ajustes > Histórico e
-  backup > Ligar o histórico**.
-- Se a pasta já é um repositório git e você ligar o commit automático, o painel
-  passa a fazer commits nele a cada 30 minutos (ajustável no `orquestra.yaml`).
+- Para preparar: marque a opção na tela de boas-vindas, ou use **Ajustes > Histórico e
+  backup > Preparar histórico local**. Em vaults existentes, revise e autorize a
+  configuração antes do primeiro snapshot.
+- Com autorização e backup automático ligado, o painel cria snapshots após
+  mudanças, respeitando o intervalo de 30 minutos por padrão. Usa a referência
+  `refs/orquestra/backups`, preservando seu `HEAD`, branch e staging.
 
 ## Agentes no seu vault
 
@@ -107,8 +110,9 @@ O `AGENTS.md` do painel diz aos agentes que as pastas sem `_modulo.yaml` são su
 podem ler, mas não reescrever, renomear nem reorganizar, a menos que você peça.
 Notas sem o campo `origem` são tratadas como escritas por você.
 
-Isso depende de o agente seguir o contrato. Se você ligar o histórico, tem como
-desfazer qualquer coisa. Veja [agentes.md](agentes.md).
+Isso depende de o agente seguir o contrato. O histórico preserva o que já entrou
+em snapshots; mudanças posteriores ao último snapshot exigem outra cópia para
+recuperação. Veja [agentes.md](agentes.md) e [backup.md](backup.md).
 
 ## Edição e sincronização
 

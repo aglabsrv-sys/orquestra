@@ -34,9 +34,10 @@ rede privada entre os seus aparelhos. Confira o plano e os limites atuais para s
    Não use curingas. Não permita domínios de terceiros.
 6. No celular, use "Adicionar à tela de início" para ter o painel como um aplicativo.
 
+Se você mudou a porta do Orquestra, substitua `8420` pela porta mostrada no terminal.
 O `--bg` deixa o encaminhamento ligado mesmo depois de fechar o terminal e de
 reiniciar o computador. O painel precisa estar rodando para o endereço responder
-(veja `orquestra autostart` no README).
+(veja `uv run --frozen orquestra autostart ativar` no README).
 
 ## Conferir e desligar
 
@@ -48,7 +49,12 @@ tailscale serve status
 tailscale serve reset
 ```
 
-O `orquestra doctor` também confere tudo isso e avisa em vermelho se o Funnel estiver ligado.
+`reset` remove toda a configuração Serve deste computador, inclusive outros
+encaminhamentos que você tenha criado. Confira `tailscale serve status` antes de
+usar. A sintaxe e o comportamento estão na [referência oficial de Serve](https://tailscale.com/docs/reference/tailscale-cli/serve).
+
+Na pasta do aplicativo, `uv run --frozen orquestra doctor` também consulta o
+Tailscale, quando instalado, e aponta se detectar Funnel ativo.
 
 ## Se algo não funcionar
 

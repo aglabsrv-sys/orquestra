@@ -10,7 +10,7 @@ nela; e você abre no Obsidian quando quiser.
 
 ![Tela inicial do Orquestra](docs/img/inicio.png)
 
-- **Roda no seu computador.** Sem conta, sem nuvem, sem mensalidade. Os dados são arquivos seus.
+- **Roda no seu computador.** O painel não exige conta nem envia suas notas para uma nuvem própria. Os dados são arquivos seus; coletores e agentes opcionais podem acessar serviços externos.
 - **Aproveita o Obsidian que você já tem.** Aponte para o seu vault: nenhuma nota muda de lugar, e as pastas que você escolher viram quadros e listas.
 - **Do seu jeito.** Comece pelo essencial, pelo método PARA, por um perfil de criador, de estudos ou de negócio. Depois mude tudo pela tela, sem escrever código: áreas, campos, tema, modo claro ou escuro, cor de destaque, cantos e letra.
 - **Funciona com qualquer agente, e sem nenhum.** Claude, Codex, Gemini: basta dar acesso à pasta. As regras ficam num `AGENTS.md`. Quem só quer se organizar não precisa de IA.
@@ -77,7 +77,7 @@ Para encerrar, `Ctrl+C` no terminal. Nas próximas vezes, `uv run --frozen orque
 inicia direto no vault escolhido; abra a URL mostrada no terminal. Para abrir o
 navegador também nessas vezes, use `uv run --frozen orquestra iniciar --abrir`.
 
-> Algo não funcionou? Rode `uv run orquestra doctor`. Ele confere a instalação e
+> Algo não funcionou? Rode `uv run --frozen orquestra doctor`. Ele confere a instalação e
 > explica, em português, o que falta.
 
 ## Já usa o Obsidian?
@@ -113,17 +113,17 @@ acrescenta e tira áreas à vontade, em Ajustes.
 | **Estudos** | Tarefas, Estudos, Recursos, Entrada |
 | **Em branco** | nenhuma: você monta |
 
-E, em qualquer vault:
+As telas e áreas disponíveis dependem do perfil e do que você acrescentar em Ajustes:
 
 | | |
 |---|---|
-| **Entrada** | Captura rápida: anote do celular, organize depois (você ou um agente). |
+| **Entrada** | Quando a área de captura está configurada, anote do celular e organize depois (você ou um agente). |
 | **Decidir** | Uma fila só com tudo que espera você, incluindo perguntas dos agentes. |
-| **Números** | Uma nota por dia com o que você acompanha, e um gráfico de cada número. |
+| **Números** | Área opcional com uma nota por dia e um gráfico de cada número que você acompanha. |
 | **Pastas** | O vault como ele é no disco, inclusive o que não é área do painel. |
 | **Diário** | O que mudou no vault e o que cada agente fez, com autor e horário. |
 | **Temas** | Três temas, cada um com o seu estilo de capas em pixel art animadas (nove cenas desenhadas por código), em modo claro e escuro. |
-| **Automações sem IA** | Tarefas que se repetem, compromissos da sua agenda, cotações, feeds e canais: scripts gratuitos que rodam sozinhos. |
+| **Automações sem IA** | Tarefas recorrentes, agenda, cotações e feeds: scripts que você revisa, aprova e pode agendar. Serviços externos podem ter limites ou custos. |
 
 ## Primeiros passos
 
@@ -195,8 +195,8 @@ uma correção sua, o que rendeu, o que evitar. O trabalho deixa de se repetir i
 
 ### Coletar é script, decidir é IA
 
-Buscar os vídeos novos de um canal não precisa de inteligência: um script faz todo
-dia, de graça. A IA entra depois, para dizer quais valem o seu tempo. Os coletores
+Buscar os vídeos novos de um canal não precisa de inteligência: um script pode
+fazer a coleta após sua aprovação. A IA entra depois, para dizer quais valem o seu tempo. Os coletores
 do Orquestra são scripts Python pequenos, que você pode ler e adaptar.
 
 O Orquestra não tenta substituir os conectores que os agentes já têm (e-mail,
@@ -204,21 +204,47 @@ agenda, documentos). Quem faz a ação é o agente; o vault é onde fica o regis
 
 ## Comandos
 
-Rode dentro da pasta do Orquestra.
+Rode dentro da pasta do aplicativo, onde estão `pyproject.toml` e `uv.lock`, depois
+de `uv sync --locked`. O vault fica em outra pasta. Para conferir os argumentos:
+
+```bash
+uv run --frozen orquestra --help
+uv run --frozen orquestra iniciar --help
+uv run --frozen orquestra confiar --help
+```
 
 | Comando | O que faz |
 |---|---|
-| `uv run orquestra` | Inicia o painel (na primeira vez, a tela pergunta qual vault usar) |
-| `uv run orquestra criar [pasta] [--perfil P]` | Cria um vault novo sem passar pela tela |
-| `uv run orquestra adotar PASTA` | Prepara um vault que já existe, sem alterar nenhuma nota |
-| `uv run orquestra doctor` | Confere tudo e explica o que falta |
-| `uv run orquestra coletar [módulo]` | Roda os coletores agora |
-| `uv run orquestra confiar coletor MODULO SCRIPT` | Mostra a assinatura e os arquivos da versão que precisa de revisão local |
-| `uv run orquestra confiar backup` | Mostra a configuração e os destinos do histórico para revisão local |
-| `uv run orquestra backup [--enviar]` | Snapshot local do vault (e envio ao remoto) |
-| `uv run orquestra mcp` | Servidor MCP: o vault vira um conector para agentes |
-| `uv run orquestra autostart ativar` | Inicia o painel junto com o computador |
-| `uv run orquestra --vault PASTA` | Usa outro vault (e passa a lembrar dele) |
+| `uv run --frozen orquestra` | Inicia o painel; na primeira vez, abre a escolha do vault |
+| `uv run --frozen orquestra iniciar --abrir` | Inicia e abre o navegador também nas próximas vezes |
+| `uv run --frozen orquestra iniciar --porta 8421` | Escolhe outra porta local para esta execução |
+| `uv run --frozen orquestra criar "PASTA NOVA" --perfil essencial --sem-exemplos` | Cria um vault essencial sem exemplos; omita `--sem-exemplos` para incluí-los |
+| `uv run --frozen orquestra adotar "PASTA EXISTENTE"` | Prepara uma pasta existente, preservando suas notas |
+| `uv run --frozen orquestra doctor` | Diagnostica instalação, vault, Git e acesso remoto disponível |
+| `uv run --frozen orquestra coletar radar` | Roda os coletores aprovados do Radar; omita `radar` para todos |
+| `uv run --frozen orquestra confiar coletor radar rss.py` | Mostra assinatura e arquivos do coletor para revisão local |
+| `uv run --frozen orquestra confiar backup` | Mostra configuração e destinos do histórico para revisão local |
+| `uv run --frozen orquestra backup --enviar` | Cria snapshot e envia ao remoto aprovado; omita `--enviar` para manter local |
+| `uv run --frozen orquestra mcp --vault "PASTA DO VAULT"` | Inicia MCP por stdio; o cliente MCP deve iniciar esse processo |
+| `uv run --frozen orquestra autostart ativar` | Configura o início automático; também aceita `status` e `desativar` |
+| `uv run --frozen orquestra iniciar --vault "OUTRO VAULT"` | Abre outro vault e passa a lembrá-lo como padrão |
+
+Os caminhos entre aspas são exemplos: substitua pelo caminho completo desejado.
+`--vault` seleciona o destino dos comandos existentes, como `doctor`, `mcp`,
+`coletar`, `backup` e `confiar`; em `criar` e `adotar`, o destino é o argumento
+posicional `caminho`. Os aliases `init` e `diagnostico` equivalem a `criar` e `doctor`.
+Não use `--vault` com `criar`/`init` ou `adotar`: esses comandos recusam a opção
+para evitar criar ou preparar uma pasta diferente da desejada.
+
+`autostart status` e `autostart desativar` funcionam mesmo se o vault anterior
+não existir mais. Em scripts, código de saída `0` indica conclusão sem erro,
+`1` indica falha de operação/diagnóstico e `2` indica argumentos inválidos.
+Avisos do `doctor` são mostrados no relatório e, sozinhos, não geram saída `1`.
+
+Consultar `confiar` não aprova execução. Leia os arquivos apresentados e repita o
+comando com `--assinatura HASH` usando a assinatura revisada. `--revogar` retira
+a autorização. As instruções completas estão nos guias de [coletores](docs/coletores.md)
+e [backup](docs/backup.md).
 
 Para trocar de vault com o painel aberto: Ajustes > Vault > Trocar de vault.
 
@@ -251,6 +277,9 @@ testes executados e os limites de validação de cada plataforma.
 O refinamento de formulários, alertas, navegação e primeira experiência está em
 [Revisão de UI e UX](docs/revisao-ui-ux-2026-11-11.md), com capturas e validação.
 
+A verificação dos comandos, instalação, MCP e exemplos dos guias está em
+[Revisão de comandos e MCP](docs/revisao-comandos-mcp-2026-11-11.md).
+
 Versão 0.4. Funciona e tem testes automatizados, mas é novo: faça backup.
 
 - Testado no **Windows 10** com Chrome. macOS e Linux usam o mesmo código, mas ainda não foram testados em máquina real; relatos são bem-vindos.
@@ -270,7 +299,7 @@ O código é comentado em português e feito para ser lido. Comece pelo
 uv sync --locked
 uv run --frozen python -m pytest
 uv run --frozen ruff check src tests scripts
-node --test tests/js/notas-seguras.test.cjs
+node --test tests/js/*.test.cjs
 ```
 
 Ideias, problemas e módulos novos são bem-vindos nas issues.

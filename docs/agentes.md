@@ -4,8 +4,9 @@ O Orquestra não chama nenhuma IA. Quem trabalha é o agente que você já usa, 
 única coisa que ele precisa é **acesso à pasta do vault**. As regras estão no
 `AGENTS.md`, na raiz do vault, e valem para qualquer agente.
 
-Por isso você pode trocar de agente quando quiser, ou usar dois ao mesmo tempo: o
-sistema é a pasta, não a ferramenta.
+Você pode trocar de agente mantendo a mesma pasta. Ao usar mais de um, separe as
+notas em que cada um trabalha: editores e agentes externos não participam dos
+locks do Orquestra.
 
 ## Claude Code
 
@@ -20,8 +21,8 @@ claude
 ```
 
 O vault traz um `CLAUDE.md` com uma linha só (`@AGENTS.md`), que faz o Claude Code
-carregar o contrato sozinho a cada sessão. No aplicativo de desktop, escolha a pasta
-do vault como pasta de trabalho.
+carregar o contrato. Se você já tinha `CLAUDE.md` ou `AGENTS.md` antes da adoção,
+eles são preservados: peça também a leitura de `AGENTS.orquestra.md`, quando existir.
 
 ## Codex (OpenAI)
 
@@ -58,7 +59,8 @@ lê o e-mail ou a agenda é o agente, e o vault é onde o resultado fica organiz
 qualquer agente que tenha o conector de e-mail e acesso ao vault.
 
 O que o Orquestra faz por conta própria são os **coletores**: scripts simples que
-rodam sozinhos todo dia, sem IA e sem custo. Veja [coletores.md](coletores.md).
+podem ser agendados após revisão e aprovação. Não usam IA; os serviços consultados
+podem ter custos ou limites próprios. Veja [coletores.md](coletores.md).
 
 ## Pedidos para começar
 
@@ -87,18 +89,21 @@ Dois pedidos que ajudam:
 - **Diário** (ícone de pulso no dock): mostra o relato que o agente escreveu ao fim
   da sessão e, abaixo, o registro automático de cada arquivo criado ou alterado.
 - **Decidir** (ícone de sino): as perguntas que o agente deixou para você.
-- **Histórico git**: o painel faz commits automáticos do vault. Se um agente fizer
-  besteira, `git log` e `git checkout` dentro do vault desfazem.
+- **Histórico Git**: quando autorizado e habilitado, o painel cria snapshots em
+  `refs/orquestra/backups`, sem mover sua branch ou staging. Consulte com
+  `git log --oneline refs/orquestra/backups` na pasta do vault e recupere primeiro
+  uma cópia da nota, seguindo [backup.md](backup.md).
 
 ## O que protege você
 
 | Risco | Proteção |
 |---|---|
 | A IA resume algo e depois trata o resumo como fala sua | Pasta `humano/` separada e campo `origem` em toda nota |
-| O agente sobrescreve o que você está editando | O painel confere a versão do arquivo antes de gravar e avisa se mudou |
-| O agente apaga algo | A regra é arquivar, não apagar; e o git guarda o histórico |
+| Outra edição mudou a nota antes da gravação do painel | O painel verifica a versão e oferece preservação do rascunho em caso de conflito; isso não impede outro programa de gravar depois |
+| O agente apaga algo | O contrato orienta arquivar; snapshots já feitos e cópias externas permitem recuperar conteúdo preservado |
 | Você não sabe o que mudou | O registro do diário vem do vigia de arquivos, não depende de o agente contar |
 
-Essas proteções dependem, em parte, de o agente seguir o `AGENTS.md`. Agentes
-atuais seguem bem, mas não são infalíveis: o histórico git é a rede de segurança
-que não depende deles.
+Agentes com acesso direto à pasta têm as permissões da conta e podem desobedecer
+ao `AGENTS.md`. As ferramentas do MCP aplicam suas próprias restrições por código;
+elas não restringem ferramentas de arquivo que o mesmo agente já possua. Revise
+o que foi alterado e mantenha uma cópia externa, além do histórico local.

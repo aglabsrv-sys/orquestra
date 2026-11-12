@@ -21,6 +21,17 @@ exemplo fora do repositório do aplicativo e mantenha uma cópia de recuperaçã
 O Ruff verifica erros de sintaxe e todas as regras Pyflakes (`E9` e `F`), incluindo
 nomes indefinidos e imports não utilizados.
 
+A instalação editável usa o modo exato do Hatch e `editables`, incluído no lock,
+para funcionar também em caminhos com acentos no Windows/Python 3.11 e 3.12.
+Se a IDE não descobrir os imports automaticamente, marque `src` como raiz de
+fontes ou acrescente esse diretório ao caminho de análise da IDE. As edições
+continuam disponíveis sem reinstalar o pacote. Veja o [modo editável do Hatch](https://hatch.pypa.io/latest/config/build/#dev-mode).
+
+O smoke de instalação verifica wheel, sdist e um checkout editável em caminho
+com espaços e acentos, sem dependências de desenvolvimento. Em cada ambiente,
+testa a CLI instalada e uma sessão MCP stdio com leitura e gravação em vault
+descartável. A CI também confere os SDKs MCP 1.30.0 e 2.3.0.
+
 O workflow de qualidade cobre Windows, macOS e Linux com Python 3.11 e 3.13,
 empacotamento, lint, testes e dependências conhecidamente vulneráveis. Um workflow
 pendente ou sem runner não significa aprovação. Os testes de instalação em CI

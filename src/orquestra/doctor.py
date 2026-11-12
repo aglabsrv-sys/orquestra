@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -15,8 +16,9 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
-from orquestra import backup
+from orquestra import backup, confianca
 from orquestra.config import carregar_env, pasta_app
 from orquestra.coletores import caminho_script
 
@@ -104,6 +106,8 @@ def verificar_vault(vault: Path | None) -> list[Item]:
         painel = Painel(vault)
     except Exception as e:
         return itens + [Item("erro", "Não consegui ler o vault", str(e))]
+    for aviso in painel.avisos:
+        itens.append(Item("erro", "A configuração do vault precisa de correção", aviso))
 
     modulos = painel.indice.modulos
     if modulos:
@@ -123,7 +127,7 @@ def verificar_vault(vault: Path | None) -> list[Item]:
     if fora:
         itens.append(Item("aviso", f"{fora} nota(s) com campos fora do schema", "Abra o módulo no painel: elas aparecem com um sinal de aviso."))
 
-    if painel.config.captura not in modulos:
+    if painel.config.captura and painel.config.captura not in modulos:
         itens.append(Item("aviso", f"Módulo de captura '{painel.config.captura}' não existe", "Ajuste 'captura' no orquestra.yaml; sem isso o botão Capturar some."))
 
     # ---- coletores e chaves
@@ -131,9 +135,14 @@ def verificar_vault(vault: Path | None) -> list[Item]:
     for modulo in modulos.values():
         for coletor in modulo.coletores:
             nome = f"Coletor {modulo.id}/{coletor.script}"
-            if not caminho_script(modulo, coletor).is_file():
-                itens.append(Item("erro", nome, "O script não existe em maquina/coletores/."))
+            try:
+                caminho_script(modulo, coletor)
+            except (ValueError, OSError) as erro:
+                itens.append(Item("erro", nome, str(erro)))
                 continue
+            revisao = confianca.resumo(vault, modulo, coletor)
+            if not revisao.get("confiavel"):
+                itens.append(Item("aviso", nome + " sem autorização local", f"Confira o código e rode `orquestra confiar coletor {modulo.id} {coletor.script}` antes de executar."))
             faltam = [c for c in coletor.requer if not segredos.get(c)]
             if faltam:
                 itens.append(Item("aviso", nome, f"Falta a chave {', '.join(faltam)} em {pasta_app() / '.env'}"))
@@ -141,17 +150,21 @@ def verificar_vault(vault: Path | None) -> list[Item]:
                 ultima = painel.ultima_coleta(modulo.id, coletor.script)
                 if ultima and not ultima.get("ok"):
                     itens.append(Item("aviso", nome, "A última execução falhou: " + str(ultima.get("erro"))))
-                else:
+                elif revisao.get("confiavel"):
                     itens.append(Item("ok", nome + (" (automático)" if coletor.ativo else " (manual)")))
 
     # ---- backup
     if backup.git_disponivel():
         if not backup.e_repositorio(vault):
-            itens.append(Item("aviso", "O vault não tem histórico git", "Ligue em Ajustes > Histórico e backup (ou rode `orquestra backup`). É o seu 'desfazer' para qualquer alteração de um agente."))
-        elif not backup.tem_remoto(vault):
-            itens.append(Item("aviso", "Backup só local", "O histórico existe, mas só neste computador. Veja docs/backup.md para enviar a um repositório privado."))
+            itens.append(Item("aviso", "O vault não tem histórico git", "Prepare em Ajustes > Histórico e backup (ou `orquestra backup`), revise e autorize a configuração para criar o primeiro snapshot. Só as versões capturadas podem ser recuperadas; mantenha também uma cópia externa."))
         else:
-            itens.append(Item("ok", "Backup: repositório remoto configurado" + ("" if painel.config.backup.push else " (envio automático desligado)")))
+            revisao_backup = backup.resumo(vault)
+            if not revisao_backup.get("confiavel"):
+                itens.append(Item("aviso", "Backup sem autorização local", "Revise os arquivos e destinos com `orquestra confiar backup` antes de autorizar o primeiro snapshot ou a configuração alterada."))
+            if not backup.tem_remoto(vault):
+                itens.append(Item("aviso", "Backup só local", "Não há destino remoto. Um repositório local não confirma que já existe snapshot e não substitui cópia externa; veja docs/backup.md."))
+            else:
+                itens.append(Item("aviso", "Backup: destino remoto configurado", "A configuração do remoto não confirma um envio bem-sucedido. Confira os últimos resultados em Ajustes > Histórico e backup." + ("" if painel.config.backup.push else " O envio automático está desligado.")))
 
     itens.extend(verificar_acesso(painel.config.porta))
     return itens
@@ -162,7 +175,10 @@ def verificar_acesso(porta: int) -> list[Item]:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.5)
         aberto = s.connect_ex(("127.0.0.1", porta)) == 0
-    itens.append(Item("ok", f"Painel {'rodando' if aberto else 'parado'} em http://localhost:{porta}"))
+    itens.append(Item(
+        "ok", f"Porta local {'aberta' if aberto else 'fechada'} em http://localhost:{porta}",
+        "A conexão TCP foi aceita; isso não confirma que o serviço é o Orquestra." if aberto else "",
+    ))
 
     tailscale = localizar_tailscale()
     if not tailscale:
@@ -182,11 +198,27 @@ def verificar_acesso(porta: int) -> list[Item]:
     _, serve = _rodar(tailscale, "serve", "status")
     if "funnel on" in serve.lower():
         itens.append(Item("erro", "Tailscale Funnel está LIGADO", "Isso expõe o painel para a internet inteira, sem senha. Desligue com `tailscale funnel reset`."))
-    elif str(porta) in serve:
-        itens.append(Item("ok", f"Acesso pelo celular: https://{nome}"))
+    elif _serve_aponta_para_porta(serve, porta):
+        itens.append(Item(
+            "ok", f"Tailscale Serve aponta para a porta local {porta}",
+            "A configuração foi encontrada; o acesso pelo celular ainda precisa ser conferido na sua rede Tailscale."
+            + (f" Abra https://{nome}." if nome else ""),
+        ))
     else:
         itens.append(Item("aviso", "Tailscale ainda não aponta para o painel", f"Rode uma vez: tailscale serve --bg {porta}"))
     return itens
+
+
+def _serve_aponta_para_porta(saida: str, porta: int) -> bool:
+    """Confere a URL de backend local, sem confundir 8420 com 18420."""
+    for achado in re.finditer(r"https?://[^\s<>\"']+", saida, flags=re.IGNORECASE):
+        try:
+            url = urlsplit(achado.group(0).rstrip("),;"))
+            if url.hostname in {"localhost", "127.0.0.1", "::1"} and url.port == porta:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def executar(vault: Path | None) -> int:
@@ -202,7 +234,7 @@ def executar(vault: Path | None) -> int:
     if erros:
         print(f"{erros} problema(s) para resolver e {avisos} aviso(s).")
     elif avisos:
-        print(f"Tudo funcionando. {avisos} aviso(s) acima para olhar quando puder.")
+        print(f"Diagnóstico concluído com {avisos} aviso(s). Confira os itens acima.")
     else:
         print("Tudo certo.")
     return 1 if erros else 0

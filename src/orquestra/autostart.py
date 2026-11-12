@@ -63,7 +63,7 @@ def _conteudo(vault: Path) -> str:
     return f"[Desktop Entry]\nType=Application\nName=Orquestra\nExec={linha}\nX-GNOME-Autostart-enabled=true\n"
 
 
-def executar(acao: str, vault: Path) -> str:
+def executar(acao: str, vault: Path | None = None) -> str:
     if acao not in ("status", "ativar", "desativar"):
         raise ValueError("Use status, ativar ou desativar para o início automático.")
     arquivo = _arquivo()
@@ -75,6 +75,8 @@ def executar(acao: str, vault: Path) -> str:
         return f"Início automático ligado ({arquivo})." if arquivo.exists() else "Início automático desligado."
 
     if acao == "ativar":
+        if vault is None:
+            raise ValueError("Escolha um vault com --vault antes de ativar o início automático.")
         conteudo = _conteudo(vault).encode("utf-8")
         atualizar_bytes(arquivo, lambda anterior: conteudo)
         if sys.platform == "darwin":

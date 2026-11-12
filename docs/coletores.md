@@ -3,14 +3,16 @@
 Um coletor é um script que busca informação fora (vídeos novos, posts, assuntos em
 alta) e entrega ao painel, que transforma cada item em uma nota com `status: novo`.
 
-**Coletor não usa IA.** Buscar e guardar é trabalho mecânico: um script faz mais
-rápido, de graça e sempre do mesmo jeito. A IA entra depois, na triagem, quando já
+**Coletor não usa IA.** Buscar e guardar é trabalho mecânico: um script faz a
+coleta conforme sua configuração. Serviços externos podem ter custos e limites. A IA entra depois, na triagem, quando já
 existe o que avaliar.
 
 ## Antes de executar: revise o código
 
 Coletores executam Python com as permissões da sua conta. Eles podem ler arquivos,
-acessar rede e receber variáveis do ambiente; não há sandbox do sistema operacional.
+acessar rede e receber as chaves declaradas na configuração. O processo recebe um
+ambiente básico e somente os segredos listados em `requer`, mas isso não impede
+que um script malicioso leia outros arquivos acessíveis à conta. Não há sandbox do sistema operacional.
 Um módulo importado pode conter código malicioso, mesmo que pareça uma pasta de notas.
 
 Na aba **Máquina**, abra a revisão do coletor, leia os arquivos indicados e confira
@@ -40,7 +42,7 @@ Todos vêm desligados e precisam de aprovação de versão. Para configurar, edi
 coletores:
   - script: youtube_rss.py
     nome: Canais do YouTube
-    ativo: true              # roda sozinho
+    ativo: true              # agenda depois da aprovação local desta versão
     a_cada: 6h               # 30m, 6h, 1d...   ou   diario_as: "07:00"
     config:
       canais:
@@ -49,19 +51,24 @@ coletores:
 ```
 
 Na aba **Máquina** do módulo você liga e desliga cada coletor, vê quando rodou pela
-última vez e pode rodar na hora. Pelo terminal:
+última vez e pode rodar na hora. Pelo terminal, na pasta do aplicativo:
 
 ```bash
-uv run orquestra coletar
+uv run --frozen orquestra coletar
 ```
 
 ```bash
-uv run orquestra coletar radar
+uv run --frozen orquestra coletar radar
 ```
 
 O agendamento vive dentro do painel: os coletores automáticos só rodam com o painel
 aberto. Se o computador ficou desligado, o que estava atrasado roda quando o painel
 volta.
+
+Sem `a_cada` ou `diario_as`, não há execução automática, mesmo com `ativo: true`.
+O comando `coletar` é manual e também considera coletores com o agendamento
+desligado; todos continuam exigindo aprovação local da versão. Para selecionar
+outro vault, acrescente `--vault "CAMINHO COMPLETO"`.
 
 ## Automações que vêm com os outros módulos
 
@@ -195,8 +202,9 @@ Detalhes úteis:
 - O painel acrescenta `origem: coletor`, `coletor`, `id_externo` e `coletado_em`.
 - Precisa de uma biblioteca? Liste em `dependencies` no topo do arquivo (por exemplo
   `dependencies = ["feedparser"]`). O `uv` instala sozinho na primeira execução.
-- Chaves de API chegam como variáveis de ambiente, lidas do `.env`. Declare em
-  `requer: [NOME_DA_CHAVE]` para o `doctor` conferir.
+- Chaves de API chegam como variáveis de ambiente, lidas de `~/.orquestra/.env`
+  (ou `ORQUESTRA_HOME/.env`) e das variáveis do processo. Declare em
+  `requer: [NOME_DA_CHAVE]` para autorizar o repasse e permitir a conferência pelo `doctor`.
 - Mensagens de diagnóstico vão com `avisar(...)`; se o script terminar com erro, a
   última linha aparece no painel.
 - Um coletor tem até 3 minutos por execução.

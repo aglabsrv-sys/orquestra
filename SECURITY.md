@@ -29,13 +29,17 @@ apagar a linha do código não o remove do histórico Git.
 - Quem alcança o painel pode ler e editar notas. Escolher/trocar vault e aprovar
   execução de código ou configuração de backup exigem localhost direto, sem
   headers de encaminhamento. Outros programas na sua conta já têm acesso local.
-- Um coletor é código Python com as permissões da sua conta, acesso à rede e ao
-  ambiente. A assinatura aprovada cobre os arquivos/configuração apresentados;
+- Um coletor é código Python com as permissões da sua conta e acesso à rede. O
+  processo recebe ambiente básico e as chaves declaradas em `requer`; ele ainda
+  pode ler outros arquivos acessíveis à conta. A assinatura aprovada cobre os arquivos/configuração apresentados;
   mudanças exigem nova aprovação. Não aprove módulos recebidos de desconhecidos
   sem ler seu código. Não existe sandbox de sistema operacional para coletores.
 - Agentes que recebem acesso direto à pasta podem alterar qualquer arquivo que a
   conta permite. As regras de `AGENTS.md` orientam esses agentes; a proteção de
   escrita do conector MCP aplica-se às ferramentas desse conector.
+- O MCP stdio é local, mas o cliente de IA recebe o conteúdo retornado e pode
+  enviá-lo ao provedor configurado. Conectar o vault não garante processamento
+  exclusivamente neste computador; revise o cliente e os dados que pretende usar.
 
 ## Dados, segredos e recuperação
 

@@ -63,12 +63,12 @@ src/orquestra/
   boasvindas.py    tela "escolher ou criar", que funciona antes de existir um vault
   hospedeiro.py    o que o servidor web executa: boas-vindas ou painel, e a troca entre eles
   mcp_servidor.py  o vault como conector MCP, com as regras aplicadas pelo código
-  cli.py           comandos: iniciar, criar, adotar, doctor, coletar, backup, mcp, autostart
+  cli.py           comandos: iniciar, criar, adotar, doctor, coletar, backup, confiar, mcp, autostart
   doctor.py        diagnóstico em português
   autostart.py     início automático por sistema operacional
   templates/       páginas (Jinja)
   static/css       um arquivo de estilos, mobile primeiro
-  static/js        app.js, notas-seguras.js (fila e rascunhos), boasvindas.js e cenas.js
+  static/js        app.js, interface.js (avisos e confirmações), notas-seguras.js (fila e rascunhos), boasvindas.js e cenas.js
   modelo_vault/    o que todo vault recebe: AGENTS.md, orquestra.yaml, temas
   catalogo/        os módulos prontos (uma pasta cada) e os perfis (perfis.yaml)
 tests/             leitura/escrita, schema, API, segurança, coletores, diário, estruturas de vault
@@ -117,7 +117,7 @@ autorização local. A capacidade não é persistida no navegador.
 5. As outras abas abertas recebem o evento e se atualizam.
 
 Quando a alteração vem de fora (Obsidian, um agente), o vigia de arquivos chama o
-mesmo `apos_escrita`, com autor "externo". Como o índice compara o conteúdo, uma
+mesmo `apos_escrita`, com autor "externo". Como o índice compara o conteúdo,
 eventos repetidos podem ser deduplicados pela versão observada; o diário também
 precisa lidar com remoções, renomes e eventos agrupados do sistema de arquivos.
 
@@ -126,7 +126,7 @@ precisa lidar com remoções, renomes e eventos agrupados do sistema de arquivos
 ```bash
 uv run --frozen python -m pytest
 uv run --frozen ruff check src tests scripts
-node --test tests/js/notas-seguras.test.cjs
+node --test tests/js/*.test.cjs
 ```
 
 Os testes criam um vault temporário a partir do modelo e não tocam em nada seu.

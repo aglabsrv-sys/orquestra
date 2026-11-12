@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import socket
+import subprocess
 import sys
 import threading
 import webbrowser
@@ -55,7 +56,7 @@ def _contar(relatorio: preparo.Relatorio) -> None:
     print("  Histórico (git): " + ("ligado" if relatorio.com_git else "desligado"))
     print(f"  Chaves de API:   {pasta_app() / '.env'}")
     print("\nPróximos passos:")
-    print("  1. Inicie o painel:  uv run orquestra")
+    print("  1. Inicie o painel:  orquestra (ou `uv run --frozen orquestra` no projeto)")
     print("  2. Abra no Obsidian: 'Abrir pasta como cofre' e escolha a pasta acima (opcional)")
     print("  3. Aponte seu agente (Claude, Codex...) para essa pasta: ele lê o AGENTS.md sozinho")
 
@@ -143,7 +144,7 @@ def iniciar(args: argparse.Namespace) -> None:
     if not _porta_livre(porta):
         sys.exit(
             f"A porta {porta} já está em uso. O painel talvez já esteja aberto em http://localhost:{porta}\n"
-            f"Se for outro programa, mude 'porta' no orquestra.yaml ou use: orquestra iniciar --porta {porta + 1}"
+            f"Se for outro programa, mude 'porta' no orquestra.yaml ou use: orquestra iniciar --porta {porta + 1 if porta < 65535 else 8420}"
         )
     app = Hospedeiro(vault)
     url = f"http://localhost:{porta}"
@@ -167,7 +168,10 @@ def coletar(args: argparse.Namespace) -> None:
 
     painel = Painel(_exigir_vault(args))
     alvo = getattr(args, "modulo", None)
+    if alvo and alvo not in painel.indice.modulos:
+        sys.exit(f"O módulo '{alvo}' não existe. Confira as áreas do vault no painel.")
     rodou = False
+    falhou = False
     for modulo in painel.indice.modulos.values():
         if alvo and modulo.id != alvo:
             continue
@@ -176,8 +180,11 @@ def coletar(args: argparse.Namespace) -> None:
             print(f"{modulo.nome} · {coletor.nome}... ", end="", flush=True)
             r = painel.rodar_coletor_agora(modulo, coletor)
             print(f"{r.novos} novos, {r.repetidos} já conhecidos" if r.ok else f"falhou: {r.erro}")
+            falhou = falhou or not r.ok
     if not rodou:
         print("Nenhum coletor encontrado" + (f" no módulo '{alvo}'." if alvo else "."))
+    if falhou:
+        sys.exit(1)
 
 
 def fazer_backup(args: argparse.Namespace) -> None:
@@ -212,11 +219,14 @@ def confiar(args: argparse.Namespace) -> None:
         revogar = lambda: backup.revogar(vault)
     else:
         from orquestra import confianca
-        from orquestra.painel import Painel
+        from orquestra.painel import NaoEncontrado, Painel
         if not args.modulo or not args.script:
             sys.exit("Use: orquestra confiar coletor MODULO SCRIPT [--assinatura HASH | --revogar]")
         painel = Painel(vault)
-        modulo, coletor = painel.coletor(args.modulo, args.script)
+        try:
+            modulo, coletor = painel.coletor(args.modulo, args.script)
+        except NaoEncontrado as erro:
+            raise ValueError(str(erro)) from None
         obter = lambda: confianca.resumo(vault, modulo, coletor)
         aprovar = lambda assinatura: confianca.autorizar(vault, modulo, coletor, assinatura)
         revogar = lambda: confianca.revogar(vault, modulo, coletor)
@@ -274,14 +284,21 @@ def _main(argv: list[str] | None = None) -> None:
     t.add_argument("alvo", choices=["coletor", "backup"])
     t.add_argument("modulo", nargs="?")
     t.add_argument("script", nargs="?")
-    t.add_argument("--assinatura", default="", help="assinatura exata dos arquivos revisados")
-    t.add_argument("--revogar", action="store_true")
+    escolha_confianca = t.add_mutually_exclusive_group()
+    escolha_confianca.add_argument("--assinatura", default="", help="assinatura exata dos arquivos revisados")
+    escolha_confianca.add_argument("--revogar", action="store_true")
 
     a = sub.add_parser("autostart", parents=[comum], help="início automático com o computador")
     a.add_argument("acao", choices=["ativar", "desativar", "status"])
 
     args = p.parse_args(argv)
     comando = args.comando or "iniciar"
+    if args.vault is not None and not args.vault.strip():
+        p.error("--vault precisa de um caminho; não use um valor vazio.")
+    if comando in ("criar", "init", "adotar") and args.vault is not None:
+        p.error(f"{comando} recebe a pasta como argumento: `orquestra {comando} PASTA`, sem --vault.")
+    if comando == "confiar" and args.alvo == "backup" and (args.modulo or args.script):
+        t.error("backup não recebe módulo nem script; use `orquestra confiar backup`.")
 
     if comando in ("criar", "init"):
         criar_vault(Path(args.caminho) if args.caminho else Path.home() / "Orquestra", args.perfil, not args.sem_exemplos)
@@ -307,12 +324,15 @@ def _main(argv: list[str] | None = None) -> None:
     elif comando == "autostart":
         from orquestra import autostart
 
-        print(autostart.executar(args.acao, _exigir_vault(args)))
+        vault = _exigir_vault(args) if args.acao == "ativar" else None
+        print(autostart.executar(args.acao, vault))
 
 
 def main(argv: list[str] | None = None) -> None:
     try:
         _main(argv)
+    except subprocess.TimeoutExpired:
+        sys.exit("O comando auxiliar não respondeu dentro do prazo. Confira o serviço e tente novamente.")
     except (ValueError, OSError, RuntimeError) as erro:
         sys.exit(f"Não foi possível concluir: {erro}")
 

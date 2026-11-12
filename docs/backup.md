@@ -64,18 +64,29 @@ snapshots usam um índice temporário e a referência **`refs/orquestra/backups`
 não movem seu `HEAD`, branch atual ou staging. Isso permite usar o Git do Obsidian
 sem incluir no commit do usuário notas que ainda não pretendia preparar.
 
-Para pedir uma versão agora:
+Os comandos `uv run` deste guia são executados na pasta do **aplicativo**, que tem
+`pyproject.toml` e `uv.lock`. Os comandos `git` indicados abaixo são executados na
+pasta do **vault**. Se houver mais de um vault, informe `--vault "CAMINHO COMPLETO"`
+em cada comando Orquestra para selecionar o mesmo destino.
+
+Para pedir uma versão agora, depois da aprovação:
 
 ```bash
 uv run --frozen orquestra backup
 ```
 
 Sem interface gráfica, esse comando prepara um repositório ausente e orienta a
-revisão antes da primeira cópia. Consulte a configuração com
+revisão antes da primeira cópia. Até a aprovação, retorna falha: isso não confirma
+que uma cópia foi feita. Consulte a configuração com
 `uv run --frozen orquestra confiar backup`, confira os arquivos/destinos e repita
 com `--assinatura HASH` usando a assinatura exibida. Para retirar a autorização,
 use `uv run --frozen orquestra confiar backup --revogar`. O aceite fica somente
 nesse computador; uma mudança na configuração exige revisão nova.
+
+Depois de aprovar, execute `uv run --frozen orquestra backup` novamente para criar
+o primeiro snapshot. Na criação de um vault novo pelo modelo, o histórico inicial
+gerado pelo próprio Orquestra pode já ter sido preparado e autorizado; configurações
+e destinos remotos acrescentados depois ainda exigem nova revisão.
 
 Os comandos abaixo são somente de leitura e devem ser usados na pasta do vault:
 
@@ -101,6 +112,10 @@ Crie um repositório **privado** e vazio e configure seu endereço dentro do vau
 git remote add origin git@github.com:voce/meu-vault.git
 ```
 
+Se já existe um remoto `origin`, confira seu destino e use a configuração que
+pretende manter. Não adicione nem substitua um remoto sem revisar para onde as
+notas serão enviadas.
+
 Prefira SSH com uma chave protegida e um agente SSH já configurado. O processo de
 backup desabilita configuração Git global/system e helpers globais de credenciais;
 um gerenciador HTTPS já usado pelo seu terminal pode não funcionar nesse processo.
@@ -108,10 +123,11 @@ Não coloque tokens ou senhas na URL do remoto. Autenticação e envio real ao s
 provedor precisam ser conferidos no seu ambiente; os testes automatizados usam um
 remoto Git local independente.
 
-Revise o novo destino em Ajustes e autorize a configuração localmente. Envie:
+Revise o novo destino em Ajustes e autorize a configuração localmente. Volte à
+pasta do aplicativo e envie, indicando o caminho completo do mesmo vault:
 
 ```bash
-uv run --frozen orquestra backup --enviar
+uv run --frozen orquestra backup --enviar --vault "CAMINHO COMPLETO DO VAULT"
 ```
 
 O Orquestra envia a referência local para a branch remota **`orquestra-backup`**;

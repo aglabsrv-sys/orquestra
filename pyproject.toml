@@ -15,6 +15,8 @@ classifiers = [
 ]
 
 dependencies = [
+    # O import hook editável mantém caminhos Unicode legíveis no Windows/Python 3.11–3.12.
+    "editables>=0.5,<1",
     # Servidor web e templates
     "fastapi>=0.110",
     "pydantic>=2.10,<3",
@@ -27,7 +29,7 @@ dependencies = [
     # Markdown -> HTML para a pré-visualização das notas
     "markdown-it-py>=3.0",
     # Protocolo MCP: o vault como conector para agentes (comando `orquestra mcp`)
-    "mcp>=1.2",
+    "mcp>=1.30,<3",
 ]
 
 [project.urls]
@@ -45,6 +47,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/orquestra"]
+dev-mode-exact = true
 
 [dependency-groups]
 dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.14,<1", "pip-audit>=2.10,<3"]

@@ -289,7 +289,7 @@ class Ferramentas:
         if novo_texto:
             corpo = "\n" + novo_texto.strip() + "\n"
         elif acrescentar.strip():
-            atual = nota.corpo.rstrip("\n")
+            atual = nota.corpo
             hoje = dt.date.today().isoformat()
             if fora_de_area:
                 bloco = f"> Acrescentado por agente em {hoje}:\n" + "\n".join("> " + linha for linha in acrescentar.strip().splitlines())
@@ -297,7 +297,10 @@ class Ferramentas:
                 bloco = f"## Notas do agente\n\n{acrescentar.strip()}"
             else:
                 bloco = acrescentar.strip()
-            corpo = (atual + "\n\n" if atual.strip() else "\n") + bloco + "\n"
+            # Acrescentar não dá licença para remover espaços ou linhas vazias
+            # que a pessoa já escreveu no final da nota.
+            separador = "" if atual.endswith("\n\n") else "\n" if atual.endswith("\n") or not atual else "\n\n"
+            corpo = atual + separador + bloco + "\n"
         if corpo is None and not campos:
             raise ErroDeFerramenta("Nada para alterar: informe `campos`, `acrescentar` ou `novo_texto`.")
 
@@ -403,9 +406,18 @@ FERRAMENTAS = [
 def criar_servidor(vault: Path):
     """Monta o servidor MCP com as ferramentas acima."""
     try:
-        from mcp.server.mcpserver import MCPServer as Servidor  # mcp 2.x
-    except ImportError:  # mcp 1.x usa o nome antigo
-        from mcp.server.fastmcp import FastMCP as Servidor
+        try:
+            from mcp.server.mcpserver import MCPServer as Servidor  # mcp 2.x
+        except ModuleNotFoundError as erro:  # mcp 1.x usa o nome antigo
+            if erro.name != "mcp.server.mcpserver":
+                raise
+            from mcp.server.fastmcp import FastMCP as Servidor
+    except ImportError:
+        raise RuntimeError(
+            "Não consegui carregar o SDK MCP. No projeto, execute `uv sync --frozen` "
+            "para restaurar as versões compatíveis. Se instalou um pacote, reinstale "
+            "o Orquestra e suas dependências no mesmo ambiente Python."
+        ) from None
 
     ferramentas = Ferramentas(vault)
     servidor = Servidor("orquestra", instructions=INSTRUCOES)
