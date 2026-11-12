@@ -43,7 +43,7 @@ input, select, textarea { font-size:.9375rem; }
 .bv-modulo small { display:none; }
 .bv-perfis { gap:8px; }
 .bv-perfil { padding:10px; }
-@view-transition { navigation: auto; }
+@media(prefers-reduced-motion:no-preference) { @view-transition { navigation: auto; } }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration:100ms; }
 @media(prefers-reduced-motion:reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation:none; } }
 @media(max-width:600px) { .cenas-grade { grid-template-columns: repeat(2,minmax(0,1fr)); } }

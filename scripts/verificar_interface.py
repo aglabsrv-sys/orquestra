@@ -271,7 +271,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     assert marcado.value.status == 200
     expect(card.locator("[data-habito-marcar]")).to_have_attribute("aria-pressed", "true")
     registros = marcado.value.json()["item"]["registros"]
-    assert registros and registros[0] in (vault / habito.value.json()["rel"]).read_text(encoding="utf-8")
+    assert registros and registros[0] in (vault / marcado.value.json()["rel"]).read_text(encoding="utf-8")
     card.locator("[data-habito-editar]").click()
     page.locator("#habito-titulo").fill("Leitura diária")
     with page.expect_response(lambda r: r.url.endswith("/api/habitos")) as habito_editado:
@@ -302,6 +302,22 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
                 conferir_layout(page)
                 page.screenshot(path=str(capturas / f"{nome}-{largura}.png"), full_page=True)
 
+    # Modo claro e fonte ampliada também passam pelo formulário e persistem no vault.
+    page.goto(base + "/ajustes", wait_until="domcontentloaded")
+    for chave, valor in (("modo", "claro"), ("tamanho", "grande")):
+        botao = page.locator(f'[data-visual="{chave}"][data-valor="{valor}"]')
+        with page.expect_response(lambda r: r.url.endswith("/api/config")) as visual:
+            botao.click()
+        assert visual.value.status == 200
+        expect(botao).to_be_enabled()
+    for rota in ("/agenda?visao=semana", "/m/habitos", "/foco"):
+        page.goto(base + rota, wait_until="domcontentloaded")
+        conferir_layout(page)
+        assert page.evaluate("getComputedStyle(document.documentElement).fontSize") == "18px"
+        if capturas:
+            nome = urlsplit(page.url).path.strip("/").replace("/", "-")
+            page.screenshot(path=str(capturas / f"{nome}-claro-fonte-grande-320.png"), full_page=True)
+
     page.goto(base, wait_until="domcontentloaded")
     page.wait_for_timeout(350)
     assert page.locator('.slide[aria-hidden="true"]').evaluate_all("els => els.every(e=>e.tabIndex===-1)")
@@ -325,7 +341,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     return {"rotas_por_largura": len(rotas), "larguras": [1440, 390, 320], "erros_javascript": erros,
             "jornadas": ["primeiro uso", "navegação e gaveta", "criar e editar", "recuperação", "conflito externo e cópia",
                          "personalização pendente", "números", "decisão", "falha e repetição de captura", "contagem do Kanban",
-                         "agenda e falha recuperável", "hábitos e preservação de registros", "Pomodoro ao navegar", "animação e movimento reduzido"]}
+                         "agenda e falha recuperável", "hábitos e preservação de registros", "Pomodoro ao navegar",
+                         "modo claro e fonte ampliada", "animação e movimento reduzido"]}
 
 
 def main() -> None:
