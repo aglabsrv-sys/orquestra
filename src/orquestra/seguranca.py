@@ -109,7 +109,7 @@ class Protecao:
 
     def __init__(self, app, hosts_extras: list[str] | None = None):
         self.app = app
-        self.hosts_extras = hosts_extras or []
+        self.hosts_extras = hosts_extras if hosts_extras is not None else []
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -127,11 +127,14 @@ class Protecao:
 
         if scope["method"] not in METODOS_DE_LEITURA:
             origem = cabecalhos.get("origin")
-            if origem and not _origem_permitida(origem, scope.get("scheme", "http"), host):
+            esquema = "https" if nome_do_host(host) in self.hosts_extras and nome_do_host(host).endswith(".ts.net") else scope.get("scheme", "http")
+            if origem and not _origem_permitida(origem, esquema, host):
                 return await _negar(send, 403, "Requisição vinda de outro site foi bloqueada.")
             if cabecalhos.get("sec-fetch-site") in ("cross-site", "same-site"):
                 return await _negar(send, 403, "Requisição vinda de outro site foi bloqueada.")
-            if cabecalhos.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
+            tipo_corpo = cabecalhos.get("content-type", "").split(";", 1)[0].strip().lower()
+            upload_capa = scope.get("path") == "/api/capas" and scope["method"] == "POST" and tipo_corpo == "application/octet-stream"
+            if tipo_corpo != "application/json" and not upload_capa:
                 return await _negar(send, 415, "Este painel só aceita alterações em JSON.")
             mensagens = []
             tamanho = 0

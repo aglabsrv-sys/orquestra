@@ -10,7 +10,12 @@
 
   // Versões de arquivos que esta aba acabou de gravar. Serve para não recarregar
   // a página por causa de uma mudança que ela mesma fez.
-  var minhas = {};
+  var minhas = {}, minhasRemovidas = {};
+  document.addEventListener("orquestra:nota-salva", function (e) {
+    if (!e.detail) return;
+    if (typeof e.detail.versao === "string") minhas[e.detail.versao] = true;
+    if (e.detail.removido && typeof e.detail.rel === "string") minhasRemovidas[e.detail.rel] = Date.now() + 2000;
+  });
   var arrastando = null;
 
   function caminho(rel) { return rel.split("/").map(encodeURIComponent).join("/"); }
@@ -111,10 +116,11 @@
       s.addEventListener("click", function (e) { if (k !== atual) { e.preventDefault(); ir(k); } });
     });
     document.addEventListener("keydown", function (e) {
-      if (digitando(e) || $("dialog[open]")) return;
-      if (e.key === "ArrowLeft") ir(atual - 1);
-      else if (e.key === "ArrowRight") ir(atual + 1);
-      else if (e.key === "Enter" && atual >= 0) slides[atual].click();
+      var interativo = e.target && e.target.closest && e.target.closest("a, button, [role=button], [role=link], [role=tab], [role=radio], [role=slider]");
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || digitando(e) || interativo || $("dialog[open]")) return;
+      if (e.key === "ArrowLeft") { e.preventDefault(); ir(atual - 1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); ir(atual + 1); }
+      else if (e.key === "Enter" && atual >= 0) { e.preventDefault(); slides[atual].click(); }
     });
 
     var inicial = 0;
@@ -133,9 +139,19 @@
   // ---------------------------------------------------------------- diálogos
 
   function dialogos() {
-    $$("[data-fechar]").forEach(function (b) { b.onclick = function () { b.closest("dialog").close(); }; });
+    function pedirFechamento(d) {
+      // Escape, botão e backdrop passam pela mesma proteção de alterações pendentes.
+      if (d && d.dispatchEvent(new Event("cancel", { cancelable: true }))) d.close();
+    }
+    $$("[data-fechar]").forEach(function (b) { b.onclick = function () { pedirFechamento(b.closest("dialog")); }; });
     $$("dialog").forEach(function (d) {
-      d.addEventListener("click", function (e) { if (e.target === d) d.close(); }); // clique fora fecha
+      d.addEventListener("click", function (e) {
+        if (e.target !== d) return;
+        var caixa = d.getBoundingClientRect();
+        // Espaço interno do diálogo não é o backdrop.
+        if (e.clientX >= caixa.left && e.clientX <= caixa.right && e.clientY >= caixa.top && e.clientY <= caixa.bottom) return;
+        pedirFechamento(d);
+      });
     });
   }
 
@@ -520,8 +536,9 @@
           copiarVersao.disabled = false; salvarVersao.disabled = false;
         }).catch(function (erro) { if (numero === buscaVersao) mensagem.textContent = erro.message; });
       }
-      historico.addEventListener("toggle", function () {
-        if (!historico.open || carregado) return;
+      $("#consultar-versoes").onclick = function () {
+        historico.hidden = false;
+        if (carregado) return;
         mensagem.textContent = "Consultando versões locais…";
         consultar(urlHistorico).then(function (d) {
           carregado = true; versoes = d.versoes || [];
@@ -533,8 +550,8 @@
             escolha.appendChild(opcao);
           });
           $("#versoes-conteudo").hidden = false; lerVersao();
-        }).catch(function (erro) { mensagem.textContent = erro.message + " Feche e abra esta seção para tentar novamente."; });
-      });
+        }).catch(function (erro) { mensagem.textContent = erro.message + " Clique em Consultar recuperação para tentar novamente."; });
+      };
       escolha.onchange = lerVersao; tipo.onchange = lerVersao;
       copiarVersao.onclick = function () {
         if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(textoVersao.value).then(function () { avisar("Versão copiada."); }).catch(function () { textoVersao.focus(); textoVersao.select(); avisar("Selecionei a versão. Use Ctrl+C ou Cmd+C."); });
@@ -675,6 +692,7 @@
       });
       var dados = {
         nome: $("#p-nome").value, descricao: $("#p-descricao").value, icone: $("#p-icone").value, cena: $("#p-cena").value,
+        capa: $("#p-capa").value || null,
         campos: campos, remover: remover, quadro: $("#p-quadro").checked, grafico: $("#p-grafico").checked
       };
       if ($("#p-concluidos")) dados.concluidos = $("#p-concluidos").value;
@@ -823,7 +841,14 @@
       var anteriores = opcoes.map(function (opcao) { return opcao.getAttribute("aria-checked"); });
       if (grupo) grupo.setAttribute("aria-busy", "true");
       opcoes.forEach(function (opcao) { opcao.disabled = true; opcao.setAttribute("aria-checked", opcao === botao ? "true" : "false"); });
-      api("POST", "/api/config", dados).then(function () { location.reload(); }).catch(function (erro) {
+      api("POST", "/api/config", dados).then(function (r) {
+        var estilo = $("#aparencia-dinamica");
+        if (!estilo) { estilo = document.createElement("style"); estilo.id = "aparencia-dinamica"; document.head.appendChild(estilo); }
+        if (r.estilo) estilo.textContent = r.estilo;
+        opcoes.forEach(function (opcao) { opcao.disabled = false; });
+        if (grupo) grupo.removeAttribute("aria-busy");
+        avisar("Aparência salva.");
+      }).catch(function (erro) {
         opcoes.forEach(function (opcao, i) { opcao.disabled = false; opcao.setAttribute("aria-checked", anteriores[i]); });
         if (grupo) grupo.removeAttribute("aria-busy");
         if (botao) botao.focus(); mostrarErro(erro);
@@ -873,11 +898,11 @@
         return;
       }
       nome.disabled = true;
-      config({ nome: nome.value }).then(function (ok) { if (ok) location.reload(); else nome.disabled = false; });
+      config({ nome: nome.value }).then(function (ok) { nome.disabled = false; if (ok) document.title = nome.value + " · Orquestra"; });
     });
     if (captura) captura.addEventListener("change", function () {
       captura.disabled = true;
-      config({ captura: captura.value }).then(function (ok) { if (ok) location.reload(); else captura.disabled = false; });
+      config({ captura: captura.value }).then(function (ok) { captura.disabled = false; });
     });
     if (auto) auto.addEventListener("change", function () {
       var proximo = auto.checked; auto.disabled = true;
@@ -942,23 +967,42 @@
 
   // ---------------------------------------------------------------- ao vivo
 
+  var resumoTemporizador = 0, resumoEmVoo = false, resumoPendente = false;
   function atualizarSelos() {
-    fetch("/api/resumo").then(function (r) { return r.json(); }).then(function (dados) {
+    // Uma rajada de mudanças precisa de uma leitura final, não uma por arquivo.
+    resumoPendente = true;
+    if (resumoEmVoo || resumoTemporizador) return;
+    resumoTemporizador = setTimeout(buscarResumo, 180);
+  }
+  function buscarResumo() {
+    resumoTemporizador = 0;
+    if (resumoEmVoo || !resumoPendente) return;
+    resumoPendente = false; resumoEmVoo = true;
+    fetch("/api/resumo").then(function (r) {
+      if (!r.ok) throw new Error("Não consegui atualizar os contadores.");
+      return r.json();
+    }).then(function (dados) {
+      if (!dados || typeof dados !== "object" || Array.isArray(dados)) return;
       Object.keys(dados.selos || {}).forEach(function (id) {
         // A mesma área pode aparecer no dock e na gaveta: atualiza os dois.
         $$('[data-selo-de="' + id + '"] .selo').forEach(function (selo) { selo.textContent = dados.selos[id]; selo.hidden = !dados.selos[id]; });
       });
       $$('[data-conta="decidir"]').forEach(function (el) { el.textContent = dados.decidir; });
       $$('[data-conta="hoje"]').forEach(function (el) { el.textContent = dados.hoje; });
-    }).catch(function () { /* o painel pode estar reiniciando */ });
+    }).catch(function () { /* preserva os contadores atuais se o painel reiniciar */ }).then(function () {
+      resumoEmVoo = false;
+      // Eventos recebidos durante o pedido invalidam o resultado: leia outra vez.
+      if (resumoPendente) atualizarSelos();
+    });
   }
 
   var temporizador = 0, avisouNovidade = false;
   function ocupado() { return notaSuja || !!arrastando || !!$("dialog[open]") || (document.activeElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable)); }
-  function recarregarLogo() {
+  function recarregarLogo(resumoJaSolicitado) {
+    if (!resumoJaSolicitado) atualizarSelos();
     clearTimeout(temporizador);
     temporizador = setTimeout(function () {
-      if (!ocupado()) { location.reload(); return; }
+      // Atualização explícita preserva foco, rolagem e formulários.
       // A pessoa está no meio de algo: não tiramos a tela debaixo dela.
       if (notaSuja && $("#faixa-conflito")) { $("#faixa-conflito").hidden = false; return; }
       if (!avisouNovidade) { avisouNovidade = true; avisar("Há novidades nesta página.", "", { rotulo: "Atualizar", fazer: function () { location.reload(); } }); }
@@ -976,10 +1020,14 @@
         if (ev.tipo === "config") { recarregarLogo(); return; }
         atualizarSelos();
         if (ev.versao && minhas[ev.versao]) return;
+        if (ev.acao === "removido" && minhasRemovidas[ev.rel]) {
+          var propria = minhasRemovidas[ev.rel] > Date.now(); delete minhasRemovidas[ev.rel];
+          if (propria) return;
+        }
         var observa = document.body.dataset.observa || "", corte = observa.indexOf(":");
         var tipo = corte < 0 ? observa : observa.slice(0, corte), alvo = corte < 0 ? "" : observa.slice(corte + 1);
         var afeta = tipo === "tudo" || (tipo === "modulo" && (ev.modulo === alvo || ev.tipo === "coletor")) || (tipo === "nota" && ev.rel === alvo);
-        if (afeta) recarregarLogo();
+        if (afeta) recarregarLogo(true);
       }, 350);
     };
   }

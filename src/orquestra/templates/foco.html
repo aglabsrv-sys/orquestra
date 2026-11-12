@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titulo %}Pomodoro{% endblock %}
+{% block trilha %}Pomodoro{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/foco.css?v={{ marca }}">{% endblock %}
+{% block conteudo %}
+<section class="foco-pagina" id="foco-pagina" aria-labelledby="foco-titulo">
+  <header class="foco-cabecalho"><div><p class="foco-sobrancelha">UM TEMPO SÓ SEU</p><h1 id="foco-titulo">Uma coisa de cada vez.</h1><p class="suave">Encontre seu ritmo. O resto pode esperar.</p></div><button type="button" class="botao so-icone" id="foco-configurar" aria-label="Ajustar Pomodoro" title="Ajustar duração e som">{{ icone('ajustes', 18) }}</button></header>
+  <div class="foco-modos" role="tablist" aria-label="Etapa do Pomodoro">{% for valor, nome in [('foco', 'Foco'), ('curta', 'Pausa curta'), ('longa', 'Pausa longa')] %}<button type="button" role="tab" data-foco-modo="{{ valor }}" aria-selected="{{ 'true' if valor == 'foco' else 'false' }}" tabindex="{{ '0' if valor == 'foco' else '-1' }}" aria-controls="foco-relogio">{{ nome }}</button>{% endfor %}</div>
+  <div class="foco-relogio" id="foco-relogio" role="tabpanel" aria-label="Temporizador">
+    <div class="foco-coroa" aria-hidden="true"><i></i><i></i><i></i></div>
+    <svg class="foco-mostrador" viewBox="0 0 400 400" aria-hidden="true">
+      <defs><radialGradient id="foco-face"><stop offset="0" stop-color="var(--superficie-alta)"/><stop offset="1" stop-color="var(--superficie)"/></radialGradient><linearGradient id="foco-arco" x1="0" y1="1" x2="1" y2="0"><stop stop-color="var(--destaque)" stop-opacity=".35"/><stop offset="1" stop-color="var(--destaque)"/></linearGradient></defs>
+      <circle cx="200" cy="200" r="194" class="foco-aro-exterior"/>
+      <circle cx="200" cy="200" r="187" class="foco-face"/>
+      <g class="foco-marcas">{% for i in range(60) %}<line x1="200" y1="{{ 24 if i % 5 == 0 else 28 }}" x2="200" y2="{{ 38 if i % 5 == 0 else 35 }}" transform="rotate({{ i*6 }} 200 200)" class="{{ 'maior' if i % 5 == 0 else '' }}"/>{% endfor %}</g>
+      <circle cx="200" cy="200" r="149" class="foco-trilho"/><circle cx="200" cy="200" r="149" class="foco-progresso" id="foco-progresso" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0" transform="rotate(-90 200 200)"/>
+      <circle cx="200" cy="200" r="134" class="foco-anel-interno"/>
+      <g class="foco-numeros"><text x="200" y="62">00</text><text x="348" y="204">15</text><text x="200" y="348">30</text><text x="52" y="204">45</text></g>
+      <g id="foco-ponteiro"><line x1="200" y1="14" x2="200" y2="32" class="foco-agulha"/><circle cx="200" cy="49" r="2.5" class="foco-ponto"/></g>
+    </svg>
+    <div class="foco-digital"><span class="foco-etapa" id="foco-etapa">MOMENTO DE FOCO</span><output id="foco-tempo" aria-label="Tempo restante" aria-live="off">25:00</output><span class="foco-estado" id="foco-estado" role="status" aria-live="polite">Pronto quando você estiver.</span><div class="foco-ciclos" id="foco-ciclos" aria-label="0 de 4 ciclos">{% for i in range(4) %}<i></i>{% endfor %}</div></div>
+  </div>
+  <div class="foco-controles"><button type="button" class="botao so-icone foco-reiniciar" id="foco-reiniciar" title="Reiniciar etapa" aria-label="Reiniciar etapa"><svg viewBox="0 0 24 24" class="icone" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></svg></button><button type="button" class="botao principal foco-iniciar" id="foco-iniciar"><span id="foco-play" aria-hidden="true">▶</span><span id="foco-acao">Começar foco</span></button><button type="button" class="botao so-icone" id="foco-proxima" title="Próxima etapa" aria-label="Próxima etapa"><svg viewBox="0 0 24 24" class="icone" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m6 5 10 7L6 19zM19 5v14"/></svg></button></div>
+  <label class="foco-intencao"><span>Em que você quer focar?</span><input id="foco-tarefa" type="text" maxlength="120" placeholder="Dê um nome a este momento…" autocomplete="off"></label>
+  <footer class="foco-rodape"><span id="foco-hoje">Nenhum ciclo concluído hoje</span><span>Você pode navegar. O tempo continua.</span></footer>
+  <p class="campo-ajuda" id="foco-armazenamento" role="status" hidden>Este navegador não permitiu guardar o timer. Mantenha esta aba aberta para acompanhar o ciclo.</p>
+</section>
+{% endblock %}
+{% block dialogos %}<dialog id="foco-ajustes" class="dialogo" aria-labelledby="foco-ajustes-titulo"><form class="dialogo-corpo" id="foco-ajustes-form"><h2 id="foco-ajustes-titulo">Seu ritmo</h2><p class="suave">Ajuste as etapas para o seu dia. Aplicar reinicia a etapa atual.</p>
+{% for valor, nome, minutos in [('foco','Foco',25),('curta','Pausa curta',5),('longa','Pausa longa',15)] %}<div class="foco-ajuste-linha"><label for="foco-minutos-{{ valor }}">{{ nome }}<small>minutos</small></label><div class="foco-stepper"><button type="button" data-foco-passo="-1" data-alvo="{{ valor }}" aria-label="Diminuir {{ nome|lower }}">−</button><input type="number" id="foco-minutos-{{ valor }}" min="1" max="180" required value="{{ minutos }}" aria-label="Minutos de {{ nome|lower }}"><button type="button" data-foco-passo="1" data-alvo="{{ valor }}" aria-label="Aumentar {{ nome|lower }}">+</button></div></div>{% endfor %}
+<label class="chave"><input type="checkbox" id="foco-som"><i></i><span>Aviso sonoro ao terminar</span></label><p class="campo-ajuda">A cada quatro focos concluídos, o próximo descanso é uma pausa longa.</p><div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button type="submit" class="botao principal">Aplicar</button></div></form></dialog>{% endblock %}

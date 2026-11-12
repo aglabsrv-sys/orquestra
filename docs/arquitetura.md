@@ -51,7 +51,11 @@ src/orquestra/
   diario.py        registro de mudanças e sessões dos agentes
   coletores.py     execução dos scripts e importação dos itens
   agenda.py        laço que roda coletores e backups na hora certa
+  calendario.py    períodos, filtros e organização dos eventos da agenda visual
+  habitos.py       notas de hábitos, metas semanais e marcações com controle de versão
   backup.py        snapshots Git em referência própria e envio revisado
+  github_local.py  autenticação pelo GitHub CLI e conexão revisável com repositório
+  segredos.py      variáveis locais fora do vault, sem devolver valores ao navegador
   temas.py         temas e resolução das capas
   aparencia.py     claro/escuro, cor de destaque, cantos e letra: vira o CSS do topo da página
   seguranca.py     checagem de Host e de origem (DNS rebinding e CSRF)
@@ -67,12 +71,23 @@ src/orquestra/
   doctor.py        diagnóstico em português
   autostart.py     início automático por sistema operacional
   templates/       páginas (Jinja)
-  static/css       um arquivo de estilos, mobile primeiro
-  static/js        app.js, interface.js (avisos e confirmações), notas-seguras.js (fila e rascunhos), boasvindas.js e cenas.js
+  static/css       estilos comuns e arquivos das telas de agenda, foco e hábitos
+  static/js        comportamento progressivo; foco-engine.js isola o estado do timer do DOM
   modelo_vault/    o que todo vault recebe: AGENTS.md, orquestra.yaml, temas
   catalogo/        os módulos prontos (uma pasta cada) e os perfis (perfis.yaml)
 tests/             leitura/escrita, schema, API, segurança, coletores, diário, estruturas de vault
 ```
+
+O Pomodoro guarda o prazo por vault e aba em `sessionStorage`; não grava produtividade
+no vault. Hábitos usa o catálogo e os mesmos arquivos e mecanismos de escrita dos
+demais módulos. Criar e marcar retornam o registro atualizado; o navegador atualiza
+os cartões sem recarregar a página. Leituras compartilhadas e escritas usam a trava
+do painel, e alterações de notas exigem a versão lida.
+
+As seções de Ajustes carregam somente seu contexto. Eventos de arquivos agrupam a
+atualização dos contadores; alterações externas oferecem atualização explícita para
+preservar formulários e foco. Cenas animadas só mantêm o laço visual com trabalho
+visível e respeitam a preferência de movimento reduzido.
 
 ## Um vault de qualquer formato
 

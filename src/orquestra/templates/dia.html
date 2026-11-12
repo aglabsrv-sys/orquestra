@@ -10,6 +10,8 @@
     <h1>{{ 'Hoje' if e_hoje else dia_longo|capitalize }}</h1>
     <p class="suave">{% if e_hoje %}{{ dia_longo|capitalize }}. Inclui o que está atrasado.{% else %}O que está marcado para este dia.{% endif %}</p>
   </header>
+  <nav class="agenda-dias" aria-label="Dias da agenda">{% for d in dias_agenda %}<a href="/agenda/{{ d.isoformat() }}"{% if d == dia %} aria-current="date"{% endif %}><small>{{ ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'][d.weekday()] }}</small><br><b>{{ d.day }}</b></a>{% endfor %}</nav>
+  <div class="linha-botoes"><a class="botao" href="/agenda/{{ hoje.isoformat() }}">Hoje</a><button class="botao" type="button" data-guia="agenda">Conectar agenda</button></div>
   {% for g in grupos %}
   <h2 class="grupo-titulo">{{ icone(g.modulo.icone, 18) }} <a href="/m/{{ g.modulo.id }}">{{ g.modulo.nome }}</a> <small>{{ g.cartoes|length }}</small></h2>
   <div class="grade-cartoes">

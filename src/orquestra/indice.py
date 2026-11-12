@@ -218,6 +218,10 @@ class Indice:
         achadas.sort(key=lambda n: n.titulo.lower())
         return achadas
 
+    def registros_em(self, modulo_id: str, zona: str = "itens"):
+        """Iteração sem ordenar para contagens e visões que já têm sua própria ordem."""
+        return self._zonas.get((modulo_id, zona), {}).values()
+
     # ------------------------------------------------------------ pastas
 
     def pastas_da_raiz(self) -> list[tuple[str, int]]:
@@ -274,11 +278,11 @@ class Indice:
         r = Resumo()
         if not modulo.tem_status:
             # Sem status não há "em aberto" nem "para hoje": é só uma coleção de notas.
-            notas = self.notas_em(modulo.id, "itens")
+            notas = self.registros_em(modulo.id)
             r.total = len(notas)
             r.decidir = sum(1 for n in notas if espera_decisao(n, modulo))
             return r
-        for nota in self.notas_em(modulo.id, "itens"):
+        for nota in self.registros_em(modulo.id):
             r.total += 1
             status = str(nota.campo(modulo.campo_status) or "")
             if espera_decisao(nota, modulo):

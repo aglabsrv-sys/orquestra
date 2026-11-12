@@ -61,7 +61,7 @@ test("falha do POST mantém nome editado, reabilita campo e não recarrega", asy
   assert.equal(pagina.recargas, 0);
 });
 
-test("sucesso após corrigir nome limpa erro inline e recarrega uma vez", async () => {
+test("sucesso após corrigir nome limpa erro inline e preserva a página", async () => {
   const pagina = paginaConfig(async () => ({ ok: true, json: async () => ({ ok: true }) }));
   pagina.nome.value = ""; pagina.nome.mudar();
   pagina.nome.value = "Meu painel"; pagina.nome.mudar(); await tick();
@@ -69,7 +69,8 @@ test("sucesso após corrigir nome limpa erro inline e recarrega uma vez", async 
   assert.equal(pagina.nome.getAttribute("aria-invalid"), "false");
   assert.equal(pagina.estado.classList.contains("erro-texto"), false);
   assert.equal(pagina.estado.textContent, "Preferências salvas.");
-  assert.equal(pagina.recargas, 1);
+  assert.equal(pagina.recargas, 0);
+  assert.equal(pagina.nome.disabled, false);
   assert.equal(pagina.pedidos.filter(p => p.url === "/api/config").length, 1);
 });
 

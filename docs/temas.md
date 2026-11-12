@@ -4,12 +4,12 @@ A aparência do painel tem duas camadas, e as duas moram no vault:
 
 - o **tema** (uma pasta em `_orquestra/temas/`) define as cores e as capas;
 - as **suas escolhas** por cima dele (`aparencia:` no `orquestra.yaml`): claro ou
-  escuro, cor de destaque, cantos e letra.
+  escuro, cor de destaque, cantos, letra e tamanho da fonte.
 
 Tudo se muda em **Ajustes**, sem editar arquivo. Como está no vault, um agente
 também consegue: "crie um tema verde-escuro com capas de floresta".
 
-## Do seu jeito (Ajustes > Tema)
+## Do seu jeito (Ajustes > Aparência)
 
 | Escolha | Opções | No `orquestra.yaml` |
 |---|---|---|
@@ -17,6 +17,7 @@ também consegue: "crie um tema verde-escuro com capas de floresta".
 | Cor de destaque | a do tema, oito sugestões ou qualquer cor | `destaque: "#7cc4ff"` (vazio usa a do tema) |
 | Cantos | Retos, Discretos, Médios, Redondos (botões em pílula) | `cantos: reto \| discreto \| medio \| redondo` |
 | Letra | Padrão, Serifada, Arredondada, Monoespaçada | `fonte: sistema \| serifada \| arredondada \| mono` |
+| Tamanho da fonte | Pequena, Padrão, Grande | `tamanho: pequena \| padrao \| grande` |
 
 ```yaml
 aparencia:
@@ -24,6 +25,7 @@ aparencia:
   destaque: "#7cc4ff"
   cantos: redondo
   fonte: sistema
+  tamanho: padrao
 ```
 
 Três detalhes de como isso funciona:
@@ -85,7 +87,9 @@ capas:                       # qual cena e paleta cada módulo usa
   diario: {cena: floresta, paleta: cobre}
 ```
 
-Salve o arquivo e o painel recarrega sozinho.
+Ao alterar o arquivo fora do painel, ele avisa que há novidades. Use **Atualizar**
+para aplicar o conteúdo novo. Os controles de aparência da própria tela aplicam
+as preferências sem recarregar o documento.
 
 ## As cenas
 
@@ -120,17 +124,25 @@ as `cenas` do tema a partir do nome da área, sempre o mesmo. Uma pasta sua cham
 "1. Projetos" usa a capa que o tema reservou para `projetos`.
 
 Para escolher a cena de uma área, use **Personalizar** (o ícone ao lado das abas).
+**Ver cenas animadas** abre os previews no mesmo modal. A cena pode ser automática,
+seguindo o tema, ou uma escolha sua.
 
 ## Usar a sua própria imagem ou vídeo
 
-Coloque o arquivo no vault (sugestão: `_orquestra/capas/`) e aponte no
-`_modulo.yaml` do módulo:
+Em **Personalizar > Adicionar capa**, envie PNG, JPEG, WebP, MP4 ou WebM de até
+2 MB. Prefira vídeos curtos, até 20 segundos, comprimidos e sem áudio. O servidor
+limita formato e tamanho, mas não transcodifica nem verifica a duração. Confira
+o resultado e salve a personalização para aplicar.
+
+Também é possível colocar um arquivo no vault (sugestão: `_orquestra/capas/`) e
+apontar no `_modulo.yaml` do módulo:
 
 ```yaml
 capa: _orquestra/capas/meu-estudio.webp
 ```
 
-Formatos: PNG, JPG, WebP, GIF, SVG, MP4 e WebM. Vídeos tocam em loop, sem som. A
+Arquivos já existentes podem usar PNG, JPG, WebP, GIF, SVG, MP4 e WebM. Vídeos
+tocam em loop, sem som, pausam fora da tela e respeitam movimento reduzido. A
 capa definida no módulo vale mais que a do tema, então ela fica mesmo se você
 trocar de tema.
 

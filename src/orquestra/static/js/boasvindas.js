@@ -123,6 +123,7 @@
       $("#backup").checked = false;
       $("#concluir").textContent = "Abrir o painel";
     }
+    iniciarPassos();
     resumir();
     window.scrollTo({ top: 0, behavior: reduzirMovimento ? "auto" : "smooth" });
     focar(qual === "novo" ? "#caminho-novo" : qual === "existente" ? "#caminho-existente" : "[data-modo]");
@@ -244,6 +245,7 @@
     $("#concluir").textContent = "Abrir o painel";
     estado("Pasta lida. Confira as áreas e as opções antes de abrir o painel.");
     resumir();
+    iniciarPassos();
     $("#analise").scrollIntoView({ behavior: reduzirMovimento ? "auto" : "smooth", block: "start" });
     focar("#analise-resumo");
   }
@@ -280,10 +282,7 @@
       else itens.push("AGENTS.md e CLAUDE.md (as regras que os agentes de IA leem)");
     }
     e.pastas.forEach(function (p) { itens.push(p.pasta + "/_modulo.yaml (para a sua pasta aparecer como área)"); });
-    e.modulos.forEach(function (m) {
-      var caixa = $('input[name="modulo"][value="' + m + '"]');
-      itens.push(m + "/ (área " + $("b", caixa.closest("label")).textContent + (e.exemplos ? ", com exemplos" : "") + ")");
-    });
+    if (e.modulos.length) itens.push(plural(e.modulos.length, "pasta nova do catálogo", "pastas novas do catálogo") + (e.exemplos ? ", com notas de exemplo" : ", sem exemplos"));
     itens.push("diario/ (o registro do que muda, criado conforme você usa)");
     if (e.backup) itens.push(".git/ (histórico de versões, só neste computador)");
     lista.textContent = "";
@@ -315,7 +314,7 @@
       .then(function (r) {
         var avisos = (r.avisos || []).slice();
         if (r.pediu_git && !r.com_git) avisos.push("Não liguei o histórico porque o git não está instalado. Instale em git-scm.com e ligue depois, em Ajustes.");
-        if (!avisos.length) { location.href = "/"; return; }
+        $("#bv-navegacao").hidden = true;
         ["#bloco-existente", "#bloco-novo", "#bloco-comum"].forEach(function (s) { $(s).hidden = true; });
         $("#pronto-texto").textContent = "O vault está pronto em " + r.vault + ". Antes de abrir, vale ler:";
         var lista = $("#pronto-avisos");
@@ -336,6 +335,48 @@
         botao.textContent = antes;
       });
   }
+
+  var paginas = [], paginaAtual = 0;
+  function iniciarPassos() {
+    var compacto = window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
+    var grupos = Math.ceil($$('.bv-modulo').length / (compacto ? 6 : 12));
+    paginas = modo === "novo" ? ["pasta", "perfil"] : ["pasta"];
+    if (modo === 'existente' && analise) for (var p = 0; p < Math.ceil($$('.bv-pasta').length / 5); p++) paginas.push('pastas-' + p);
+    for (var i = 0; i < grupos; i++) paginas.push('modulos-' + i);
+    paginas.push('visual', 'revisao');
+    paginaAtual = modo === 'existente' && analise && paginas.length > 1 ? 1 : 0; pintarPasso();
+  }
+  function pintarPasso() {
+    var atual = paginas[paginaAtual];
+    $("#bv-navegacao").hidden = !modo || (modo === "existente" && !analise);
+    $("#bloco-novo").hidden = modo !== "novo" || paginaAtual > 1;
+    $("#bloco-existente").hidden = modo !== "existente" || (atual !== 'pasta' && atual.indexOf('pastas-') !== 0);
+    if (modo === 'existente') {
+      Array.from($('#bloco-existente').children).forEach(function (p) { if (p.id !== 'analise') p.hidden = atual !== 'pasta'; });
+      $('#analise').hidden = atual.indexOf('pastas-') !== 0;
+      $$('.bv-pasta').forEach(function (p, i) { p.hidden = atual.indexOf('pastas-') === 0 && Math.floor(i / 5) !== Number(atual.split('-')[1]); });
+    }
+    $("#bloco-comum").hidden = paginaAtual < (modo === "novo" ? 2 : 1);
+    $$("[data-bv-pagina]").forEach(function (p) { p.hidden = p.dataset.bvPagina !== atual.split('-')[0]; });
+    var porPagina = window.matchMedia && window.matchMedia('(max-width: 600px)').matches ? 6 : 12;
+    $$('.bv-modulo').forEach(function (p, i) { p.hidden = atual.indexOf('modulos-') === 0 && Math.floor(i / porPagina) !== Number(atual.split('-')[1]); });
+    // No primeiro passo do vault novo, apenas o caminho fica visível.
+    if (modo === "novo") {
+      Array.from($("#bloco-novo").children).forEach(function (p) { if (!p.dataset.bvPagina) p.hidden = atual !== "pasta"; });
+    }
+    $("#bv-passo").textContent = (paginaAtual + 1) + " de " + paginas.length;
+    $("#bv-proximo").hidden = atual === "revisao";
+    $("#bv-anterior").disabled = paginaAtual === 0;
+    etapa(atual === "revisao" ? 3 : 2);
+  }
+  $("#bv-proximo").onclick = function () {
+    var campo = modo === "novo" ? $("#caminho-novo") : $("#caminho-existente");
+    if (!campo.value.trim()) { campo.reportValidity(); return; }
+    if (modo === 'existente' && !analise) { analisar(); return; }
+    if (paginas[paginaAtual] === "visual" && !$("#nome").reportValidity()) return;
+    paginaAtual = Math.min(paginaAtual + 1, paginas.length - 1); pintarPasso();
+  };
+  $("#bv-anterior").onclick = function () { paginaAtual = Math.max(0, paginaAtual - 1); pintarPasso(); };
 
   // ---------------------------------------------------------------- ligações
 

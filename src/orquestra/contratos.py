@@ -100,6 +100,7 @@ class Personalizacao(Pedido):
     descricao: str | None = Field(default=None, max_length=160)
     icone: str | None = None
     cena: str | None = None
+    capa: str | None = Field(default=None, max_length=300)
     campos: list[DefinicaoCampo] = Field(default_factory=list, max_length=200)
     remover: list[str] = Field(default_factory=list, max_length=200)
     concluidos: list[str] | str | None = None
@@ -122,3 +123,38 @@ class Numeros(Pedido):
     modulo: str
     dia: str = ""
     valores: dict[str, str | int | float] = Field(default_factory=dict, max_length=200)
+
+
+class EventoAgenda(Pedido):
+    rel: str = Field(default="", max_length=2000)
+    versao: str = Field(default="", max_length=128)
+    titulo: str = Field(min_length=1, max_length=500)
+    corpo: str = Field(default="", max_length=1_000_000)
+    data: str = Field(max_length=10)
+    data_fim: str = Field(default="", max_length=10)
+    hora: str = Field(default="", max_length=5)
+    hora_fim: str = Field(default="", max_length=5)
+    dia_inteiro: bool = False
+    categoria: str = Field(default="Compromisso", max_length=60)
+    cor: Literal["azul", "verde", "lilas", "laranja", "rosa", "vermelho"] = "azul"
+    tags: list[str] = Field(default_factory=list, max_length=20)
+
+
+class MoverEventoAgenda(Pedido):
+    rel: str = Field(min_length=1, max_length=2000)
+    versao: str = Field(min_length=1, max_length=128)
+    data: str = Field(max_length=10)
+    hora: str | None = Field(default=None, max_length=5)
+
+
+class Habito(Pedido):
+    rel: str = Field(default="", max_length=2000)
+    versao: str = Field(default="", max_length=128)
+    titulo: str = Field(min_length=1, max_length=120)
+    meta_semanal: int = Field(default=3, ge=1, le=7)
+    tags: list[str] = Field(default_factory=list, max_length=12)
+
+
+class MarcarHabito(Pedido):
+    rel: str = Field(min_length=1, max_length=2000)
+    versao: str = Field(min_length=1, max_length=128)

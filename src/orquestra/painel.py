@@ -174,6 +174,64 @@ class Painel:
     # ------------------------------------------------------------ notas
 
     @_sincronizado
+    def evento_agenda(self, rel: str) -> dict:
+        from orquestra import calendario
+        nota = self.nota(rel)
+        modulo = self.indice.modulo_de(rel)
+        if not modulo or self.indice.zona_de(rel) != "itens" or not modulo.campo_data:
+            raise Recusado("Este arquivo não é um item com data da agenda.")
+        evento = calendario.evento(nota, modulo)
+        if evento is None:
+            raise Recusado("Esta nota não tem uma data válida.")
+        return {**evento, "corpo": nota.corpo}
+
+    @_sincronizado
+    def salvar_evento_agenda(self, dados: dict) -> Nota:
+        from orquestra import calendario
+        try:
+            campos = calendario.validar_evento(dados)
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
+        if not dados["titulo"].strip():
+            raise Recusado("Dê um título para o compromisso.")
+        if dados.get("rel"):
+            self.evento_agenda(dados["rel"])
+            modulo = self.indice.modulo_de(dados["rel"])
+            campos[modulo.campo_data] = campos.pop("data")
+            return self.editar_nota(dados["rel"], dados.get("versao"), titulo=dados["titulo"], corpo=dados.get("corpo", ""), campos=campos)
+        if "agenda" not in self.indice.modulos:
+            self.adicionar_modulo("agenda")
+        modulo = self.modulo("agenda")
+        if not set(campos).issubset(modulo.campos):
+            raise Recusado("A pasta agenda existente tem outro formato. Configure os campos da Agenda pessoal antes de criar compromissos.")
+        return self.criar_nota("agenda", dados["titulo"], campos, dados.get("corpo", ""))
+
+    @_sincronizado
+    def mover_evento_agenda(self, dados: dict) -> Nota:
+        from orquestra import calendario
+        evento = self.evento_agenda(dados["rel"])
+        novo_dia = calendario.data(dados["data"])
+        if not novo_dia or not 2 <= novo_dia.year <= 9998:
+            raise Recusado("Escolha uma data válida.")
+        inicio = dt.datetime.fromisoformat(evento["data"] + "T" + (evento["hora"] or "00:00"))
+        fim = dt.datetime.fromisoformat(evento["data_fim"] + "T" + (evento["hora_fim"] or "00:00"))
+        nova_hora = calendario.hora(dados.get("hora")) if dados.get("hora") is not None else evento["hora"]
+        if dados.get("hora") is not None and not nova_hora:
+            raise Recusado("Horário inválido.")
+        novo_inicio = dt.datetime.combine(novo_dia, dt.time.fromisoformat(nova_hora or "00:00"))
+        try:
+            novo_fim = novo_inicio + (fim - inicio)
+        except OverflowError:
+            raise Recusado("O término fica fora do intervalo de datas permitido.") from None
+        pedido = {**evento, "versao": dados["versao"], "data": novo_dia.isoformat(), "data_fim": novo_fim.date().isoformat(),
+                  "hora": nova_hora, "hora_fim": novo_fim.strftime("%H:%M") if nova_hora else "", "dia_inteiro": not nova_hora}
+        # Ao atribuir horário a um item de dia inteiro, use uma hora de duração.
+        if evento["dia_inteiro"] and nova_hora:
+            fim_horario = novo_inicio + dt.timedelta(hours=1)
+            pedido.update(data_fim=fim_horario.date().isoformat(), hora_fim=fim_horario.strftime("%H:%M"))
+        return self.salvar_evento_agenda(pedido)
+
+    @_sincronizado
     def criar_nota(
         self,
         modulo_id: str,
@@ -641,6 +699,12 @@ class Painel:
         if dados.get("icone"):
             yaml["icone"] = str(dados["icone"])
         cena = str(dados.get("cena") or "")
+        if dados.get("capa"):
+            midia = caminho_no_vault(self.vault, str(dados["capa"]))
+            if not midia.is_file() or midia.suffix.lower() not in {".png", ".jpg", ".webp", ".mp4", ".webm"}:
+                raise Recusado("Escolha uma imagem ou vídeo enviado ao vault.")
+            yaml["capa"] = midia.relative_to(self.vault).as_posix()
+            cena = ""
         if cena:
             if cena not in temas.CENAS:
                 raise Recusado(f"A cena '{cena}' não existe.")

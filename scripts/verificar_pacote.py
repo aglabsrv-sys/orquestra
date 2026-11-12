@@ -21,7 +21,7 @@ from pathlib import Path
 import anyio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from orquestra import preparo
+from orquestra import preparo, calendario, habitos
 from orquestra.hospedeiro import Hospedeiro
 from orquestra.mcp_servidor import FERRAMENTAS
 from orquestra.painel import Painel
@@ -29,10 +29,18 @@ from orquestra.painel import Painel
 pacote = Path(preparo.__file__).parent
 for relativo in ("templates/base.html", "templates/boasvindas.html", "static/icone.svg", "static/css/app.css", "static/js/notas-seguras.js", "static/js/interface.js", "static/js/app.js", "static/js/boasvindas.js", "catalogo/perfis.yaml", "modelo_vault/orquestra.yaml"):
     assert (pacote / relativo).is_file(), relativo
+for relativo in ("templates/agenda.html", "static/css/calendario.css", "static/js/calendario.js", "catalogo/agenda/_modulo.yaml", "templates/foco.html", "static/css/foco.css", "static/js/foco.js", "static/js/foco-engine.js", "templates/habitos.html", "templates/habito-card.html", "static/css/habitos.css", "static/js/habitos.js", "catalogo/habitos/_modulo.yaml"):
+    assert (pacote / relativo).is_file(), relativo
 vault = Path.cwd() / "Meu vault com espaços e acentos"
 preparo.preparar(vault, preparo.modulos_do_perfil("essencial"), exemplos=False, com_backup=False)
 painel = Painel(vault)
 assert set(painel.indice.modulos) == {"tarefas", "notas", "entrada"}
+import datetime as dt
+nota = painel.salvar_evento_agenda({"titulo": "Conferência da agenda empacotada", "data": dt.date.today().isoformat(), "dia_inteiro": True})
+assert any(e["rel"] == nota.rel for e in calendario.montar(painel, dt.date.today())["eventos"])
+novo_habito = habitos.salvar(painel, {"titulo": "Conferência de hábito empacotado", "meta_semanal": 3})
+marcado = habitos.marcar(painel, {"rel": novo_habito["rel"], "versao": novo_habito["versao"]})
+assert marcado["marcado"] and marcado["item"]["semana"] == 1
 assert Hospedeiro(None, vigiar=False, agendar=False).boas_vindas
 
 # Testar o entry point instalado, sem depender do checkout ou de uma ativação do shell.

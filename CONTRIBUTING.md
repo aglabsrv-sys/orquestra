@@ -1,15 +1,17 @@
 # Contribuir com o Orquestra
 
 O projeto usa Python 3.11 ou mais recente, uv e Git. O JavaScript do painel é
-entregue diretamente ao navegador, sem bundler; Node 20+ é necessário apenas para
-os testes de JavaScript. Veja a instalação no [README](README.md).
+entregue diretamente ao navegador, sem bundler; os testes de JavaScript usam
+Node 24 na CI. Node não é necessário para executar o painel. Veja a instalação
+no [README](README.md).
 
 ## Preparar e verificar
 
 ```bash
 uv sync --locked
 uv run --frozen python -m pytest -q
-uv run --frozen ruff check src tests scripts
+uv run --frozen ruff check src tests scripts .github/scripts
+uv run --frozen python .github/scripts/verificar_docs.py
 node --test tests/js/*.test.cjs
 uv build
 uv run --frozen python scripts/verificar_pacote.py dist
@@ -84,3 +86,12 @@ Forme o commit/tag candidato incluindo todos os arquivos novos pretendidos.
 Execute instalação e verificações em um clone desse commit exato e confirme que
 sdist/wheel contêm templates, static, catálogo e modelo. Não conclua prontidão
 open source com base apenas na árvore de trabalho local.
+
+Confira também as jornadas de primeiro uso, criação/edição e recuperação, agenda,
+hábitos e Pomodoro em desktop e celular. Use dados fictícios nos prints, registre
+a data e o viewport e mantenha os exemplos do README compatíveis com a versão
+candidata. Os relatórios em `docs/` são evidências da data indicada; os guias de uso
+devem refletir o comportamento atual. Uma captura antiga não valida uma tela nova.
+
+O verificador de documentação confere destinos locais de links e imagens. Ele não
+acessa a rede nem confirma o conteúdo de links externos ou a aparência dos prints.

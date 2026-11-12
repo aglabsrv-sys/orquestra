@@ -5,7 +5,7 @@
 {%- if c.tipo == "cena" -%}
 <canvas class="capa {{ classe }}" width="320" height="180" data-cena="{{ c.cena }}" data-semente="{{ c.semente }}" data-paleta='{{ c.paleta|tojson }}' aria-hidden="true"></canvas>
 {%- elif c.tipo == "video" -%}
-<video class="capa midia {{ classe }}" src="{{ c.url }}" autoplay loop muted playsinline aria-hidden="true"></video>
+<video class="capa midia {{ classe }}" src="{{ c.url }}" preload="metadata" loop muted playsinline aria-hidden="true"></video>
 {%- else -%}
 <img class="capa midia {{ classe }}" src="{{ c.url }}" alt="">
 {%- endif -%}
@@ -57,6 +57,7 @@
   <input type="url" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" placeholder="https://exemplo.com" aria-describedby="{{ id }}-ajuda" autocapitalize="none" spellcheck="false" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% elif campo.tipo == "imagem" %}
   <input type="text" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" placeholder="anexos/imagem.jpg" aria-describedby="{{ id }}-ajuda" autocapitalize="none" spellcheck="false" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
+  <input type="file" class="upload-discreto" accept="image/png,image/jpeg,image/webp" data-miniatura-para="{{ id }}" aria-label="Enviar arquivo para {{ campo.rotulo }}">
   {% else %}
   <input type="text" name="{{ campo.nome }}" id="{{ id }}" aria-labelledby="{{ id }}-rotulo" value="{{ valor }}" {{ marca }}{% if campo.obrigatorio %} required{% endif %}>
   {% endif %}

@@ -24,10 +24,14 @@
 </section>
 
 <nav class="abas" aria-label="Visões do módulo">
+  {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos">Progresso</a>{% endif %}
+  {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir">Aprovação de criativos</a>{% endif %}
   {% for v in modulo.visoes %}
   <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}"{% if aba == 'v' ~ loop.index0 %} aria-current="page"{% endif %}>{{ v.nome }}</a>
   {% endfor %}
+  {% if modulo.id != "entrada" %}
   <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano"{% if aba == 'humano' %} aria-current="page"{% endif %}>{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
+  {% endif %}
   <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina"{% if aba == 'maquina' %} aria-current="page"{% endif %}>{{ icone('chip', 15) }} Máquina</a>
   <span class="abas-fim">
     <a class="botao so-icone" href="/m/{{ modulo.id|urlencode }}/personalizar" title="Personalizar esta área" aria-label="Personalizar esta área">{{ icone('ajustes', 17) }}</a>
@@ -43,10 +47,12 @@
 <div class="faixa alerta" role="status">{{ icone('aviso', 16) }} <span><strong>A configuração desta área precisa de revisão.</strong> {{ modulo.avisos|join(' ') }}</span></div>
 {% endif %}
 
+{% if modulo.id == 'conteudo' and aba != 'maquina' %}<div class="linha-botoes"><span class="suave pequeno">Envie o criativo em Miniatura e use “Em aprovação”. Ele aparece em Para decidir, com preview.</span>{% if 'em_aprovacao' not in modulo.decidir %}<button class="botao pequeno" type="button" id="preparar-aprovacao">Ativar aprovação neste pipeline</button>{% endif %}<span role="status" id="aprovacao-estado"></span></div>{% endif %}
+
 {# ---------------------------------------------------------------- Humano #}
 {% if aba == "humano" %}
 <section class="lista-notas">
-  <p class="explica">{{ icone('pessoa', 15) }} O que <b>você</b> disse ou decidiu, com as suas palavras. Agentes leem esta pasta, mas não reescrevem nada aqui: só acrescentam, marcando que foram eles.</p>
+  <p class="explica">{{ icone('pessoa', 15) }} <span>Suas orientações para esta pasta. Agentes podem ler e acrescentar contribuições identificadas. Tarefas e notas do dia a dia ficam nas outras visões.</span></p>
   {% for n in notas %}
   <a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><span>{{ n.trecho }}</span></a>
   {% else %}
@@ -64,6 +70,7 @@
   <div class="coletor" data-modulo="{{ modulo.id }}" data-script="{{ c.def.script }}">
     <div class="coletor-info">
       <b>{{ c.def.nome }}</b>
+      {% if c.def.script == 'recorrentes.py' %}<p class="campo-ajuda">Cria tarefas conforme regras como “sexta” ou “dia 5”. Não duplica uma tarefa já criada para a mesma data. Edite as rotinas no _modulo.yaml.</p>{% elif c.def.script == 'agenda_ics.py' %}<p class="campo-ajuda">Importa os próximos compromissos de um link iCal. É uma leitura: alterações aqui não são enviadas à agenda.</p><button class="botao pequeno" type="button" data-guia="agenda">Conectar agenda</button>{% endif %}
       <span class="suave">{{ c.def.script }} · {{ c.quando }}</span>
       {% if c.ultima %}
       <span class="{{ 'suave' if c.ultima.ok else 'erro-texto' }}">

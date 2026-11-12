@@ -531,6 +531,40 @@ def test_git_ambiente_minimo_exclui_segredos_e_controles_herdados(repo, monkeypa
     assert observado["GIT_NO_LAZY_FETCH"] == observado["GIT_NO_REPLACE_OBJECTS"] == "1"
 
 
+@pytest.mark.parametrize("protocolo,host,autenticado", [
+    ("https", "github.com", True),
+    ("https", "outro.example.test", False),
+    ("https", "github.com.example.test", False),
+    ("http", "github.com", False),
+])
+def test_push_usa_so_helper_oficial_no_host_github_sem_config_global(repo, monkeypatch, protocolo, host, autenticado):
+    # O envio é substituído por credential fill local: não abre rede nem consulta
+    # a conta real. O Python representa um gh de teste e só escreve dados fictícios.
+    (repo / "auth").write_text(
+        "import sys\n"
+        "assert sys.argv[1:] == ['git-credential', 'get']\n"
+        "assert 'host=github.com' in sys.stdin.read()\n"
+        "print('username=usuario-teste\\npassword=token-sintetico\\n')\n",
+        encoding="utf-8",
+    )
+    assert backup.git(repo, "config", "credential.helper", "!exit 99").returncode == 0
+    executar = subprocess.run
+    localizar = backup.shutil.which
+    monkeypatch.setattr(backup.shutil, "which", lambda nome: sys.executable if nome == "gh" else localizar(nome))
+
+    def preencher(args, **kwargs):
+        assert args[-3:] == ["push", "origin", "ref-teste"]
+        assert kwargs["env"]["GIT_CONFIG_GLOBAL"] == os.devnull
+        assert "credential.helper=" in args and "core.fsmonitor=false" in args
+        kwargs["input"] = f"protocol={protocolo}\nhost={host}\n\n"
+        return executar([*args[:-3], "credential", "fill"], **kwargs)
+
+    monkeypatch.setattr(backup.subprocess, "run", preencher)
+    resultado = backup.git(repo, "push", "origin", "ref-teste")
+    assert (resultado.returncode == 0) is autenticado
+    assert ("password=token-sintetico" in resultado.stdout) is autenticado
+
+
 @pytest.mark.parametrize("endereco,esperado", [
     ("https://usuario-secreto:senha-secreta@github.com/org/repo.git?access_token=token-secreto#fragmento-secreto", "https://github.com/org/repo.git"),
     ("ssh://usuario-secreto:senha-secreta@[::1]:2222/org/repo.git?token=token-secreto#fragmento-secreto", "ssh://[::1]:2222/org/repo.git"),

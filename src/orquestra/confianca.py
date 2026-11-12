@@ -19,12 +19,29 @@ from typing import Any
 
 from orquestra.caminhos import caminho_no_vault, eh_link
 from orquestra.config import pasta_app
-from orquestra.modulos import ColetorDef, Modulo
+from orquestra.modulos import ColetorDef, Modulo, carregar_modulo
 from orquestra.notas import simples
 
 LIMITE_ARQUIVOS = 1000
 LIMITE_BYTES = 32 * 1024 * 1024
 _trava = threading.RLock()
+
+
+def _original(modulo: Modulo, coletor: ColetorDef, arquivos: dict[str, bytes]) -> bool:
+    """Confiança limitada ao código E configuração distribuídos nesta instalação."""
+    pasta = Path(__file__).parent / "catalogo" / modulo.id
+    if not pasta.is_dir():
+        return False
+    try:
+        original = carregar_modulo(pasta)
+        definicao = next((c for c in original.coletores if c.script == coletor.script), None)
+        if definicao is None or simples(definicao.config) != simples(coletor.config) or sorted(definicao.requer) != sorted(coletor.requer):
+            return False
+        base = pasta / "maquina" / "coletores"
+        esperado = {p.relative_to(base).as_posix(): p.read_bytes() for p in base.rglob("*") if p.is_file() and "__pycache__" not in p.parts}
+        return esperado == arquivos
+    except (OSError, ValueError):
+        return False
 
 
 def caminho_script(vault: Path, modulo: Modulo, coletor: ColetorDef) -> Path:
@@ -162,6 +179,8 @@ def preparar(vault: Path, modulo: Modulo, coletor: ColetorDef) -> tuple[dict[str
         "requer": requer,
     }
     assinatura = hashlib.sha256(json.dumps(manifesto, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+    aceite = _ler(vault).get(_chave(vault, modulo, coletor))
+    original = _original(modulo, coletor, arquivos)
     estado = {
         "script": str(coletor.script),
         "caminho": script.relative_to(vault.resolve()).as_posix(),
@@ -169,7 +188,8 @@ def preparar(vault: Path, modulo: Modulo, coletor: ColetorDef) -> tuple[dict[str
         "requer": requer,
         "arquivos": list(manifesto["arquivos"]),
         "config": configuracao,
-        "confiavel": secrets.compare_digest(_ler(vault).get(_chave(vault, modulo, coletor), ""), assinatura),
+        "original": original,
+        "confiavel": secrets.compare_digest(aceite or "", assinatura) or (aceite is None and original),
     }
     return estado, arquivos
 
@@ -195,5 +215,5 @@ def autorizar(vault: Path, modulo: Modulo, coletor: ColetorDef, assinatura_esper
 def revogar(vault: Path, modulo: Modulo, coletor: ColetorDef) -> None:
     with _transacao(vault):
         aceites = _ler(vault)
-        aceites.pop(_chave(vault, modulo, coletor), None)
+        aceites[_chave(vault, modulo, coletor)] = "revogado"
         _gravar(vault, aceites)

@@ -14,6 +14,7 @@ import hashlib
 import os
 import logging
 import math
+import subprocess
 from functools import wraps
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -26,7 +27,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from orquestra import __version__, adocao, agenda, aparencia, armazenamento, backup, coletores, confianca, contratos, diario, graficos, preparo, temas
+from orquestra import __version__, adocao, agenda, aparencia, armazenamento, backup, coletores, confianca, contratos, diario, graficos, preparo, temas, segredos
 from orquestra.caminhos import CaminhoInseguro, ignorar
 from orquestra.config import ConfigInvalida
 from orquestra import apresentacao as ap
@@ -50,6 +51,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     tela de Ajustes oferece trocar de vault; nos testes ele não existe.
     """
     painel = Painel(vault)
+    from orquestra.github_local import LoginGitHub
+    github = LoginGitHub()
     capacidade = hospedeiro.capacidade if hospedeiro else CapabilityLocal()
     vault_id = hashlib.sha256(os.path.normcase(str(painel.vault)).encode("utf-8")).hexdigest()[:24]
 
@@ -64,6 +67,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         try:
             yield
         finally:
+            github.fechar()
             await asyncio.to_thread(coletores.cancelar_execucoes, painel.vault)
             if tarefa:
                 tarefa.cancel()
@@ -77,7 +81,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     app = FastAPI(title="Orquestra", lifespan=vida, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.painel = painel
     app.state.vault_id = vault_id
-    app.add_middleware(Protecao, hosts_extras=painel.config.hosts_permitidos)
+    hosts_extras = list(painel.config.hosts_permitidos)
+    app.add_middleware(Protecao, hosts_extras=hosts_extras)
     app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
 
     modelos = Jinja2Templates(directory=PASTA / "templates")
@@ -152,10 +157,13 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             return JSONResponse({"erro": mensagem}, status_code=503)
         return pagina(request, "erro.html", "", 503, titulo="Arquivo indisponível", mensagem=mensagem)
 
-    async def corpo_json(request: Request, modelo: type[BaseModel] | None = None) -> dict[str, Any]:
+    def conferir_vault(request: Request) -> None:
         vinculo = request.headers.get("x-orquestra-vault")
         if vinculo and vinculo != vault_id:
             raise Conflito("Esta aba pertence a outro vault. Reabra o vault correto ou copie o rascunho antes de atualizar.")
+
+    async def corpo_json(request: Request, modelo: type[BaseModel] | None = None) -> dict[str, Any]:
+        conferir_vault(request)
         def constante_invalida(_texto: str):
             raise ValueError("Números JSON precisam ser finitos.")
         def decimal(texto: str) -> float:
@@ -179,6 +187,9 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         return dados
 
     def exigir_local(request: Request) -> JSONResponse | None:
+        vinculo = request.headers.get("x-orquestra-vault")
+        if vinculo and vinculo != vault_id:
+            raise Conflito("Esta aba pertence a outro vault. Reabra o painel antes de configurar.")
         try:
             capacidade.exigir(request)
         except ValueError as erro:
@@ -288,6 +299,9 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.get("/m/{modulo_id}", response_class=HTMLResponse)
     @leitura
     def ver_modulo(request: Request, modulo_id: str, aba: str = "v0"):
+        if modulo_id == "habitos" and aba in ("v0", "progresso", "lista", "v1"):
+            from orquestra import habitos
+            return pagina(request, "habitos.html", "m:habitos", **habitos.montar(painel, aba))
         modulo = painel.modulo(modulo_id)
         hoje = dt.date.today()
         itens = painel.indice.itens(modulo.id)
@@ -496,7 +510,36 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     cartoes.append(ap.cartao(nota, modulo, hoje))
             if cartoes:
                 grupos.append({"modulo": modulo, "cartoes": cartoes})
-        return pagina(request, "dia.html", "inicio", dia=alvo, dia_longo=ap.data_longa(alvo), e_hoje=alvo == hoje, grupos=grupos)
+        return pagina(request, "dia.html", "inicio", dia=alvo, dia_longo=ap.data_longa(alvo), e_hoje=alvo == hoje, grupos=grupos, dias_agenda=[alvo + dt.timedelta(days=i) for i in range(-3, 4)])
+
+    @app.get("/agenda", response_class=HTMLResponse)
+    @app.get("/agenda/{data}", response_class=HTMLResponse)
+    @leitura
+    def ver_agenda(request: Request, data: str = "", visao: str = "mes", q: str = "", pasta: str = "", categoria: str = "", cor: str = "", tag: str = "", concluidos: str = ""):
+        from orquestra import calendario
+        try:
+            alvo = dt.date.fromisoformat(data) if data else dt.date.today()
+            agenda_visual = calendario.montar(painel, alvo, visao, q[:200], pasta, categoria, cor, tag, concluidos == "1")
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
+        return pagina(request, "agenda.html", "calendario", cal=agenda_visual)
+
+    @app.get("/api/agenda/evento/{rel:path}")
+    @leitura
+    def api_evento_agenda(rel: str):
+        return painel.evento_agenda(rel)
+
+    @app.post("/api/agenda/eventos")
+    async def api_salvar_evento_agenda(request: Request):
+        dados = await corpo_json(request, contratos.EventoAgenda)
+        nota = await asyncio.to_thread(painel.salvar_evento_agenda, dados)
+        return {"rel": nota.rel, "versao": nota.versao, "url": ap.url_nota(nota.rel)}
+
+    @app.post("/api/agenda/mover")
+    async def api_mover_evento_agenda(request: Request):
+        dados = await corpo_json(request, contratos.MoverEventoAgenda)
+        nota = await asyncio.to_thread(painel.mover_evento_agenda, dados)
+        return {"rel": nota.rel, "versao": nota.versao}
 
     @app.get("/buscar", response_class=HTMLResponse)
     @leitura
@@ -512,6 +555,61 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             for n in notas
         ]
         return pagina(request, "buscar.html", "", q=q, resultados=resultados, paginacao=paginacao)
+
+    @app.get("/habitos", response_class=HTMLResponse)
+    def ver_habitos(request: Request):
+        return RedirectResponse("/m/habitos", status_code=307)
+
+    @app.get("/foco", response_class=HTMLResponse)
+    @leitura
+    def ver_foco(request: Request):
+        return pagina(request, "foco.html", "foco")
+
+    @app.post("/api/habitos")
+    async def salvar_habito(request: Request):
+        from orquestra import habitos
+        dados = await corpo_json(request, contratos.Habito)
+        def gravar_habito():
+            with painel._trava:
+                instalado = "habitos" in painel.indice.modulos
+                resultado = habitos.salvar(painel, dados)
+                contexto = habitos.montar(painel)
+                resultado["html"] = modelos.env.get_template("habito-card.html").render(**{**contexto, "item": resultado["item"], "hoje": dt.date.today()})
+                resultado["ativado"] = not instalado
+                return resultado
+        return await asyncio.to_thread(gravar_habito)
+
+    @app.post("/api/habitos/marcar")
+    async def marcar_habito(request: Request):
+        from orquestra import habitos
+        dados = await corpo_json(request, contratos.MarcarHabito)
+        return await asyncio.to_thread(habitos.marcar, painel, dados)
+
+    @app.post("/api/conteudo/aprovacao")
+    async def preparar_aprovacao(request: Request):
+        await corpo_json(request)
+        from orquestra.config import ler_yaml, gravar_yaml
+        modulo = painel.modulo("conteudo")
+        caminho = painel.caminho_seguro(str(modulo.pasta / "_modulo.yaml"))
+        dados = ler_yaml(caminho)
+        campo = (dados.get("campos") or {}).get("status") or {}
+        if campo.get("tipo") != "escolha":
+            raise Recusado("A aprovação precisa de um campo status do tipo escolha.")
+        opcoes = campo.setdefault("opcoes", [])
+        for opcao in ("em_aprovacao", "aprovado", "ajustes"):
+            if opcao not in opcoes:
+                opcoes.append(opcao)
+        status = dados.setdefault("status", {})
+        decidir = status.setdefault("decidir", [])
+        if "em_aprovacao" not in decidir:
+            decidir.append("em_aprovacao")
+        acoes = status.setdefault("acoes", [])
+        for acao in [{"rotulo": "Aprovar criativo", "definir": {"status": "aprovado"}, "estilo": "principal"}, {"rotulo": "Pedir ajustes", "definir": {"status": "ajustes"}}]:
+            if not any(a.get("definir") == acao["definir"] for a in acoes if isinstance(a, dict)):
+                acoes.append(acao)
+        await asyncio.to_thread(gravar_yaml, caminho, dados)
+        await asyncio.to_thread(painel.recarregar_tudo)
+        return {"ok": True}
 
     @app.get("/pastas", response_class=HTMLResponse)
     @app.get("/pastas/{rel:path}", response_class=HTMLResponse)
@@ -589,53 +687,64 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         )
 
     @app.get("/ajustes", response_class=HTMLResponse)
+    @app.get("/ajustes/{secao}", response_class=HTMLResponse)
     @leitura
-    def ajustes(request: Request):
-        lista_temas = []
-        for tema in temas.listar(painel.vault):
-            lista_temas.append({**tema, "previa": temas.resolver_capa(tema, "tarefas"), "atual": tema["id"] == painel.tema["id"]})
-        estado = painel.ler_estado()
-        avisos = [(m.nome, a) for m in painel.indice.modulos.values() for a in m.avisos]
-        coletores = [
-            {"modulo": m, "def": c, "ultima": painel.ultima_coleta(m.id, c.script), "confianca": estado_confianca(m, c)}
-            for m in painel.indice.modulos.values()
-            for c in m.coletores
-        ]
-        return pagina(
-            request,
-            "ajustes.html",
-            "ajustes",
-            temas=lista_temas,
-            vault=str(painel.vault),
-            tem_git=backup.e_repositorio(painel.vault),
-            tem_remoto=backup.tem_remoto(painel.vault) if backup.git_disponivel() else False,
-            ultimo_commit=backup.ultimo_commit(painel.vault),
-            estado_backup=estado.get("backup", {}),
-            confianca_backup=backup.resumo(painel.vault),
-            avisos=avisos,
-            coletores=coletores,
-            n_notas=len(painel.indice.notas),
-            host=request.headers.get("host", ""),
-            areas=[
+    def ajustes(request: Request, secao: str = "painel"):
+        if secao not in {"painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis"}:
+            raise NaoEncontrado(secao)
+        # Cada seção é uma página independente: não ler catálogos, scripts ou Git
+        # que não serão exibidos. Revisões de confiança continuam frescas na origem.
+        contexto: dict[str, Any] = {"secao": secao, "icones": ap.ICONES_DE_MODULO}
+        if secao == "painel":
+            contexto["areas"] = [{"modulo": m} for m in painel.indice.modulos.values()]
+        elif secao == "areas":
+            contexto["areas"] = [
                 {"modulo": m, "itens": len(painel.indice.notas_em(m.id, "itens")), "propria": m.itens_na_raiz}
                 for m in painel.indice.modulos.values()
-            ],
-            prontos=[
+            ]
+            contexto["prontos"] = [
                 m for m in preparo.catalogo().values() if m.id not in painel.indice.modulos and not (painel.vault / m.id).exists()
-            ],
-            icones=ap.ICONES_DE_MODULO,
-            visual={
+            ]
+        elif secao == "aparencia":
+            contexto["temas"] = [
+                {**tema, "previa": temas.resolver_capa(tema, "tarefas"), "atual": tema["id"] == painel.tema["id"]}
+                for tema in temas.listar(painel.vault)
+            ]
+            contexto["visual"] = {
                 "modos": aparencia.MODOS,
                 "cantos": list(aparencia.CANTOS),
                 "fontes": aparencia.FONTES,
                 "nomes": aparencia.NOMES,
                 "sugestoes": aparencia.SUGESTOES,
                 "destaque_do_tema": painel.tema["cores"]["destaque"],
-            },
-            pode_trocar=hospedeiro is not None,
-            tem_git_instalado=backup.git_disponivel(),
-            link_obsidian="obsidian://open?path=" + quote(str(painel.vault), safe=""),
-        )
+            }
+        elif secao == "backup":
+            confianca_backup = backup.resumo(painel.vault)
+            tem_git = backup.e_repositorio(painel.vault)
+            contexto.update(
+                tem_git=tem_git,
+                tem_git_instalado=backup.git_disponivel(),
+                tem_remoto=bool(confianca_backup.get("remotos")),
+                ultimo_commit=backup.ultimo_commit(painel.vault) if tem_git else "",
+                estado_backup=painel.ler_estado().get("backup", {}),
+                confianca_backup=confianca_backup,
+            )
+        elif secao == "coletores":
+            ultimas = painel.ler_estado().get("coletores", {})
+            contexto["coletores"] = [
+                {"modulo": m, "def": c, "ultima": ultimas.get(f"{m.id}/{c.script}", {})}
+                for m in painel.indice.modulos.values() for c in m.coletores
+            ]
+        elif secao == "acesso":
+            contexto["host"] = request.headers.get("host", "")
+        elif secao == "vault":
+            contexto.update(
+                vault=str(painel.vault), n_notas=len(painel.indice.notas),
+                avisos=[(m.nome, a) for m in painel.indice.modulos.values() for a in m.avisos],
+                pode_trocar=hospedeiro is not None,
+                link_obsidian="obsidian://open?path=" + quote(str(painel.vault), safe=""),
+            )
+        return pagina(request, "ajustes.html", "ajustes", **contexto)
 
     # ------------------------------------------------------------ API
 
@@ -786,6 +895,192 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             raise Recusado(str(erro)) from None
         return await asyncio.to_thread(backup.resumo, painel.vault)
 
+    @app.get("/api/variaveis")
+    async def api_variaveis(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        try:
+            return {"nomes": await asyncio.to_thread(segredos.nomes, painel.vault)}
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
+
+    @app.post("/api/agenda/conectar")
+    async def api_conectar_agenda(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        dados = await corpo_json(request)
+        from urllib.parse import urlsplit
+        endereco = str(dados.get("url") or "").replace("webcal://", "https://", 1)
+        try:
+            url = urlsplit(endereco)
+        except ValueError:
+            raise Recusado("Endereço iCal inválido.") from None
+        if url.scheme != "https" or not url.hostname or url.username or url.password or url.fragment:
+            raise Recusado("Use um endereço iCal HTTPS, sem usuário ou senha na URL.")
+        modulo, coletor = painel.coletor("tarefas", "agenda_ics.py")
+        script = confianca.caminho_script(painel.vault, modulo, coletor)
+        novo = (PASTA / "catalogo/tarefas/maquina/coletores/agenda_ics.py").read_bytes().replace(b"\r\n", b"\n")
+        anterior = novo.replace(b"import os\n", b"").replace(b'        if isinstance(agenda, dict) and agenda.get("variavel"):\n            endereco = os.environ.get(str(agenda["variavel"]), "")\n', b"")
+        atual = script.read_bytes().replace(b"\r\n", b"\n")
+        if atual not in (novo.replace(b"\r\n", b"\n"), anterior.replace(b"\r\n", b"\n")):
+            raise Recusado("Este coletor foi personalizado. Adapte a leitura da variável AGENDA_ICAL_URL no script antes de conectar.")
+        if atual != novo.replace(b"\r\n", b"\n"):
+            def atualizar_script(antes: bytes) -> bytes:
+                if antes.replace(b"\r\n", b"\n") != atual:
+                    raise Conflito("O coletor mudou durante a configuração. Confira a nova versão antes de continuar.")
+                return novo
+            await asyncio.to_thread(armazenamento.atualizar_bytes, script, atualizar_script)
+        # Não substitui código alterado pelo usuário. O novo contrato pede revisão.
+        from orquestra.config import ler_yaml, gravar_yaml
+        caminho = painel.caminho_seguro(str(modulo.pasta / "_modulo.yaml"))
+        conf = ler_yaml(caminho)
+        await asyncio.to_thread(segredos.salvar, painel.vault, "AGENDA_ICAL_URL", endereco)
+        for definicao in conf.get("coletores") or []:
+            if definicao.get("script") == coletor.script:
+                definicao["config"] = {"agendas": [{"nome": "Pessoal", "variavel": "AGENDA_ICAL_URL"}], "dias_a_frente": 14}
+                definicao["requer"] = ["AGENDA_ICAL_URL"]
+                definicao["ativo"] = False
+        await asyncio.to_thread(gravar_yaml, caminho, conf)
+        await asyncio.to_thread(painel.recarregar_tudo)
+        return {"ok": True, "revisar": True}
+
+    @app.post("/api/capas")
+    async def api_enviar_capa(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        conferir_vault(request)
+        dados = await request.body()
+        if not dados or len(dados) > 2 * 1024 * 1024:
+            raise Recusado("Envie uma capa de até 2 MB.")
+        extensao = ""
+        if dados.startswith(b"\x89PNG\r\n\x1a\n"):
+            extensao = ".png"
+        elif dados.startswith(b"\xff\xd8\xff"):
+            extensao = ".jpg"
+        elif dados.startswith(b"RIFF") and dados[8:12] == b"WEBP":
+            extensao = ".webp"
+        elif dados[4:8] == b"ftyp":
+            extensao = ".mp4"
+        elif dados.startswith(b"\x1a\x45\xdf\xa3"):
+            extensao = ".webm"
+        if not extensao:
+            raise Recusado("Use PNG, JPEG, WebP, MP4 ou WebM.")
+        rel = "midia/capas/" + hashlib.sha256(dados).hexdigest()[:32] + extensao
+        caminho = painel.caminho_seguro(rel)
+        await asyncio.to_thread(armazenamento.atualizar_bytes, caminho, lambda _: dados, backup=False,
+                                validar=lambda: painel.caminho_seguro(rel))
+        return {"caminho": rel}
+
+    @app.post("/api/variaveis")
+    async def api_salvar_variavel(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        dados = await corpo_json(request)
+        if not isinstance(dados.get("nome"), str) or (dados.get("valor") is not None and not isinstance(dados["valor"], str)):
+            raise Recusado("Nome e valor precisam ser texto.")
+        try:
+            await asyncio.to_thread(segredos.salvar, painel.vault, dados["nome"], dados.get("valor"))
+            return {"ok": True}
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
+
+    @app.post("/api/autostart")
+    async def api_autostart(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        from orquestra import autostart
+        dados = await corpo_json(request)
+        acao = dados.get("acao")
+        if acao not in {"ativar", "desativar", "status"}:
+            raise Recusado("Escolha ativar, desativar ou status.")
+        return {"mensagem": await asyncio.to_thread(autostart.executar, acao, painel.vault if acao == "ativar" else None)}
+
+    @app.post("/api/tailscale/host")
+    async def api_tailscale_host(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        import re
+        from urllib.parse import urlsplit
+        from orquestra.config import ler_yaml, gravar_yaml
+        dados = await corpo_json(request)
+        endereco = str(dados.get("url") or "").strip()
+        try:
+            parsed = urlsplit(endereco if "://" in endereco else "https://" + endereco)
+        except ValueError:
+            raise Recusado("Endereço Tailscale inválido.") from None
+        host = parsed.hostname or ""
+        if parsed.scheme != "https" or parsed.username or parsed.password or parsed.path not in {"", "/"} or parsed.query or parsed.fragment or not re.fullmatch(r"[a-z0-9-]+\.[a-z0-9-]+\.ts\.net", host):
+            raise Recusado("Cole somente o endereço HTTPS exato mostrado pelo Tailscale Serve.")
+        try:
+            if parsed.port not in (None, 443):
+                raise Recusado("Use o endereço HTTPS padrão do Tailscale Serve.")
+        except ValueError:
+            raise Recusado("A porta do endereço é inválida.") from None
+        caminho = painel.vault / "orquestra.yaml"
+        cfg = ler_yaml(caminho)
+        nomes = list(cfg.get("hosts_permitidos") or [])
+        if host not in nomes:
+            nomes.append(host)
+        cfg["hosts_permitidos"] = nomes
+        await asyncio.to_thread(gravar_yaml, caminho, cfg)
+        await asyncio.to_thread(painel.recarregar_config)
+        hosts_extras[:] = nomes
+        return {"ok": True, "mensagem": "Endereço permitido. Abra-o no celular conectado à sua rede Tailscale."}
+
+    @app.post("/api/github/login")
+    async def api_github_login(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        try:
+            return await asyncio.to_thread(github.iniciar)
+        except (ValueError, OSError) as erro:
+            raise Recusado(str(erro) if isinstance(erro, ValueError) else "Não consegui abrir o GitHub CLI.") from None
+
+    @app.get("/api/github/estado")
+    async def api_github_estado(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        return github.estado()
+
+    @app.get("/api/github/repositorios")
+    async def api_github_repositorios(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        try:
+            resultado = await asyncio.to_thread(github.comando, ["repo", "list", "--visibility", "private", "--limit", "100", "--json", "nameWithOwner"])
+            return {"repositorios": [r["nameWithOwner"] for r in json.loads(resultado)]}
+        except (ValueError, OSError, subprocess.TimeoutExpired):
+            raise Recusado("Não consegui listar os repositórios privados. Confira o login no GitHub CLI.") from None
+
+    @app.post("/api/github/vincular")
+    async def api_github_vincular(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        import re
+        dados = await corpo_json(request)
+        repo = str(dados.get("repositorio") or "")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_.-]{1,100}", repo):
+            raise Recusado("Escolha um repositório no formato usuario/repositorio.")
+        if not backup.e_repositorio(painel.vault):
+            raise Recusado("Prepare primeiro o histórico local em Ajustes → Backup.")
+        resumo = await asyncio.to_thread(backup.resumo, painel.vault)
+        if resumo.get("erro"):
+            raise Recusado("Revise a configuração Git antes de vincular.")
+        try:
+            metadados = json.loads(await asyncio.to_thread(github.comando, ["repo", "view", "https://github.com/" + repo, "--json", "isPrivate"]))
+            if not metadados.get("isPrivate"):
+                raise Recusado("Escolha um repositório privado para proteger suas notas.")
+            import shutil
+            git = shutil.which("git")
+            if not git:
+                raise Recusado("Instale o Git antes de vincular.")
+            for chave in ("remote.origin.url", "remote.origin.pushurl"):
+                await asyncio.to_thread(subprocess.run, [git, "-C", str(painel.vault), "config", "--local", "--replace-all", chave, "https://github.com/" + repo + ".git"], check=True, capture_output=True, timeout=15,
+                                        **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
+            return {"ok": True, "mensagem": "Repositório vinculado. Revise e autorize o destino em Backup antes do primeiro envio."}
+        except (ValueError, OSError, subprocess.SubprocessError):
+            raise Recusado("Não foi possível vincular o repositório. Nenhuma nota foi enviada.") from None
+
     @app.post("/api/config")
     async def api_config(request: Request):
         dados = await corpo_json(request, contratos.Configuracao)
@@ -795,7 +1090,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             auto_commit=dados.get("auto_commit") if isinstance(dados.get("auto_commit"), bool) else None,
             visual=dados.get("aparencia") if isinstance(dados.get("aparencia"), dict) else None,
         )
-        return {"ok": True}
+        return {"ok": True, "estilo": aparencia.estilo(painel.tema, painel.config.aparencia)}
 
     @app.post("/api/modulos")
     async def api_novo_modulo(request: Request):

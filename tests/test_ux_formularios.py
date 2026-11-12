@@ -47,9 +47,12 @@ def test_ajustes_e_personalizacao_preservam_navegacao_e_ajuda(cliente):
     ajustes = Elementos(cliente.get("/ajustes").text)
     ajustes.conferir_ajuda()
     assert ajustes.id("estado-config")["role"] == "status"
-    for alvo in ("painel", "areas", "aparencia-secao", "backup-secao", "coletores-secao", "vault-secao"):
-        assert ajustes.id(alvo)
-        assert any(tag == "a" and a.get("href") == "#" + alvo for tag, a in ajustes.itens)
+    for secao, alvo in (("painel", "painel"), ("areas", "areas"), ("aparencia", "aparencia-secao"), ("backup", "backup-secao"), ("coletores", "coletores-secao"), ("vault", "vault-secao")):
+        pagina = Elementos(cliente.get("/ajustes/" + secao).text)
+        pagina.conferir_ajuda()
+        assert pagina.id(alvo)
+        assert any(tag == "a" and a.get("href") == "/ajustes/" + secao and a.get("aria-current") == "page" for tag, a in pagina.itens)
+        assert not any(a.get("href", "").startswith("#backup") for _, a in pagina.itens)
     assert "required" in ajustes.id("cfg-nome")
     assert ajustes.id("cfg-nome")["aria-labelledby"] == "rotulo-cfg-nome"
     assert ajustes.id("cfg-captura")["aria-labelledby"] == "rotulo-cfg-captura"

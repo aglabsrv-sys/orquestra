@@ -6,9 +6,11 @@ para mexer.
 
 ## Três jeitos de ter um módulo, sem escrever YAML
 
-- **Acrescentar um pronto.** Em Ajustes > Áreas do painel, escolha no catálogo:
+- **Acrescentar um pronto.** Em Ajustes > Pastas, escolha no catálogo:
   Tarefas, Notas, Projetos, Áreas, Recursos, Arquivos, Clientes, Finanças, Estudos,
-  Conteúdo, Radar, Números, Entrada. Com ou sem notas de exemplo.
+  Conteúdo, Radar, Números, Entrada, Agenda e Hábitos e metas. Com ou sem notas de
+  exemplo, conforme o módulo. Agenda e Hábitos também preparam suas pastas ao
+  criar o primeiro registro em suas próprias telas.
 - **Criar em branco.** No mesmo lugar: nome, ícone e se quer quadro. Depois ajuste
   os campos em Personalizar.
 - **Mostrar uma pasta sua.** Em Pastas, "Mostrar no painel": o painel lê os campos
@@ -18,6 +20,10 @@ para mexer.
 O ícone ao lado das abas de cada área abre **Personalizar**: nome, descrição, ícone,
 cena da capa, campos (com tipo e opções), o que conta como concluído e se a área
 mostra quadro e gráfico. Tudo é gravado no `_modulo.yaml`, preservando os comentários.
+
+Agenda e Hábitos possuem telas próprias, com visões específicas de calendário e
+progresso semanal. Seus registros continuam em notas dos respectivos módulos.
+Veja os guias de [Agenda](agenda.md) e [Pomodoro e hábitos](foco-e-habitos.md).
 
 Também dá para pedir a um agente ("crie um módulo de receitas") ou editar o arquivo
 à mão. O resto desta página é a referência do que vai nele.
@@ -144,7 +150,8 @@ Para acompanhar outro número, acrescente um campo do tipo `numero` em Personali
   espera decisão; senão, o que está em aberto.
 - **O dock não cresce sem parar.** Com até nove itens, mostra tudo. Acima disso, mostra
   cinco áreas, a área em que você está e o botão "Todas as áreas" (tecla `G`), que abre
-  a lista completa com Diário, Pastas e Ajustes. Para escolher quais ficam sempre à mão,
+  a lista completa com Diário, Pastas e Ajustes. Agenda e Decidir continuam na barra.
+  Para escolher quais ficam sempre à mão,
   liste no `orquestra.yaml`: `dock: [tarefas, projetos, notas]`.
 - **Tirar do painel não apaga nada.** O `_modulo.yaml` vira `_modulo.desligado.yaml`
   e a pasta continua no vault. Religar devolve a área como estava.

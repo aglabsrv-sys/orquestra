@@ -1,0 +1,32 @@
+nome: Agenda pessoal
+descricao: Compromissos e lembretes, nos seus arquivos.
+icone: calendario
+ordem: 5
+campos:
+  data:
+    tipo: data
+    rotulo: Início
+    obrigatorio: true
+  data_fim:
+    tipo: data
+    rotulo: Término
+  hora:
+    tipo: texto
+    rotulo: Hora de início
+  hora_fim:
+    tipo: texto
+    rotulo: Hora de término
+  categoria:
+    tipo: texto
+    padrao: Compromisso
+  cor:
+    tipo: escolha
+    opcoes: [azul, verde, lilas, laranja, rosa, vermelho]
+    padrao: azul
+  tags:
+    tipo: lista
+campo_data: data
+visoes:
+  - tipo: tabela
+    nome: Compromissos
+    colunas: [titulo, data, hora, categoria, tags]

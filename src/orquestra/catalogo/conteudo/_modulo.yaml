@@ -8,7 +8,7 @@ ordem: 2
 campos:
   status:
     tipo: escolha
-    opcoes: [ideia, roteiro, gravado, editado, publicado]
+    opcoes: [ideia, roteiro, gravado, editado, em_aprovacao, aprovado, ajustes, publicado]
     padrao: ideia
     obrigatorio: true
   plataforma:
@@ -32,7 +32,13 @@ campo_data: data
 
 status:
   concluidos: [publicado]
-  decidir: []             # aqui a fila Decidir é alimentada pelo campo `pergunta` dos agentes
+  decidir: [em_aprovacao]
+  acoes:
+    - rotulo: Aprovar criativo
+      definir: {status: aprovado}
+      estilo: principal
+    - rotulo: Pedir ajustes
+      definir: {status: ajustes}
 
 visoes:
   - tipo: kanban

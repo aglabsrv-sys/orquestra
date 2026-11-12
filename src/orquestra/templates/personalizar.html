@@ -14,7 +14,7 @@
   <h2 class="grupo-titulo">{{ icone('editar', 18) }} Aparência</h2>
   <div class="bloco">
     <div class="grade-campos">
-      <label class="campo"><span>Nome da área</span><input type="text" id="p-nome" value="{{ modulo.nome }}" maxlength="60" required autocomplete="off"></label>
+      <label class="campo"><span>Nome no painel</span><input type="text" id="p-nome" value="{{ modulo.nome }}" maxlength="60" required autocomplete="off"></label>
       <label class="campo"><span>Ícone</span>
         <select id="p-icone">
           {% if modulo.icone not in icones %}<option value="{{ modulo.icone }}" selected>{{ rotulo(modulo.icone) }}</option>{% endif %}
@@ -22,13 +22,17 @@
         </select>
       </label>
       <label class="campo"><span>Cena da capa</span>
-        <select id="p-cena">
+        <button class="botao" type="button" id="escolher-cena" aria-label="Ver cenas animadas">Ver cenas animadas</button>
+        <select id="p-cena" hidden aria-label="Cena escolhida">
           <option value="">{{ 'Imagem própria (manter)' if capa.tipo != 'cena' else 'Automática' }}</option>
           {% for c in cenas %}<option value="{{ c }}"{% if c == cena_atual %} selected{% endif %}>{{ rotulo(c) }}</option>{% endfor %}
         </select>
       </label>
     </div>
     <label class="campo"><span>Descrição (aparece na capa)</span><input type="text" id="p-descricao" value="{{ modulo.descricao }}" maxlength="160"></label>
+    <label class="campo"><span>Adicionar capa</span><input type="file" id="p-capa-arquivo" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"><small class="campo-ajuda">Até 2 MB. Para vídeos, prefira até 20 segundos, sem áudio. Reprodução em loop; animação pausada fora da tela.</small></label>
+    <input type="hidden" id="p-capa" value="">
+    <p id="p-capa-estado" role="status"></p>
   </div>
 
   <h2 class="grupo-titulo">{{ icone('check', 18) }} Campos das notas</h2>
@@ -71,6 +75,10 @@
     <a class="botao" href="/m/{{ modulo.id|urlencode }}">Cancelar</a>
   </div>
 </section>
+
+<dialog id="cenas-dialogo" class="dialogo" aria-label="Escolher cena da capa"><div class="dialogo-corpo"><h2>Escolha uma cena</h2><div class="cenas-grade">
+{% for c in cenas %}<button type="button" data-escolher-cena="{{ c }}">{{ p.capa({'tipo': 'cena', 'cena': c, 'semente': 42, 'paleta': tema.paletas.values()|first}) }}<span>{{ rotulo(c) }}</span></button>{% endfor %}
+</div><div class="dialogo-acoes"><button class="botao" type="button" data-fechar>Fechar</button></div></div></dialog>
 
 <template id="p-modelo-campo">
   <div class="campo-editor novo">

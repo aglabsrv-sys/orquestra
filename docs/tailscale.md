@@ -24,7 +24,10 @@ rede privada entre os seus aparelhos. Confira o plano e os limites atuais para s
    um link, é só abrir e confirmar.
 4. O comando mostra um endereço parecido com `https://seu-pc.tail1234.ts.net`. Abra
    esse endereço no navegador do celular (com o Tailscale ligado nele).
-5. Em `orquestra.yaml`, permita **somente o nome exato** que apareceu, sem esquema nem caminho, e reinicie o painel:
+5. Pelo localhost do computador, abra Ajustes → Celular → Conecte seu celular.
+   No último passo, cole o endereço HTTPS mostrado e clique em Permitir este endereço.
+   O painel aplica o nome exato imediatamente. Como alternativa manual, em
+   `orquestra.yaml`, permita **somente o nome exato** e reinicie o painel:
 
    ```yaml
    hosts_permitidos:

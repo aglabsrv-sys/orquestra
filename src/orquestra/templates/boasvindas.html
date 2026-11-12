@@ -7,6 +7,7 @@
   <title>Boas-vindas · Orquestra</title>
   <link rel="icon" href="/static/icone.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/css/app.css?v={{ marca }}">
+  <link rel="stylesheet" href="/static/css/refino.css?v={{ marca }}">
   <style>{{ estilo|safe }}</style>
 </head>
 <body class="bv">
@@ -104,6 +105,7 @@
       <p class="campo-ajuda" id="ajuda-caminho-novo">Use uma pasta nova ou vazia. O Orquestra cria a pasta se ela ainda não existir.</p>
       <p class="campo-erro" id="erro-caminho-novo" hidden></p>
 
+      <div data-bv-pagina="perfil">
       <h3 class="bv-sub">Qual ponto de partida combina com você?</h3>
       <div class="bv-perfis" role="radiogroup" aria-label="Ponto de partida">
         {% for pf in perfis %}
@@ -114,10 +116,12 @@
         </label>
         {% endfor %}
       </div>
+      </div>
     </section>
 
     {# ------------------------------------------------------------ 3. comum aos dois #}
     <section id="bloco-comum" hidden>
+      <div data-bv-pagina="modulos">
       <h3 class="bv-sub" id="titulo-prontos">Áreas do painel</h3>
       <p class="suave" id="texto-prontos">Marque o que quiser. Dá para acrescentar e tirar áreas depois, em Ajustes.</p>
       <div class="bv-modulos">
@@ -131,6 +135,7 @@
       </div>
       <label class="chave bv-chave"><input type="checkbox" id="exemplos"><i></i><span>Incluir notas de exemplo nas áreas novas (dá para apagar depois)</span></label>
 
+      </div><div data-bv-pagina="visual">
       <h3 class="bv-sub">Do seu jeito</h3>
       <div class="grade-campos">
         <label class="campo"><span id="rotulo-nome">Nome do painel</span><input type="text" id="nome" value="Orquestra" maxlength="60" required aria-labelledby="rotulo-nome" aria-describedby="ajuda-nome erro-nome"><small class="campo-ajuda" id="ajuda-nome">Aparece no topo do painel. Você pode mudar depois em Ajustes.</small><small class="campo-erro" id="erro-nome" hidden></small></label>
@@ -146,6 +151,7 @@
         {% endfor %}
       </div>
 
+      </div><div data-bv-pagina="revisao">
       <label class="chave bv-chave"><input type="checkbox" id="backup"><i></i><span>Guardar versões locais do vault (git). Uma cópia externa continua sendo necessária.</span></label>
       <p class="suave pequeno" id="aviso-backup" hidden></p>
 
@@ -159,16 +165,20 @@
       <div class="linha-botoes bv-final">
         <button class="botao principal grande" type="button" id="concluir">Abrir o painel</button>
       </div>
+      </div>
     </section>
 
     {# ------------------------------------------------------------ 4. pronto #}
     <section id="passo-pronto" hidden>
       <h2 class="bv-pergunta">Pronto.</h2>
       <p id="pronto-texto"></p>
+      <p>Mantenha o terminal aberto: fechá-lo encerra o painel e as automações. Para abrir novamente: <code>uv run --frozen orquestra</code>.</p>
+      <p>Quer iniciar automaticamente ao entrar no computador? Execute <code>uv run --frozen orquestra autostart ativar</code>. Para desligar, use <code>uv run --frozen orquestra autostart desativar</code>.</p>
       <ul class="bv-avisos" id="pronto-avisos"></ul>
       <div class="linha-botoes"><a class="botao principal grande" href="/">Abrir o painel</a></div>
     </section>
 
+    <div class="linha-botoes" id="bv-navegacao" hidden><button class="botao" type="button" id="bv-anterior">Anterior</button><span id="bv-passo" class="suave" role="status"></span><button class="botao principal" type="button" id="bv-proximo">Continuar</button></div>
     <p class="suave pequeno bv-rodape">Orquestra {{ versao }} · roda só neste computador, sem conta e sem nuvem.</p>
   </main>
 

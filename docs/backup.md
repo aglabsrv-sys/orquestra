@@ -45,7 +45,7 @@ sem antes preservar sua versão atual. Arquivos de recuperação não são apaga
 automaticamente; revise o espaço usado e copie versões importantes antes de uma
 limpeza manual. Eles podem conter conteúdo privado e segredos antigos.
 
-Na própria nota, abra **Versões locais de recuperação**, escolha a gravação e
+Na própria nota, clique em **Consultar recuperação**, escolha a gravação e
 consulte o conteúdo **antes da gravação** ou a **proposta**. **Copiar versão** copia
 o arquivo completo; **Salvar versão como nova nota** preserva frontmatter e texto
 em outra nota. A nota aberta e seu rascunho não são substituídos.
@@ -104,7 +104,23 @@ mescla regras de ignore com as existentes, exclui nomes comuns de segredos
 e recusa arquivos sensíveis já rastreados. Esse filtro não reconhece todo segredo
 possível dentro de uma nota ou anexo. Confira o que há no vault antes de enviar.
 
-## Cópia externa privada
+## Conectar ao GitHub pelo painel
+
+Em **Ajustes > Backup**, o botão **Login no GitHub** inicia a autorização oficial
+do GitHub CLI, que precisa estar instalado no computador. A senha é informada no
+GitHub, e o painel mostra somente o código temporário da autorização.
+
+Depois do login, escolha um repositório privado da lista. Vincular atualiza os
+endereços de leitura e envio de `origin`; não envia arquivos nem ativa o backup
+automático. Crie um repositório privado dedicado se ainda não tiver um. Confira
+o destino, prepare o histórico e revise a autorização antes do primeiro envio.
+
+O token fica sob gerenciamento do CLI, conforme o suporte do sistema operacional.
+Login concluído e remoto vinculado não comprovam que um backup foi enviado:
+confira a execução e teste a recuperação de uma cópia separada. Detalhes do fluxo
+em [Experiência da comunidade](experiencia-comunidade.md).
+
+## Configurar a cópia externa manualmente
 
 Crie um repositório **privado** e vazio e configure seu endereço dentro do vault:
 
@@ -119,6 +135,8 @@ notas serão enviadas.
 Prefira SSH com uma chave protegida e um agente SSH já configurado. O processo de
 backup desabilita configuração Git global/system e helpers globais de credenciais;
 um gerenciador HTTPS já usado pelo seu terminal pode não funcionar nesse processo.
+No envio HTTPS para `github.com`, a exceção é o helper oficial do `gh` instalado:
+ele usa o login do GitHub CLI sem habilitar helpers herdados ou configuração global.
 Não coloque tokens ou senhas na URL do remoto. Autenticação e envio real ao seu
 provedor precisam ser conferidos no seu ambiente; os testes automatizados usam um
 remoto Git local independente.

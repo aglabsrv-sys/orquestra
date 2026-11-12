@@ -210,6 +210,8 @@ def test_todo_coletor_do_catalogo_tem_o_script():
 
 
 def test_dock_mostra_tudo_quando_ha_poucas_areas(cliente):
+    # Quatro módulos + cinco telas do sistema cabem sem a gaveta.
+    cliente.painel.desligar_modulo("numeros")
     pagina = cliente.get("/").text
     assert 'id="abrir-gaveta"' not in pagina and 'data-dica="Pastas"' in pagina and 'data-dica="Ajustes"' in pagina
 
@@ -225,7 +227,7 @@ def test_dock_compacta_quando_ha_muitas_areas(cliente, vault):
     assert len(dock["modulos"]) == 10
     barra = [m["id"] for m in dock["barra"]]
     assert len(barra) == 6 and barra[-1] == "financas"  # as cinco primeiras, mais a área aberta
-    assert [s["id"] for s in dock["sistema_barra"]] == ["decidir"]
+    assert [s["id"] for s in dock["sistema_barra"]] == ["calendario", "decidir"]
     assert {i["id"] for i in dock["gaveta"]} >= {"pastas", "diario", "ajustes", "estudos"}
     assert not dock["gaveta_ativa"]  # a área aberta está visível na barra
 

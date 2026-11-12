@@ -26,6 +26,7 @@ Para rotinas, use o coletor recorrentes.py.
 
 import datetime
 import pathlib
+import os
 
 from _comum import CONFIG, avisar, baixar, emitir
 
@@ -82,6 +83,8 @@ def main() -> None:
     limite = hoje + datetime.timedelta(days=int(CONFIG.get("dias_a_frente") or 14))
     for agenda in CONFIG.get("agendas") or []:
         endereco = str(agenda.get("url") or "") if isinstance(agenda, dict) else str(agenda)
+        if isinstance(agenda, dict) and agenda.get("variavel"):
+            endereco = os.environ.get(str(agenda["variavel"]), "")
         nome = str(agenda.get("nome") or "agenda") if isinstance(agenda, dict) else "agenda"
         if not endereco:
             continue

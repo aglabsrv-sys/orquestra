@@ -8,6 +8,8 @@
   <link rel="icon" href="/static/icone.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/css/app.css?v={{ marca }}">
   {# Cores, cantos e fonte: o tema ativo mais as escolhas de Ajustes > Aparência (aparencia.py). #}
+  <link rel="stylesheet" href="/static/css/refino.css?v={{ marca }}">
+  {% block estilos %}{% endblock %}
   <style>{{ estilo|safe }}</style>
 </head>
 <body data-vault-id="{{ vault_id }}" data-observa="{% block observa %}{% endblock %}">
@@ -24,6 +26,7 @@
       <time class="relogio" id="relogio">--:--</time>
       <span class="data-hoje">{{ hoje_longo|capitalize }}</span>
       <a class="botao so-icone" href="/buscar" title="Buscar" aria-label="Buscar">{{ icone('busca', 18) }}</a>
+      <a class="botao so-icone acesso-foco" href="/foco" id="abrir-foco" title="Pomodoro" aria-label="Pomodoro"{% if ativo == 'foco' %} aria-current="page"{% endif %}>{{ icone('cronometro', 19) }}<i id="foco-indicador" hidden aria-hidden="true"></i></a>
       {% if modulo_captura %}
       <button class="botao" id="abrir-captura" type="button" aria-label="Capturar uma ideia" title="Captura rápida (tecla C)">{{ icone('mais', 16) }}<span>Capturar</span></button>
       {% endif %}
@@ -94,5 +97,9 @@
   <script src="/static/js/notas-seguras.js?v={{ marca }}"></script>
   <script src="/static/js/interface.js?v={{ marca }}"></script>
   <script src="/static/js/app.js?v={{ marca }}"></script>
+  <script src="/static/js/refino.js?v={{ marca }}"></script>
+  <script src="/static/js/foco-engine.js?v={{ marca }}"></script>
+  <script src="/static/js/foco.js?v={{ marca }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

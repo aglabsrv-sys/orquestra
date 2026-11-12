@@ -59,7 +59,8 @@ lê o e-mail ou a agenda é o agente, e o vault é onde o resultado fica organiz
 qualquer agente que tenha o conector de e-mail e acesso ao vault.
 
 O que o Orquestra faz por conta própria são os **coletores**: scripts simples que
-podem ser agendados após revisão e aprovação. Não usam IA; os serviços consultados
+podem ser agendados. Versões personalizadas exigem revisão e aprovação local;
+originais idênticos ao catálogo instalado não exigem aceite extra. Não usam IA; os serviços consultados
 podem ter custos ou limites próprios. Veja [coletores.md](coletores.md).
 
 ## Pedidos para começar

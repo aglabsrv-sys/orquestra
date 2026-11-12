@@ -885,7 +885,8 @@
 
   // ---------------------------------------------------------------- execução
 
-  var ativas = [], parado = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var preferencia = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  var ativas = [], parado = preferencia && preferencia.matches, agendado = 0;
 
   function preparar(canvas) {
     if (canvas._cena) return canvas._cena;
@@ -907,15 +908,14 @@
 
   // Uma cena só é animada se estiver na tela e, dentro do carrossel, se for o slide ativo.
   function deveAnimar(cena) {
-    if (!cena.visivel || document.hidden) return false;
+    if (!cena.visivel || document.hidden || !cena.canvas.isConnected) return false;
     var slide = cena.canvas.closest(".slide");
     return !slide || slide.classList.contains("ativo");
   }
 
+  var observador = "IntersectionObserver" in window
+    ? new IntersectionObserver(function (itens) { itens.forEach(function (i) { if (i.target._cena) i.target._cena.visivel = i.isIntersecting; }); acordar(); }) : null;
   function iniciar(raiz) {
-    var observador = "IntersectionObserver" in window
-      ? new IntersectionObserver(function (itens) { itens.forEach(function (i) { if (i.target._cena) i.target._cena.visivel = i.isIntersecting; }); })
-      : null;
     (raiz || document).querySelectorAll("canvas[data-cena]").forEach(function (canvas) {
       if (canvas._cena) return;
       try {
@@ -924,34 +924,48 @@
         if (observador) observador.observe(canvas); else cena.visivel = true;
       } catch (e) { if (window.console) console.error("Cena não pôde ser desenhada:", e); }
     });
+    acordar();
   }
 
   var ultimo = 0, fonteAmbiente = null;
+  function ambienteAnimado() { return fonteAmbiente && fonteAmbiente.isConnected && fonteAmbiente.tagName === "VIDEO" && !fonteAmbiente.paused; }
+  function temTrabalho() { return !document.hidden && !parado && (ativas.some(deveAnimar) || ambienteAnimado()); }
+  function acordar() { if (!agendado && temTrabalho()) agendado = requestAnimationFrame(laco); }
   function laco(agora) {
-    requestAnimationFrame(laco);
-    if (agora - ultimo < 1000 / QPS) return;
+    agendado = 0;
+    ativas = ativas.filter(function (c) { if (c.canvas.isConnected) return true; if (observador) observador.unobserve(c.canvas); return false; });
+    if (!temTrabalho()) return;
+    if (agora - ultimo < 1000 / QPS) { acordar(); return; }
     ultimo = agora;
     if (!parado) for (var i = 0; i < ativas.length; i++) if (deveAnimar(ativas[i])) ativas[i].quadro(agora / 1000);
     pintarAmbiente();
+    acordar();
   }
 
   // O fundo da página copia a capa ativa em baixíssima resolução; o CSS desfoca.
   function pintarAmbiente() {
     var alvo = document.getElementById("ambiente");
-    if (!alvo || !fonteAmbiente) return;
+    if (!alvo || !fonteAmbiente || document.hidden || !fonteAmbiente.isConnected) return;
     try {
       if (fonteAmbiente.tagName === "IMG" && !fonteAmbiente.complete) return;
       alvo.getContext("2d").drawImage(fonteAmbiente, 0, 0, alvo.width, alvo.height);
       alvo.classList.add("visivel");
     } catch (e) { /* imagem de outro site ou ainda carregando */ }
   }
-  function ambiente(elemento) { fonteAmbiente = elemento || null; pintarAmbiente(); }
+  function ambiente(elemento) {
+    if (fonteAmbiente) { fonteAmbiente.removeEventListener("load", pintarAmbiente); fonteAmbiente.removeEventListener("play", acordar); }
+    fonteAmbiente = elemento || null;
+    if (fonteAmbiente) { fonteAmbiente.addEventListener("load", pintarAmbiente); fonteAmbiente.addEventListener("play", acordar); }
+    pintarAmbiente(); acordar();
+  }
+  document.addEventListener("visibilitychange", function () { if (document.hidden && agendado) { cancelAnimationFrame(agendado); agendado = 0; } else acordar(); });
+  if (preferencia && preferencia.addEventListener) preferencia.addEventListener("change", function (e) { parado = e.matches; if (parado && agendado) { cancelAnimationFrame(agendado); agendado = 0; } else acordar(); });
 
   window.Orquestra = { iniciarCenas: iniciar, ambiente: ambiente, cenas: Object.keys(CENAS) };
   document.addEventListener("DOMContentLoaded", function () {
     iniciar(document);
     var capa = document.querySelector(".cab-modulo .capa");
     if (capa) ambiente(capa);
-    requestAnimationFrame(laco);
+    acordar();
   });
 })();

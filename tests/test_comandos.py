@@ -89,7 +89,10 @@ def test_coletar_modulo_inexistente_ou_falha_nao_retornam_sucesso(comando, cofre
     desconhecido = comando("coletar", "nao-existe", "--vault", cofre_cli)
     assert desconhecido.returncode == 1
     assert "não existe" in desconhecido.stderr
-    # Os scripts do catálogo não foram autorizados: nenhum provedor é chamado.
+    # Uma alteração local deixa de corresponder ao catálogo e exige aprovação.
+    # Todos os auxiliares entram na assinatura: nenhum provedor deve ser chamado.
+    script = cofre_cli / "tarefas/maquina/coletores/recorrentes.py"
+    script.write_bytes(script.read_bytes() + b"\n# revisao local pendente\n")
     recusado = comando("coletar", "tarefas", "--vault", cofre_cli)
     assert recusado.returncode == 1
     assert "falhou:" in recusado.stdout
