@@ -21,6 +21,7 @@
       <span class="aqui">{% block trilha %}Início{% endblock %}</span>
     </div>
     <div class="topo-dir">
+      <span id="estado-conexao" class="estado-conexao" role="status" aria-live="polite" hidden></span>
       <time class="relogio" id="relogio">--:--</time>
       <span class="data-hoje">{{ hoje_longo|capitalize }}</span>
       <a class="botao so-icone" href="/buscar" title="Buscar" aria-label="Buscar">{{ icone('busca', 18) }}</a>
@@ -35,20 +36,20 @@
 
   {# Dock: só ícones. O nome aparece ao passar o mouse. Com muitas áreas, parte delas fica no botão "Áreas". #}
   <nav class="dock" aria-label="Navegação">
-    <a class="dock-item{% if dock.inicio_ativo %} ativo{% endif %}" href="/" data-dica="Início" aria-label="Início">{{ icone('inicio', 20) }}</a>
+    <a class="dock-item{% if dock.inicio_ativo %} ativo{% endif %}" href="/"{% if dock.inicio_ativo %} aria-current="page"{% endif %} data-dica="Início" aria-label="Início">{{ icone('inicio', 20) }}</a>
     {% for m in dock.barra %}
-    <a class="dock-item{% if m.ativo %} ativo{% endif %}" href="{{ m.url }}" data-dica="{{ m.nome }}" aria-label="{{ m.nome }}" data-selo-de="{{ m.id }}">
+    <a class="dock-item{% if not m.no_mobile %} dock-so-desktop{% endif %}{% if m.ativo %} ativo{% endif %}" href="{{ m.url }}"{% if m.ativo %} aria-current="page"{% endif %} data-dica="{{ m.nome }}" aria-label="{{ m.nome }}" data-selo-de="{{ m.id }}">
       {{ icone(m.icone, 20) }}<b class="selo"{% if not m.selo %} hidden{% endif %}>{{ m.selo }}</b>
     </a>
     {% endfor %}
     {% if dock.gaveta %}
-    <button class="dock-item{% if dock.gaveta_ativa %} ativo{% endif %}" type="button" id="abrir-gaveta" data-dica="Todas as áreas" aria-label="Todas as áreas" aria-expanded="false" aria-controls="gaveta" data-selo-de="_gaveta">
-      {{ icone('grade', 20) }}<b class="selo"{% if not dock.gaveta_selo %} hidden{% endif %}>{{ dock.gaveta_selo }}</b>
+    <button class="dock-item{% if not dock.gaveta_desktop %} dock-so-mobile{% endif %}{% if dock.gaveta_ativa %} ativo-desktop{% endif %}{% if dock.gaveta_mobile_ativa %} ativo-mobile{% endif %}" type="button" id="abrir-gaveta" data-dica="Todas as áreas" aria-label="Todas as áreas" aria-expanded="false" aria-controls="gaveta" data-selo-de="_gaveta">
+      {{ icone('grade', 20) }}<b class="selo dock-so-desktop"{% if not dock.gaveta_selo %} hidden{% endif %}>{{ dock.gaveta_selo }}</b>
     </button>
     {% endif %}
     <span class="dock-sep" aria-hidden="true"></span>
     {% for s in dock.sistema_barra %}
-    <a class="dock-item{% if s.ativo %} ativo{% endif %}" href="{{ s.url }}" data-dica="{{ s.nome }}" aria-label="{{ s.nome }}" data-selo-de="{{ s.id }}">
+    <a class="dock-item{% if s.id != 'decidir' %} dock-so-desktop{% endif %}{% if s.ativo %} ativo{% endif %}" href="{{ s.url }}"{% if s.ativo %} aria-current="page"{% endif %} data-dica="{{ s.nome }}" aria-label="{{ s.nome }}" data-selo-de="{{ s.id }}">
       {{ icone(s.icone, 20) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ s.selo }}</b>
     </a>
     {% endfor %}
@@ -57,7 +58,7 @@
   {% if dock.gaveta %}
   <div class="gaveta" id="gaveta" hidden>
     {% for i in dock.gaveta %}
-    <a class="gaveta-item{% if i.ativo %} ativo{% endif %}" href="{{ i.url }}" data-selo-de="{{ i.id }}">
+    <a class="gaveta-item{% if i.ativo %} ativo{% endif %}" href="{{ i.url }}"{% if i.ativo %} aria-current="page"{% endif %} data-selo-de="{{ i.id }}">
       {{ icone(i.icone, 20) }}<span>{{ i.nome }}</span><b class="selo"{% if not i.selo %} hidden{% endif %}>{{ i.selo }}</b>
     </a>
     {% endfor %}
@@ -88,7 +89,7 @@
     </form>
   </dialog>
   {% block dialogos %}{% endblock %}
-  <div id="avisos" aria-live="off" aria-label="Notificações"></div>
+  <div id="avisos" role="region" aria-live="off" aria-label="Notificações"></div>
 
   <script src="/static/js/cenas.js?v={{ marca }}"></script>
   <script src="/static/js/notas-seguras.js?v={{ marca }}"></script>

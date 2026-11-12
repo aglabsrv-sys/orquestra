@@ -15,6 +15,31 @@ uv build
 uv run --frozen python scripts/verificar_pacote.py dist
 ```
 
+Para verificar as jornadas no navegador:
+
+```bash
+uv sync --locked --group browser
+uv run --frozen --group browser playwright install chromium
+uv run --frozen --group browser python scripts/verificar_interface.py
+```
+
+Em Linux sem as bibliotecas necessárias, use `playwright install --with-deps chromium`
+no lugar da instalação acima. Quem já tem Chromium pode passar `--chromium CAMINHO`
+ao script. O processo abre somente loopback, usa um vault descartável e desliga os
+agendamentos. Para gerar prints fictícios, acrescente `--capturas output/prints`.
+O mesmo roteiro roda no job **Jornadas desktop e mobile / Chromium** da CI.
+
+Para medir o servidor sem o custo do navegador:
+
+```bash
+uv run --frozen python scripts/medir_desempenho.py --notas 10000 --amostras 7
+```
+
+O benchmark gera notas sintéticas em uma pasta temporária e imprime JSON com
+ambiente, tamanho das notas, carga inicial, mediana, máximo e bytes por resposta.
+Compare no mesmo ambiente e com os mesmos argumentos; os resultados variam com
+cache do sistema, disco e carga concorrente.
+
 Os testes usam diretórios temporários e `ORQUESTRA_HOME` isolado. Nunca aponte
 testes automatizados para seu vault real. Para trabalho manual, crie um vault de
 exemplo fora do repositório do aplicativo e mantenha uma cópia de recuperação.
@@ -36,6 +61,11 @@ O workflow de qualidade cobre Windows, macOS e Linux com Python 3.11 e 3.13,
 empacotamento, lint, testes e dependências conhecidamente vulneráveis. Um workflow
 pendente ou sem runner não significa aprovação. Os testes de instalação em CI
 também não substituem uso real de Obsidian, Tailscale e login automático.
+
+A suíte roda nos pull requests, nos pushes para `main` e por disparo manual;
+push de branch com PR não duplica a execução. O job de segredos recebe somente
+leitura de conteúdo e de pull requests, necessária para consultar os commits do
+PR mesmo quando comentários e upload de artefatos estão desligados.
 
 ## Mudanças e pull requests
 

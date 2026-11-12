@@ -210,8 +210,11 @@ def test_todo_coletor_do_catalogo_tem_o_script():
 
 
 def test_dock_mostra_tudo_quando_ha_poucas_areas(cliente):
-    pagina = cliente.get("/").text
-    assert 'id="abrir-gaveta"' not in pagina and 'data-dica="Pastas"' in pagina and 'data-dica="Ajustes"' in pagina
+    resposta = cliente.get("/")
+    pagina = resposta.text
+    assert not resposta.context["dock"]["gaveta_desktop"]
+    assert 'dock-so-mobile' in pagina and 'id="abrir-gaveta"' in pagina
+    assert 'data-dica="Pastas"' in pagina and 'data-dica="Ajustes"' in pagina
 
 
 def test_dock_compacta_quando_ha_muitas_areas(cliente, vault):

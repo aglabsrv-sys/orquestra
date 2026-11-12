@@ -4,12 +4,13 @@
 {% block trilha %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a>{% endblock %}
 
 {% block conteudo %}
-<section class="pagina" id="personalizar" data-modulo="{{ modulo.id }}">
+<section class="pagina" id="personalizar" data-modulo="{{ modulo.id }}" data-versao="{{ modulo.versao }}">
   <header class="pagina-topo">
     <h1>Personalizar</h1>
     <a class="botao" href="/m/{{ modulo.id|urlencode }}">{{ icone('seta_esq', 15) }}<span>Voltar</span></a>
   </header>
   <p class="suave">Ajuste a aparência e os campos de {{ modulo.nome }}. As mudanças só entram em vigor ao salvar.</p>
+  <p class="faixa alerta" id="p-novidades" role="status" hidden>A configuração mudou no disco. Suas escolhas continuam nesta tela; copie-as e reabra Personalizar para revisar a versão atual antes de salvar.</p>
 
   <h2 class="grupo-titulo">{{ icone('editar', 18) }} Aparência</h2>
   <div class="bloco">
@@ -70,6 +71,7 @@
     <button class="botao principal" type="button" id="p-salvar">Salvar alterações</button>
     <a class="botao" href="/m/{{ modulo.id|urlencode }}">Cancelar</a>
   </div>
+  <p class="campo-ajuda" id="p-estado" role="status" aria-live="polite">As mudanças só entram em vigor ao salvar.</p>
 </section>
 
 <template id="p-modelo-campo">

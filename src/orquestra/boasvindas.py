@@ -25,6 +25,7 @@ from orquestra import __version__, aparencia, preparo, temas
 from orquestra import apresentacao as ap
 from orquestra.config import lembrar_vault
 from orquestra.modulos import rotulo
+from orquestra.recursos import marca_estaticos
 from orquestra.seguranca import CapabilityLocal, Protecao, canal_local
 
 PASTA = Path(__file__).parent
@@ -51,7 +52,7 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
     app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
     modelos = Jinja2Templates(directory=PASTA / "templates")
     modelos.env.globals.update(icone=ap.icone, rotulo=rotulo)
-    marca = str(int(max(p.stat().st_mtime for p in (PASTA / "static").rglob("*") if p.is_file())))
+    marca = marca_estaticos(PASTA / "static")
 
     @app.exception_handler(Recusa)
     async def recusa(request: Request, erro: Recusa):

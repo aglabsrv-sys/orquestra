@@ -96,6 +96,7 @@ class DefinicaoCampo(Pedido):
 
 
 class Personalizacao(Pedido):
+    versao: str | None = Field(default=None, min_length=1, max_length=128)
     nome: str | None = Field(default=None, max_length=60)
     descricao: str | None = Field(default=None, max_length=160)
     icone: str | None = None
