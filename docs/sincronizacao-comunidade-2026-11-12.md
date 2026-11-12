@@ -27,6 +27,16 @@ visibilidade, criação de tag ou publicação em um registro de pacotes.
   conexão SSE abrir antes de alterar o arquivo, evitando perder o evento no setup.
 - Changelog e índice dos guias incorporam as funcionalidades novas.
 
+### Estabilidade do teste remoto de remoção
+
+A CI de `6c2e1ec` identificou outra condição de corrida no setup: no Linux a nota
+criada/editada pela API podia ser removida antes do primeiro snapshot do monitor
+por polling. A conexão SSE aberta, sozinha, não confirma esse snapshot. O roteiro
+agora cria e remove um marcador Markdown na raiz do vault descartável e aguarda os
+eventos exatos de criação e remoção antes de executar as alterações externas.
+Esse marcador não pertence ao módulo Tarefas e não dispara seu aviso Atualizar.
+O teste continua exigindo o aviso e a atualização real da lista após a remoção.
+
 ## Verificações desta rodada
 
 As verificações usam dados sintéticos, vaults descartáveis e `ORQUESTRA_HOME`

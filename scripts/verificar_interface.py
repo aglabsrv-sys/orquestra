@@ -50,16 +50,37 @@ def conferir_layout(page) -> None:
         assert novo.evaluate("e => { const r=e.getBoundingClientRect(); return r.left>=0 && r.right<=innerWidth; }")
 
 
+def aguardar_vigia(page, vault: Path) -> None:
+    """Confirma um ciclo real do polling, além de abrir a conexão SSE.
+
+    O Linux pode criar/editar a nota pela API e apagá-la antes de o primeiro
+    snapshot vê-la. O marcador na raiz não afeta a página do módulo em teste.
+    """
+    page.wait_for_function("window.__fonteAoVivo && window.__fonteAoVivo.readyState===1")
+    marcador = vault / f"Sonda do monitor {time.monotonic_ns()}.md"
+    marcador.write_text("Arquivo sintético para sincronizar a observação.\n", encoding="utf-8")
+    for acao in ("criado", "removido"):
+        page.wait_for_function(
+            "([rel, acao]) => window.__eventos.some(e => e.rel===rel && e.acao===acao)",
+            arg=[marcador.name, acao], timeout=8000,
+        )
+        if acao == "criado":
+            marcador.unlink()
+
+
 def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     contexto = browser.new_context(viewport={"width": 1440, "height": 960}, reduced_motion="reduce")
     contexto.set_default_timeout(8000)
     # Contar chamadas reais de RAF permite detectar animação ociosa no modo reduzido.
-    contexto.add_init_script("""window.__quadros=0;
+    contexto.add_init_script("""window.__quadros=0; window.__eventos=[];
       const raf=window.requestAnimationFrame.bind(window);
       window.requestAnimationFrame=cb=>{window.__quadros++;return raf(cb);};
       const Fonte=window.EventSource;
       window.EventSource=class extends Fonte {
-        constructor(...args) { super(...args); window.__fonteAoVivo=this; }
+        constructor(...args) {
+          super(...args); window.__fonteAoVivo=this;
+          this.addEventListener('message', e => window.__eventos.push(JSON.parse(e.data)));
+        }
       };""")
     page = contexto.new_page()
     erros = []
@@ -131,7 +152,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         if largura != 320:
             # Prints da próxima largura usam apenas as demonstrações do catálogo.
             page.goto(base + "/m/tarefas?aba=v1", wait_until="domcontentloaded")
-            page.wait_for_function("window.__fonteAoVivo && window.__fonteAoVivo.readyState===1")
+            aguardar_vigia(page, vault)
             (vault / nota["rel"]).unlink()
             expect(page.get_by_role("button", name="Atualizar", exact=True)).to_be_visible(timeout=8000)
             page.get_by_role("button", name="Atualizar", exact=True).click()
@@ -141,7 +162,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator("#editar").click()
     page.locator("#editor").fill("Meu rascunho ainda não salvo.")
     arquivo = vault / nota["rel"]
-    page.wait_for_function("window.__fonteAoVivo && window.__fonteAoVivo.readyState===1")
+    aguardar_vigia(page, vault)
     arquivo.write_text(arquivo.read_text(encoding="utf-8") + "\nAlteração externa.\n", encoding="utf-8")
     expect(page.locator("#faixa-conflito")).to_be_visible(timeout=8000)
     with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as conflito:
@@ -163,7 +184,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator("#p-descricao").fill("Descrição pendente")
     page.locator("h1").click()
     schema = vault / "tarefas/_modulo.yaml"
-    page.wait_for_function("window.__fonteAoVivo && window.__fonteAoVivo.readyState===1")
+    aguardar_vigia(page, vault)
     schema.write_text(schema.read_text(encoding="utf-8") + "\n# Alteração externa para testar atualização ao vivo.\n", encoding="utf-8")
     expect(page.locator("#p-novidades")).to_be_visible(timeout=8000)
     expect(page.locator("#p-descricao")).to_have_value("Descrição pendente")
