@@ -290,7 +290,6 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     def ver_modulo(request: Request, modulo_id: str, aba: str = "v0"):
         modulo = painel.modulo(modulo_id)
         hoje = dt.date.today()
-        itens = painel.indice.itens(modulo.id)
         contexto: dict[str, Any] = {
             "modulo": modulo,
             "aba": aba,
@@ -326,6 +325,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             ]
             contexto["arquivadas"] = len(painel.indice.notas_em(modulo.id, "arquivo"))
         else:
+            itens = painel.indice.itens(modulo.id)
             try:
                 indice_visao = max(0, min(int(aba.lstrip("v") or 0), len(modulo.visoes) - 1))
             except ValueError:
@@ -655,14 +655,14 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_editar(request: Request, rel: str):
         painel.caminho_seguro(rel)
         dados = await corpo_json(request, contratos.EditarNota)
-        nota = await asyncio.to_thread(painel.editar_nota,
-            rel,
-            str(dados["versao"]) if dados.get("versao") else None,
-            titulo=dados.get("titulo") if isinstance(dados.get("titulo"), str) else None,
-            campos=dados.get("campos") if isinstance(dados.get("campos"), dict) else None,
-            corpo=dados.get("corpo") if isinstance(dados.get("corpo"), str) else None,
-        )
-        return {"rel": nota.rel, "versao": nota.versao, "html": str(ap.render_markdown(nota.corpo, painel.indice))}
+        def editar_e_renderizar():
+            # Markdown extenso também usa CPU. Mantê-lo fora do laço ASGI evita
+            # bloquear eventos e outras abas enquanto se prepara a prévia salva.
+            with painel._trava:
+                nota = painel.editar_nota(rel, dados["versao"], titulo=dados.get("titulo"),
+                                           campos=dados.get("campos"), corpo=dados.get("corpo"))
+                return {"rel": nota.rel, "versao": nota.versao, "html": str(ap.render_markdown(nota.corpo, painel.indice))}
+        return await asyncio.to_thread(editar_e_renderizar)
 
     @app.post("/api/arquivar/{rel:path}")
     async def api_arquivar(request: Request, rel: str):
@@ -811,7 +811,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_personalizar(request: Request, modulo_id: str):
         dados = await corpo_json(request, contratos.Personalizacao)
         modulo = await asyncio.to_thread(painel.personalizar_modulo, modulo_id, dados)
-        return {"id": modulo.id, "url": f"/m/{quote(modulo.id)}", "avisos": modulo.avisos}
+        return {"id": modulo.id, "url": f"/m/{quote(modulo.id)}", "avisos": modulo.avisos, "versao": modulo.versao}
 
     @app.post("/api/modulos/{modulo_id}/desligar")
     async def api_desligar(request: Request, modulo_id: str):

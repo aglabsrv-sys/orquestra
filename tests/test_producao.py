@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import threading
+
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -196,3 +200,67 @@ def test_disco_cheio_vira_erro_recuperavel_sem_alterar_nota(app_leve, monkeypatc
     resposta = cliente.put("/api/notas/" + nota["rel"], json={"versao": nota["versao"], "corpo": "Meu rascunho."})
     assert resposta.status_code == 503 and "erro" in resposta.json()
     assert (vault / nota["rel"]).read_bytes() == original
+
+
+def test_renderizar_nota_nao_bloqueia_pedidos_no_laco_asgi(app_leve, monkeypatch):
+    from orquestra import apresentacao
+
+    cliente, _, _ = app_leve
+    nota = criar(cliente)
+    inicio, liberar = threading.Event(), threading.Event()
+    render_original = apresentacao.render_markdown
+
+    def renderizar_lento(*args, **kwargs):
+        inicio.set()
+        assert liberar.wait(timeout=5), "A renderização bloqueou outros pedidos no servidor"
+        return render_original(*args, **kwargs)
+
+    monkeypatch.setattr(apresentacao, "render_markdown", renderizar_lento)
+
+    async def verificar():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=cliente.app), base_url="http://localhost") as c:
+            gravacao = asyncio.create_task(c.put("/api/notas/" + nota["rel"], json={"versao": nota["versao"], "corpo": "Texto extenso."}))
+            try:
+                assert await asyncio.to_thread(inicio.wait, 2)
+                # O bootstrap não precisa do lock do índice nem deve aguardar o Markdown.
+                resposta = await asyncio.wait_for(c.get("/api/local/capacidade"), timeout=1)
+                assert resposta.status_code == 200
+            finally:
+                liberar.set()
+                resposta = await gravacao
+            assert resposta.status_code == 200
+
+    asyncio.run(verificar())
+
+
+def test_csp_recusa_scripts_inline_e_preserva_scripts_locais(app_leve):
+    cliente, _, _ = app_leve
+    csp = cliente.get("/").headers["content-security-policy"]
+    scripts = next(d for d in csp.split(";") if d.strip().startswith("script-src"))
+    assert "'self'" in scripts and "unsafe-inline" not in scripts
+    assert cliente.get("/static/js/app.js").status_code == 200
+
+
+def test_dock_mobile_mantem_area_atual_e_acesso_a_todas_as_telas(app_leve):
+    cliente, _, painel = app_leve
+    for nome in ("conteudo", "radar", "numeros", "entrada", "notas", "estudos"):
+        painel.adicionar_modulo(nome)
+    resposta = cliente.get("/m/estudos")
+    dock = resposta.context["dock"]
+    mobile = [m for m in dock["barra"] if m["no_mobile"]]
+    assert len(mobile) <= 2 and any(m["id"] == "estudos" for m in mobile)
+    assert {i["id"] for i in dock["gaveta"]} == set(painel.indice.modulos) | {"ajustes", "diario", "pastas"}
+
+
+def test_personalizacao_de_aba_antiga_nao_sobrescreve_configuracao_nova(app_leve):
+    cliente, vault, painel = app_leve
+    versao = painel.modulo("tarefas").versao
+    primeira = cliente.put("/api/modulos/tarefas", json={"versao": versao, "descricao": "Mudança em outra aba"})
+    assert primeira.status_code == 200 and primeira.json()["versao"] != versao
+    schema = vault / "tarefas/_modulo.yaml"
+    atual = schema.read_bytes()
+    antiga = cliente.put("/api/modulos/tarefas", json={"versao": versao, "descricao": "Formulário antigo"})
+    assert antiga.status_code == 409 and antiga.json()["conflito"]
+    assert schema.read_bytes() == atual
+    segunda = cliente.put("/api/modulos/tarefas", json={"versao": primeira.json()["versao"], "descricao": "Escolhas revisadas"})
+    assert segunda.status_code == 200

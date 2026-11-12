@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from orquestra.armazenamento import versao
 from orquestra.config import ler_yaml
 from orquestra.caminhos import CaminhoInseguro, caminho_no_vault
 
@@ -95,6 +96,7 @@ class Modulo:
     # todo vault do Obsidian já é organizado.
     itens_em: str = "itens"
     invalido: bool = False
+    versao: str = ""
 
     @property
     def itens_na_raiz(self) -> bool:
@@ -159,6 +161,7 @@ def _carregar_modulo(pasta: Path) -> Modulo:
             raise ValueError("'ativo' precisa ser true ou false, sem aspas.")
 
     m = Modulo(id=pasta.name, pasta=pasta, nome=str(bruto.get("nome") or rotulo(pasta.name)))
+    m.versao = versao(bruto._orq_original or b"")
     m.descricao = str(bruto.get("descricao") or "")
     m.icone = str(bruto.get("icone") or "pasta")
     m.capa = bruto.get("capa")

@@ -21,6 +21,18 @@ nela; e você abre no Obsidian quando quiser.
 |---|---|
 | ![Módulo Tarefas](docs/img/tarefas.png) | ![Módulo Conteúdo](docs/img/conteudo.png) |
 
+<details>
+<summary>Veja também no celular</summary>
+
+| Início | Tarefas |
+|---|---|
+| ![Início em tela de 390 px](docs/img/inicio-mobile.png) | ![Quadro de tarefas em tela de 390 px, com criação e navegação acessíveis](docs/img/tarefas-mobile.png) |
+
+Capturas com notas fictícias do catálogo. No celular, **Todas as áreas** abre a
+lista completa, incluindo Ajustes, Pastas e Diário.
+
+</details>
+
 ## Instalação
 
 Leva uns dez minutos. Você precisa de duas ferramentas gratuitas: o **uv**
@@ -250,6 +262,9 @@ Para trocar de vault com o painel aberto: Ajustes > Vault > Trocar de vault.
 
 ## Documentação
 
+O [índice dos guias](docs/README.md) reúne uso, desenvolvimento e histórico das
+revisões. As mudanças recentes ficam no [changelog](CHANGELOG.md).
+
 | | |
 |---|---|
 | [Usar um vault que já existe](docs/vault-existente.md) | O que o painel cria, como as pastas viram áreas, estilos reconhecidos |
@@ -270,6 +285,11 @@ Para trocar de vault com o painel aberto: Ajustes > Vault > Trocar de vault.
 
 ## Estado do projeto
 
+A [revisão de lançamento de 12/11](docs/revisao-lancamento-2026-11-12.md) registra
+os ajustes de desktop/mobile, reconexão, proteção da personalização e medições
+reproduzíveis com 10 mil notas. Inclui um roteiro automatizado no Chromium que
+cria seu próprio vault de teste e verifica as jornadas sem usar arquivos pessoais.
+
 As correções de segurança, recuperação, desempenho e qualidade da versão 0.4 estão
 descritas em [Preparação para produção](docs/preparacao-producao-2026-11-11.md), com
 testes executados e os limites de validação de cada plataforma.
@@ -282,7 +302,7 @@ A verificação dos comandos, instalação, MCP e exemplos dos guias está em
 
 Versão 0.4. Funciona e tem testes automatizados, mas é novo: faça backup.
 
-- Testado no **Windows 10** com Chrome. macOS e Linux usam o mesmo código, mas ainda não foram testados em máquina real; relatos são bem-vindos.
+- Uso manual anterior no **Windows 10** com Chrome; nesta revisão, **Linux com Chromium** e larguras de 1440, 390 e 320 px. A CI verifica Python em Windows, macOS e Linux. Emulação de largura não substitui Safari/iOS, Android e uso real do Obsidian em cada sistema.
 - A leitura da lista de cofres do Obsidian, o acesso por Tailscale e o início automático no macOS/Linux foram escritos seguindo a documentação de cada sistema e ainda precisam de confirmação de quem usa.
 - Só pastas da raiz do vault viram área do painel; subpastas aparecem dentro da área e em "Pastas".
 

@@ -152,6 +152,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .barra { color: var(--texto-suave); }
 .aqui { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topo-dir { display: flex; align-items: center; gap: 10px; }
+.estado-conexao { color: var(--alerta); font-size: 12px; font-weight: 600; }
 .relogio { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .data-hoje { font-size: 12.5px; font-weight: 600; color: var(--texto-suave); display: none; }
 
@@ -354,6 +355,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 }
 .dock-item:hover { background: var(--superficie-alta); color: var(--texto); }
 .dock-item.ativo { background: var(--destaque); color: var(--sobre-destaque); }
+.dock-so-mobile { display: none; }
 .dock-sep { flex: none; width: 1px; margin: 8px 2px; background: var(--borda); }
 .selo {
   position: absolute;
@@ -429,9 +431,10 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   font-size: 12px;
 }
 
-.abas { display: flex; align-items: center; gap: 4px; margin: 12px var(--margem) 0; overflow-x: auto; scrollbar-width: none; }
-.abas::-webkit-scrollbar { display: none; }
+.abas { display: flex; align-items: center; gap: 8px; margin: 12px var(--margem) 0; }
+.abas-visoes { display: flex; align-items: center; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: thin; padding: 4px 2px; }
 .aba {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1001,7 +1004,7 @@ body.bv { padding-bottom: 40px; }
   .relogio { font-size: 19px; }
   .cab-numeros span:nth-child(n + 3) { display: none; }
   .abas .novo span { display: none; }
-  .abas .novo { width: 38px; padding: 0; position: sticky; right: 0; }
+  .abas .novo { width: 44px; padding: 0; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not(.nota-titulo), select, textarea, .editor, .bv-caminho input { font-size: 16px; }
   .botao, .botao.pequeno, .topo .botao { min-height: 44px; }
   .topo .botao, .botao.so-icone { width: 44px; }
@@ -1020,6 +1023,22 @@ body.bv { padding-bottom: 40px; }
   .linha-nota.com-lado { grid-template-columns: minmax(0, 1fr); }
   .linha-nota.com-lado small { white-space: normal; }
   .aviso .aviso-fechar { width: 40px; min-height: 40px; }
+}
+
+@media (max-width: 699px) {
+  .dock { overflow: visible; }
+  .dock .dock-so-desktop { display: none; }
+  .dock .dock-so-mobile { display: grid; }
+  .dock-item { width: 44px; height: 44px; }
+  .dock-item.ativo-mobile { background: var(--destaque); color: var(--sobre-destaque); }
+  .topo { flex-wrap: wrap; }
+  .estado-conexao { max-width: 90px; font-size: 11px; }
+  .abas-visoes { flex: 1; }
+  .abas-fim { flex: none; }
+  .aba { min-height: 44px; }
+}
+@media (min-width: 700px) {
+  .dock-item.ativo-desktop { background: var(--destaque); color: var(--sobre-destaque); }
 }
 
 @media (pointer: coarse) {

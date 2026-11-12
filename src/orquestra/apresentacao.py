@@ -310,13 +310,23 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
         sistema_barra = [s for s in sistema if s["id"] == "decidir"]
         gaveta = [*modulos, *[s for s in sistema if s["id"] != "decidir"]]
     escondidos = [i for i in gaveta if i not in barra]
+    # A largura do navegador não chega ao servidor. O CSS alterna a mesma barra
+    # para dois atalhos no celular, mantendo a área atual e todas as demais na gaveta.
+    mobile = barra[:2]
+    atual = next((m for m in barra if m["ativo"]), None)
+    if atual and atual not in mobile:
+        mobile = [*mobile[:1], atual]
+    for item in barra:
+        item["no_mobile"] = item in mobile
     return {
         "modulos": modulos,
         "sistema": sistema,
         "barra": barra,
         "sistema_barra": sistema_barra,
-        "gaveta": gaveta,
+        "gaveta": [*modulos, *[s for s in sistema if s["id"] != "decidir"]],
+        "gaveta_desktop": bool(gaveta),
         "gaveta_ativa": any(i["ativo"] for i in escondidos),
+        "gaveta_mobile_ativa": any(s["ativo"] for s in sistema if s["id"] != "decidir"),
         "gaveta_selo": sum(int(i["selo"] or 0) for i in escondidos),
         "decidir": total_decidir,
         "inicio_ativo": ativo == "inicio",
@@ -330,7 +340,7 @@ def montar_semana(painel: Painel, hoje: dt.date) -> tuple[list[dict[str, Any]], 
     for modulo in painel.indice.modulos.values():
         if not modulo.campo_data:
             continue
-        for nota in painel.indice.notas_em(modulo.id, "itens"):
+        for nota in painel.indice.notas_em(modulo.id, "itens", ordenar=False):
             if str(nota.campo(modulo.campo_status) or "") in modulo.concluidos:
                 continue
             dia = data_de(nota, modulo)

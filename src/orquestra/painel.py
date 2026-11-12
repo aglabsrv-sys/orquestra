@@ -633,6 +633,9 @@ class Painel:
         caminho = caminho_no_vault(self.vault, modulo.pasta / ARQUIVO_MODULO)
         yaml = ler_yaml(caminho)
 
+        if dados.get("versao") and dados["versao"] != armazenamento.versao(yaml._orq_original or b""):
+            raise Conflito("A configuração desta área mudou no disco. Suas escolhas continuam nesta tela; copie-as e reabra Personalizar para revisar a versão atual antes de salvar.")
+
         nome = str(dados.get("nome") or "").strip()
         if nome:
             yaml["nome"] = nome[:60]

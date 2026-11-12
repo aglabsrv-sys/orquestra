@@ -213,9 +213,10 @@ class Indice:
             return "itens"
         return partes[1] if len(partes) > 2 else ""
 
-    def notas_em(self, modulo_id: str, zona: str) -> list[Nota]:
+    def notas_em(self, modulo_id: str, zona: str, *, ordenar: bool = True) -> list[Nota]:
         achadas = list(self._zonas.get((modulo_id, zona), {}).values())
-        achadas.sort(key=lambda n: n.titulo.lower())
+        if ordenar:
+            achadas.sort(key=lambda n: n.titulo.lower())
         return achadas
 
     # ------------------------------------------------------------ pastas
@@ -274,11 +275,11 @@ class Indice:
         r = Resumo()
         if not modulo.tem_status:
             # Sem status não há "em aberto" nem "para hoje": é só uma coleção de notas.
-            notas = self.notas_em(modulo.id, "itens")
+            notas = self.notas_em(modulo.id, "itens", ordenar=False)
             r.total = len(notas)
             r.decidir = sum(1 for n in notas if espera_decisao(n, modulo))
             return r
-        for nota in self.notas_em(modulo.id, "itens"):
+        for nota in self.notas_em(modulo.id, "itens", ordenar=False):
             r.total += 1
             status = str(nota.campo(modulo.campo_status) or "")
             if espera_decisao(nota, modulo):
