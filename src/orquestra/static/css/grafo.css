@@ -81,3 +81,8 @@ body:has(.explorador) > #conteudo { flex:1; min-height:0; display:flex; flex-dir
 #pasta-notas .lista-notas { gap:0; }
 #pasta-notas .linha-nota { border:0; border-bottom:1px solid var(--borda); border-radius:0; padding:11px 8px; background:transparent; }
 #pasta-notas .linha-principal > span { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+/* Celular baixo (ex.: 320x568): a árvore encolhe para o grafo manter uma área útil. */
+@media(max-width:600px) and (max-height:620px) {
+  .explorador { grid-template-rows:minmax(72px,16%) minmax(0,1fr); }
+  .explorador-topo { margin-bottom:4px; }
+}

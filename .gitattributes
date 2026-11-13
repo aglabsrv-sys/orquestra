@@ -15,3 +15,5 @@
 *.webp binary
 *.webm binary
 *.mp4 binary
+# Fixtures com hash conhecido: os bytes não podem mudar no checkout (CRLF no Windows).
+tests/fixtures/** -text

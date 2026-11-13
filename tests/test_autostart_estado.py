@@ -86,6 +86,9 @@ def test_macos_falha_ao_descarregar_preserva_configuracao(tmp_path, monkeypatch)
 def test_api_inicializacao_confirma_estado_sem_expor_arquivo(cliente, tmp_path, monkeypatch):
     arquivo = tmp_path / "Inicializar" / "Orquestra.vbs"
     monkeypatch.setattr(autostart, "_arquivo", lambda: arquivo)
+    # A API é a mesma em todo sistema. Fixar uma plataforma sem serviço do sistema evita
+    # que o teste registre um agente de verdade no launchctl do macOS da CI.
+    monkeypatch.setattr(autostart, "sys", SimpleNamespace(platform="win32", executable=sys.executable))
     assert cliente.get("/api/autostart").status_code == 403
     assert cliente.post("/api/autostart", json={"acao": "ativar"}).status_code == 403
     headers = {"X-Orquestra-Local": cliente.get("/api/local/capacidade").json()["token"]}
