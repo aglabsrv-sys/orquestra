@@ -222,8 +222,17 @@ def test_snapshot_ocupado_na_limpeza_preserva_limite_apos_encerrar_processo(codi
         assert "snapshot ainda ocupado" not in erro
         assert "snapshot temporário" in caplog.text
     finally:
+        # O Windows pode segurar o arquivo do processo encerrado por alguns instantes;
+        # a limpeza do próprio teste espera um pouco e, no fim, não falha por isso.
         for temporaria in temporarias:
-            temporaria.cleanup()
+            for _ in range(20):
+                try:
+                    temporaria.cleanup()
+                    break
+                except PermissionError:
+                    time.sleep(0.25)
+            else:
+                shutil.rmtree(temporaria.name, ignore_errors=True)
 
 
 def test_limpeza_nao_oculta_erro_distinto_de_bloqueio_windows(tmp_path, monkeypatch):
