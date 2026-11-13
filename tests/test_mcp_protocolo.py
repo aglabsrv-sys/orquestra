@@ -15,7 +15,7 @@ from threading import Thread
 
 import pytest
 
-from orquestra.mcp_servidor import FERRAMENTAS, criar_servidor
+from orquestra.mcp_servidor import FERRAMENTAS, FERRAMENTAS_DE_LEITURA, criar_servidor
 
 
 class ClienteStdio:
@@ -124,7 +124,7 @@ def servidor_stdio(vault, cwd):
             fluxo.close()
 
 
-def test_cli_mcp_stdio_executa_as_17_ferramentas(vault, tmp_path):
+def test_cli_mcp_stdio_executa_todas_as_ferramentas(vault, tmp_path):
     with servidor_stdio(vault, tmp_path) as cliente:
         ferramentas = cliente.pedir("tools/list")["tools"]
         assert {ferramenta["name"] for ferramenta in ferramentas} == set(FERRAMENTAS)
@@ -132,9 +132,14 @@ def test_cli_mcp_stdio_executa_as_17_ferramentas(vault, tmp_path):
             schema = ferramenta["inputSchema"]
             assert schema["type"] == "object"
             assert not {"self", "args", "kwargs", "_ja_em_dia"} & schema.get("properties", {}).keys()
+            assert ferramenta["annotations"]["readOnlyHint"] == (ferramenta["name"] in FERRAMENTAS_DE_LEITURA)
+            assert ferramenta["annotations"]["openWorldHint"] is False
 
         assert "**tarefas**" in cliente.chamar("regras")
         assert "numeros" in {area["id"] for area in cliente.chamar("listar_areas")}
+        assert cliente.chamar("contexto_area", {"area": "tarefas"})["pasta_itens"] == "tarefas/itens"
+        assert cliente.chamar("panorama")["grupos"]["capturas"]["total"] >= 0
+        assert cliente.chamar("revisar_organizacao")["itens_analisados"] >= 0
         criado = cliente.chamar("criar_item", {
             "area": "tarefas", "titulo": "Ação de teste via MCP", "campos": {"status": "fazendo", "origem": "humano"},
             "texto": "Rascunho do agente.",
@@ -142,6 +147,7 @@ def test_cli_mcp_stdio_executa_as_17_ferramentas(vault, tmp_path):
         caminho = criado["caminho"]
         assert criado["campos"]["origem"] == "agente"
         assert cliente.chamar("ler_nota", {"caminho": caminho})["texto"].strip() == "Rascunho do agente."
+        assert cliente.chamar("conexoes_nota", {"caminho": caminho})["nota"]["caminho"] == caminho
         assert any(item["caminho"] == caminho for item in cliente.chamar("listar_itens", {"area": "tarefas", "status": "fazendo"}))
         assert any(item["caminho"] == caminho for item in cliente.chamar("buscar", {"termo": "Ação de teste via MCP"}))
 
@@ -162,6 +168,26 @@ def test_cli_mcp_stdio_executa_as_17_ferramentas(vault, tmp_path):
         cliente.chamar("registrar_sessao", {"agente": "teste-mcp", "pedido": "Verificar protocolo", "feito": "Ferramentas exercitadas"})
         assert "Ferramentas exercitadas" in cliente.chamar("sessoes_recentes", {"dias": 1})
         assert cliente.chamadas == set(FERRAMENTAS)
+
+
+def test_mcp_stdio_recusa_versao_obsoleta_e_permite_retomar(vault, tmp_path):
+    with servidor_stdio(vault, tmp_path) as cliente:
+        criado = cliente.chamar("criar_item", {"area": "tarefas", "titulo": "Concorrência", "texto": "Primeira versão"})
+        atualizado = cliente.chamar("atualizar_item", {
+            "caminho": criado["caminho"], "versao": criado["versao"], "novo_texto": "Segunda versão",
+        })
+        assert atualizado["versao"] != criado["versao"]
+        assert "mudou desde" in cliente.chamar("atualizar_item", {
+            "caminho": criado["caminho"], "versao": criado["versao"], "novo_texto": "Perderia a edição",
+        }, erro=True)
+        assert "mudou desde" in cliente.chamar("perguntar", {
+            "caminho": criado["caminho"], "versao": criado["versao"], "pergunta": "Desatualizada?",
+        }, erro=True)
+        lido = cliente.chamar("ler_nota", {"caminho": criado["caminho"]})
+        assert lido["texto"].strip() == "Segunda versão" and not lido["campos"].get("pergunta")
+        assert cliente.chamar("perguntar", {
+            "caminho": lido["caminho"], "versao": lido["versao"], "pergunta": "Pode revisar?",
+        })["campos"]["pergunta"] == "Pode revisar?"
 
 
 def test_mcp_stdio_preserva_notas_humanas_e_recusa_pedidos_invalidos(vault, tmp_path):

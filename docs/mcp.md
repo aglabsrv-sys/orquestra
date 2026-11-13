@@ -9,6 +9,12 @@ Há dois jeitos de um agente trabalhar no seu vault:
    aplicativos que não abrem pastas, e para quando você quer que as regras sejam
    garantidas pelo código, e não pela boa vontade do agente.
 
+Os dois caminhos podem se complementar. Mesmo com acesso à pasta, um agente pode
+usar o MCP para receber um panorama de pendências, reunir o contexto de uma área,
+revisar inconsistências e consultar conexões entre notas. Essas consultas derivam
+dos mesmos arquivos: não criam outro banco, não usam um modelo de IA no servidor
+e não reorganizam nada sozinhas.
+
 As ferramentas deste conector não permitem:
 
 - reescrever o texto de uma nota sua (só acrescentar, sob "Notas do agente");
@@ -135,6 +141,10 @@ padrão é reservada ao protocolo; diagnósticos do processo vão para stderr.
 | `registrar_aprendizado` | Acrescenta uma linha aos aprendizados da área. |
 | `sessoes_recentes` | O relato das últimas sessões: a memória entre conversas. |
 | `registrar_sessao` | Registra no diário o que foi pedido e feito. |
+| `contexto_area` | Reúne schema, pasta real dos itens e documentos de `humano/` e `maquina/`, incluindo os aprendizados. |
+| `panorama` | Agrupa respostas, decisões, atrasados, itens de hoje, próximos dias, capturas e itens sem data, com totais. |
+| `revisar_organizacao` | Aponta configurações inválidas, problemas de frontmatter/schema e títulos possivelmente duplicados na mesma área. |
+| `conexoes_nota` | Mostra referências locais de saída e backlinks, usando o mesmo resolvedor do painel. |
 
 Os schemas descobertos pelo cliente são a referência dos parâmetros. `listar_itens`
 retorna até 50 itens por padrão (máximo de 200), `buscar` até 20 (máximo de 60) e
@@ -143,6 +153,75 @@ não é um inventário completo de um vault grande. Use área/status/termo espec
 Datas usam `AAAA-MM-DD`; os IDs de área e nomes de campos vêm de `listar_areas`.
 O módulo Números e a captura são opcionais: as ferramentas explicam quando a área
 necessária não está configurada.
+
+### Organização além da leitura de arquivos
+
+As quatro consultas novas são somente leitura. O cliente recebe essa indicação
+também nas anotações das ferramentas; ela descreve o comportamento, não substitui
+as permissões do cliente.
+
+- `contexto_area(area, limite=10, deslocamento=0)`: devolve os campos, opções,
+  obrigatoriedade, valores padrão e os status de conclusão/decisão. Os documentos
+  de contexto são paginados (máximo de 20 por chamada), com 4000 caracteres por
+  corpo. `proximo_deslocamento` indica a próxima página; `texto_limitado` pede
+  leitura completa com `ler_nota`. Complete o contexto relevante antes de agir.
+  Scripts e outros arquivos que não sejam notas Markdown não entram nessa lista.
+- `panorama(area="", dias=7, limite=20, deslocamento=0)`: considera os itens das áreas, com uma
+  janela de 1 a 30 dias incluindo hoje. Cada grupo informa `total`, `itens` e
+  `limitado` e `proximo_deslocamento` (máximo de 100 itens por grupo). O deslocamento
+  vale para todos os grupos; percorra até não haver próxima página em nenhum.
+  Os grupos podem se sobrepor: uma tarefa
+  atrasada também pode esperar uma decisão. Capturas usam a área configurada em
+  `orquestra.yaml`; itens concluídos não entram nas pendências, mas uma resposta
+  ainda preenchida continua visível. Eventos que atravessam dias aparecem em
+  hoje enquanto durarem; compromissos encerrados não viram tarefas atrasadas.
+  Um compromisso é identificado pela área `agenda`, pelo coletor `agenda_ics` ou
+  por `categoria: Compromisso`. Uma tarefa com horário continua podendo atrasar.
+  `sem_data` considera apenas áreas com status e campo de data: não é um erro nem
+  uma ordem para preencher datas. Para listas limitadas, filtre por área e use
+  `deslocamento` para continuar. Notas fora de áreas e saídas de automações em
+  pastas sem módulo não entram neste panorama.
+- `revisar_organizacao(area="", limite=30, deslocamento=0)`: analisa todos os
+  itens das áreas selecionadas, inclusive concluídos, e pagina os achados
+  (máximo de 100). Exclui `humano/`, `maquina/` e `arquivo/`. Títulos são comparados
+  dentro da mesma área, normalizando Unicode, caixa e espaços. Coincidência de
+  título pede revisão: não significa que duas notas possam ser mescladas.
+  Ausência de `origem` continua significando nota humana e não gera erro.
+- `conexoes_nota(caminho, limite=30)`: retorna `saidas` (ocorrências de links) e
+  `entradas` (notas que apontam para ela), com totais e limites separados, de até
+  100 por direção. Distingue destinos válidos, notas futuras, anexos ausentes,
+  âncoras ausentes e referências ambíguas. Não escolhe arbitrariamente um destino
+  ambíguo; links bloqueados não expõem o destino. Inclui notas em pastas pessoais
+  e arquivadas quando visíveis ao conector. Links externos não são consultados.
+  As linhas indicadas contam o corpo Markdown, sem frontmatter.
+
+Exemplo de uso: "Leia as regras e sessões recentes, reúna o contexto de tarefas e
+me mostre o panorama da semana. Confira se já existe uma nota equivalente antes
+de criar outra. Proponha a organização e execute somente o que eu pedi."
+
+Essas consultas trazem contexto e critérios reproduzíveis. A interpretação, a
+priorização e as decisões continuam com a pessoa e o agente.
+
+### Edições concorrentes
+
+As leituras de notas retornam `versao`. Passe esse valor em `atualizar_item` ou
+`perguntar`: se o arquivo mudou desde a consulta, o conector recusa a alteração e
+pede uma nova leitura. O parâmetro é opcional para manter clientes anteriores
+compatíveis; sem ele, continua havendo a conferência entre a leitura interna e a
+gravação, mas não entre a leitura anterior do agente e a operação atual.
+
+### Memória e contratos existentes
+
+Comece com `regras`, `sessoes_recentes` e o contexto das áreas envolvidas. Registre
+aprendizados somente quando houver uma correção ou evidência nova; registre uma
+única sessão ao encerrar, mesmo que tenha usado também acesso direto aos arquivos.
+
+`regras` devolve `AGENTS.md` e `AGENTS.orquestra.md`, quando presentes. Em vaults
+adotados, preserve a política original sobre conteúdo e destino de registros. Se
+ela proíbe relatos operacionais no vault, não use `registrar_sessao` para contornar
+essa regra. Essa interpretação depende do agente: o MCP não converte regras em
+linguagem natural em permissões automáticas. O aplicativo preserva contratos
+existentes, sem substituí-los pelo modelo novo.
 
 ## Como isso conversa com os conectores do agente
 

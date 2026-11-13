@@ -137,6 +137,16 @@ def test_agents_da_pessoa_e_respeitado(cofre):
     assert (cofre / "AGENTS.md").read_text(encoding="utf-8") == "Minhas regras.\n"
     assert (cofre / "AGENTS.orquestra.md").is_file()
     assert any("AGENTS.orquestra.md" in a for a in relatorio.avisos)
+    # O Claude Code carrega os dois contratos pelo CLAUDE.md criado.
+    assert (cofre / "CLAUDE.md").read_text(encoding="utf-8").split() == ["@AGENTS.md", "@AGENTS.orquestra.md"]
+
+
+def test_claude_md_da_pessoa_e_preservado_com_aviso(cofre):
+    (cofre / "AGENTS.md").write_text("Minhas regras.\n", encoding="utf-8")
+    (cofre / "CLAUDE.md").write_text("Regras do Claude.\n", encoding="utf-8")
+    relatorio = preparo.preparar(cofre, [], com_backup=False)
+    assert (cofre / "CLAUDE.md").read_text(encoding="utf-8") == "Regras do Claude.\n"
+    assert any("@AGENTS.orquestra.md" in a for a in relatorio.avisos)
 
 
 def test_modulo_pronto_nao_passa_por_cima_de_pasta_existente(cofre):

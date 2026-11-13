@@ -162,8 +162,10 @@ guarda versões de recuperação em `~/.orquestra/recuperacao/`. Detalhes em
 
 **Com agentes:** abra o Claude Code ou o Codex na pasta do vault e peça "leia o
 AGENTS.md e processe a minha entrada". Para apps de conversa, use o
-[conector MCP](docs/mcp.md). Cada área tem um `maquina/aprendizados.md` que os
-agentes leem antes de começar e completam ao terminar.
+[conector MCP](docs/mcp.md): além de criar e atualizar itens com as regras
+aplicadas pelo código, ele reúne o panorama de pendências, o contexto de uma área,
+possíveis duplicados e os links de cada nota, sem alterar nada. Cada área tem um
+`maquina/aprendizados.md` que os agentes leem antes de começar e completam ao terminar.
 
 ## Documentação
 

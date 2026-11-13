@@ -322,11 +322,21 @@ def preparar(
             "Você já tinha um AGENTS.md, então guardei as regras do painel em AGENTS.orquestra.md. "
             "Peça ao seu agente para ler os dois, ou junte os arquivos quando quiser."
         )
+    # O Claude Code lê CLAUDE.md, que importa os contratos com @. Assim as mesmas regras
+    # valem para todos os agentes, sem copiar o texto. Um CLAUDE.md da pessoa fica como está.
     claude = caminho_no_vault(vault, "CLAUDE.md")
+    suplemento = caminho_no_vault(vault, "AGENTS.orquestra.md").is_file()
     if not claude.exists():
-        armazenamento.gravar_bytes(claude, (MODELO / "CLAUDE.md").read_bytes(), criar=True,
-                                   validar=lambda: caminho_no_vault(vault, claude))
+        conteudo = (MODELO / "CLAUDE.md").read_bytes()
+        if suplemento:
+            conteudo = conteudo.rstrip() + b"\n@AGENTS.orquestra.md\n"
+        armazenamento.gravar_bytes(claude, conteudo, criar=True, validar=lambda: caminho_no_vault(vault, claude))
         relatorio.criados.append("CLAUDE.md")
+    elif suplemento and "@AGENTS.orquestra.md" not in claude.read_text(encoding="utf-8", errors="replace"):
+        relatorio.avisos.append(
+            "Seu CLAUDE.md foi preservado. Para o Claude Code ler também as regras do painel, "
+            "acrescente a linha @AGENTS.orquestra.md a ele."
+        )
 
     # ---- módulos do catálogo e pastas adotadas
     escolhidos = [m for m in dict.fromkeys(modulos or [])]

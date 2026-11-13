@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- MCP ganha contexto por área, panorama de pendências, revisão de schemas e possíveis duplicados, além de links e backlinks; consultas usam os arquivos do vault sem alterar notas.
+- Leituras MCP retornam a versão da nota, aceita nas atualizações e perguntas para recusar alterações baseadas numa leitura antiga; ferramentas declaram se são de leitura ou escrita.
+- `CLAUDE.md` criado na adoção importa também `AGENTS.orquestra.md`; um `CLAUDE.md` existente é preservado, com aviso de como incluir as regras do painel.
+- Contrato de agentes reforça retomada de sessões, autoria, aprendizados com evidência e respeito à política local de vaults adotados, com captura configurável.
+
 - Grafite com capas em tons pastel; Luz ganha modo escuro em preto absoluto; Brasa volta a ter a janela de poente como capa de assinatura.
 - Cópias intactas de versões antigas dos temas no vault passam a receber a versão nova; temas editados continuam com prioridade.
 - Cor de destaque ajustada ao modo mantendo o tom (sem ficar acinzentada), e amostras de Ajustes mostram a cor que de fato será usada.

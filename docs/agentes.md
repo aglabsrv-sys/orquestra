@@ -2,7 +2,10 @@
 
 O Orquestra não chama nenhuma IA. Quem trabalha é o agente que você já usa, e a
 única coisa que ele precisa é **acesso à pasta do vault**. As regras estão no
-`AGENTS.md`, na raiz do vault, e valem para qualquer agente.
+`AGENTS.md`, na raiz do vault, e valem para qualquer agente. Na adoção de uma
+pasta que já tinha instruções próprias, as regras do Orquestra podem estar em
+`AGENTS.orquestra.md`: nesse caso, leia os dois. O arquivo original é preservado
+e o suplemento não é carregado automaticamente por todos os clientes.
 
 Você pode trocar de agente mantendo a mesma pasta. Ao usar mais de um, separe as
 notas em que cada um trabalha: editores e agentes externos não participam dos
@@ -20,9 +23,14 @@ cd ~/Orquestra
 claude
 ```
 
-O vault traz um `CLAUDE.md` com uma linha só (`@AGENTS.md`), que faz o Claude Code
-carregar o contrato. Se você já tinha `CLAUDE.md` ou `AGENTS.md` antes da adoção,
-eles são preservados: peça também a leitura de `AGENTS.orquestra.md`, quando existir.
+O vault traz um `CLAUDE.md` com uma linha só (`@AGENTS.md`). Ela importa o contrato,
+e o Claude Code passa a lê-lo no início de cada sessão: as regras ficam num lugar só,
+valendo para todos os agentes. Quando a adoção guarda as regras do painel em
+`AGENTS.orquestra.md`, o `CLAUDE.md` criado importa os dois arquivos.
+
+Se você já tinha um `CLAUDE.md`, ele é preservado e o painel avisa: acrescente a
+linha `@AGENTS.orquestra.md` para o Claude Code carregar também as regras do painel.
+Instruções só suas para o Claude podem ficar abaixo das importações.
 
 ## Codex (OpenAI)
 
@@ -36,11 +44,16 @@ cd ~/Orquestra
 codex
 ```
 
+Se existir `AGENTS.orquestra.md`, peça sua leitura também. Para tornar isso
+permanente, você pode acrescentar ao seu `AGENTS.md` uma orientação para ler o
+suplemento, depois de conciliar eventuais diferenças entre as políticas. A adoção
+preserva seus arquivos e não adiciona essa orientação por conta própria.
+
 ## Gemini CLI e outros
 
 Inicie o agente na pasta do vault e, na primeira mensagem, peça:
 
-> Leia o arquivo AGENTS.md desta pasta e siga as regras dele.
+> Leia o AGENTS.md e, se existir, o AGENTS.orquestra.md desta pasta e siga as regras.
 
 Qualquer agente que consiga ler e gravar arquivos funciona, inclusive assistentes
 com acesso a pastas do computador.
@@ -50,6 +63,19 @@ com acesso a pastas do computador.
 Para aplicativos de conversa, o Orquestra oferece um **conector MCP**: o agente usa
 ferramentas como "criar tarefa" e "capturar", e as regras do contrato são aplicadas
 pelo código. Veja [mcp.md](mcp.md).
+
+O acesso direto e o MCP podem ser usados na mesma sessão. O acesso direto permite
+trabalhar na estrutura e nos arquivos; o conector oferece consultas e operações
+padronizadas. Confira que ambos apontam para o mesmo vault e evite registrar duas
+vezes o mesmo aprendizado ou relato de sessão. As restrições do MCP não limitam
+as outras ferramentas de arquivo que o agente tenha.
+
+Quando o MCP estiver conectado, suas consultas também podem ajudar um agente que
+edita arquivos diretamente: `panorama` reúne pendências, `contexto_area` prepara o
+contexto de uma área, `revisar_organizacao` aponta inconsistências e possíveis
+duplicados e `conexoes_nota` mostra os vínculos de uma nota. Use-as conforme o
+pedido; elas complementam a leitura dos arquivos e não são obrigatórias para
+trabalhar no vault. Consulte os limites e parâmetros em [mcp.md](mcp.md).
 
 ## E os conectores de e-mail, agenda, redes sociais?
 
@@ -79,6 +105,20 @@ Cada área tem um `maquina/aprendizados.md`. O contrato manda o agente ler antes
 começar e acrescentar uma linha ao terminar, quando aprendeu algo que vale para a
 próxima vez: uma correção sua, um resultado medido, algo a evitar. Você vê (e pode
 editar) na aba **Máquina** da área.
+
+O contrato também manda consultar os dois ou três últimos dias do diário ao
+começar e registrar ao terminar o pedido, o que foi feito e o que ficou pendente.
+Aprendizados devem ter evidência nova; não são um relatório obrigatório de cada
+ação. Releia os arquivos antes de gravar para preservar mudanças concorrentes.
+
+Se o vault adotado já tiver uma política própria sobre o destino desses registros,
+concilie-a com o suplemento. Uma base que guarda somente conhecimento durável pode
+destinar relatos operacionais a outro sistema. A presença do suplemento não
+autoriza criar diários onde a política da pessoa os proíbe.
+
+Mudanças no modelo do aplicativo valem para novos contratos. O Orquestra não
+sobrescreve automaticamente `AGENTS.md` nem `AGENTS.orquestra.md` já existentes;
+compare as instruções ao atualizar e preserve suas personalizações.
 
 Dois pedidos que ajudam:
 
