@@ -67,6 +67,13 @@
             <div><label class="campo"><span>Encontrar uma nota</span><input id="grafo-busca" type="search" placeholder="Nome da nota…" autocomplete="off"></label>
             <label class="grafo-chave"><input id="grafo-isoladas" type="checkbox" checked> Notas sem ligações</label>
             <label class="grafo-chave"><input id="grafo-rotulos" type="checkbox" checked> Nomes das notas</label>
+            <fieldset class="grafo-forcas"><legend>Forças</legend>
+              <label class="grafo-forca"><span>Força centrípeta <output>0.52</output></span><input id="grafo-centro" type="range" min="0" max="1" step="0.01" value="0.52"></label>
+              <label class="grafo-forca"><span>Força de repulsão <output>10.00</output></span><input id="grafo-repulsao" type="range" min="0" max="20" step="0.1" value="10"></label>
+              <label class="grafo-forca"><span>Força dos links <output>1.00</output></span><input id="grafo-links" type="range" min="0" max="1" step="0.01" value="1"></label>
+              <label class="grafo-forca"><span>Distância dos links <output>174</output></span><input id="grafo-distancia" type="range" min="30" max="500" step="1" value="174"></label>
+              <button type="button" class="botao pequeno" id="grafo-forcas-padrao">Restaurar padrão</button>
+            </fieldset>
             <p>Arraste notas para organizar. Arraste o fundo para mover e use a roda para aproximar.</p></div>
           </details>
           <button type="button" class="botao pequeno so-icone" id="grafo-menos" aria-label="Afastar grafo" title="Afastar">−</button>

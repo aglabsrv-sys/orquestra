@@ -1,4 +1,4 @@
-"""Live preview em notas sintéticas: preserva Markdown e a moldura do explorador.
+"""Edição no lugar em notas sintéticas: preserva Markdown, aparência e a moldura do explorador.
 
 uv run --frozen --group browser python scripts/verificar_editor.py
 """
@@ -42,6 +42,12 @@ Fim da nota, com [link](https://example.invalid).
 CABECALHO = "---\n# comentário mantido\ncategoria: referência\n---\n"
 
 
+def selecionar_conteudo(alvo) -> None:
+    """Seleciona o texto de um bloco já em edição, como arrastar o mouse por cima dele."""
+    alvo.evaluate("e=>{const r=document.createRange();r.selectNodeContents(e);"
+                  "const s=getSelection();s.removeAllRanges();s.addRange(r);}")
+
+
 def jornadas(browser, base: str, vault: Path, capturas: Path | None) -> dict:
     from orquestra.notas import ler_nota
 
@@ -60,31 +66,34 @@ def jornadas(browser, base: str, vault: Path, capturas: Path | None) -> dict:
             antigo = leitor.locator("#ver > p").filter(has_text="Segundo parágrafo")
             dimensoes = antigo.bounding_box()
             fonte = antigo.evaluate("e=>getComputedStyle(e).fontSize")
+            tabela = leitor.locator("#ver table").screenshot()
             rota = page.url
             frame_src = page.locator("#leitor-frame").get_attribute("src")
             iframe = page.locator("#leitor-frame").bounding_box()
-            antigo.dblclick()
-            editor = leitor.locator("#editor[data-editor-bloco]")
-            expect(editor).to_be_visible()
+            antigo.dblclick(position={"x": 8, "y": 6})
+            expect(leitor.locator("#ver[contenteditable=true]")).to_be_visible()
+            # A nota não troca de aparência: nada de caixa de Markdown, tabela continua tabela.
+            assert leitor.locator("#ver textarea").count() == 0
             expect(leitor.locator("#ver h1")).to_have_text("Documento de teste")
-            expect(leitor.locator("#ver table")).to_be_visible()
             expect(leitor.locator("#ver pre")).to_be_visible()
-            atual = editor.bounding_box()
-            assert abs(atual["x"] - dimensoes["x"]) < 2
-            assert abs(atual["width"] - dimensoes["width"]) < 2
-            assert atual["height"] >= dimensoes["height"]
-            assert editor.evaluate("e=>getComputedStyle(e).fontSize") == fonte
+            assert leitor.locator("#ver table").screenshot() == tabela
+            atual = antigo.bounding_box()
+            assert abs(atual["x"] - dimensoes["x"]) < 2 and abs(atual["width"] - dimensoes["width"]) < 2
+            assert abs(atual["height"] - dimensoes["height"]) < 2
+            assert antigo.evaluate("e=>getComputedStyle(e).fontSize") == fonte
             assert page.locator("#leitor-frame").bounding_box() == iframe
             assert page.url == rota and page.locator("#leitor-frame").get_attribute("src") == frame_src
             if capturas:
                 page.screenshot(path=str(capturas / f"editor-inline-{largura}.png"), full_page=True)
 
+            # Markdown digitado vira formatação ao salvar; o resto do arquivo fica igual.
             novo = "Parágrafo revisado com *itálico* e [[Destino]]."
-            editor.fill(novo)
+            selecionar_conteudo(antigo)
+            page.keyboard.type(novo)
             with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as salvo:
-                editor.press("Escape")
+                page.keyboard.press("Escape")
             assert salvo.value.status == 200
-            expect(leitor.locator("#editor")).to_be_hidden()
+            expect(leitor.locator("#ver[contenteditable=true]")).to_have_count(0)
             expect(leitor.locator("#ver em")).to_have_text("itálico")
             assert ler_nota(arquivo, vault).corpo == FONTE.replace("Segundo parágrafo para editar.", novo)
             assert page.url == rota and page.locator("#leitor-frame").get_attribute("src") == frame_src
@@ -95,25 +104,31 @@ def jornadas(browser, base: str, vault: Path, capturas: Path | None) -> dict:
             puts = []
             page.on("request", lambda r: puts.append(r.url) if r.method == "PUT" else None)
             leitor.locator("#ver h1").dblclick()
-            expect(editor).to_have_value("# Documento de teste")
-            editor.press("Escape")
-            expect(editor).to_be_hidden()
+            expect(leitor.locator("#ver[contenteditable=true]")).to_be_visible()
+            page.keyboard.press("Escape")
+            expect(leitor.locator("#ver[contenteditable=true]")).to_have_count(0)
             assert arquivo.read_bytes() == antes and not puts
 
-            # Sair por um wikilink salva o trecho e conserva a moldura do leitor.
-            leitor.locator("#ver > p").filter(has_text="Parágrafo revisado").dblclick()
-            editor.fill("Texto salvo antes de abrir outra nota.")
-            leitor.locator("#ver a").filter(has_text="apelido").click()
+            # Ctrl+clique num link durante a edição salva o texto e abre a nota no leitor.
+            revisado = leitor.locator("#ver > p").filter(has_text="Parágrafo revisado")
+            revisado.dblclick(position={"x": 8, "y": 6})
+            selecionar_conteudo(revisado)
+            page.keyboard.type("Texto salvo antes de abrir outra nota, veja [[Destino|apelido novo]].")
+            page.keyboard.press("Escape")
+            expect(leitor.locator("#ver[contenteditable=true]")).to_have_count(0)
+            leitor.locator("#ver > p").first.dblclick(position={"x": 8, "y": 6})
+            leitor.locator("#ver a").filter(has_text="apelido").first.click(modifiers=["Control"])
             expect(leitor.locator("#nota-titulo")).to_have_value("Destino")
             expect(leitor.locator(".dock")).to_be_hidden()
             assert page.url == rota
-            assert "Texto salvo antes de abrir outra nota." in ler_nota(arquivo, vault).corpo
+            assert "Texto salvo antes de abrir outra nota, veja [[Destino|apelido novo]]." in ler_nota(arquivo, vault).corpo
         finally:
             contexto.close()
     assert not erros, erros
     return {"larguras": [1440, 390, 320], "erros_javascript": erros,
-            "jornadas": ["edição no bloco renderizado", "fonte e largura preservadas", "iframe e rota estáveis",
-                         "Markdown fora do trecho intacto", "Escape salva", "abrir sem editar não grava", "wikilink salva antes de navegar no leitor"]}
+            "jornadas": ["edição no próprio texto renderizado", "tabela, código e títulos sem mudar de aparência",
+                         "iframe e rota estáveis", "Markdown fora do bloco intacto", "Escape salva",
+                         "abrir sem editar não grava", "Ctrl+clique em link salva e abre no leitor"]}
 
 
 def conferir_linhas_iniciais(browser, base: str, vault: Path) -> dict:
@@ -134,37 +149,42 @@ def conferir_linhas_iniciais(browser, base: str, vault: Path) -> dict:
                     cabecalho_bytes = CABECALHO.replace("\n", "\r\n" if inicial.crlf else "\n").encode("utf-8")
                     page.goto(base + "/n/" + quote(f"Notas/{nome}.md") + "?explorador=1", wait_until="domcontentloaded")
                     assert page.locator("#nota-fonte").input_value() == esperado
+                    editando = page.locator("#ver[contenteditable=true]")
 
-                    # O primeiro heading precisa abrir seu próprio texto, mesmo
-                    # com linhas vazias no início do corpo após o frontmatter.
-                    page.locator("#ver > h1").dblclick()
-                    editor = page.locator("#editor[data-editor-bloco]")
-                    expect(editor).to_have_value("# Documento de teste")
-                    editor.fill("# Título revisado")
+                    # O primeiro heading grava nas próprias linhas, mesmo com linhas
+                    # vazias no início do corpo depois do frontmatter.
+                    titulo = page.locator("#ver > h1")
+                    titulo.dblclick()
+                    selecionar_conteudo(titulo)
+                    page.keyboard.type("Título revisado")
                     with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as salvo:
-                        editor.press("Escape")
+                        page.keyboard.press("Escape")
                     assert salvo.value.status == 200
-                    expect(editor).to_be_hidden()
+                    expect(editando).to_have_count(0)
                     esperado = esperado.replace("# Documento de teste", "# Título revisado", 1)
                     assert ler_nota(arquivo, vault).corpo == esperado
                     assert page.locator("#nota-fonte").input_value() == esperado
 
-                    page.locator("#ver > p").filter(has_text="Primeiro com").dblclick()
-                    expect(editor).to_have_value("Primeiro com **negrito** e [[Destino|apelido]].")
-                    editor.fill("Primeiro parágrafo revisado.")
+                    primeiro = page.locator("#ver > p").filter(has_text="Primeiro com")
+                    primeiro.dblclick(position={"x": 8, "y": 6})
+                    selecionar_conteudo(primeiro)
+                    page.keyboard.type("Primeiro parágrafo revisado.")
                     with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as salvo:
-                        editor.press("Escape")
+                        page.keyboard.press("Escape")
                     assert salvo.value.status == 200
-                    expect(editor).to_be_hidden()
+                    expect(editando).to_have_count(0)
                     esperado = esperado.replace("Primeiro com **negrito** e [[Destino|apelido]].", "Primeiro parágrafo revisado.", 1)
                     assert ler_nota(arquivo, vault).corpo == esperado
                     if frontmatter:
                         assert arquivo.read_bytes().startswith(cabecalho_bytes)
 
                     if quebras:
+                        # Mapa desalinhado (aponta para uma linha vazia): o editor não arrisca
+                        # gravar no lugar errado e abre o Markdown inteiro numa caixa.
                         antes = arquivo.read_bytes()
                         page.locator("#ver > h1").evaluate("e=>{e.dataset.mdInicio='0';e.dataset.mdFim='1';}")
                         page.locator("#ver > h1").dblclick()
+                        editor = page.locator("#editor[data-editor-bloco]")
                         expect(editor).to_have_value(esperado)
                         editor.press("Escape")
                         expect(editor).to_be_hidden()

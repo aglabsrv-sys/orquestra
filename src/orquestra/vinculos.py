@@ -125,7 +125,8 @@ def _wiki(state, silent):
     if not silent:
         token = state.push("wikilink", "", 0)
         token.content = rotulo.strip() or alvo
-        token.meta = {"alvo": alvo, "embutido": embutido, "inicio": inicio, "multilinha": "\n" in conteudo}
+        token.meta = {"alvo": alvo, "embutido": embutido, "inicio": inicio, "multilinha": "\n" in conteudo,
+                      "fonte": state.src[inicio:fim + 2]}
     state.pos = fim + 2
     return True
 

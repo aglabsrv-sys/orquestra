@@ -6,3 +6,8 @@
 .nota-cabecalho .nota-acoes { flex-wrap:nowrap; }
 .nota-cabecalho .nota-acoes .so-icone { min-height:32px; }
 @media(max-width:600px) { .nota-cabecalho { gap:8px; } }
+/* Edição no lugar: o texto continua com a mesma aparência. O cursor na cor de destaque
+   e os botões Salvar/Cancelar no topo mostram que a nota está em edição. */
+.nota .texto.edicao-rica, .nota .texto.edicao-rica:focus, .nota .texto.edicao-rica:focus-visible { outline:0; box-shadow:none; caret-color:var(--destaque); }
+.nota .texto.edicao-rica [data-peca] { cursor:default; }
+.nota .texto.edicao-rica a { cursor:text; }

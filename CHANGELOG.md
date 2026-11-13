@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- Comandos `status`, `parar`, `reiniciar` e `atualizar`: encontram o painel mesmo quando ele foi aberto por outro terminal, por um agente ou pelo início automático, e o encerram com calma pelo endpoint local.
+- Busca flutuante por cima da página (botão de busca, Ctrl+K ou /), com resultados enquanto você digita, termo destacado e navegação pelo teclado; a página de busca completa continua disponível.
+- Grafo de pastas com forças ajustáveis como no Obsidian (centrípeta, repulsão, força e distância dos links), guardadas no navegador; o realce ao passar o mouse agora transiciona suavemente, e arrastar uma nota puxa as vizinhas.
+- O painel inicia com um único comando (`uv run --frozen orquestra`), que instala o ambiente sozinho na primeira vez.
+- Edição de notas no próprio texto: dois cliques deixam a nota editável sem mudar a aparência (tabelas, listas e títulos continuam iguais), com passagem livre entre blocos; só os blocos alterados são reescritos no arquivo.
 - MCP ganha contexto por área, panorama de pendências, revisão de schemas e possíveis duplicados, além de links e backlinks; consultas usam os arquivos do vault sem alterar notas.
 - Leituras MCP retornam a versão da nota, aceita nas atualizações e perguntas para recusar alterações baseadas numa leitura antiga; ferramentas declaram se são de leitura ou escrita.
 - `CLAUDE.md` criado na adoção importa também `AGENTS.orquestra.md`; um `CLAUDE.md` existente é preservado, com aviso de como incluir as regras do painel.

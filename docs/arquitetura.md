@@ -67,7 +67,8 @@ src/orquestra/
   boasvindas.py    tela "escolher ou criar", que funciona antes de existir um vault
   hospedeiro.py    o que o servidor web executa: boas-vindas ou painel, e a troca entre eles
   mcp_servidor.py  o vault como conector MCP, com as regras aplicadas pelo código
-  cli.py           comandos: iniciar, criar, adotar, doctor, coletar, backup, confiar, mcp, autostart
+  cli.py           comandos: iniciar, status, parar, reiniciar, atualizar, criar, adotar, doctor, coletar, backup, confiar, mcp, autostart
+  processo.py      o painel em execução: registro em ~/.orquestra/painel.json, consulta e encerramento
   doctor.py        diagnóstico em português
   autostart.py     início automático por sistema operacional
   templates/       páginas (Jinja)

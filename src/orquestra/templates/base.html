@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/css/app.css?v={{ marca }}">
   {# Cores, cantos e fonte: o tema ativo mais as escolhas de Ajustes > Aparência (aparencia.py). #}
   <link rel="stylesheet" href="/static/css/refino.css?v={{ marca }}">
+  <link rel="stylesheet" href="/static/css/busca.css?v={{ marca }}">
   {% block estilos %}{% endblock %}
   <link rel="stylesheet" href="/static/css/tipografia.css?v={{ marca }}">
   <style>{{ estilo|safe }}</style>
@@ -28,7 +29,7 @@
       <span id="estado-conexao" class="estado-conexao" role="status" aria-live="polite" hidden></span>
       <time class="relogio" id="relogio">--:--</time>
       <span class="data-hoje">{{ hoje_longo|capitalize }}</span>
-      <a class="botao so-icone" href="/buscar" title="Buscar" aria-label="Buscar">{{ icone('busca', 18) }}</a>
+      <a class="botao so-icone" href="/buscar" title="Buscar (Ctrl+K)" aria-label="Buscar" data-abrir-busca aria-haspopup="dialog" aria-controls="busca-flutuante">{{ icone('busca', 18) }}</a>
       <a class="botao so-icone acesso-foco" href="/foco" id="abrir-foco" title="Pomodoro" aria-label="Pomodoro"{% if ativo == 'foco' %} aria-current="page"{% endif %}>{{ icone('cronometro', 19) }}<i id="foco-indicador" hidden aria-hidden="true"></i></a>
       {% if modulo_captura %}
       <button class="botao" id="abrir-captura" type="button" aria-label="Capturar uma ideia" title="Captura rápida (tecla C)">{{ icone('mais', 16) }}<span>Capturar</span></button>
@@ -93,6 +94,14 @@
       <div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button type="submit" class="botao principal" id="resposta-salvar">Guardar resposta</button></div>
     </form>
   </dialog>
+  <dialog id="busca-flutuante" class="busca-flutuante" aria-label="Buscar notas">
+    <div class="bf-caixa">{{ icone('busca', 18) }}
+      <input id="bf-campo" type="search" placeholder="Buscar notas…" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bf-lista" aria-describedby="bf-estado">
+      <kbd>Esc</kbd>
+    </div>
+    <ul id="bf-lista" class="bf-lista" role="listbox" aria-label="Resultados"></ul>
+    <p class="bf-rodape"><span id="bf-estado" role="status" aria-live="polite">Digite para buscar no título e no texto das notas.</span><span class="bf-atalhos"><kbd>↑</kbd> <kbd>↓</kbd> navegar · <kbd>Enter</kbd> abrir · <a id="bf-completa" href="/buscar">Busca completa</a></span></p>
+  </dialog>
   {% block dialogos %}{% endblock %}
   <div id="avisos" role="region" aria-live="off" aria-label="Notificações"></div>
 
@@ -104,6 +113,7 @@
   <script src="/static/js/experiencia.js?v={{ marca }}"></script>
   <script src="/static/js/foco-engine.js?v={{ marca }}"></script>
   <script src="/static/js/foco.js?v={{ marca }}"></script>
+  <script src="/static/js/busca.js?v={{ marca }}"></script>
   {% if request.query_params.get('explorador') == '1' %}<script src="/static/js/leitor.js?v={{ marca }}"></script>{% endif %}
   {% block scripts %}{% endblock %}
 </body>

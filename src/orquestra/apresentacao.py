@@ -166,12 +166,14 @@ def _render_wiki(tokens, numero, options, env):
     resolucao = indice.resolver_referencia(ref, origem)
     url = _url_referencia(resolucao, indice)
     rotulo = escape(token.content)
+    # A fonte original (`[[alvo|rótulo]]`) acompanha o HTML: a edição no lugar a devolve intacta.
+    fonte = ' data-md="' + escape(token.meta.get("fonte") or "", quote=True) + '"'
     if url and ref.embutido and url.startswith("/arquivo/"):
-        return '<img src="' + escape(url, quote=True) + '" alt="' + rotulo + '">'
+        return '<img src="' + escape(url, quote=True) + '" alt="' + rotulo + '"' + fonte + '>'
     if url:
         classe = ' class="nota-embutida"' if ref.embutido else ""
-        return '<a href="' + escape(url, quote=True) + '"' + classe + '>' + rotulo + '</a>'
-    return '<span class="vinculo-pendente" title="' + escape(ref.alvo, quote=True) + '">' + rotulo + '</span>'
+        return '<a href="' + escape(url, quote=True) + '"' + classe + fonte + '>' + rotulo + '</a>'
+    return '<span class="vinculo-pendente" title="' + escape(ref.alvo, quote=True) + '"' + fonte + '>' + rotulo + '</span>'
 
 
 _md.renderer.rules["wikilink"] = _render_wiki
@@ -210,6 +212,7 @@ def _render_markdown(texto: str, indice: Indice, origem: str) -> Markup:
             alvo = filho.attrGet(atributo) or ""
             if externo(alvo):
                 continue
+            filho.attrSet("data-md-alvo", alvo)  # o caminho escrito na nota, antes de virar URL do painel
             resolucao = indice.resolver_referencia(Referencia(alvo, tipo="markdown", embutido=filho.type == "image"), origem)
             url = _url_referencia(resolucao, indice)
             if url:
@@ -225,7 +228,8 @@ def _render_markdown(texto: str, indice: Indice, origem: str) -> Markup:
                 if bloco:
                     ultimo.content = ultimo.content[:bloco.start()].rstrip()
                     marcador = Token("html_inline", "", 0)
-                    marcador.content = '<span id="bloco-' + bloco.group(1).casefold() + '"></span>'
+                    marcador.content = ('<span id="bloco-' + bloco.group(1).casefold()
+                                        + '" data-md=" ^' + bloco.group(1) + '"></span>')
                     token.children.append(marcador)
     html = _md.renderer.render(tokens, _md.options, {"indice": indice, "origem": origem})
     html = html.replace("<li>[ ] ", '<li class="tarefa"><input type="checkbox" disabled> ')

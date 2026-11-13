@@ -30,3 +30,15 @@ test('trechos multilinha preservam indentação e não acrescentam newline ao fi
   assert.equal(fim.quebra,'');
   assert.equal(substituir(fonte,fim,'Fim alterado'),'Antes.\n\n- Um\n  - Aninhado\n- Dois\n\nFim alterado');
 });
+
+test('várias trocas de blocos são aplicadas sem deslocar as linhas das outras', () => {
+  const {aplicar} = require('../../src/orquestra/static/js/editor-inline.js');
+  const fonte = '# Título\n\nPrimeiro.\n\n| A | B |\n|---|:---:|\n| 1 | 2 |\n\nÚltimo.\n';
+  const depois = aplicar(fonte, [
+    {inicio: 2, fim: 3, conteudo: 'Primeiro revisado.\n\nNovo parágrafo.'},
+    {inicio: 8, fim: 9, conteudo: 'Último revisado.'},
+  ]);
+  assert.equal(depois, '# Título\n\nPrimeiro revisado.\n\nNovo parágrafo.\n\n| A | B |\n|---|:---:|\n| 1 | 2 |\n\nÚltimo revisado.\n');
+  // Bloco apagado leva junto as linhas em branco que o separavam do próximo.
+  assert.equal(aplicar(fonte, [{inicio: 2, fim: 3, conteudo: ''}]), '# Título\n\n| A | B |\n|---|:---:|\n| 1 | 2 |\n\nÚltimo.\n');
+});

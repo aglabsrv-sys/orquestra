@@ -86,3 +86,11 @@ body:has(.explorador) > #conteudo { flex:1; min-height:0; display:flex; flex-dir
   .explorador { grid-template-rows:minmax(72px,16%) minmax(0,1fr); }
   .explorador-topo { margin-bottom:4px; }
 }
+/* Forças do grafo, como no Obsidian. */
+.grafo-forcas { display:grid; gap:10px; margin:12px 0 4px; padding:10px 0 0; border:0; border-top:1px solid var(--borda); }
+.grafo-forcas legend { padding:0; font-size:.75rem; font-weight:600; color:var(--texto); }
+.grafo-forca { display:grid; gap:4px; font-size:.72rem; color:var(--texto-suave); }
+.grafo-forca span { display:flex; justify-content:space-between; gap:8px; }
+.grafo-forca output { color:var(--texto); font-variant-numeric:tabular-nums; }
+.grafo-forca input[type=range] { width:100%; accent-color:var(--destaque); }
+.grafo-forcas .botao { justify-self:start; }

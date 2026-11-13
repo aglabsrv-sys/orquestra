@@ -23,6 +23,12 @@ from urllib.parse import urlsplit
 from playwright.sync_api import expect, sync_playwright
 
 
+def selecionar_conteudo(alvo) -> None:
+    """Seleciona o texto de um bloco já em edição, como arrastar o mouse por cima dele."""
+    alvo.evaluate("e=>{const r=document.createRange();r.selectNodeContents(e);"
+                  "const s=getSelection();s.removeAllRanges();s.addRange(r);}")
+
+
 def aguardar_servidor(url: str, processo: subprocess.Popen) -> None:
     prazo = time.monotonic() + 20
     while time.monotonic() < prazo:
@@ -221,12 +227,16 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         url = link.get_attribute("href")
         page.goto(base + url, wait_until="domcontentloaded")
         nota = {"url": url, "rel": page.locator(".nota").get_attribute("data-rel")}
-        page.locator("#ver").dblclick()
-        page.locator("#editor").fill("Texto revisado pelo navegador.")
+        # Edição no próprio texto: dois cliques, digitar, Escape salva.
+        paragrafo = page.locator("#ver > p").first
+        paragrafo.dblclick()
+        expect(page.locator("#ver[contenteditable=true]")).to_be_visible()
+        selecionar_conteudo(paragrafo)
+        page.keyboard.type("Texto revisado pelo navegador.")
         with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as envio:
-            page.locator("#editor").press("Escape")
+            page.keyboard.press("Escape")
         assert envio.value.status == 200
-        expect(page.locator("#editor")).to_be_hidden()
+        expect(page.locator("#ver[contenteditable=true]")).to_have_count(0)
         expect(page.locator("#ver")).to_contain_text("Texto revisado pelo navegador.")
         assert "Texto revisado" in (vault / nota["rel"]).read_text(encoding="utf-8")
         page.locator("#nota-propriedades > summary").click()
@@ -244,7 +254,9 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
 
     # Conflito real com edição externa: conservar rascunho e recuperar como cópia.
     page.locator("#editar").click()
-    page.locator("#editor").fill("Meu rascunho ainda não salvo.")
+    expect(page.locator("#ver[contenteditable=true]")).to_be_visible()
+    selecionar_conteudo(page.locator("#ver > p").first)
+    page.keyboard.type("Meu rascunho ainda não salvo.")
     arquivo = vault / nota["rel"]
     aguardar_vigia(page, vault)
     arquivo.write_text(arquivo.read_text(encoding="utf-8") + "\nAlteração externa.\n", encoding="utf-8")
@@ -252,7 +264,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as conflito:
         page.locator("#salvar").click()
     assert conflito.value.status == 409
-    expect(page.locator("#editor")).to_have_value("Meu rascunho ainda não salvo.")
+    # Só o parágrafo muda; as linhas em branco em volta do texto continuam no arquivo.
+    expect(page.locator("#nota-fonte")).to_have_value(re.compile(r"^\s*Meu rascunho ainda não salvo\.\s*$"))
     url_original = page.url
     with page.expect_response(lambda r: "/api/notas/copia/" in r.url) as copia:
         page.locator("#salvar-copia").click()

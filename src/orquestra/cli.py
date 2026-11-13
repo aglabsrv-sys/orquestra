@@ -8,12 +8,17 @@
     orquestra coletar [módulo]  roda os coletores agora
     orquestra backup            faz commit do vault (e envia, com --enviar)
     orquestra autostart ...     liga/desliga o início automático com o computador
+    orquestra status            mostra se o painel está rodando, em que porta e com qual vault
+    orquestra parar             encerra o painel, mesmo que aberto por outro terminal ou agente
+    orquestra reiniciar         para e abre de novo (para pegar uma atualização)
+    orquestra atualizar         baixa a versão nova do GitHub e reabre o painel
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -142,9 +147,18 @@ def iniciar(args: argparse.Namespace) -> None:
     if not 1 <= porta <= 65535:
         sys.exit("Use uma porta entre 1 e 65535.")
     if not _porta_livre(porta):
+        from orquestra import processo
+
+        aberto = processo.consultar(porta)
+        if aberto:
+            sys.exit(
+                f"O Orquestra já está rodando em http://localhost:{porta} (vault: {aberto.get('vault') or 'nenhum'}).\n"
+                "Abra esse endereço no navegador, ou use `orquestra reiniciar` para pegar uma atualização "
+                "e `orquestra parar` para encerrá-lo."
+            )
         sys.exit(
-            f"A porta {porta} já está em uso. O painel talvez já esteja aberto em http://localhost:{porta}\n"
-            f"Se for outro programa, mude 'porta' no orquestra.yaml ou use: orquestra iniciar --porta {porta + 1 if porta < 65535 else 8420}"
+            f"A porta {porta} está em uso por outro programa.\n"
+            f"Mude 'porta' no orquestra.yaml ou use: orquestra iniciar --porta {porta + 1 if porta < 65535 else 8420}"
         )
     app = Hospedeiro(vault)
     url = f"http://localhost:{porta}"
@@ -152,12 +166,118 @@ def iniciar(args: argparse.Namespace) -> None:
     print(f"  Vault:  {vault or 'ainda não escolhido (a tela de boas-vindas vai perguntar)'}")
     print(f"  Painel: {url}")
     print("  O painel escuta só neste computador. Para o celular, veja docs/tailscale.md.")
-    print("  Ctrl+C para encerrar.\n")
+    print("  Ctrl+C (ou `orquestra parar`, de qualquer terminal) para encerrar.\n")
     # Na primeira vez não há vault: abrimos o navegador sozinhos, porque é lá que a pessoa escolhe.
     if getattr(args, "abrir", False) or vault is None:
         threading.Timer(1.2, webbrowser.open, [url]).start()
     # 127.0.0.1 de propósito: o painel não tem senha e não deve ficar visível na rede.
-    uvicorn.run(app, host="127.0.0.1", port=porta, log_level="warning", timeout_graceful_shutdown=2)
+    from orquestra import processo
+
+    servidor = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=porta, log_level="warning", timeout_graceful_shutdown=2))
+    app.servidor = servidor  # permite `orquestra parar` fechar este processo pelo endpoint local
+    processo.registrar(porta, vault)
+    try:
+        servidor.run()
+    finally:
+        processo.esquecer(os.getpid())
+
+
+# ---------------------------------------------------------------- status, parar, reiniciar, atualizar
+
+
+def status(args: argparse.Namespace) -> None:
+    from orquestra import processo
+
+    info = processo.localizar(getattr(args, "porta", None))
+    if info is None:
+        print("O painel não está rodando. Para abrir: uv run --frozen orquestra")
+        return
+    if info.get("antigo"):
+        print(f"Há um painel de uma versão anterior rodando em http://localhost:{info['porta']} (processo {info['pid']}).")
+        print("Use `orquestra reiniciar` para trocá-lo pela versão atual.")
+        return
+    if not info["respondendo"]:
+        print(f"Há um painel registrado (processo {info['pid']}, porta {info['porta']}) que não responde.")
+        print("Se ele travou: uv run --frozen orquestra parar --forcar")
+        return
+    print(f"Rodando em http://localhost:{info['porta']} (Orquestra {info.get('versao', '?')}, processo {info.get('pid')})")
+    print(f"  Vault: {info.get('vault') or 'ainda não escolhido'}")
+    if info.get("versao") and info["versao"] != __version__:
+        print(f"  Esta instalação é a {__version__}: rode `orquestra reiniciar` para usar a versão nova.")
+
+
+def parar(args: argparse.Namespace) -> dict | None:
+    from orquestra import processo
+
+    try:
+        info = processo.parar(getattr(args, "porta", None), getattr(args, "forcar", False))
+    except RuntimeError as erro:
+        sys.exit(str(erro))
+    if info is None:
+        print("O painel não estava rodando.")
+    else:
+        print(f"Painel encerrado (porta {info['porta']}).")
+    return info
+
+
+def reiniciar(args: argparse.Namespace) -> None:
+    info = parar(args)
+    if info and getattr(args, "vault", None) is None and info.get("vault"):
+        args.vault = info["vault"]
+    if info and getattr(args, "porta", None) is None:
+        args.porta = info["porta"]
+    print("Abrindo de novo…\n")
+    iniciar(args)
+
+
+def _git(*partes: str, pasta: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *partes], cwd=pasta, capture_output=True, text=True, encoding="utf-8",
+                          errors="replace", timeout=120)
+
+
+def atualizar(args: argparse.Namespace) -> None:
+    """Baixa a versão nova (git pull) e, se o painel estava aberto, reabre já atualizado."""
+    import shutil
+
+    from orquestra import processo
+
+    raiz = Path(__file__).resolve().parents[2]
+    if not (raiz / ".git").exists() or not (raiz / "pyproject.toml").is_file():
+        sys.exit("Esta instalação não veio de um `git clone`; atualize pelo mesmo caminho em que instalou.")
+    if not shutil.which("git"):
+        sys.exit("O git não foi encontrado. Instale-o e tente de novo.")
+    alteradas = _git("status", "--porcelain", "--untracked-files=no", pasta=raiz).stdout.strip()
+    if alteradas:
+        sys.exit("Há arquivos do aplicativo alterados nesta pasta. Guarde ou desfaça essas mudanças antes de atualizar:\n"
+                 + alteradas)
+    print("Procurando a versão nova…")
+    busca = _git("fetch", "--quiet", pasta=raiz)
+    if busca.returncode != 0:
+        sys.exit("Não consegui falar com o GitHub:\n" + (busca.stderr.strip() or busca.stdout.strip()))
+    antes = _git("rev-parse", "HEAD", pasta=raiz).stdout.strip()
+    novos = _git("log", "--oneline", "HEAD..@{u}", pasta=raiz)
+    if novos.returncode != 0:
+        sys.exit("Esta pasta não acompanha um branch remoto. Use `git pull` manualmente.")
+    if not novos.stdout.strip():
+        print(f"Você já está na versão mais recente ({__version__}).")
+        return
+    aberto = processo.localizar()
+    if aberto:
+        parar(argparse.Namespace(porta=aberto["porta"], forcar=False))
+    puxar = _git("pull", "--ff-only", "--quiet", pasta=raiz)
+    if puxar.returncode != 0:
+        sys.exit("A atualização não pôde ser aplicada sem mesclar mudanças:\n" + puxar.stderr.strip())
+    depois = _git("log", "--oneline", f"{antes}..HEAD", pasta=raiz).stdout.strip().splitlines()
+    print(f"Atualizado: {len(depois)} mudança(s). Veja o que mudou no CHANGELOG.md.")
+    uv = os.environ.get("UV") or shutil.which("uv")
+    if aberto and uv:
+        # Um `uv run` novo instala as dependências da versão nova antes de abrir o painel.
+        comando = [uv, "run", "--frozen", "orquestra", "iniciar", "--porta", str(aberto["porta"])]
+        if aberto.get("vault"):
+            comando += ["--vault", aberto["vault"]]
+        print("Abrindo o painel atualizado…\n")
+        sys.exit(subprocess.call(comando, cwd=raiz))
+    print("Para abrir: uv run --frozen orquestra")
 
 
 # ---------------------------------------------------------------- outros comandos
@@ -288,6 +408,17 @@ def _main(argv: list[str] | None = None) -> None:
     escolha_confianca.add_argument("--assinatura", default="", help="assinatura exata dos arquivos revisados")
     escolha_confianca.add_argument("--revogar", action="store_true")
 
+    s = sub.add_parser("status", help="mostra se o painel está rodando, em que porta e com qual vault")
+    s.add_argument("--porta", type=int, help="consultar esta porta em vez da registrada")
+    pa = sub.add_parser("parar", aliases=["stop"], help="encerra o painel, mesmo que aberto por outro terminal ou agente")
+    pa.add_argument("--porta", type=int, help="parar o painel desta porta")
+    pa.add_argument("--forcar", action="store_true", help="encerrar o processo registrado mesmo que ele não responda")
+    r = sub.add_parser("reiniciar", aliases=["restart"], parents=[comum], help="para o painel e abre de novo, com o código atual")
+    r.add_argument("--porta", type=int, help="porta do painel (padrão: a que estava em uso)")
+    r.add_argument("--abrir", action="store_true", help="abre o navegador ao iniciar")
+    r.add_argument("--forcar", action="store_true", help="encerrar o processo registrado mesmo que ele não responda")
+    sub.add_parser("atualizar", aliases=["update"], help="baixa a versão nova do GitHub e reabre o painel, se estava aberto")
+
     a = sub.add_parser("autostart", parents=[comum], help="início automático com o computador")
     a.add_argument("acao", choices=["ativar", "desativar", "status"])
 
@@ -314,6 +445,14 @@ def _main(argv: list[str] | None = None) -> None:
         executar_mcp(_exigir_vault(args))
     elif comando == "iniciar":
         iniciar(args)
+    elif comando == "status":
+        status(args)
+    elif comando in ("parar", "stop"):
+        parar(args)
+    elif comando in ("reiniciar", "restart"):
+        reiniciar(args)
+    elif comando in ("atualizar", "update"):
+        atualizar(args)
     elif comando in ("doctor", "diagnostico"):
         from orquestra.doctor import executar
 

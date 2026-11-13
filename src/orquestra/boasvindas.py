@@ -13,6 +13,7 @@ aparece, mas não deixa escolher nem criar nada.
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 from typing import Any
 
@@ -116,6 +117,23 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
         if token is None:
             raise Recusa("Abra o painel diretamente em localhost neste computador para autorizar operações locais.", 403)
         return JSONResponse({"token": token}, headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/local/painel")
+    async def painel_local(request: Request):
+        """Quem está nesta porta: usado por `orquestra status`, `parar` e `reiniciar`."""
+        try:
+            hospedeiro.capacidade.exigir(request)
+        except ValueError as erro:
+            raise Recusa(str(erro), 403) from None
+        return JSONResponse({"app": "orquestra", "versao": __version__, "pid": os.getpid(),
+                             "vault": str(hospedeiro.vault or "")}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/local/encerrar")
+    async def encerrar_local(request: Request):
+        await corpo(request)
+        if not hospedeiro.encerrar():
+            raise Recusa("Este painel não foi iniciado pela linha de comando; feche-o por onde foi aberto.", 409)
+        return {"ok": True}
 
     @app.post("/api/boas-vindas/analisar")
     async def analisar(request: Request):

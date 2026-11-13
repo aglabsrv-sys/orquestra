@@ -467,7 +467,7 @@
     if (bEditar) {
       bEditar.onclick = function () { modoEdicao(true); };
       ver.addEventListener("dblclick", function (e) { if (!e.target.closest("a")) modoEdicao(true,e.target); });
-      ver.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target === ver) { e.preventDefault(); modoEdicao(true); } });
+      ver.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target === ver && !emEdicao) { e.preventDefault(); modoEdicao(true); } });
       editor.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); salvarTexto(); ver.focus(); } });
       document.addEventListener("pointerdown", function (e) {
         if (!emEdicao || e.target === editor || edicaoInline && edicaoInline.contem(e.target) || e.target.closest(".nota-acoes, dialog, #falha-gravacao, #faixa-conflito")) return;
@@ -475,12 +475,20 @@
       });
       document.addEventListener("click", function (e) {
         var link = e.target.closest("a[href]");
-        if (!link || !notaSuja || !emEdicao || e.ctrlKey || e.metaKey || e.shiftKey || link.target === "_blank" || link.getAttribute("href").charAt(0) === "#") return;
-        e.preventDefault(); salvarTexto(function () {
+        function seguir() {
           var destino=new URL(link.href,location.href);
           if(window.parent!==window&&new URLSearchParams(location.search).get('explorador')==='1'&&destino.origin===location.origin&&/^\/(n|documento|pastas)(?:\/|$)/.test(destino.pathname))window.parent.postMessage({tipo:'orquestra:leitor',url:destino.href,titulo:link.textContent},location.origin);
           else location.href = link.href;
-        });
+        }
+        // Durante a edição no lugar, clicar num link só posiciona o cursor;
+        // Ctrl+clique (Cmd no Mac) salva o texto e abre o link.
+        if (link && emEdicao && edicaoInline && edicaoInline.contem(link)) {
+          e.preventDefault();
+          if ((e.ctrlKey || e.metaKey) && link.getAttribute("href") && link.getAttribute("href").charAt(0) !== "#") salvarTexto(seguir);
+          return;
+        }
+        if (!link || !notaSuja || !emEdicao || e.ctrlKey || e.metaKey || e.shiftKey || link.target === "_blank" || link.getAttribute("href").charAt(0) === "#") return;
+        e.preventDefault(); salvarTexto(seguir);
       }, true);
       bSalvar.onclick = salvarTexto;
       bCancelar.onclick = async function () {

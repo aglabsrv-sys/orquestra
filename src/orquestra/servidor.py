@@ -604,6 +604,27 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         ]
         return pagina(request, "buscar.html", "", q=q, resultados=resultados, paginacao=paginacao)
 
+    @app.get("/api/buscar")
+    @leitura
+    def api_buscar(q: str = "", limite: int = 12):
+        """Resultados da busca flutuante: título, onde está e o trecho em volta do termo."""
+        termo = " ".join(q.split())[:200]
+        encontrados = painel.indice.buscar(termo, limite=None) if termo else []
+        limite = max(1, min(int(limite), 30))
+
+        def trecho(n) -> str:
+            corpo = " ".join(n.corpo.split())
+            posicao = corpo.lower().find(termo.lower())
+            if posicao < 0:
+                return ap.trecho(n)
+            inicio = max(0, posicao - 60)
+            return ("…" if inicio else "") + corpo[inicio:posicao + len(termo) + 90].strip() + ("…" if posicao + len(termo) + 90 < len(corpo) else "")
+
+        return {"total": len(encontrados), "resultados": [
+            {"url": ap.url_nota(n.rel), "titulo": n.titulo, "trecho": trecho(n), "onde": n.rel.rsplit("/", 1)[0] if "/" in n.rel else ""}
+            for n in encontrados[:limite]
+        ]}
+
     @app.get("/habitos", response_class=HTMLResponse)
     def ver_habitos(request: Request):
         return RedirectResponse("/m/habitos", status_code=307)

@@ -37,7 +37,15 @@ class Hospedeiro:
         self._trava: asyncio.Lock | None = None
         self.erro_ao_abrir = ""
         self.capacidade = CapabilityLocal()
+        self.servidor = None  # o uvicorn.Server, quando iniciado pela linha de comando
         self.boas_vindas = criar_boas_vindas(self)
+
+    def encerrar(self) -> bool:
+        """Pede ao servidor para fechar, como o Ctrl+C faria. False se não há servidor a fechar."""
+        if self.servidor is None:
+            return False
+        self.servidor.should_exit = True
+        return True
 
     @property
     def painel(self):

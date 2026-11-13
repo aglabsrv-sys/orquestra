@@ -43,7 +43,6 @@ O painel web pode estar fechado.
 Primeiro, na pasta onde você clonou o aplicativo, execute:
 
 ```bash
-uv sync --locked
 uv run --frozen orquestra doctor --vault "CAMINHO COMPLETO DO VAULT"
 ```
 

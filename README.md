@@ -81,17 +81,21 @@ Com as duas instaladas, em qualquer sistema:
 ```bash
 git clone https://github.com/aglabsrv-sys/orquestra.git
 cd orquestra
-uv sync --locked
 uv run --frozen orquestra
 ```
 
-O navegador abre em <http://localhost:8420>. Na primeira vez, escolha entre:
+O último comando é o único que você vai usar no dia a dia: na primeira vez ele
+instala o Python e as dependências sozinho (demora um pouco mais) e, nas outras,
+só abre o painel. O navegador abre em <http://localhost:8420>. Na primeira vez, escolha entre:
 
 - **Já tenho um vault do Obsidian:** o painel lista os cofres que encontrou, olha a
   pasta sem alterar nada e pergunta quais pastas você quer ver.
 - **Criar um vault novo:** escolha a pasta, um ponto de partida e o tema.
 
 Nas próximas vezes, `uv run --frozen orquestra` abre direto no vault escolhido.
+Para pegar uma versão nova, `uv run --frozen orquestra atualizar`. Para encerrar o
+painel de qualquer terminal (mesmo se foi aberto por um agente),
+`uv run --frozen orquestra parar`; `status` e `reiniciar` também existem.
 Se algo não funcionar, rode `uv run --frozen orquestra doctor`: ele confere a
 instalação e explica, em português, o que falta.
 
@@ -103,7 +107,8 @@ instalação e explica, em português, o que falta.
 | **Decidir** | Uma fila com tudo que espera você, inclusive perguntas dos agentes. |
 | **Agenda** | Mês, semana, dia e lista; compromissos gravados no vault e leitura de calendários iCal. |
 | **Hábitos e Pomodoro** | Metas semanais com marcação diária, e um timer de foco que continua ao navegar. |
-| **Pastas** | O vault como está no disco, com árvore, grafo de ligações, imagens, vídeos e HTML. |
+| **Pastas** | O vault como está no disco, com árvore, grafo de ligações (forças ajustáveis como no Obsidian), imagens, vídeos e HTML. |
+| **Busca** | Ctrl+K (ou /) abre uma busca flutuante por cima de qualquer tela, com resultados enquanto você digita. |
 | **Diário** | O que mudou no vault e o que cada agente fez, com autor e horário. |
 | **Resumo do dia** | Prazos, decisões, hábitos e atividade de um dia numa visão compacta. |
 | **Links do cofre** | Referências, anexos e blocos verificados, com notas futuras separadas do que precisa de revisão. |
@@ -155,6 +160,10 @@ origem: humano
 
 Gravar o vídeo principal da semana.
 ```
+
+Para editar, dê dois cliques no texto da nota: ele fica editável ali mesmo, com a
+mesma aparência, e só os blocos que você mudar são reescritos no arquivo
+(veja [Editar uma nota](docs/pastas.md#editar-uma-nota)).
 
 O painel confere a versão antes de gravar, avisa quando o arquivo mudou por fora e
 guarda versões de recuperação em `~/.orquestra/recuperacao/`. Detalhes em

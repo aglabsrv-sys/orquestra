@@ -1,12 +1,36 @@
 # Comandos
 
 Rode os comandos dentro da pasta do aplicativo (onde estão `pyproject.toml` e
-`uv.lock`), depois de `uv sync --locked`. O vault fica em outra pasta.
+`uv.lock`). Não precisa instalar nada antes: o `uv run` prepara o ambiente sozinho
+na primeira vez. O vault fica em outra pasta.
 
 ```bash
 uv run --frozen orquestra --help
 uv run --frozen orquestra iniciar --help
 ```
+
+## Parar, reiniciar e atualizar
+
+O painel pode estar rodando sem estar no seu terminal: aberto por outro terminal,
+por um agente (Claude Code, Codex) ou pelo início automático. Nesses casos o Ctrl+C
+do seu terminal não chega até ele. Estes comandos encontram o painel onde ele estiver:
+
+| Comando | O que faz |
+|---|---|
+| `uv run --frozen orquestra status` | Diz se o painel está rodando, em que endereço e com qual vault |
+| `uv run --frozen orquestra parar` | Encerra o painel com calma, como o Ctrl+C faria |
+| `uv run --frozen orquestra reiniciar` | Para e abre de novo no mesmo vault e porta, já com o código atual |
+| `uv run --frozen orquestra atualizar` | Baixa a versão nova do GitHub e, se o painel estava aberto, reabre atualizado |
+
+**Para pegar uma atualização,** use `atualizar`. Ele confere se há algo novo, para o
+painel, faz o `git pull` e reabre com as dependências da versão nova. Se você mesmo
+fez o `git pull`, basta `reiniciar`. O `atualizar` não mexe se houver arquivos do
+aplicativo alterados nesta pasta.
+
+Ao abrir, o painel se registra em `~/.orquestra/painel.json`, e é assim que os outros
+comandos o encontram. Se ele travou e não responde, `orquestra parar --forcar`
+encerra o processo registrado. Um painel de versão anterior, que ainda não se
+registrava, também é encontrado pela porta e encerrado.
 
 ## Referência
 
@@ -27,8 +51,8 @@ uv run --frozen orquestra iniciar --help
 | `uv run --frozen orquestra autostart ativar` | Inicia o painel ao entrar na sua conta; aceita também `status` e `desativar` |
 | `uv run --frozen orquestra desinstalar` | Explica a remoção; com `--confirmar`, tira o início automático |
 
-Os caminhos entre aspas são exemplos. Os apelidos `init` e `diagnostico` equivalem
-a `criar` e `doctor`.
+Os caminhos entre aspas são exemplos. Os apelidos `init`, `diagnostico`, `stop`,
+`restart` e `update` equivalem a `criar`, `doctor`, `parar`, `reiniciar` e `atualizar`.
 
 ## Detalhes
 
@@ -44,9 +68,10 @@ a `criar` e `doctor`.
 
 ## Encerrar e remover
 
-`Ctrl+C` no terminal (ou fechar o terminal) encerra o painel. Para trocar de vault
-com o painel aberto: **Ajustes → Cofres → Abrir pasta como cofre**.
+`Ctrl+C` no terminal em que o painel foi aberto o encerra. De qualquer outro
+terminal, use `uv run --frozen orquestra parar`. Para trocar de vault com o painel
+aberto: **Ajustes → Cofres → Abrir pasta como cofre**.
 
-Para remover: `uv run --frozen orquestra desinstalar --confirmar`, encerre o
-processo e apague a pasta do aplicativo. O vault, os backups e `~/.orquestra`
+Para remover: `uv run --frozen orquestra desinstalar --confirmar`, depois
+`uv run --frozen orquestra parar`, e apague a pasta do aplicativo. O vault, os backups e `~/.orquestra`
 (incluindo seus segredos) são preservados.

@@ -18,6 +18,11 @@ atual, em formato `[[wikilink]]` ou link Markdown.
 - **Centralizar** ajusta o conjunto de notas ao espaço disponível. O explorador ocupa a altura da janela; listas longas e documentos rolam dentro dos seus painéis.
 - Notas sem ligações ficam próximas do conjunto conectado, sem reduzir o miolo do grafo a um ponto distante.
 - Nas opções do grafo, busque pelo nome ou oculte notas sem ligações e rótulos.
+- Em **Forças**, ajuste o grafo como no Obsidian: **centrípeta** puxa tudo para o
+  centro, **repulsão** afasta as notas entre si, **força dos links** aperta as
+  ligações e **distância dos links** define o comprimento delas. Os padrões são
+  0,52 · 10 · 1 · 174; **Restaurar padrão** volta a eles. A escolha fica guardada
+  neste navegador, por cofre. Arrastar uma nota puxa as vizinhas junto.
 - Passe sobre uma nota para destacar suas conexões. Pelo teclado, use as setas para escolher uma nota, Enter para abrir e `0` para centralizar.
 - Em uma pasta adotada no painel, as subpastas continuam navegáveis. O painel sugere Lista quando um quadro não teria uma distribuição útil de status e memoriza a visualização escolhida para cada área e cofre.
 
@@ -58,5 +63,24 @@ substitui testar a mensagem nos clientes de email usados pelos destinatários.
 
 A edição de HTML é feita no editor de sua preferência; a edição de notas Markdown
 continua disponível no leitor do painel.
+
+## Editar uma nota
+
+Dê dois cliques no texto (ou aperte Enter com a nota selecionada). A nota fica
+editável ali mesmo, com a mesma aparência: tabelas continuam tabelas e listas
+continuam listas, e você passa de um parágrafo a outro clicando, sem trocar de modo.
+
+- **Formatação:** Ctrl+B e Ctrl+I (Cmd no Mac) aplicam negrito e itálico. Você também
+  pode digitar Markdown, como `**negrito**`, `[[Outra nota]]` ou `- item`, que vira
+  formatação ao salvar.
+- **Salvar:** Escape, Ctrl+S ou clicar fora da nota. Cancelar volta à última versão salva.
+- **Links:** durante a edição, um clique num link só posiciona o cursor. Ctrl+clique
+  salva e abre o link.
+- **Só o que mudou:** ao salvar, apenas os blocos que você alterou são reescritos no
+  arquivo. O resto continua exatamente como estava, inclusive a formatação do seu Markdown.
+
+Quando o painel não consegue relacionar o texto exibido com as linhas do arquivo
+(um rascunho recuperado, por exemplo), a edição abre o Markdown da nota inteira
+numa caixa de texto. **Selecionar texto** no menu da nota faz o mesmo.
 
 [Ver o explorador no celular](img/pastas-mobile.png).

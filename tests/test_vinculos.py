@@ -1,4 +1,5 @@
 """Diagnóstico e navegação usam as mesmas referências, sem alterar o cofre."""
+import re
 from urllib.parse import quote
 
 from orquestra import vinculos
@@ -56,7 +57,7 @@ def test_resolve_relativos_aliases_subpastas_ancoras_e_anexos(tmp_path):
     assert 'href="/n/B/Alvo.md#' + quote("seção") + '"' in html
     assert 'src="/arquivo/A/foto.png"' in html
     html_alvo = str(render_markdown(indice.notas["B/Alvo.md"].corpo, indice, "B/Alvo.md"))
-    assert 'id="bloco-bloco-a"' in html_alvo and "^bloco-a" not in html_alvo
+    assert 'id="bloco-bloco-a"' in html_alvo and "^bloco-a" not in re.sub(r"<[^>]+>", "", html_alvo)  # só no data-md da edição
 
 
 def test_relatorio_distingue_futuro_revisao_e_escopo_sem_reescrever(tmp_path):
