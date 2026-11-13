@@ -710,10 +710,13 @@ class Painel:
             yaml["icone"] = str(dados["icone"])
         cena = str(dados.get("cena") or "")
         if dados.get("capa"):
-            midia = caminho_no_vault(self.vault, str(dados["capa"]))
-            if not midia.is_file() or midia.suffix.lower() not in {".png", ".jpg", ".webp", ".mp4", ".webm"}:
-                raise Recusado("Escolha uma imagem ou vídeo enviado ao vault.")
-            yaml["capa"] = midia.relative_to(self.vault).as_posix()
+            if dados["capa"] in temas.CAPAS_CATALOGO:
+                yaml["capa"] = dados["capa"]
+            else:
+                midia = caminho_no_vault(self.vault, str(dados["capa"]))
+                if not midia.is_file() or midia.suffix.lower() not in {".png", ".jpg", ".webp", ".mp4", ".webm"}:
+                    raise Recusado("Escolha uma imagem ou vídeo enviado ao vault.")
+                yaml["capa"] = midia.relative_to(self.vault).as_posix()
             cena = ""
         if cena:
             if cena not in temas.CENAS:

@@ -1,33 +1,36 @@
-# Tema Maré: verde profundo, com luz de fim de tarde.
+# Tema Maré: o mar por cima e por baixo. Verde-água profundo com destaque em coral.
+# Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
 
 nome: Maré
-descricao: Verde profundo e calmo, com destaque em pêssego.
+descricao: Verde-mar profundo com destaque em coral.
 
+# Cores da interface
 cores:
-  fundo: "#0a1716"
-  superficie: "#112423"
-  superficie_alta: "#18312f"
-  borda: "#254441"
-  texto: "#eef4f0"
-  texto_suave: "#93aea8"
-  destaque: "#f2b88c"
-  sobre_destaque: "#2a1608"
-  alerta: "#ff8f70"
-  ok: "#9fdcae"
+  fundo: "#081a1b"
+  superficie: "#0f2627"
+  superficie_alta: "#163435"
+  borda: "#24494a"
+  texto: "#ecf5f2"
+  texto_suave: "#8fb0ab"
+  destaque: "#ff9d8a"
+  sobre_destaque: "#3a110b"
+  alerta: "#ffc46b"
+  ok: "#8fe3c0"
 
 # As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
 cores_claras:
-  fundo: "#f4f8f6"
+  fundo: "#f2f8f6"
   superficie: "#ffffff"
-  superficie_alta: "#e5efec"
-  borda: "#cbdcd7"
-  texto: "#10292a"
-  texto_suave: "#56736f"
-  destaque: "#b25a22"
+  superficie_alta: "#e2efeb"
+  borda: "#c6dbd5"
+  texto: "#0d2a2a"
+  texto_suave: "#4f706b"
+  destaque: "#b8402c"
   sobre_destaque: "#ffffff"
-  alerta: "#c9492c"
-  ok: "#2c7d46"
+  alerta: "#a85a00"
+  ok: "#1f7a4d"
 
+# Paletas das capas em pixel art (os papéis de cada cor estão em docs/temas.md).
 paletas:
   laguna:
     ceu: ["#04232e", "#0b4a55", "#1f8a84", "#8fd9b6"]
@@ -37,7 +40,7 @@ paletas:
     meio: "#114a52"
     perto: "#0a2f38"
     sombra: "#051c23"
-    luz: "#f2b88c"
+    luz: "#ffb49a"
     brilho: "#fff6e6"
   abissal:
     ceu: ["#020a12", "#051a28", "#0a3040", "#14505a"]
@@ -72,27 +75,31 @@ paletas:
     brilho: "#fbffe6"
     noite: true
 
-# O estilo deste tema: mar, céu e farol.
+# O estilo deste tema: o mar visto da praia e do fundo: farol, recife e céu limpo.
 # `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
-# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto
-cenas: [mar, ceu, aurora, montanhas, floresta, janela, cidade]
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
+cenas: [mar, recife, ceu, aurora, montanhas, floresta, jardim]
 
 # Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
-# para duas áreas nunca ficarem com a mesma capa.
+# para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
+# representa o tema na tela de escolha.
 capas:
-  tarefas: {cena: janela, paleta: coral}
-  conteudo: {cena: cidade, paleta: abissal}
+  boas-vindas: {cena: mar, paleta: laguna}
+  tarefas: {cena: recife, paleta: laguna}
+  conteudo: {cena: mar, paleta: coral}
   radar: {cena: aurora, paleta: abissal}
-  entrada: {cena: mar, paleta: laguna}
+  entrada: {cena: ceu, paleta: laguna}
   decidir: {cena: montanhas, paleta: coral}
   diario: {cena: floresta, paleta: musgo}
-  pastas: {cena: ceu, paleta: laguna}
+  pastas: {cena: recife, paleta: abissal}
   numeros: {cena: ceu, paleta: coral}
-  notas: {cena: mar, paleta: coral}
+  notas: {cena: janela, paleta: laguna}
   projetos: {cena: montanhas, paleta: laguna}
   areas: {cena: floresta, paleta: laguna}
-  recursos: {cena: janela, paleta: laguna}
+  recursos: {cena: recife, paleta: coral}
   arquivos: {cena: espaco, paleta: abissal}
   clientes: {cena: cidade, paleta: coral}
   financas: {cena: mar, paleta: abissal}
   estudos: {cena: aurora, paleta: musgo}
+  agenda: {cena: mar, paleta: musgo}
+  habitos: {cena: jardim, paleta: musgo}

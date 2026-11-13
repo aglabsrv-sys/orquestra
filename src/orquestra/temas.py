@@ -17,6 +17,7 @@ static/js/cenas.js) ou um arquivo de imagem/vídeo do vault.
 from __future__ import annotations
 
 import re
+import hashlib
 import unicodedata
 import zlib
 from importlib import resources
@@ -28,9 +29,44 @@ from orquestra.config import ler_yaml
 from orquestra.caminhos import CaminhoInseguro, caminho_no_vault
 from orquestra.notas import simples
 
+TEMAS_ORIGINAIS_ANTIGOS = {'mare': 'fd4e9a85c7a74f27c202b1e4432e442656325ed46e7662837787c9098700c986', 'noturno': '586fc158e1ee13ecd08a05254b7fd382c3497575905447b4abe6ee19c7b310ed'}
+
 PASTA_TEMAS = "_orquestra/temas"
-CENAS = ["janela", "cidade", "montanhas", "mar", "floresta", "espaco", "ceu", "aurora", "deserto"]
+CENAS = [
+    "janela", "cidade", "montanhas", "mar", "floresta", "espaco", "ceu", "aurora", "deserto",
+    "observatorio", "jardim", "orbital", "codigo", "neon", "recife",
+]
+NOMES_CENAS = {
+    "espaco": "Espaço", "ceu": "Céu", "observatorio": "Observatório", "codigo": "Código", "neon": "Néon",
+}
 EXT_VIDEO = {".mp4", ".webm"}
+
+# Coleção de imagens e vídeos que vem com o app (src/orquestra/static/arte). Cada peça
+# foi feita para um tema; todas podem ser usadas em qualquer um.
+COLECAO = [
+    {"arquivo": "entardecer.webp", "nome": "Entardecer", "tema": "brasa", "alt": "Cabana no alto de um deserto ao pôr do sol"},
+    {"arquivo": "enseada.webp", "nome": "Enseada", "tema": "mare", "alt": "Farol sobre o mar e um recife de coral sob a água"},
+    {"arquivo": "avenida.webp", "nome": "Avenida", "tema": "noturno", "alt": "Avenida cyberpunk com letreiros de néon sob chuva"},
+    {"arquivo": "avenida.webm", "nome": "Avenida", "tema": "noturno", "alt": "A avenida de néon com a chuva caindo, em loop"},
+    {"arquivo": "observatorio.webp", "nome": "Observatório", "tema": "azul", "alt": "Observatório nas montanhas ao anoitecer"},
+    {"arquivo": "laboratorio.webp", "nome": "Laboratório", "tema": "terminal", "alt": "Mesa com monitores antigos de fósforo verde"},
+    {"arquivo": "pavilhao.webp", "nome": "Pavilhão", "tema": "luz", "alt": "Pavilhão branco à beira de um lago, com cerejeira em flor"},
+    {"arquivo": "refugio.webp", "nome": "Refúgio", "tema": "grafite", "alt": "Biblioteca às margens de um lago na hora azul"},
+]
+for _peca in COLECAO:
+    _peca["url"] = "/static/arte/" + _peca["arquivo"]
+    _peca["tipo"] = "video" if Path(_peca["arquivo"]).suffix.lower() in EXT_VIDEO else "imagem"
+CAPAS_CATALOGO = {peca["url"] for peca in COLECAO}
+
+
+def nome_cena(cena: str) -> str:
+    """'espaco' -> 'Espaço': o nome de uma cena como aparece na tela."""
+    return NOMES_CENAS.get(cena) or str(cena).replace("_", " ").capitalize()
+
+
+def colecao(tema_id: str = "") -> list[dict[str, Any]]:
+    """A coleção de imagens e vídeos, com as peças do tema atual primeiro."""
+    return sorted(COLECAO, key=lambda peca: peca["tema"] != tema_id)
 
 CORES_PADRAO = {
     "fundo": "#130c09",
@@ -90,10 +126,18 @@ def listar(vault: Path) -> list[dict[str, Any]]:
             try:
                 arquivo = caminho_no_vault(vault, sub / "tema.yaml")
                 if arquivo.is_file():
+                    if hashlib.sha256(arquivo.read_bytes().replace(b"\r\n", b"\n")).hexdigest() == TEMAS_ORIGINAIS_ANTIGOS.get(sub.name):
+                        continue  # Atualiza apenas cópias originais; preserva temas editados no vault.
                     temas.append(_normalizar(sub.name, simples(dict(ler_yaml(arquivo)))))
             except (ValueError, TypeError, AttributeError, OSError):
                 continue  # um tema defeituoso não impede o uso das notas
-    return temas or [_tema_embutido()]
+    ids = {t["id"] for t in temas}
+    base = resources.files("orquestra") / "modelo_vault" / PASTA_TEMAS
+    for sub in sorted(base.iterdir(), key=lambda p: p.name):
+        if sub.name not in ids and (sub / "tema.yaml").is_file():
+            with resources.as_file(sub / "tema.yaml") as arquivo:
+                temas.append(_normalizar(sub.name, simples(dict(ler_yaml(Path(arquivo))))))
+    return sorted(temas, key=lambda t: (t["id"] != "brasa", t["nome"])) or [_tema_embutido()]
 
 
 def carregar(vault: Path, tema_id: str) -> dict[str, Any]:
@@ -121,13 +165,17 @@ def resolver_capa(tema: dict[str, Any], alvo: str, propria: Any = None) -> dict[
 
     if isinstance(spec, str) and spec.strip():
         caminho = spec.strip()
-        url = caminho if caminho.startswith(("http://", "https://")) else "/arquivo/" + quote(caminho)
+        url = caminho if caminho in CAPAS_CATALOGO or caminho.startswith(("http://", "https://")) else "/arquivo/" + quote(caminho)
         tipo = "video" if Path(caminho).suffix.lower() in EXT_VIDEO else "imagem"
         return {"tipo": tipo, "url": url}
 
     cena = paleta = None
     if isinstance(spec, dict):
         cena, paleta = spec.get("cena"), spec.get("paleta")
+        # Só a cena foi escolhida: se é a mesma que o tema já dá a esta área, a paleta do tema continua.
+        do_tema = tema["capas"].get(alvo) or tema["capas"].get(_chave(alvo))
+        if paleta is None and isinstance(do_tema, dict) and do_tema.get("cena") == cena:
+            paleta = do_tema.get("paleta")
     paletas = tema["paletas"]
     if cena not in CENAS or (not isinstance(paleta, dict) and paleta not in paletas):
         # Módulo que o tema não conhece: escolhemos um par (cena, paleta) estável pelo nome,
@@ -135,8 +183,12 @@ def resolver_capa(tema: dict[str, Any], alvo: str, propria: Any = None) -> dict[
         usados = {(c.get("cena"), c.get("paleta")) for c in tema["capas"].values() if isinstance(c, dict)}
         pares = [(c, p) for c in (tema.get("cenas") or CENAS) for p in (paletas or [None])]
         livres = [par for par in pares if par not in usados] or pares
-        livres = [par for par in livres if cena not in CENAS or par[0] == cena] or livres
-        escolhida, nome_paleta = livres[semente % len(livres)]
+        if cena in CENAS:  # a cena já foi escolhida: falta só a paleta, de preferência uma que ela ainda não use
+            com_a_cena = [(cena, p) for p in (paletas or [None])]
+            livres = [par for par in com_a_cena if par not in usados] or com_a_cena
+        # Com a cena já escolhida, ela entra no sorteio: cenas diferentes caem em paletas diferentes.
+        sorteio = semente + zlib.crc32(cena.encode("utf-8")) if cena in CENAS else semente
+        escolhida, nome_paleta = livres[sorteio % len(livres)]
         cena = cena if cena in CENAS else escolhida
         paleta = paleta if (isinstance(paleta, dict) or paleta in paletas) else nome_paleta
 
@@ -147,3 +199,17 @@ def resolver_capa(tema: dict[str, Any], alvo: str, propria: Any = None) -> dict[
     else:
         cores = {}
     return {"tipo": "cena", "cena": cena, "paleta": cores, "semente": semente % 100000}
+
+
+def previa(tema: dict[str, Any]) -> dict[str, Any]:
+    """A capa que representa o tema na escolha de temas: `boas-vindas`, a cena de assinatura."""
+    return resolver_capa(tema, "boas-vindas")
+
+
+def previas_das_cenas(tema: dict[str, Any], alvo: str) -> list[dict[str, Any]]:
+    """Uma prévia por cena, exatamente como `alvo` ficaria se a escolhesse.
+
+    As cenas do estilo do tema vêm primeiro; as demais, na ordem do catálogo.
+    """
+    do_tema = [c for c in tema.get("cenas") or [] if c in CENAS]
+    return [resolver_capa(tema, alvo, {"cena": cena}) for cena in [*do_tema, *[c for c in CENAS if c not in do_tema]]]

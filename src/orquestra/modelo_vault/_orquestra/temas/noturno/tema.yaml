@@ -1,19 +1,21 @@
-# Tema Noturno: madrugada em índigo e lilás.
+# Tema Noturno: cidade cyberpunk. Violeta elétrico, magenta e ciano.
+# Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
 
 nome: Noturno
-descricao: Madrugada em índigo, lilás e um pouco de néon.
+descricao: Cyberpunk em violeta elétrico, magenta e ciano.
 
+# Cores da interface
 cores:
-  fundo: "#0c0b1a"
-  superficie: "#15142b"
-  superficie_alta: "#1f1d3d"
-  borda: "#302d5a"
-  texto: "#ecebff"
-  texto_suave: "#a09dc8"
-  destaque: "#c4a7ff"
-  sobre_destaque: "#1a1033"
-  alerta: "#ff8fa3"
-  ok: "#9be7c0"
+  fundo: "#0c0816"
+  superficie: "#170f26"
+  superficie_alta: "#25173c"
+  borda: "#44305e"
+  texto: "#f4eaff"
+  texto_suave: "#b8a2cc"
+  destaque: "#d38aff"
+  sobre_destaque: "#200a35"
+  alerta: "#ff719e"
+  ok: "#68efda"
 
 # As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
 cores_claras:
@@ -28,6 +30,7 @@ cores_claras:
   alerta: "#c7305a"
   ok: "#22805a"
 
+# Paletas das capas em pixel art (os papéis de cada cor estão em docs/temas.md).
 paletas:
   madrugada:
     ceu: ["#06051a", "#12103a", "#2a1f6a", "#5a3f9a"]
@@ -54,7 +57,7 @@ paletas:
   neon:
     ceu: ["#0d0524", "#3a0f5a", "#a02a8a", "#ff6aa8"]
     astro: "#ffe0f0"
-    nuvem: "#c04a9a"
+    nuvem: "#ff5fc8"
     longe: "#4a1a6a"
     meio: "#2c1048"
     perto: "#1a0930"
@@ -73,27 +76,31 @@ paletas:
     luz: "#ffe38a"
     brilho: "#ffffff"
 
-# O estilo deste tema: espaço, aurora e cidade de madrugada.
+# O estilo deste tema: madrugada de néon: letreiros, chuva, espaço e aurora.
 # `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
-# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto
-cenas: [espaco, aurora, cidade, janela, floresta, montanhas, ceu, mar]
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
+cenas: [neon, cidade, espaco, janela, aurora, orbital]
 
 # Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
-# para duas áreas nunca ficarem com a mesma capa.
+# para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
+# representa o tema na tela de escolha.
 capas:
+  boas-vindas: {cena: neon, paleta: neon}
   tarefas: {cena: janela, paleta: lilas}
-  conteudo: {cena: cidade, paleta: neon}
+  conteudo: {cena: neon, paleta: lilas}
   radar: {cena: espaco, paleta: madrugada}
-  entrada: {cena: mar, paleta: aurora}
+  entrada: {cena: cidade, paleta: neon}
   decidir: {cena: montanhas, paleta: aurora}
   diario: {cena: floresta, paleta: madrugada}
   pastas: {cena: aurora, paleta: madrugada}
   numeros: {cena: espaco, paleta: neon}
   notas: {cena: janela, paleta: madrugada}
-  projetos: {cena: montanhas, paleta: lilas}
+  projetos: {cena: neon, paleta: madrugada}
   areas: {cena: floresta, paleta: aurora}
   recursos: {cena: cidade, paleta: madrugada}
   arquivos: {cena: espaco, paleta: lilas}
   clientes: {cena: cidade, paleta: lilas}
-  financas: {cena: ceu, paleta: lilas}
+  financas: {cena: orbital, paleta: neon}
   estudos: {cena: aurora, paleta: aurora}
+  agenda: {cena: orbital, paleta: lilas}
+  habitos: {cena: neon, paleta: aurora}

@@ -87,7 +87,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
 
     modelos = Jinja2Templates(directory=PASTA / "templates")
-    modelos.env.globals.update(icone=ap.icone, rotulo=rotulo, url_nota=ap.url_nota, url_pasta=ap.url_pasta)
+    modelos.env.globals.update(icone=ap.icone, rotulo=rotulo, nome_cena=temas.nome_cena, url_nota=ap.url_nota, url_pasta=ap.url_pasta)
     # Muda sempre que um arquivo de static/ muda, para o navegador não usar CSS/JS antigo.
     marca = marca_estaticos(PASTA / "static")
 
@@ -109,7 +109,11 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             "modulo_captura": painel.indice.modulos.get(painel.config.captura),
             **extra,
         }
-        return modelos.TemplateResponse(request, nome, contexto, status_code=status)
+        resposta = modelos.TemplateResponse(request, nome, contexto, status_code=status)
+        if nome == "nota.html" and request.query_params.get("explorador") == "1":
+            from orquestra.seguranca import _CSP
+            resposta.headers["Content-Security-Policy"] = _CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+        return resposta
 
     # ------------------------------------------------------------ erros
 
@@ -446,7 +450,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             campos=campos,
             outros={k: (", ".join(map(str, v)) if isinstance(v, list) else v) for k, v in outros.items()},
             pasta=rel.rsplit("/", 1)[0] if "/" in rel else "",
-            html=ap.render_markdown(nota.corpo, painel.indice),
+            html=ap.render_markdown(nota.corpo, painel.indice, nota.rel),
             avisos=validar(modulo, nota.meta) if modulo and zona == "itens" else [],
             imagem=imagem,
             campo_imagem=next((c.nome for c in modulo.campos.values() if c.tipo == "imagem"), "") if modulo else "",
@@ -619,6 +623,34 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         await asyncio.to_thread(painel.recarregar_tudo)
         return {"ok": True}
 
+    def arquivos_da_pasta(rel: str) -> list[dict]:
+        pasta = painel.caminho_seguro(rel)
+        arquivos = []
+        for filho in sorted(pasta.iterdir(), key=lambda p: p.name.casefold()):
+            caminho = (rel + "/" + filho.name).strip("/")
+            if filho.is_symlink() or not filho.is_file() or ignorar(caminho):
+                continue
+            ext = filho.suffix.lower()
+            if ext in EXT_MIDIA or ext in {".html", ".htm"}:
+                arquivos.append({"nome": filho.name, "rel": caminho, "url": "/documento/" + quote(caminho), "tipo": "html" if ext in {".html", ".htm"} else "midia"})
+        return arquivos
+
+    @app.get("/documento/{rel:path}")
+    @leitura
+    def documento(request: Request, rel: str):
+        from html import escape
+        caminho = painel.caminho_seguro(rel)
+        if ignorar(rel) or not caminho.is_file() or caminho.suffix.lower() not in EXT_MIDIA | {".html", ".htm"}:
+            raise NaoEncontrado(rel)
+        if caminho.suffix.lower() in {".html", ".htm"}:
+            from orquestra.documentos import preparar_html
+            return HTMLResponse(preparar_html(caminho.read_text(encoding="utf-8-sig", errors="replace"), rel), headers={
+                "Content-Security-Policy": "default-src 'none'; img-src 'self' https: data:; style-src 'unsafe-inline'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; sandbox",
+            })
+        url = escape("/arquivo/" + quote(rel), quote=True)
+        elemento = f'<video src="{url}" controls muted playsinline></video>' if caminho.suffix.lower() in {".mp4", ".webm"} else f'<img src="{url}" alt="{escape(caminho.name, quote=True)}">'
+        return HTMLResponse('<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#111318}img,video{max-width:100%;max-height:100vh;object-fit:contain}</style>' + elemento, headers={"Content-Security-Policy": "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'; sandbox"})
+
     @app.get("/api/pastas/arvore")
     @leitura
     def arvore_pastas(request: Request, rel: str = ""):
@@ -636,6 +668,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             "pastas": [{"nome": n, "rel": (rel + "/" + n).strip("/"), "url": ap.url_pasta((rel + "/" + n).strip("/")), "notas": nomes[n]} for n in sorted(nomes, key=str.casefold)],
             "notas": [{"titulo": n.titulo, "rel": n.rel, "url": ap.url_nota(n.rel)} for n in notas[:300]],
             "total_notas": len(notas),
+            "arquivos": arquivos_da_pasta(rel),
         }
 
     @app.get("/api/pastas/grafo")
@@ -701,6 +734,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             rel=rel,
             trilha=[{"nome": parte, "url": ap.url_pasta("/".join(partes[: i + 1]))} for i, parte in enumerate(partes)],
             pastas=pastas,
+            arquivos=arquivos_da_pasta(rel),
             notas=[
                 {
                     "url": ap.url_nota(n.rel),
@@ -719,7 +753,6 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @leitura
     def personalizar(request: Request, modulo_id: str):
         modulo = painel.modulo(modulo_id)
-        capa = modulo.capa if isinstance(modulo.capa, dict) else {}
         return pagina(
             request,
             "personalizar.html",
@@ -729,8 +762,11 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             campos=[c for c in modulo.campos.values() if c.nome != "origem"],
             tipos=sorted(TIPOS_DE_CAMPO),
             icones=ap.ICONES_DE_MODULO,
-            cenas=temas.CENAS,
-            cena_atual=str(capa.get("cena") or ""),
+            cenas=temas.previas_das_cenas(painel.tema, modulo.id),
+            colecao=temas.colecao(painel.tema["id"]),
+            nomes_temas={t["id"]: t["nome"] for t in temas.listar(painel.vault)},
+            cena_atual=ap.capa_de(painel, modulo.id, modulo.capa).get("cena", ""),
+            cena_propria=modulo.capa.get("cena", "") if isinstance(modulo.capa, dict) else "",
             tem_quadro=any(v.tipo == "kanban" for v in modulo.visoes),
             tem_grafico=any(v.tipo == "grafico" for v in modulo.visoes),
             pode_quadro=modulo.tem_status,
@@ -757,8 +793,9 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 m for m in preparo.catalogo().values() if m.id not in painel.indice.modulos and not (painel.vault / m.id).exists()
             ]
         elif secao == "aparencia":
+            contexto["cenas"] = temas.CENAS
             contexto["temas"] = [
-                {**tema, "previa": temas.resolver_capa(tema, "tarefas"), "atual": tema["id"] == painel.tema["id"]}
+                {**tema, "previa": temas.previa(tema), "atual": tema["id"] == painel.tema["id"]}
                 for tema in temas.listar(painel.vault)
             ]
             contexto["visual"] = {
@@ -821,7 +858,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             with painel._trava:
                 nota = painel.editar_nota(rel, dados["versao"], titulo=dados.get("titulo"),
                                            campos=dados.get("campos"), corpo=dados.get("corpo"))
-                return {"rel": nota.rel, "versao": nota.versao, "html": str(ap.render_markdown(nota.corpo, painel.indice))}
+                return {"rel": nota.rel, "versao": nota.versao, "html": str(ap.render_markdown(nota.corpo, painel.indice, nota.rel))}
         return await asyncio.to_thread(editar_e_renderizar)
 
     @app.post("/api/arquivar/{rel:path}")

@@ -80,12 +80,14 @@ paletas:
 
 # O estilo deste tema: fim de tarde e noite quente.
 # `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
-# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
 cenas: [janela, deserto, cidade, montanhas, floresta, mar, ceu, espaco]
 
 # Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
-# para duas áreas nunca ficarem com a mesma capa.
+# para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
+# representa o tema na tela de escolha.
 capas:
+  boas-vindas: {cena: janela, paleta: brasa}
   tarefas: {cena: janela, paleta: poente}
   conteudo: {cena: cidade, paleta: brasa}
   radar: {cena: espaco, paleta: cobre}
@@ -102,3 +104,5 @@ capas:
   clientes: {cena: cidade, paleta: poente}
   financas: {cena: mar, paleta: brasa}
   estudos: {cena: janela, paleta: cobre}
+  agenda: {cena: ceu, paleta: poente}
+  habitos: {cena: jardim, paleta: areia}

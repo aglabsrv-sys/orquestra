@@ -68,3 +68,9 @@ O calendário usa os templates Jinja, os temas e os controles existentes do
 Orquestra, com JavaScript progressivo. CSS e lógica da agenda são arquivos próprios;
 o backend de apresentação fica em `calendario.py`, separado do agendador de coletores.
 Não há dependências novas de frontend nem um banco paralelo de eventos.
+
+## Interface
+
+![agenda — exemplo com dados de demonstração](img/agenda-1440.png)
+
+![agenda — exemplo com dados de demonstração](img/agenda-390.png)

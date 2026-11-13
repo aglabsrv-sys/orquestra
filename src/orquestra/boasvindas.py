@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 
 from orquestra import __version__, aparencia, preparo, temas
 from orquestra import apresentacao as ap
-from orquestra.config import lembrar_vault
+from orquestra.config import lembrar_vault, definir_chave
 from orquestra.modulos import rotulo
 from orquestra.recursos import marca_estaticos
 from orquestra.seguranca import CapabilityLocal, Protecao, canal_local
@@ -51,7 +51,7 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
     app.add_middleware(Protecao, hosts_extras=extras)
     app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
     modelos = Jinja2Templates(directory=PASTA / "templates")
-    modelos.env.globals.update(icone=ap.icone, rotulo=rotulo)
+    modelos.env.globals.update(icone=ap.icone, rotulo=rotulo, nome_cena=temas.nome_cena)
     marca = marca_estaticos(PASTA / "static")
 
     @app.exception_handler(Recusa)
@@ -89,9 +89,11 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
                 "versao": __version__,
                 "marca": marca,
                 "tema": tema,
+                "cenas": temas.CENAS,
+                "visual": {"modos": aparencia.MODOS, "cantos": aparencia.CANTOS, "fontes": aparencia.FONTES, "nomes": aparencia.NOMES},
                 "estilo": aparencia.estilo(tema, aparencia.Aparencia()),
-                "temas": [{**t, "previa": temas.resolver_capa(t, "boas-vindas")} for t in lista_temas],
-                "capa": temas.resolver_capa(tema, "boas-vindas"),
+                "temas": [{**t, "previa": temas.previa(t)} for t in lista_temas],
+                "capa": temas.previa(tema),
                 "perfis": [p for p in preparo.perfis().values() if p.id in ("essencial", "criador", "negocio")],
                 "catalogo": list(preparo.catalogo().values()),
                 "cofres": await asyncio.to_thread(preparo.cofres_obsidian) if local else [],
@@ -119,6 +121,11 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
     async def analisar(request: Request):
         dados = await corpo(request)
         return await asyncio.to_thread(preparo.analisar, str(dados.get("caminho") or ""))
+
+    @app.get("/api/boas-vindas/visual")
+    async def previa_visual(tema: str = "brasa", modo: str = "escuro", destaque: str = ""):
+        t = temas.carregar(preparo.MODELO, tema)
+        return {"estilo": aparencia.estilo(t, aparencia.ler({"modo": modo, "destaque": destaque}))}
 
     @app.post("/api/boas-vindas/procurar")
     async def procurar(request: Request):
@@ -149,6 +156,10 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
             for p in dados.get("pastas") or []
             if isinstance(p, dict) and p.get("pasta")
         ]
+        try:
+            visual = aparencia.validar(dados.get("aparencia") or {})
+        except (ValueError, TypeError, AttributeError) as erro:
+            raise Recusa("Confira as opções de aparência escolhidas.") from erro
         tema = str(dados.get("tema") or "")
         relatorio = await asyncio.to_thread(
             preparo.preparar,
@@ -160,6 +171,8 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
             bool(dados.get("backup")),
             pastas,
         )
+        if visual:
+            definir_chave(vault / "orquestra.yaml", "aparencia", visual)
         lembrar_vault(vault)
         await hospedeiro.abrir(vault)
         return {

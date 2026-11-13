@@ -50,3 +50,11 @@ a versão atual, para evitar sobrepor uma alteração feita por um agente ou Obs
 
 São hábitos de frequência semanal. Metas financeiras, subobjetivos e hábitos com
 múltiplas ocorrências por dia continuam fora deste modelo simples.
+
+## Interface
+
+![foco-e-habitos — exemplo com dados de demonstração](img/foco-1440.png)
+
+![foco-e-habitos — exemplo com dados de demonstração](img/habitos-1440.png)
+
+No celular: [Pomodoro](img/foco-390.png) e [Hábitos](img/habitos-390.png).

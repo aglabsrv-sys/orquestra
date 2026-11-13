@@ -1,0 +1,107 @@
+# Tema Terminal: tela de fósforo. Quase preto, com verde de monitor antigo.
+# Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
+
+nome: Terminal
+descricao: Carvão e fósforo verde, como um terminal clássico.
+
+# Cores da interface
+cores:
+  fundo: "#090e0c"
+  superficie: "#101a15"
+  superficie_alta: "#17271e"
+  borda: "#294735"
+  texto: "#dcf5e5"
+  texto_suave: "#91b49c"
+  destaque: "#67ed99"
+  sobre_destaque: "#062414"
+  alerta: "#ff8c88"
+  ok: "#67ed99"
+
+# As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
+cores_claras:
+  fundo: "#f3f7f2"
+  superficie: "#ffffff"
+  superficie_alta: "#e3ede4"
+  borda: "#c7d8c9"
+  texto: "#0f2417"
+  texto_suave: "#4f6a57"
+  destaque: "#1a7a43"
+  sobre_destaque: "#ffffff"
+  alerta: "#b8322c"
+  ok: "#1a7a43"
+
+# Paletas das capas em pixel art (os papéis de cada cor estão em docs/temas.md).
+paletas:
+  fosforo:
+    ceu: ["#020503", "#06140c", "#0c2a18", "#17502c"]
+    astro: "#b6ffce"
+    nuvem: "#2f8f55"
+    longe: "#11391f"
+    meio: "#0b2715"
+    perto: "#07190e"
+    sombra: "#020704"
+    luz: "#67ed99"
+    brilho: "#e6ffee"
+    noite: true
+  ambar:
+    ceu: ["#070401", "#1a0f03", "#3d2406", "#7a4a0c"]
+    astro: "#ffe2a1"
+    nuvem: "#b3741c"
+    longe: "#4a2d08"
+    meio: "#301d05"
+    perto: "#1c1103"
+    sombra: "#080501"
+    luz: "#ffb938"
+    brilho: "#fff1cf"
+    noite: true
+  matriz:
+    ceu: ["#010806", "#03241a", "#0a5a3c", "#2fb37a"]
+    astro: "#eafff2"
+    nuvem: "#57d79a"
+    longe: "#0c4a33"
+    meio: "#083323"
+    perto: "#052016"
+    sombra: "#010906"
+    luz: "#a8ffcf"
+    brilho: "#ffffff"
+    noite: true
+  grade:
+    ceu: ["#02080a", "#062028", "#0d4a55", "#249aa0"]
+    astro: "#d9fffb"
+    nuvem: "#3fb8b5"
+    longe: "#0d3d47"
+    meio: "#082a32"
+    perto: "#051a20"
+    sombra: "#02090b"
+    luz: "#5ef2e4"
+    brilho: "#eafffd"
+    noite: true
+
+# O estilo deste tema: monitores monocromáticos: chuva de código, cidade e órbitas em uma cor só.
+# `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
+cenas: [codigo, cidade, orbital, janela, neon, espaco, montanhas]
+
+# Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
+# para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
+# representa o tema na tela de escolha.
+capas:
+  boas-vindas: {cena: codigo, paleta: fosforo}
+  tarefas: {cena: codigo, paleta: matriz}
+  conteudo: {cena: cidade, paleta: fosforo}
+  radar: {cena: orbital, paleta: grade}
+  entrada: {cena: codigo, paleta: ambar}
+  decidir: {cena: montanhas, paleta: fosforo}
+  diario: {cena: janela, paleta: ambar}
+  pastas: {cena: codigo, paleta: grade}
+  numeros: {cena: orbital, paleta: fosforo}
+  notas: {cena: janela, paleta: fosforo}
+  projetos: {cena: neon, paleta: matriz}
+  areas: {cena: floresta, paleta: matriz}
+  recursos: {cena: cidade, paleta: grade}
+  arquivos: {cena: espaco, paleta: fosforo}
+  clientes: {cena: cidade, paleta: ambar}
+  financas: {cena: orbital, paleta: ambar}
+  estudos: {cena: observatorio, paleta: grade}
+  agenda: {cena: neon, paleta: grade}
+  habitos: {cena: montanhas, paleta: matriz}

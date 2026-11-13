@@ -2,6 +2,16 @@
 
 ## Em desenvolvimento
 
+- Explorador abre no grafo, mantém a árvore durante a leitura e oferece um canvas mais amplo com centralização pelas posições reais das notas.
+- Imagens relativas à nota e anexos soltos no vault são reconhecidos; templates HTML têm prévia isolada com estilos inline e imagens locais ou HTTPS.
+- Personalização compacta com salvar no topo, cena selecionada identificada e prévia imediata de cenas, imagens e vídeos.
+- Sete temas, cada um com paletas e estilo de capas próprios: Brasa, Maré (verde-mar e coral), Noturno (cyberpunk), Azul profundo (cobalto e gelo), Terminal (fósforo), Luz (capas de dia) e Grafite (nanquim neutro).
+- Cenas novas em pixel art: Código, Néon e Recife; Observatório, Jardim e Orbital redesenhadas no mesmo traço das demais.
+- Escolha de capas com prévias fiéis ao que será salvo, cenas do tema primeiro, nomes acentuados e miniaturas sem serrilhado; a prévia de cada tema mostra a sua cena de assinatura.
+- Coleção de imagens com uma ilustração por tema e um vídeo em loop.
+- Configuração inicial com miniaturas animadas e controles compactos de aparência; abertura mais alta, centralizada e sem sobrepor os formulários.
+- Sombra do carrossel mais sutil; documentação de uso reorganizada e capturas renovadas.
+
 - Agenda com visões de mês, semana, dia e lista, filtros e edição de eventos em notas Markdown.
 - Hábitos e metas semanais com marcação diária, histórico e preservação dos registros ao editar.
 - Pomodoro com pausas, duração configurável e prazo preservado ao navegar na mesma aba.

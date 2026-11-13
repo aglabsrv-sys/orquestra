@@ -1,0 +1,103 @@
+# Tema Luz: interface clara nos dois modos, com capas de dia.
+# Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
+
+nome: Luz
+descricao: Porcelana, grafite e azul. Clareza para trabalhar de dia.
+
+# Cores da interface
+cores:
+  fundo: "#f5f6f8"
+  superficie: "#ffffff"
+  superficie_alta: "#e9edf3"
+  borda: "#d3d9e3"
+  texto: "#202b3c"
+  texto_suave: "#59677b"
+  destaque: "#285cbd"
+  sobre_destaque: "#ffffff"
+  alerta: "#b52d46"
+  ok: "#26724e"
+
+# As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
+cores_claras:
+  fundo: "#f5f6f8"
+  superficie: "#ffffff"
+  superficie_alta: "#e9edf3"
+  borda: "#d3d9e3"
+  texto: "#202b3c"
+  texto_suave: "#59677b"
+  destaque: "#285cbd"
+  sobre_destaque: "#ffffff"
+  alerta: "#b52d46"
+  ok: "#26724e"
+
+# Paletas das capas em pixel art (os papéis de cada cor estão em docs/temas.md).
+paletas:
+  manha:
+    ceu: ["#5fa8e6", "#8fc4f0", "#c4e1f7", "#f3f9fd"]
+    astro: "#fff6c9"
+    nuvem: "#ffffff"
+    longe: "#9bbfd9"
+    meio: "#6f9cbd"
+    perto: "#4a7799"
+    sombra: "#2b4f70"
+    luz: "#ffd66b"
+    brilho: "#ffffff"
+  primavera:
+    ceu: ["#6fb6e8", "#a6d6ef", "#d9eef2", "#f6f8e6"]
+    astro: "#fff3b0"
+    nuvem: "#ffc0d0"
+    longe: "#a9cfa4"
+    meio: "#6faa72"
+    perto: "#44804f"
+    sombra: "#27553a"
+    luz: "#ffb84d"
+    brilho: "#ffffff"
+  areia:
+    ceu: ["#7fb7dd", "#b9d8e6", "#f0e3c4", "#fbeed6"]
+    astro: "#fff8dc"
+    nuvem: "#ffffff"
+    longe: "#dcbf94"
+    meio: "#c59f6c"
+    perto: "#9a7748"
+    sombra: "#5e4426"
+    luz: "#e2603a"
+    brilho: "#ffffff"
+  papel:
+    ceu: ["#b9c6d8", "#d3dce8", "#e9edf3", "#f8f9fb"]
+    astro: "#ffffff"
+    nuvem: "#ffffff"
+    longe: "#b4c0d2"
+    meio: "#8f9db5"
+    perto: "#65748f"
+    sombra: "#3b4860"
+    luz: "#285cbd"
+    brilho: "#ffffff"
+
+# O estilo deste tema: manhã clara: jardim, céu aberto e paisagens à luz do dia.
+# `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
+cenas: [jardim, ceu, montanhas, mar, deserto, floresta, janela]
+
+# Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
+# para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
+# representa o tema na tela de escolha.
+capas:
+  boas-vindas: {cena: jardim, paleta: primavera}
+  tarefas: {cena: janela, paleta: primavera}
+  conteudo: {cena: ceu, paleta: manha}
+  radar: {cena: montanhas, paleta: papel}
+  entrada: {cena: mar, paleta: manha}
+  decidir: {cena: montanhas, paleta: manha}
+  diario: {cena: jardim, paleta: areia}
+  pastas: {cena: ceu, paleta: papel}
+  numeros: {cena: deserto, paleta: areia}
+  notas: {cena: janela, paleta: papel}
+  projetos: {cena: montanhas, paleta: primavera}
+  areas: {cena: floresta, paleta: primavera}
+  recursos: {cena: mar, paleta: areia}
+  arquivos: {cena: deserto, paleta: papel}
+  clientes: {cena: cidade, paleta: papel}
+  financas: {cena: ceu, paleta: areia}
+  estudos: {cena: janela, paleta: manha}
+  agenda: {cena: ceu, paleta: primavera}
+  habitos: {cena: mar, paleta: primavera}

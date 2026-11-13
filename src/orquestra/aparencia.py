@@ -49,6 +49,7 @@ class Aparencia:
     cantos: str = "medio"
     fonte: str = "sistema"
     tamanho: str = "padrao"
+    cena: str = ""
 
 
 def ler(bruto: Any) -> Aparencia:
@@ -56,6 +57,9 @@ def ler(bruto: Any) -> Aparencia:
     a = Aparencia()
     if not isinstance(bruto, dict):
         return a
+    from orquestra.temas import CENAS
+    if bruto.get("cena") in CENAS:
+        a.cena = bruto["cena"]
     if str(bruto.get("modo")) in MODOS:
         a.modo = str(bruto["modo"])
     if str(bruto.get("cantos")) in CANTOS:
@@ -71,7 +75,12 @@ def ler(bruto: Any) -> Aparencia:
 
 def validar(dados: dict[str, Any]) -> dict[str, str]:
     """Confere o que veio da tela de Ajustes. Devolve só as chaves válidas; erro vira ValueError."""
+    from orquestra.temas import CENAS
     limpo: dict[str, str] = {}
+    if "cena" in dados:
+        if dados["cena"] not in ["", *CENAS]:
+            raise ValueError("Escolha uma cena do catálogo.")
+        limpo["cena"] = dados["cena"]
     for chave, opcoes in (("modo", MODOS), ("cantos", CANTOS), ("fonte", FONTES), ("tamanho", TAMANHOS)):
         if chave in dados:
             if str(dados[chave]) not in opcoes:
@@ -166,7 +175,7 @@ def cores(tema: dict[str, Any], aparencia: Aparencia, claro: bool) -> dict[str, 
     # especialmente no modo claro. Só a saída CSS muda; o tema do vault é intacto.
     for chave in ("texto", "texto_suave", "destaque", "alerta", "ok"):
         original = base[chave]
-        alvo = "#000000" if claro else "#ffffff"
+        alvo = "#000000" if luminancia(base["fundo"]) > 0.5 else "#ffffff"
         for passo in range(101):
             ajustada = misturar(original, alvo, passo / 100)
             fundos = superficies
@@ -180,6 +189,7 @@ def cores(tema: dict[str, Any], aparencia: Aparencia, claro: bool) -> dict[str, 
 
 
 def _variaveis(paleta: dict[str, str], claro: bool) -> str:
+    claro = luminancia(paleta["fundo"]) > 0.5
     partes = [f"--{nome.replace('_', '-')}:{cor}" for nome, cor in paleta.items()]
     partes.append("color-scheme:" + ("light" if claro else "dark"))
     # A sombra e o brilho de fundo pesam demais numa tela clara.

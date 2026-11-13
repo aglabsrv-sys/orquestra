@@ -45,7 +45,7 @@ def test_doctor_nao_acha_erro_no_vault_modelo(vault):
 
 def test_temas_do_modelo(vault):
     lista = temas.listar(vault)
-    assert [t["id"] for t in lista] == ["brasa", "mare", "noturno"]
+    assert {t["id"] for t in lista} == {"brasa", "mare", "noturno", "luz", "azul", "terminal", "grafite"}
     for tema in lista:
         assert set(tema["cores"]) == set(temas.CORES_PADRAO)
         for alvo in ("tarefas", "conteudo", "radar", "entrada", "decidir", "diario"):

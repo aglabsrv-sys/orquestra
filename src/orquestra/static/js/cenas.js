@@ -883,6 +883,561 @@
     };
   };
 
+  // ---------------------------------------------------------------- observatório
+
+  CENAS.observatorio = function (pal, R) {
+    var lua = { x: inteiro(R, 36, 110), y: inteiro(R, 24, 40), r: 8 };
+    var cx = inteiro(R, 196, 244), dir = lua.x > cx ? 1 : -1;
+    var ceu = camada(function (g) {
+      degrade(g, pal.ceu, 0, 0, W, H);
+      // Via Láctea: uma faixa pontilhada que sobe para a direita.
+      var po = mix(pal.nuvem, pal.ceu[1], 0.45), claro = mix(pal.brilho, pal.ceu[2], 0.6);
+      for (var y = 0; y < 124; y++)
+        for (var x = 0; x < W; x++) {
+          var d = Math.abs(y - (104 - x * 0.3 + Math.sin(x * 0.045) * 7));
+          var dens = (1 - d / 24) * 0.5 * (0.62 + 0.38 * Math.sin(x * 0.083 + 1) * Math.sin(y * 0.19 + x * 0.021));
+          if (dens > 0 && limiar(x, y) < dens) { g.fillStyle = dens > 0.3 ? claro : po; g.fillRect(x, y, 1, 1); }
+        }
+      halo(g, lua.x, lua.y, lua.r, mix(pal.astro, pal.ceu[1], 0.5));
+      disco(g, lua.x, lua.y, lua.r, pal.astro);
+      disco(g, lua.x + 4, lua.y - 2, lua.r - 2, mix(pal.astro, pal.ceu[1], 0.72)); // lua crescente
+    });
+    var est = estrelas(R, pal.noite ? 90 : 30, 100);
+    // Constelações: pontos ligados por linhas pontilhadas.
+    var nos = [];
+    var linhas = camada(function (g) {
+      g.fillStyle = mix(pal.brilho, pal.ceu[1], 0.6);
+      for (var c = 0; c < 3; c++) {
+        var px = 24 + c * 96 + inteiro(R, 0, 44), py = inteiro(R, 14, 56), n = inteiro(R, 3, 5), ang = R() * 6.28;
+        nos.push({ x: px, y: py, f: R() * 6 });
+        for (var s = 0; s < n; s++) {
+          ang += (R() - 0.5) * 2.2;
+          var len = inteiro(R, 10, 20), ax = px, ay = py;
+          px = Math.max(4, Math.min(W - 5, px + Math.round(Math.cos(ang) * len)));
+          py = Math.max(6, Math.min(70, py + Math.round(Math.sin(ang) * len * 0.7)));
+          var passos = Math.max(Math.abs(px - ax), Math.abs(py - ay));
+          for (var i = 2; i < passos - 1; i += 2) g.fillRect(Math.round(ax + (px - ax) * i / passos), Math.round(ay + (py - ay) * i / passos), 1, 1);
+          nos.push({ x: px, y: py, f: R() * 6 });
+        }
+      }
+    });
+    var a1 = relevo(R, 120, 24, 0.55), a2 = relevo(R, 142, 15, 0.5), a3 = relevo(R, 164, 9, 0.4);
+    var s1 = camada(function (g) { serra(g, a1, pal.longe, mix(pal.longe, pal.astro, 0.3), dir, 3); });
+    var chao = 0;
+    for (var k = cx - 19; k <= cx + 38; k++) chao = Math.max(chao, Math.round(a2[Math.max(0, Math.min(W, k))]));
+    chao += 1;
+    var topo = chao - 13 - 17, clara = mix(pal.meio, pal.brilho, 0.55), media = mix(pal.meio, pal.brilho, 0.26), escura = mix(pal.perto, pal.sombra, 0.3);
+    var obs = camada(function (g) {
+      serra(g, a2, pal.meio, mix(pal.meio, pal.astro, 0.2), dir, 2);
+      g.fillStyle = mix(pal.perto, pal.nuvem, 0.2); g.fillRect(cx + 18, chao - 9, 20, 9);      // anexo
+      g.fillStyle = pal.sombra; g.fillRect(cx + 17, chao - 10, 22, 1); g.fillRect(cx + 31, chao - 23, 1, 13); // telhado e antena
+      g.fillStyle = mix(pal.perto, pal.nuvem, 0.32); g.fillRect(cx - 17, chao - 13, 35, 13);  // base
+      g.fillStyle = mix(pal.perto, pal.sombra, 0.4);
+      for (var c = cx - 13; c < cx + 16; c += 6) g.fillRect(c, chao - 12, 1, 12);             // pilastras
+      for (var y = 0; y <= 17; y++) {                                                         // cúpula
+        var w = Math.floor(Math.sqrt(17 * 17 - y * y));
+        for (var x = -w; x <= w; x++) {
+          var l = (x / 17) * dir * 0.75 + (y / 17) * 0.55, li = limiar(cx + x, y);
+          g.fillStyle = l > 0.3 + li * 0.5 ? clara : l > -0.25 + li * 0.4 ? media : escura;
+          g.fillRect(cx + x, chao - 13 - y, 1, 1);
+        }
+      }
+      g.fillStyle = pal.sombra;
+      g.fillRect(cx - 18, chao - 14, 37, 2); g.fillRect(cx + 3, topo + 2, 4, 12); g.fillRect(cx + 7, chao - 8, 5, 8); // cornija, fenda e porta
+      for (var i = 0; i < 16; i++) { var px = inteiro(R, 2, W - 3); if (px < cx - 26 || px > cx + 46) pinheiro(g, px, Math.round(a2[px]) + 2, inteiro(R, 7, 15), pal.perto); }
+    });
+    var frente = camada(function (g) {
+      serra(g, a3, pal.perto, mix(pal.perto, pal.astro, 0.12), dir, 1);
+      for (var i = 0; i < 20; i++) { var x = inteiro(R, 2, W - 3); pinheiro(g, x, Math.round(a3[x]) + 2, inteiro(R, 10, 24), pal.sombra); }
+      var b = relevo(R, 176, 4, 0.4);
+      g.fillStyle = pal.sombra;
+      for (var f = 0; f < W; f++) g.fillRect(f, Math.round(b[f]), 1, H);
+    });
+    var corNevoa = mix(pal.nuvem, pal.ceu[2], 0.5), feixe = mix(pal.brilho, pal.ceu[2], 0.35), lado = cx > W / 2 ? -1 : 1;
+    var vermelho = mix(pal.luz, "#ff3b30", 0.75), luzForte = mix(pal.luz, pal.brilho, 0.5);
+    return function (g, t) {
+      g.drawImage(ceu, 0, 0);
+      desenharEstrelas(g, est, t, pal.brilho);
+      g.drawImage(linhas, 0, 0);
+      g.fillStyle = pal.brilho;
+      for (var i = 0; i < nos.length; i++) {
+        var p = nos[i];
+        g.fillRect(p.x, p.y, 1, 1);
+        if (Math.sin(t * 1.1 + p.f) > 0.2) { g.fillRect(p.x - 1, p.y, 3, 1); g.fillRect(p.x, p.y - 1, 1, 3); }
+      }
+      var fase = t % 13; // estrela cadente
+      if (fase < 0.6) {
+        var q = fase / 0.6, sx = 20 + ((Math.floor(t / 13) * 71) % 150) + q * 80, sy = 8 + q * 36;
+        for (var k = 0; k < 10; k++) { g.fillStyle = k < 3 ? pal.brilho : mix(pal.brilho, pal.ceu[0], k / 10); g.fillRect((sx - k * 2) | 0, (sy - k) | 0, 2, 1); }
+      }
+      g.drawImage(s1, 0, 0);
+      nevoa(g, t, 126, 12, corNevoa, 4);
+      // facho do telescópio, varrendo o céu bem devagar
+      var a = lado * (0.5 + 0.22 * Math.sin(t * 0.08)), sa = Math.sin(a), ca = Math.cos(a);
+      g.fillStyle = feixe;
+      for (var d = 3; d < 124; d++) {
+        var hw = 1 + d * 0.06, bx = cx + 5 + sa * d, by = topo + 4 - ca * d;
+        if (by < 0) break;
+        for (var w = -hw; w <= hw; w++) { var qx = Math.round(bx + w), qy = Math.round(by); if (limiar(qx, qy) < 0.36 * (1 - d / 124)) g.fillRect(qx, qy, 1, 1); }
+      }
+      g.drawImage(obs, 0, 0);
+      g.fillStyle = Math.sin(t * 7) * Math.sin(t * 1.9) > 0.85 ? luzForte : pal.luz;             // janelas acesas
+      g.fillRect(cx - 12, chao - 9, 3, 4); g.fillRect(cx - 5, chao - 9, 3, 4); g.fillRect(cx + 23, chao - 6, 4, 3);
+      g.fillStyle = pal.luz; g.fillRect(cx + 4, topo + 3, 2, 2);
+      if (Math.sin(t * 2.4) > 0.2) { g.fillStyle = vermelho; g.fillRect(cx + 31, chao - 24, 1, 1); }
+      nevoa(g, t, 150, 10, corNevoa, -6);
+      g.drawImage(frente, 0, 0);
+    };
+  };
+
+  // ---------------------------------------------------------------- jardim
+
+  CENAS.jardim = function (pal, R) {
+    var chao = 124, sol = { x: inteiro(R, 196, 272), y: inteiro(R, 38, 58), r: 12 };
+    var lx = inteiro(R, 150, 196), ly = 152, LA = 62, LB = 12; // lago
+    var fundo = camada(function (g) {
+      degrade(g, pal.ceu, 0, 0, W, chao + 2);
+      halo(g, sol.x, sol.y, sol.r, mix(pal.astro, pal.ceu[2], 0.35));
+      disco(g, sol.x, sol.y, sol.r, pal.astro);
+    });
+    var est = estrelas(R, pal.noite ? 60 : 6, 48);
+    var nv = nuvens(R, 3, 10, 50, mix(pal.nuvem, pal.brilho, 0.45), pal.nuvem, 0.8, 2);
+    function arvore(g, x, base, h, copa, luzCopa, tronco) {
+      var r = Math.max(4, Math.round(h * 0.42)), lado = sol.x > x ? 1 : -1;
+      var gomos = [[0, -h, r], [-r * 0.8, -h + r * 0.45, r * 0.75], [r * 0.8, -h + r * 0.4, r * 0.8], [-r * 0.2, -h - r * 0.5, r * 0.7]];
+      g.fillStyle = tronco;
+      g.fillRect(x - 1, base - h, h > 40 ? 4 : 2, h);
+      g.fillRect(x - 3, base - Math.round(h * 0.55), 3, 1); g.fillRect(x + 1, base - Math.round(h * 0.68), 4, 1);
+      gomos.forEach(function (q) { disco(g, x + Math.round(q[0]), base + Math.round(q[1]), Math.round(q[2]), copa); });
+      g.fillStyle = luzCopa;
+      gomos.forEach(function (q) {
+        var rr = Math.round(q[2]), ox = x + Math.round(q[0]), oy = base + Math.round(q[1]);
+        for (var yy = -rr; yy <= rr; yy++)
+          for (var xx = -rr; xx <= rr; xx++)
+            if (xx * xx + yy * yy <= rr * rr && xx * lado - yy > rr * 0.45 && limiar(ox + xx, oy + yy) < 0.6) g.fillRect(ox + xx, oy + yy, 1, 1);
+      });
+    }
+    var grama = mix(pal.meio, pal.astro, 0.2), agua = mix(pal.ceu[1], pal.ceu[2], 0.5), ponte = mix(pal.sombra, pal.luz, 0.4);
+    var lanterna = { x: Math.min(W - 14, lx + LA + 16), y: 150 }, cer = { x: inteiro(R, 40, 62), base: 170 };
+    var cenario = camada(function (g) {
+      var x, y;
+      serra(g, relevo(R, 108, 11, 0.4), pal.longe, mix(pal.longe, pal.astro, 0.3), sol.x > W / 2 ? 1 : -1, 3);
+      for (x = -6; x < W + 10; x += inteiro(R, 18, 32)) arvore(g, x, chao + inteiro(R, 2, 6), inteiro(R, 18, 32), pal.meio, mix(pal.meio, pal.astro, 0.35), pal.sombra);
+      degrade(g, [grama, pal.meio, pal.perto], 0, chao + 4, W, H - chao - 4);
+      for (y = -LB - 1; y <= LB + 1; y++) {                                                    // lago, com margem
+        var m = Math.round(Math.sqrt(Math.max(0, 1 - (y * y) / ((LB + 1) * (LB + 1)))) * (LA + 2));
+        g.fillStyle = pal.perto; g.fillRect(lx - m, ly + y, m * 2, 1);
+        if (Math.abs(y) <= LB) { var w = Math.round(Math.sqrt(1 - (y * y) / (LB * LB)) * LA); g.fillStyle = y < -LB / 3 ? mix(agua, pal.ceu[3], 0.4) : agua; g.fillRect(lx - w, ly + y, w * 2, 1); }
+      }
+      g.fillStyle = mix(pal.meio, pal.sombra, 0.35);                                           // vitórias-régias
+      for (var i = 0; i < 6; i++) { var vx = lx + inteiro(R, -LA + 12, LA - 14), vy = ly + inteiro(R, -5, 7); g.fillRect(vx, vy, 5, 1); g.fillRect(vx + 1, vy - 1, 3, 3); }
+      var p0 = lx - LA - 6, p1 = lx - LA + 34;                                                  // ponte em arco
+      for (x = p0; x <= p1; x++) {
+        var arco = Math.round(Math.sin(Math.PI * (x - p0) / (p1 - p0)) * 8);
+        g.fillStyle = ponte; g.fillRect(x, ly - 1 - arco, 1, 2); g.fillRect(x, ly - 6 - arco, 1, 1);
+        if ((x - p0) % 5 === 0) g.fillRect(x, ly - 6 - arco, 1, 5);
+      }
+      g.fillStyle = pal.sombra;                                                                // lanterna de pedra
+      g.fillRect(lanterna.x - 1, lanterna.y - 8, 3, 8); g.fillRect(lanterna.x - 3, lanterna.y, 7, 2);
+      g.fillRect(lanterna.x - 3, lanterna.y - 13, 7, 5); g.fillRect(lanterna.x - 5, lanterna.y - 14, 11, 1);
+      g.fillRect(lanterna.x - 3, lanterna.y - 15, 7, 1); g.fillRect(lanterna.x - 1, lanterna.y - 17, 3, 2);
+      var bx = Math.max(8, lx - LA - 44);                                                       // banco
+      g.fillRect(bx, 160, 18, 2); g.fillRect(bx + 1, 162, 1, 4); g.fillRect(bx + 16, 162, 1, 4); g.fillRect(bx, 154, 18, 1); g.fillRect(bx, 154, 1, 6); g.fillRect(bx + 17, 154, 1, 6);
+      // cerejeira em flor: tronco inclinado e copa feita de muitos tufos pequenos
+      var tronco = mix(pal.sombra, pal.perto, 0.3), flor = pal.nuvem, florLuz = mix(pal.nuvem, pal.brilho, 0.6), florSombra = mix(pal.nuvem, pal.perto, 0.42);
+      g.fillStyle = tronco;
+      for (y = 0; y < 62; y++) g.fillRect(cer.x + Math.round(y * 0.12) - (y < 8 ? 1 : 0), cer.base - y, y < 8 ? 6 : y < 36 ? 4 : 3, 1);
+      for (i = 0; i < 16; i++) { g.fillRect(cer.x + 6 + i, cer.base - 40 - Math.round(i * 0.8), 2, 1); g.fillRect(cer.x - 1 - i, cer.base - 46 - Math.round(i * 0.6), 2, 1); }
+      var tufos = [], cy = cer.base - 74;
+      for (i = 0; i < 16; i++) { var ta = R() * 6.28, td = Math.sqrt(R()); tufos.push({ x: cer.x + 6 + Math.round(Math.cos(ta) * td * 34), y: cy + Math.round(Math.sin(ta) * td * 17), r: inteiro(R, 7, 12) }); }
+      tufos.sort(function (a, b) { return b.y - a.y; });
+      tufos.forEach(function (q) { disco(g, q.x, q.y + 3, q.r, florSombra); });
+      tufos.forEach(function (q) {
+        disco(g, q.x, q.y, q.r, flor);
+        g.fillStyle = florSombra;
+        for (var yy = 2; yy <= q.r; yy++) for (var xx = -q.r; xx <= q.r; xx++) if (xx * xx + yy * yy <= q.r * q.r && limiar(q.x + xx, q.y + yy) < (yy / q.r) * 0.75) g.fillRect(q.x + xx, q.y + yy, 1, 1);
+        g.fillStyle = florLuz;
+        for (yy = -q.r; yy < -1; yy++) for (xx = -q.r; xx <= q.r; xx++) if (xx * xx + yy * yy <= q.r * q.r && limiar(q.x + xx, q.y + yy) < (-yy / q.r) * 0.7) g.fillRect(q.x + xx, q.y + yy, 1, 1);
+      });
+      var b = relevo(R, 175, 3, 0.4);
+      g.fillStyle = pal.sombra;
+      for (x = 0; x < W; x++) { g.fillRect(x, Math.round(b[x]), 1, H); if (R() < 0.3) g.fillRect(x, Math.round(b[x]) - inteiro(R, 1, 3), 1, 3); }
+    });
+    var petalas = [], bichos = [];
+    for (var i = 0; i < 24; i++) petalas.push({ x: cer.x + inteiro(R, -34, 80), y: R() * 110, v: 4 + R() * 6, f: R() * 6 });
+    for (var b = 0; b < 5; b++) bichos.push({ x: inteiro(R, 70, W - 20), y: inteiro(R, 96, 150), a: R() * 6, b: R() * 6 });
+    var corPetala = mix(pal.nuvem, pal.brilho, 0.45), reflexo = mix(pal.brilho, agua, 0.25), luzForte = mix(pal.luz, pal.brilho, 0.5);
+    return function (g, t) {
+      g.drawImage(fundo, 0, 0);
+      desenharEstrelas(g, est, t, pal.brilho);
+      desenharNuvens(g, nv, t);
+      g.drawImage(cenario, 0, 0);
+      g.fillStyle = reflexo;                                                                    // brilho na água
+      for (var y = -LB + 2; y < LB - 1; y++) {
+        var w = Math.sqrt(1 - (y * y) / (LB * LB)) * LA - 5;
+        for (var k = 0; k < 3; k++) {
+          var ox = Math.sin(t * (0.5 + k * 0.2) + y * 1.3 + k * 2.1) * w * 0.8;
+          if ((y + k + (t * 2 | 0)) % 3) g.fillRect(Math.round(lx + ox), ly + y, 3 + ((y + k * 3) & 3), 1);
+        }
+      }
+      var onda = (t * 0.3) % 1, raio = 2 + onda * 11, ex = lx + ((Math.floor(t * 0.3) * 37) % 60) - 30;   // um peixe toca a superfície
+      for (var a = 0; a < 6.28; a += 0.3) { var qx = Math.round(ex + Math.cos(a) * raio), qy = Math.round(ly + 2 + Math.sin(a) * raio * 0.28); if (limiar(qx, qy) < 1 - onda) g.fillRect(qx, qy, 1, 1); }
+      g.fillStyle = Math.sin(t * 8) * Math.sin(t * 2.1) > 0.8 ? luzForte : pal.luz;               // chama da lanterna
+      g.fillRect(lanterna.x - 1, lanterna.y - 12, 3, 3);
+      pontilhado(g, lanterna.x, lanterna.y - 11, 6, pal.luz, 0.16);
+      g.fillStyle = corPetala;                                                                  // pétalas ao vento
+      for (var i = 0; i < petalas.length; i++) {
+        var p = petalas[i], py = 62 + ((p.y + t * p.v) % 112);
+        g.fillRect(Math.round(p.x + Math.sin(t * 0.7 + p.f) * 9 + (py - 62) * 0.25), py | 0, (i & 1) + 1, 1);
+      }
+      for (var j = 0; j < bichos.length; j++) {                                                 // borboletas de dia, vaga-lumes à noite
+        var v = bichos[j], vx = v.x + Math.round(Math.sin(t * 0.4 + v.a) * 18), vy = v.y + Math.round(Math.cos(t * 0.55 + v.b) * 9);
+        if (pal.noite) { if (Math.sin(t * 1.8 + v.a) > 0) { g.fillStyle = pal.luz; g.fillRect(vx, vy, 1, 1); } }
+        else { g.fillStyle = j & 1 ? pal.luz : pal.brilho; var asa = Math.sin(t * 9 + v.a) > 0 ? 1 : 0; g.fillRect(vx - 1 - asa, vy - asa, 1 + asa, 1); g.fillRect(vx + 1, vy - asa, 1 + asa, 1); g.fillStyle = pal.sombra; g.fillRect(vx, vy, 1, 1); }
+      }
+    };
+  };
+
+  // ---------------------------------------------------------------- orbital (planetário)
+
+  CENAS.orbital = function (pal, R) {
+    var cx = inteiro(R, 138, 182), cy = inteiro(R, 84, 96), rot = -0.16 - R() * 0.24, cr = Math.cos(rot), sr = Math.sin(rot);
+    function ponto(o, a) { var x = Math.cos(a) * o.A, y = Math.sin(a) * o.B; return { x: cx + x * cr - y * sr, y: cy + x * sr + y * cr }; }
+    var cores = [pal.luz, pal.nuvem, mix(pal.astro, pal.luz, 0.5), pal.brilho, mix(pal.nuvem, pal.luz, 0.5), mix(pal.longe, pal.brilho, 0.5)];
+    var raios = [2, 3, 2, 5, 3, 2], orbitas = [];
+    for (var i = 0; i < 6; i++) {
+      var A = 28 + i * 25 + inteiro(R, -3, 3);
+      orbitas.push({ A: A, B: A * 0.36, r: raios[i], v: 0.9 / Math.pow(1 + i * 0.6, 1.5), f: R() * 6.28, cor: cores[i], anel: i === 3 });
+    }
+    var fundo = camada(function (g) {
+      degrade(g, [pal.sombra, pal.ceu[0], pal.ceu[1], pal.ceu[0]], 0, 0, W, H);
+      orbitas.forEach(function (o, i) {
+        var n = Math.round(o.A * 5);
+        g.fillStyle = i % 2 ? mix(pal.longe, pal.brilho, 0.3) : mix(pal.longe, pal.luz, 0.4);
+        for (var k = 0; k < n; k++) {
+          if (i % 2 && (k >> 1) % 2) continue; // órbitas alternadas são tracejadas
+          var p = ponto(o, (k / n) * 6.2832);
+          g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+        }
+      });
+    });
+    var est1 = estrelas(R, 60, H - 1), est2 = estrelas(R, 26, H - 1), coroa = mix(pal.astro, pal.ceu[1], 0.4);
+    function planeta(g, o, t) {
+      var a = o.f + t * o.v, p = ponto(o, a), x = Math.round(p.x), y = Math.round(p.y);
+      for (var k = 1; k < 12; k++) { // rastro
+        if (k % 2) continue;
+        var q = ponto(o, a - k * 0.045 * (1 + 20 / o.A));
+        g.fillStyle = mix(o.cor, pal.ceu[0], k / 12); g.fillRect(Math.round(q.x), Math.round(q.y), 1, 1);
+      }
+      disco(g, x, y, o.r, o.cor);
+      var dx = x - cx, dy = y - cy, n = Math.sqrt(dx * dx + dy * dy) || 1;
+      g.fillStyle = mix(o.cor, pal.sombra, 0.6); // o lado oposto à estrela fica na sombra
+      for (var yy = -o.r; yy <= o.r; yy++)
+        for (var xx = -o.r; xx <= o.r; xx++)
+          if (xx * xx + yy * yy <= o.r * o.r && (xx * dx + yy * dy) / n > o.r * 0.15) g.fillRect(x + xx, y + yy, 1, 1);
+      if (o.anel) {
+        g.fillStyle = pal.brilho; g.fillRect(x - o.r - 4, y + 1, 4, 1); g.fillRect(x + o.r + 1, y + 1, 4, 1); g.fillRect(x - o.r, y + 2, o.r * 2 + 1, 1);
+        g.fillStyle = mix(pal.brilho, pal.nuvem, 0.4); g.fillRect(Math.round(x + Math.cos(t * 0.9) * 9), Math.round(y + Math.sin(t * 0.9) * 4), 1, 1); // lua
+      }
+    }
+    return function (g, t) {
+      g.drawImage(fundo, 0, 0);
+      desenharEstrelas(g, est1, t, mix(pal.brilho, pal.ceu[1], 0.4), t * 0.3);
+      desenharEstrelas(g, est2, t, pal.brilho, t * 0.8);
+      var i;
+      for (i = orbitas.length - 1; i >= 0; i--) if (Math.sin(orbitas[i].f + t * orbitas[i].v) < 0) planeta(g, orbitas[i], t); // atrás da estrela
+      pontilhado(g, cx, cy, 13 + (Math.sin(t * 1.4) > 0 ? 1 : 0), coroa, 0.22);
+      pontilhado(g, cx, cy, 10, coroa, 0.5);
+      disco(g, cx, cy, 7, pal.astro);
+      disco(g, cx - 2, cy - 2, 3, mix(pal.astro, pal.brilho, 0.6));
+      for (i = 0; i < orbitas.length; i++) if (Math.sin(orbitas[i].f + t * orbitas[i].v) >= 0) planeta(g, orbitas[i], t);
+    };
+  };
+
+  // ---------------------------------------------------------------- código (terminal)
+
+  CENAS.codigo = function (pal, R) {
+    var CW = 5, CH = 7, colunas = Math.ceil(W / CW), fileiras = Math.ceil(H / CH) + 1, NG = 22;
+    var tons = [pal.brilho, pal.luz, mix(pal.luz, pal.sombra, 0.35), mix(pal.luz, pal.sombra, 0.6), mix(pal.luz, pal.sombra, 0.8)];
+    // Cada "letra" é um desenho de 3x5 pixels sorteado uma vez; uma folha por tom.
+    var formas = [], i, b;
+    for (i = 0; i < NG; i++) { var f = []; for (b = 0; b < 15; b++) f.push(R() < 0.52); formas.push(f); }
+    var folhas = tons.map(function (cor) {
+      return camada(function (g) {
+        g.fillStyle = cor;
+        for (var n = 0; n < NG; n++) for (var k = 0; k < 15; k++) if (formas[n][k]) g.fillRect(n * 4 + (k % 3), (k / 3) | 0, 1, 1);
+      }, NG * 4, 5);
+    });
+    var chuva = [];
+    for (i = 0; i < colunas; i++) chuva.push({ v: 3 + R() * 7, f: R() * 60, n: inteiro(R, 5, 16), s: inteiro(R, 0, 999) });
+    var JX = inteiro(R, 62, 96), JY = 42, JW = 136, JH = 96, MX = JX + JW + 9, MW = 58, MY = 56, MH = 62;
+    var vidro = mix(pal.sombra, pal.perto, 0.45), borda = mix(pal.luz, pal.sombra, 0.5), barra = mix(pal.sombra, pal.luz, 0.2);
+    var janelas = camada(function (g) {
+      [[JX, JY, JW, JH], [MX, MY, MW, MH]].forEach(function (j) {
+        g.fillStyle = borda; g.fillRect(j[0] - 1, j[1] - 1, j[2] + 2, j[3] + 2);
+        g.fillStyle = vidro; g.fillRect(j[0], j[1], j[2], j[3]);
+        g.fillStyle = barra; g.fillRect(j[0], j[1], j[2], 8);
+        g.fillStyle = pal.astro; g.fillRect(j[0] + 3, j[1] + 3, 2, 2);
+        g.fillStyle = pal.luz; g.fillRect(j[0] + 7, j[1] + 3, 2, 2);
+        g.fillStyle = tons[3]; g.fillRect(j[0] + 11, j[1] + 3, 2, 2); g.fillRect(j[0] + 20, j[1] + 3, Math.min(34, j[2] - 28), 2);
+      });
+      g.fillStyle = tons[3]; g.fillRect(MX + 4, MY + MH - 8, MW - 8, 1); // eixo do gráfico
+    });
+    var varredura = camada(function (g) { g.fillStyle = "rgba(0,0,0,0.2)"; for (var y = 1; y < H; y += 2) g.fillRect(0, y, W, 1); });
+    var LINHAS = 13, coresLinha = [tons[2], tons[2], tons[1], tons[2], pal.astro, tons[1], pal.nuvem];
+    function linha(g, n, y, parte) { // parte: quanto da linha já foi "digitado" (0 a 1)
+      var x = JX + 5, limite = JX + 5 + (JW - 12) * parte, fim;
+      g.fillStyle = pal.luz; g.fillRect(x, y, 1, 1); g.fillRect(x + 1, y + 1, 1, 1); g.fillRect(x, y + 2, 1, 1); // sinal de prompt
+      x += 5 + ((n * 7) % 3) * 5;
+      if (n % 6 === 5) { // de vez em quando, uma barra de progresso
+        fim = Math.min(limite, JX + 5 + (JW - 40));
+        g.fillStyle = tons[3]; g.fillRect(x, y, JW - 44 - (x - JX - 5), 3);
+        if (fim > x) { g.fillStyle = pal.luz; g.fillRect(x, y, fim - x, 3); }
+        return Math.max(x, fim);
+      }
+      for (var s = 0; s < 5; s++) {
+        var larg = 4 + ((n * 13 + s * 7) % 17);
+        if (x + larg > JX + JW - 6 || (n + s * 3) % 7 === 6) break;
+        if (x >= limite) break;
+        g.fillStyle = coresLinha[(n * 3 + s * 5) % coresLinha.length];
+        g.fillRect(x, y, Math.min(larg, Math.ceil(limite - x)), 3);
+        x += larg + 3;
+      }
+      return Math.min(x, Math.ceil(limite) + 1);
+    }
+    return function (g, t) {
+      g.fillStyle = pal.sombra; g.fillRect(0, 0, W, H);
+      for (var c = 0; c < colunas; c++) { // chuva de símbolos
+        var k = chuva[c], cabeca = Math.floor((t * k.v + k.f) % (fileiras + k.n + 8));
+        for (var d = 0; d <= k.n; d++) {
+          var fila = cabeca - d;
+          if (fila < 0 || fila >= fileiras) continue;
+          var tom = d === 0 ? 0 : d < 3 ? 1 : d < k.n * 0.5 ? 2 : d < k.n * 0.8 ? 3 : 4;
+          var letra = (k.s + fila * 31 + ((t * 0.8 + fila * 0.37 + c) | 0) * 7) % NG;
+          g.drawImage(folhas[tom], letra * 4, 0, 3, 5, c * CW + 1, fila * CH + 1, 3, 5);
+        }
+      }
+      g.drawImage(janelas, 0, 0);
+      var ritmo = t * 0.8, atual = Math.floor(ritmo), parte = Math.min(1, (ritmo - atual) * 1.5), fimX = JX + 6; // terminal sendo digitado
+      for (var l = 0; l < LINHAS; l++) {
+        var n = atual - (LINHAS - 1) + l;
+        if (n < 0) continue;
+        var x = linha(g, n, JY + 13 + l * 6, l === LINHAS - 1 ? parte : 1);
+        if (l === LINHAS - 1) fimX = x;
+      }
+      if ((t * 2.5 | 0) % 2) { g.fillStyle = pal.brilho; g.fillRect(Math.min(JX + JW - 6, fimX + 1), JY + 12 + (LINHAS - 1) * 6, 3, 5); } // cursor
+      for (var b = 0; b < 8; b++) { // monitor de atividade
+        var h = Math.round(6 + 16 * (0.5 + 0.5 * Math.sin(t * (0.6 + b * 0.13) + b * 1.7)) + 8 * (0.5 + 0.5 * Math.sin(t * 2.1 + b)));
+        g.fillStyle = b % 3 === 2 ? pal.astro : tons[1 + (b & 1)];
+        g.fillRect(MX + 6 + b * 6, MY + MH - 9 - h, 4, h);
+      }
+      g.fillStyle = tons[2];
+      for (var m = 0; m < 3; m++) g.fillRect(MX + 5, MY + 12 + m * 4, 14 + ((m * 11 + (t * 0.5 | 0) * 5) % 26), 2);
+      g.drawImage(varredura, 0, 0);
+    };
+  };
+
+  // ---------------------------------------------------------------- néon (cidade cyberpunk)
+
+  CENAS.neon = function (pal, R) {
+    var rua = 150, horizonte = pal.ceu[3];
+    var sol = { x: inteiro(R, 120, 200), y: inteiro(R, 78, 96), r: 24 };
+    var ceu = camada(function (g) {
+      degrade(g, pal.ceu, 0, 0, W, rua);
+      halo(g, sol.x, sol.y, sol.r, mix(pal.astro, horizonte, 0.45));
+    });
+    var astro = camada(function (g) { // sol cortado por faixas, como em capa de synthwave
+      disco(g, sol.x, sol.y, sol.r, pal.astro);
+      [[1, 1], [6, 2], [11, 2], [16, 3], [21, 3]].forEach(function (f) { g.clearRect(sol.x - sol.r, sol.y + f[0], sol.r * 2 + 1, f[1]); });
+    });
+    var est = estrelas(R, 50, 70), sinais = [];
+    var coresNeon = [pal.luz, pal.nuvem, pal.astro, pal.brilho];
+    function predios(g, cor, largMin, largMax, altMin, altMax, janela, chance, comSinal) {
+      var x = -inteiro(R, 0, 6);
+      while (x < W) {
+        var w = inteiro(R, largMin, largMax), h = inteiro(R, altMin, altMax);
+        if (Math.abs(x + w / 2 - sol.x) < sol.r + 18) h = Math.round(h * 0.38); // a avenida abre o céu na frente do sol
+        var y0 = rua - h;
+        g.fillStyle = cor; g.fillRect(x, y0, w, h);
+        if (R() < 0.35) g.fillRect(x + (w >> 1), y0 - inteiro(R, 5, 14), 1, 14);
+        if (R() < 0.3 && w > 12) g.fillRect(x + 3, y0 - 4, w - 6, 4);
+        g.fillStyle = janela;
+        for (var y = y0 + 3; y < rua - 2; y += 4) for (var xx = x + 2; xx < x + w - 2; xx += 3) if (R() < chance) g.fillRect(xx, y, 1, 2);
+        if (comSinal && R() < 0.7 && h > 54 && x > 4 && x + w < W - 4) {
+          var vertical = R() < 0.6;
+          sinais.push({ x: x + (vertical ? inteiro(R, 1, Math.max(1, w - 10)) : 2), y: y0 + inteiro(R, 6, Math.max(7, h - 52)), w: vertical ? 8 : Math.min(w - 4, inteiro(R, 14, 24)), h: vertical ? inteiro(R, 20, 34) : 8, cor: coresNeon[sinais.length % 4], f: R() * 6, v: 0.4 + R() * 2 });
+        }
+        x += w + (R() < 0.2 ? inteiro(R, 1, 3) : 0);
+      }
+    }
+    var longe = camada(function (g) { predios(g, pal.longe, 8, 20, 30, 80, mix(pal.luz, pal.longe, 0.5), 0.14, false); });
+    var meio = camada(function (g) { predios(g, pal.meio, 18, 34, 58, 124, mix(pal.nuvem, pal.meio, 0.45), 0.12, true); });
+    sinais.forEach(function (s) { // cada letreiro vira um carimbo com o brilho em volta
+      s.sp = camada(function (g) {
+        pontilhado(g, 6 + (s.w >> 1), 6 + (s.h >> 1), Math.max(s.w, s.h) / 2 + 4 | 0, s.cor, 0.2);
+        g.fillStyle = mix(s.cor, pal.sombra, 0.75); g.fillRect(5, 5, s.w + 2, s.h + 2);
+        g.fillStyle = s.cor;
+        for (var y = 0; y < s.h; y += 3) for (var x = 0; x < s.w; x += 3) if (R() < 0.72) g.fillRect(6 + x, 6 + y, 2, 2);
+        g.fillStyle = pal.brilho; g.fillRect(6, 6, s.w, 1);
+      }, s.w + 12, s.h + 12);
+    });
+    var E = inteiro(R, 34, 52), D = W - inteiro(R, 36, 56), apagada = mix(pal.perto, pal.luz, 0.12), janelas = [];
+    var perto = camada(function (g) {
+      [[0, E, 12], [D, W - D, 22]].forEach(function (p) { // os dois prédios que emolduram a rua
+        g.fillStyle = pal.perto; g.fillRect(p[0], p[2], p[1], rua - p[2]);
+        g.fillStyle = mix(pal.perto, pal.astro, 0.18); g.fillRect(p[0] ? p[0] : p[1] - 1, p[2], 1, rua - p[2]);
+        for (var y = p[2] + 6; y < rua - 6; y += 7)
+          for (var x = p[0] + 4; x < p[0] + p[1] - 5; x += 6) { g.fillStyle = apagada; g.fillRect(x, y, 3, 4); if (R() < 0.3) janelas.push({ x: x, y: y, per: 5 + R() * 20, f: R() * 6, cor: R() < 0.5 ? pal.luz : pal.nuvem }); }
+      });
+      g.fillStyle = pal.sombra;
+      g.fillRect(0, 118, W, 2); for (var x = 20; x < W; x += 56) g.fillRect(x, 120, 2, rua - 120); // trilho elevado
+      g.fillRect(0, rua, W, H - rua);
+      g.fillStyle = mix(pal.sombra, pal.luz, 0.35); g.fillRect(0, rua, W, 1);
+    });
+    var carros = [], gotas = [];
+    for (var c = 0; c < 4; c++) carros.push({ y: inteiro(R, 26, 92), v: (9 + R() * 16) * (c & 1 ? -1 : 1), f: R() * 300, cor: coresNeon[c % 3] });
+    for (var k = 0; k < 70; k++) gotas.push({ x: R() * W, y: R() * H, v: 60 + R() * 50 });
+    var chuva = mix(pal.brilho, pal.ceu[2], 0.5), fontes = [{ x: sol.x - 5, cor: pal.astro, w: 10 }];
+    sinais.forEach(function (s) { fontes.push({ x: s.x + (s.w >> 1), cor: s.cor, w: 3 }); });
+    return function (g, t) {
+      g.drawImage(ceu, 0, 0);
+      desenharEstrelas(g, est, t, pal.brilho);
+      g.drawImage(astro, 0, 0);
+      g.drawImage(longe, 0, 0);
+      for (var i = 0; i < carros.length; i++) { // carros voadores
+        var a = carros[i], larg = W + 60, ax = Math.round((((a.f + t * a.v) % larg) + larg) % larg) - 30, s = a.v > 0 ? -1 : 1;
+        g.fillStyle = pal.sombra; g.fillRect(ax - 2, a.y, 5, 2);
+        g.fillStyle = pal.brilho; g.fillRect(ax - 3 * s, a.y, 1, 1);
+        g.fillStyle = a.cor; for (var r = 1; r < 9; r += 2) g.fillRect(ax + (2 + r) * s, a.y + 1, 1, 1);
+      }
+      g.drawImage(meio, 0, 0);
+      for (var n = 0; n < sinais.length; n++) { // letreiros piscando
+        var z = sinais[n], pisca = Math.sin(t * z.v + z.f);
+        if (pisca < -0.86 || (pisca > 0.96 && (t * 14 | 0) % 2)) continue;
+        g.drawImage(z.sp, z.x - 6, z.y - 6);
+      }
+      var tx = W + 50 - ((t * 34) % (W + 520)); // trem do elevado
+      if (tx > -60) {
+        g.fillStyle = pal.perto; g.fillRect(tx | 0, 111, 54, 7);
+        g.fillStyle = pal.brilho; for (var v = 0; v < 8; v++) g.fillRect((tx | 0) + 3 + v * 6, 113, 4, 2);
+        g.fillStyle = pal.luz; g.fillRect(tx | 0, 116, 54, 1);
+      }
+      g.drawImage(perto, 0, 0);
+      for (var j = 0; j < janelas.length; j++) { var w = janelas[j]; if (Math.sin(t / w.per + w.f) > -0.7) { g.fillStyle = w.cor; g.fillRect(w.x, w.y, 3, 4); } }
+      for (var y = rua + 2; y < H; y++) { // reflexos no asfalto molhado
+        var prof = (y - rua) / (H - rua);
+        for (var q = 0; q < fontes.length; q++) {
+          var fo = fontes[q];
+          if ((y + q + (t * 5 | 0)) % 3 === 0 || limiar(fo.x, y) < prof * 0.7) continue;
+          g.fillStyle = fo.cor; g.fillRect(Math.round(fo.x + Math.sin(t * 1.3 + y * 0.8 + q) * (1 + prof * 3)), y, fo.w, 1);
+        }
+      }
+      var cx = ((t * 26) % (W + 90)) - 40, vx = W + 40 - ((t * 19 + 120) % (W + 130)); // carros na rua
+      g.fillStyle = pal.brilho; g.fillRect(cx | 0, rua + 6, 3, 1);
+      g.fillStyle = mix(pal.nuvem, "#ff3b30", 0.5); g.fillRect(vx | 0, rua + 13, 3, 1);
+      g.fillStyle = chuva; // chuva fina
+      for (var d = 0; d < gotas.length; d++) { var o = gotas[d], gy = (o.y + t * o.v) % H; g.fillRect((((o.x - gy * 0.25) % W) + W) % W | 0, gy | 0, 1, 2); }
+    };
+  };
+
+  // ---------------------------------------------------------------- recife (fundo do mar)
+
+  CENAS.recife = function (pal, R) {
+    var fundo = camada(function (g) { degrade(g, [pal.ceu[3], pal.ceu[2], pal.ceu[1], pal.ceu[0], pal.sombra], 0, 0, W, H); });
+    var raios = [];
+    for (var i = 0; i < 6; i++) raios.push({ x: inteiro(R, -30, W - 40), w: inteiro(R, 5, 13), f: R() * 6 });
+    var corBaleia = mix(pal.longe, pal.ceu[1], 0.5);
+    var baleia = camada(function (g) {
+      g.fillStyle = corBaleia;
+      for (var k = 0; k < 54; k++) { var h = Math.round(8 * Math.pow(Math.sin(Math.PI * (k + 4) / 62), 0.7)); g.fillRect(k, 13 - h, 1, h + Math.round(h * 0.6)); }
+      for (var c = 54; c < 62; c++) g.fillRect(c, 12, 1, 2);
+      for (var r = 0; r < 8; r++) g.fillRect(61 + r, 12 - r, 1, r * 2 + 2);
+      for (var n = 0; n < 7; n++) g.fillRect(16 + n, 18, 1, 7 - n);
+    }, 72, 28);
+    var a1 = relevo(R, 148, 24, 0.6), a2 = relevo(R, 160, 15, 0.6), a3 = relevo(R, 172, 5, 0.35);
+    var rochas = camada(function (g) { serra(g, a1, pal.longe, mix(pal.longe, pal.ceu[3], 0.3), 1, 3); });
+    function ramo(g, x, y, ang, len, cor) { // coral que se bifurca
+      for (var k = 0; k < len; k++) { g.fillStyle = cor; g.fillRect(Math.round(x + Math.cos(ang) * k), Math.round(y - Math.sin(ang) * k), len > 5 ? 2 : 1, 1); }
+      var fx = x + Math.cos(ang) * len, fy = y - Math.sin(ang) * len;
+      if (len < 4) { g.fillStyle = pal.brilho; g.fillRect(Math.round(fx), Math.round(fy), 1, 1); return; }
+      ramo(g, fx, fy, ang + 0.45 + R() * 0.3, len * 0.68, cor); ramo(g, fx, fy, ang - 0.45 - R() * 0.3, len * 0.68, cor);
+    }
+    var coresCoral = [pal.nuvem, pal.luz, mix(pal.nuvem, pal.astro, 0.5), mix(pal.luz, pal.meio, 0.4)];
+    var recife = camada(function (g) {
+      serra(g, a2, pal.meio, mix(pal.meio, pal.ceu[3], 0.22), 1, 2);
+      for (var c = 0; c < 9; c++) {
+        var x = inteiro(R, 8, W - 9), y = Math.round(a2[x]) + 1;
+        if (c % 3 === 2) { // coral-cérebro
+          var cor = mix(pal.astro, pal.meio, 0.45), r = inteiro(R, 4, 7);
+          for (var yy = 0; yy <= r; yy++) { var w = Math.floor(Math.sqrt(r * r - yy * yy)); for (var xx = -w; xx <= w; xx++) { g.fillStyle = (xx + yy * 2) % 4 === 0 ? mix(cor, pal.sombra, 0.4) : cor; g.fillRect(x + xx, y - yy, 1, 1); } }
+        } else ramo(g, x, y, 1.57 + (R() - 0.5) * 0.4, inteiro(R, 7, 12), coresCoral[c % 4]);
+      }
+    });
+    var areia = camada(function (g) {
+      serra(g, a3, pal.perto, mix(pal.perto, pal.ceu[2], 0.2), 1, 2);
+      g.fillStyle = pal.sombra;
+      for (var x = 0; x < W; x++) for (var y = Math.round(a3[x]) + 3; y < H; y++) if (limiar(x, y) < (y - a3[x]) / 12) g.fillRect(x, y, 1, 1);
+      for (var p = 0; p < 12; p++) { var px = inteiro(R, 2, W - 5); g.fillRect(px, Math.round(a3[px]) - 1, inteiro(R, 2, 4), 2); }
+    });
+    var algas = [], peixes = [], cardume2 = [], aguas = [], bolhas = [];
+    for (var k = 0; k < 11; k++) { var ax = inteiro(R, 4, W - 5); algas.push({ x: ax, base: Math.round((k < 6 ? a2 : a3)[ax]) + 2, n: inteiro(R, 26, 62), f: R() * 6, frente: k >= 6 }); }
+    for (var p = 0; p < 18; p++) peixes.push({ x: inteiro(R, -26, 26), y: inteiro(R, -10, 10), f: R() * 6 });
+    for (var q = 0; q < 9; q++) cardume2.push({ x: inteiro(R, -16, 16), y: inteiro(R, -6, 6), f: R() * 6 });
+    for (var j = 0; j < 2; j++) aguas.push({ x: inteiro(R, 30, W - 30), y: R() * 150, f: R() * 6 });
+    for (var b = 0; b < 4; b++) bolhas.push({ x: inteiro(R, 16, W - 16), f: R() * 100 });
+    var corRaio = mix(pal.brilho, pal.ceu[3], 0.45), corAlga = mix(pal.perto, pal.meio, 0.5), corAgua = mix(pal.astro, pal.ceu[2], 0.25);
+    return function (g, t) {
+      g.drawImage(fundo, 0, 0);
+      g.fillStyle = corRaio; // raios de sol atravessando a água
+      for (var r = 0; r < raios.length; r++) {
+        var ra = raios[r], bal = Math.sin(t * 0.3 + ra.f) * 7;
+        for (var y = 0; y < 132; y += 1) {
+          var xc = ra.x + y * 0.5 + bal, meia = ra.w * (0.4 + y / 150), dens = 0.3 * (1 - y / 132);
+          for (var x = Math.round(xc - meia); x <= xc + meia; x++) if (limiar(x, y) < dens) g.fillRect(x, y, 1, 1);
+        }
+      }
+      g.fillStyle = pal.brilho; // ondulação da superfície, vista de baixo
+      for (var s = 0; s < W; s += 2) if (Math.sin(s * 0.21 + t * 1.5) + Math.sin(s * 0.057 - t) > 0.6) g.fillRect(s, 1 + Math.round(Math.sin(s * 0.07 + t) * 1.2), 2, 1);
+      var bx = W + 70 - ((t * 5) % (W + 420)); // baleia ao longe
+      g.drawImage(baleia, Math.round(bx), 46 + Math.round(Math.sin(t * 0.4) * 4));
+      g.drawImage(rochas, 0, 0);
+      var i, a, k, fx;
+      for (i = 0; i < algas.length; i++) { // algas de trás
+        a = algas[i]; if (a.frente) continue;
+        g.fillStyle = corAlga;
+        for (k = 0; k < a.n; k++) { fx = a.x + Math.round(Math.sin(t * 0.8 + k * 0.12 + a.f) * k * 0.09); g.fillRect(fx, a.base - k, 2, 1); if (k % 5 === 3) g.fillRect(fx + ((k / 5 | 0) % 2 ? 2 : -2), a.base - k, 2, 1); }
+      }
+      g.drawImage(recife, 0, 0);
+      for (i = 0; i < aguas.length; i++) { // águas-vivas
+        var m = aguas[i], my = 140 - ((m.y + t * 3) % 150), mx = m.x + Math.round(Math.sin(t * 0.3 + m.f) * 10), pulso = Math.sin(t * 2 + m.f) > 0 ? 1 : 0, rr = 4 + pulso;
+        g.fillStyle = corAgua;
+        for (var yy = 0; yy <= rr; yy++) { var w = Math.floor(Math.sqrt(rr * rr - yy * yy)); g.fillRect(mx - w, my - yy, w * 2 + 1, 1); }
+        for (var te = -3; te <= 3; te += 3) for (k = 1; k < 7 - pulso * 2; k++) if (k % 2) g.fillRect(mx + te + Math.round(Math.sin(t * 2 + k * 0.8 + te) * 1), my + k, 1, 1);
+      }
+      var sx = ((t * 9) % (W + 140)) - 70, sy = 80 + Math.sin(t * 0.5) * 14; // cardume
+      for (i = 0; i < peixes.length; i++) {
+        var p = peixes[i], px = Math.round(sx + p.x), py = Math.round(sy + p.y + Math.sin(t * 2 + p.f) * 1.5);
+        g.fillStyle = i % 3 ? pal.brilho : pal.astro;
+        g.fillRect(px, py, 3, 2); g.fillRect(px - 1, py, 1, 1); g.fillRect(px - 2, py + (Math.sin(t * 8 + p.f) > 0 ? -1 : 1), 1, 2);
+      }
+      var ux = W + 50 - ((t * 6 + 90) % (W + 110)), uy = 112 + Math.sin(t * 0.7 + 2) * 8; // cardume menor, no sentido contrário
+      g.fillStyle = pal.luz;
+      for (i = 0; i < cardume2.length; i++) { var c = cardume2[i], qx = Math.round(ux + c.x), qy = Math.round(uy + c.y + Math.sin(t * 2.4 + c.f)); g.fillRect(qx, qy, 3, 1); g.fillRect(qx + 3, qy - 1, 1, 3); }
+      g.fillStyle = pal.brilho; // bolhas
+      for (i = 0; i < bolhas.length; i++)
+        for (k = 0; k < 5; k++) {
+          var sobe = (t * 9 + bolhas[i].f + k * 23) % 120, by = 150 - sobe, bxx = bolhas[i].x + Math.round(Math.sin(sobe * 0.15 + k) * 2);
+          if (k % 2) g.fillRect(bxx, by | 0, 1, 1); else { g.fillRect(bxx, by | 0, 2, 1); g.fillRect(bxx, (by | 0) + 2, 2, 1); g.fillRect(bxx - 1, (by | 0) + 1, 1, 1); g.fillRect(bxx + 2, (by | 0) + 1, 1, 1); }
+        }
+      g.drawImage(areia, 0, 0);
+      g.fillStyle = pal.sombra; // algas da frente
+      for (i = 0; i < algas.length; i++) {
+        a = algas[i]; if (!a.frente) continue;
+        for (k = 0; k < a.n; k++) { fx = a.x + Math.round(Math.sin(t * 0.7 + k * 0.1 + a.f) * k * 0.1); g.fillRect(fx, a.base - k, 2, 1); if (k % 5 === 3) g.fillRect(fx + ((k / 5 | 0) % 2 ? 2 : -3), a.base - k, 3, 1); }
+      }
+    };
+  };
+
   // ---------------------------------------------------------------- execução
 
   var ativas = [], movimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");

@@ -88,6 +88,7 @@
   var anexo=$('#nota-anexo'); if (anexo) anexo.onchange=function () { anexar($('.nota'),anexo.files[0]); anexo.value=''; };
   window.addEventListener('beforeunload',function (e) { if (uploads) { e.preventDefault(); e.returnValue=''; } });
 
+  var cenaGlobal=$('#ap-cena');if(cenaGlobal)cenaGlobal.onchange=async function(){cenaGlobal.disabled=true;try{await requisitar('/api/config',{aparencia:{cena:cenaGlobal.value}});location.reload();}catch(e){erro(e);cenaGlobal.disabled=false;}};
   // Ordem das pastas: uma única alteração atômica na configuração do cofre.
   var lista=$('#areas-ordem'), movida=null, salvando=false;
   if (lista) {

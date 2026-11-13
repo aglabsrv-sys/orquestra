@@ -151,7 +151,7 @@ def test_trocar_tema(cliente, vault):
     assert cliente.post("/api/tema", json={"tema": "mare"}).status_code == 200
     assert "tema: mare" in (vault / "orquestra.yaml").read_text(encoding="utf-8")
     assert "# Configuração do painel" in (vault / "orquestra.yaml").read_text(encoding="utf-8")  # comentários preservados
-    assert "#0a1716" in cliente.get("/").text
+    assert "#081a1b" in cliente.get("/").text
     assert cliente.post("/api/tema", json={"tema": "inexistente"}).status_code == 404
 
 

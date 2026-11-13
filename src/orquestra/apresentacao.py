@@ -147,13 +147,35 @@ _WIKILINK = re.compile(r"\[\[([^\]|#]+)(#[^\]|]*)?(?:\|([^\]]+))?\]\]")
 _IMG_RELATIVA = re.compile(r'<img src="(?!https?:|/|data:)([^"]+)"')
 
 
-def render_markdown(texto: str, indice: Indice) -> Markup:
+def render_markdown(texto: str, indice: Indice, origem: str = "") -> Markup:
     """Markdown -> HTML seguro (HTML cru é desativado), entendendo [[links]] do Obsidian."""
+
+    from pathlib import PurePosixPath
+    from urllib.parse import unquote
+    import posixpath
+    from html import escape, unescape
+
+    def midia(nome: str) -> str | None:
+        nome = unquote(unescape(nome)).replace("\\", "/").split("#", 1)[0]
+        candidatos = [posixpath.normpath(str(PurePosixPath(origem).parent / nome)), nome.lstrip("/")]
+        from orquestra.caminhos import CaminhoInseguro, caminho_no_vault, ignorar
+        from orquestra.indice import EXT_MIDIA
+        for candidato in candidatos:
+            try:
+                arquivo = caminho_no_vault(indice.vault, candidato)
+                if not ignorar(candidato) and arquivo.is_file() and arquivo.suffix.lower() in EXT_MIDIA:
+                    return arquivo.relative_to(indice.vault).as_posix()
+            except (CaminhoInseguro, OSError):
+                continue
+        encontrados = [r for r in indice.midias.values() if r.casefold().endswith("/" + nome.casefold()) or r.casefold() == nome.casefold()]
+        if len(encontrados) == 1:
+            return encontrados[0]
+        return indice.midias.get(PurePosixPath(nome).name.lower())
 
     def embutir(m: re.Match) -> str:
         nome = m.group(1).split("|")[0].strip()
-        rel = indice.midias.get(nome.split("/")[-1].lower())
-        return f"![{nome}](/arquivo/{quote(rel)})" if rel else m.group(0)
+        rel = midia(nome)
+        return f"![{nome}](</arquivo/{quote(rel)}>)" if rel else m.group(0)
 
     def ligar(m: re.Match) -> str:
         alvo = m.group(1).strip()
@@ -164,7 +186,14 @@ def render_markdown(texto: str, indice: Indice) -> Markup:
     texto = _EMBUTIDO.sub(embutir, texto)
     texto = _WIKILINK.sub(ligar, texto)
     html = _md.render(texto)
-    html = _IMG_RELATIVA.sub(lambda m: f'<img src="/arquivo/{m.group(1)}"', html)
+    def imagem(m: re.Match) -> str:
+        nome = m.group(1)
+        if nome.startswith(("http:", "https:", "data:", "/arquivo/")):
+            return m.group(0)
+        rel = midia(nome)
+        return '<img src="' + escape('/arquivo/' + quote(rel or unquote(nome).lstrip('/')), quote=True) + '"'
+
+    html = re.sub(r'<img src="([^"]+)"', imagem, html)
     html = html.replace("<li>[ ] ", '<li class="tarefa"><input type="checkbox" disabled> ')
     html = html.replace("<li>[x] ", '<li class="tarefa"><input type="checkbox" disabled checked> ')
     return Markup(html)
@@ -365,7 +394,7 @@ def montar_semana(painel: Painel, hoje: dt.date) -> tuple[list[dict[str, Any]], 
 
 
 def capa_de(painel: Painel, alvo: str, propria: Any = None) -> dict[str, Any]:
-    return temas.resolver_capa(painel.tema, alvo, propria)
+    return temas.resolver_capa(painel.tema, alvo, propria or ({"cena": painel.config.aparencia.cena} if painel.config.aparencia.cena else None))
 
 
 def e(valor: Any) -> str:

@@ -98,6 +98,12 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     capa_inicial = page.locator('.bv-capa canvas').get_attribute('data-paleta')
     page.locator('.bv-tema:has(input[value="mare"])').click()
     assert page.locator('.bv-capa canvas').get_attribute('data-paleta') != capa_inicial
+    page.locator('#bv-cena').select_option('orbital')
+    page.locator('#bv-fonte').select_option('sistema')
+    expect(page.locator("#bv-destaque")).to_have_value("#ff9d8a", timeout=15000)
+    assert page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--fundo').trim()") == "#081a1b"
+    if capturas:
+        page.screenshot(path=str(capturas / 'configuracao.png'), full_page=True)
     for _ in range(8):
         if page.locator("#concluir").is_visible():
             break
@@ -118,6 +124,40 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.go_back()
     expect(page.locator('.quadro')).to_be_visible()
     assert page.evaluate("window.__capaPersistente===document.querySelector('.cab-modulo canvas')")
+
+    # Arquivos sintéticos: caminhos relativos e HTML nunca executado na interface.
+    aguardar_vigia(page, vault)
+    estudio = vault / "Estúdio"
+    estudio.mkdir()
+    (estudio / "imagem.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120"><rect width="320" height="120" fill="#315483"/></svg>', encoding="utf-8")
+    (estudio / "Projeto.md").write_text('# Projeto\n\n[[Referências]]\n\n![Imagem](imagem.svg)', encoding="utf-8")
+    (estudio / "Referências.md").write_text('# Referências\n\n[[Projeto]]', encoding="utf-8")
+    (estudio / "Email.html").write_text('<!doctype html><html><head><style>body{font:16px system-ui;background:#f5f6f8;color:#263449;padding:32px}table{background:white;padding:24px;border-radius:12px}</style></head><body><table><tr><td><h1>Seu resumo da semana</h1><p>Template de demonstração.</p></td></tr></table><script>window.executouTemplate=true;parent.executouTemplate=true</script></body></html>', encoding="utf-8")
+    for _ in range(60):
+        if page.request.get(base + '/api/pastas/grafo?rel=Est%C3%BAdio').json()['total'] == 2:
+            break
+        page.wait_for_timeout(200)
+    else:
+        raise AssertionError('As notas de demonstração não chegaram ao índice.')
+    page.goto(base + "/pastas/Est%C3%BAdio", wait_until="domcontentloaded")
+    expect(page.locator('#grafo-estado')).to_contain_text('2 notas')
+    expect(page.locator('#pasta-grafo')).to_be_visible()
+    page.locator('#arvore-pastas a.arvore-nota').filter(has_text='Projeto').click()
+    leitor=page.frame_locator('#leitor-frame')
+    expect(leitor.locator('.nota')).to_be_visible()
+    expect(leitor.locator('.texto img')).to_be_visible()
+    assert leitor.locator('.texto img').evaluate('e=>e.complete&&e.naturalWidth>0')
+    expect(page.locator('#arvore-pastas')).to_be_visible()
+    leitor.locator('.texto a').filter(has_text='Referências').click()
+    expect(leitor.locator('#nota-titulo')).to_have_value('Referências')
+    expect(page.locator('#arvore-pastas')).to_be_visible()
+    expect(leitor.locator('.dock')).to_be_hidden()
+    page.locator('#arvore-pastas a.arvore-nota').filter(has_text='Email.html').click()
+    expect(leitor.get_by_role('heading', name='Seu resumo da semana')).to_be_visible()
+    assert not page.evaluate('!!window.executouTemplate')
+    assert not page.locator('#leitor-frame').content_frame.locator('body').evaluate('()=>!!window.executouTemplate')
+    page.locator('#leitor-fechar').click()
+    expect(page.locator('#pasta-grafo')).to_be_visible()
 
     page.goto(base + "/pastas", wait_until="domcontentloaded")
     page.locator('#arvore-pastas a[data-pasta="tarefas"]').click()
@@ -152,9 +192,9 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
             resposta = page.goto(base + rota, wait_until="domcontentloaded")
             assert resposta.status == 200, rota
             conferir_layout(page)
-            if capturas and largura != 320 and rota in ("/", "/m/tarefas", "/m/conteudo", "/ajustes"):
+            if capturas and largura != 320 and rota in ("/", "/m/tarefas", "/m/conteudo", "/ajustes", "/pastas", "/m/tarefas/personalizar"):
                 page.wait_for_timeout(220)
-                nome = {"/": "inicio", "/m/tarefas": "tarefas", "/m/conteudo": "conteudo", "/ajustes": "ajustes"}[rota]
+                nome = {"/": "inicio", "/m/tarefas": "tarefas", "/m/conteudo": "conteudo", "/ajustes": "ajustes", "/pastas": "pastas", "/m/tarefas/personalizar": "personalizar"}[rota]
                 page.screenshot(path=str(capturas / f"{nome}{'-mobile' if largura == 390 else ''}.png"), full_page=True)
         page.goto(base + "/m/tarefas", wait_until="domcontentloaded")
         if largura < 700:
@@ -216,7 +256,30 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     assert "Meu rascunho" in (vault / rel_copia).read_text(encoding="utf-8")
     assert "Alteração externa." in arquivo.read_text(encoding="utf-8")
 
+    page.goto(base + '/m/tarefas/personalizar', wait_until='domcontentloaded')
+    page.locator('#escolher-cena').click()
+    page.locator('[data-capa-catalogo="/static/arte/avenida.webm"]').click()
+    expect(page.locator('.personalizar-previa video')).to_have_attribute('src','/static/arte/avenida.webm')
+    for _ in range(30):
+        if page.locator('.personalizar-previa video').evaluate('v=>v.readyState>=1&&v.videoWidth>0&&v.duration>0'):
+            break
+        page.wait_for_timeout(100)
+    else:
+        raise AssertionError('O vídeo de demonstração não pôde ser decodificado.')
+    page.locator('#p-salvar').click()
+    page.wait_for_url(base + '/m/tarefas')
+    expect(page.locator('.cab-modulo video')).to_have_attribute('src','/static/arte/avenida.webm')
+
     # Formulário deixa de ter foco, mas continua protegido contra eventos do watcher.
+    page.goto(base + "/m/tarefas/personalizar", wait_until="domcontentloaded")
+    page.locator('#escolher-cena').click()
+    page.locator('[data-escolher-cena="jardim"]').click()
+    expect(page.locator('.personalizar-previa canvas')).to_have_attribute('data-cena','jardim')
+    expect(page.locator('#escolher-cena')).to_contain_text('Jardim')
+    assert page.locator('#p-salvar').evaluate('e=>e.getBoundingClientRect().top<innerHeight/2')
+    page.locator('#p-salvar').click()
+    page.wait_for_url(base + '/m/tarefas')
+
     page.goto(base + "/m/tarefas/personalizar", wait_until="domcontentloaded")
     page.locator("#p-descricao").fill("Descrição pendente")
     page.locator("h1").click()

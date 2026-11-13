@@ -14,12 +14,12 @@
   </aside>
   <div id="pasta-painel" class="explorador-painel" data-rel="{{ rel }}">
     <header class="explorador-topo"><div class="explorador-titulo"><span class="sobretitulo">{{ 'Pasta' if rel else 'Seu cofre' }}</span><h1>{{ trilha[-1].nome if trilha else cfg.nome }}</h1></div><div class="linha-botoes sem-topo">
-      <div class="segmentos" role="group" aria-label="Visualização dos arquivos"><button type="button" data-pasta-visao="notas" aria-pressed="true">Notas</button><button type="button" data-pasta-visao="grafo" aria-pressed="false">Grafo</button></div>
+      <div class="segmentos" role="group" aria-label="Visualização dos arquivos"><button type="button" data-pasta-visao="notas" aria-pressed="false">Notas</button><button type="button" data-pasta-visao="grafo" aria-pressed="true">Grafo</button></div>
       {% if modulo and trilha|length == 1 %}<a class="botao pequeno" href="/m/{{ modulo.id|urlencode }}">{{ icone(modulo.icone, 15) }} Ver painel</a>{% endif %}
       {% if pode_criar %}<button class="botao principal pequeno" type="button" id="abrir-nota-pasta">{{ icone('mais', 16) }} Nova nota</button>{% endif %}
     </div></header>
     {% if trilha %}<nav class="explorador-trilha" aria-label="Pasta atual"><a href="/pastas">Cofre</a>{% for parte in trilha %}<span>/</span><a href="{{ parte.url }}"{% if loop.last %} aria-current="page"{% endif %}>{{ parte.nome }}</a>{% endfor %}</nav>{% endif %}
-    <div id="pasta-notas">
+    <div id="pasta-notas" hidden>
   {% if pastas %}
   <div class="pastas-linhas">
     {% for f in pastas %}
@@ -39,6 +39,7 @@
   </div>
   {% endif %}
 
+  {% if arquivos %}<div class="arquivos-grade">{% for a in arquivos %}<a class="arquivo-item" href="{{ a.url }}"><span>{{ icone('nota' if a.tipo == 'html' else 'imagem', 18) }}</span><b>{{ a.nome }}</b><small>{{ 'HTML' if a.tipo == 'html' else 'Mídia' }}</small></a>{% endfor %}</div>{% endif %}
   {% if notas %}
   <h2 class="grupo-titulo">{{ icone('nota', 18) }} Notas <small>{{ notas|length }}</small></h2>
   <div class="lista-notas sem-margem">
@@ -54,7 +55,8 @@
   {% endif %}
   {{ p.paginar(paginacao|default(none)) }}
     </div>
-    <section id="pasta-grafo" class="pasta-grafo" hidden aria-label="Grafo de ligações entre notas"><div class="grafo-controles"><span id="grafo-estado" class="campo-ajuda" role="status"></span><button type="button" class="botao pequeno" id="grafo-centralizar">Centralizar</button></div><canvas id="grafo-canvas" tabindex="0" aria-label="Ligações entre notas. Use a lista abaixo para abrir uma nota pelo teclado."></canvas><details class="grafo-lista"><summary>Notas do grafo</summary><ul id="grafo-notas"></ul></details></section>
+    <section id="pasta-grafo" class="pasta-grafo" aria-label="Grafo de ligações entre notas"><div class="grafo-controles"><span id="grafo-estado" class="campo-ajuda" role="status"></span><button type="button" class="botao pequeno" id="grafo-centralizar">Centralizar</button></div><canvas id="grafo-canvas" tabindex="0" aria-label="Ligações entre notas. Use a lista abaixo para abrir uma nota pelo teclado."></canvas><details class="grafo-lista"><summary>Notas do grafo</summary><ul id="grafo-notas"></ul></details></section>
+    <section id="pasta-leitor" hidden aria-label="Arquivo aberto"><div class="leitor-barra"><span id="leitor-titulo"></span><button class="botao pequeno" type="button" id="leitor-fechar">Voltar ao grafo</button></div><iframe id="leitor-frame" title="Nota do cofre"></iframe></section>
   </div>
 </section>
 {% endblock %}

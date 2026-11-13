@@ -1,8 +1,8 @@
 # Temas e capas
 
-A aparência do painel tem duas camadas, e as duas moram no vault:
+A aparência combina temas distribuídos com o app e preferências do vault:
 
-- o **tema** (uma pasta em `_orquestra/temas/`) define as cores e as capas;
+- o **tema** define cores e capas; versões próprias podem ser guardadas em `_orquestra/temas/`;
 - as **suas escolhas** por cima dele (`aparencia:` no `orquestra.yaml`): claro ou
   escuro, cor de destaque, cantos, letra e tamanho da fonte.
 
@@ -37,8 +37,8 @@ Três detalhes de como isso funciona:
 - **As letras são as do seu computador.** Nada é baixado da internet, então o painel
   continua funcionando sem conexão. Por isso a mesma opção pode ter um desenho um
   pouco diferente no Windows, no macOS e no celular.
-- **As capas não mudam com o modo claro.** São cenas de fim de tarde e de noite, e
-  funcionam como imagem nos dois modos.
+- **As capas não mudam com o modo claro.** Cada tema tem as suas (de noite, de fim
+  de tarde ou de dia, no tema Luz) e elas funcionam como imagem nos dois modos.
 
 ## O que um tema define
 
@@ -81,6 +81,7 @@ paletas:                     # as cores das capas em pixel art
 cenas: [janela, deserto, cidade, montanhas]   # o estilo do tema: as cenas que combinam com ele
 
 capas:                       # qual cena e paleta cada módulo usa
+  boas-vindas: {cena: janela, paleta: brasa}    # a capa que representa o tema na escolha de temas
   tarefas: {cena: janela, paleta: poente}
   conteudo: {cena: cidade, paleta: brasa}
   decidir: {cena: montanhas, paleta: poente}
@@ -108,14 +109,28 @@ problema de licença.
 | `ceu` | acima das nuvens, com balões | o mar de nuvens deslizando em três planos, balões, pássaros |
 | `aurora` | colinas nevadas e uma cabana | as cortinas da aurora, neve caindo, estrelas |
 | `deserto` | dunas, chapadas e cactos | uma caravana atravessando, areia ao vento, nuvens |
+| `observatorio` | cúpula na serra sob a Via Láctea | o facho do telescópio, constelações, estrela cadente, névoa |
+| `jardim` | lago, ponte, lanterna e cerejeira em flor | pétalas ao vento, reflexos na água, borboletas (vaga-lumes à noite) |
+| `orbital` | um planetário visto de cima | planetas em órbita com rastro, a coroa da estrela, estrelas |
+| `codigo` | terminal aberto sobre uma chuva de símbolos | o texto sendo digitado, o cursor, o gráfico de atividade |
+| `neon` | avenida cyberpunk com sol de synthwave | letreiros piscando, chuva, trem elevado, carros voadores, reflexos |
+| `recife` | fundo do mar com corais e algas | raios de sol, cardumes, águas-vivas, bolhas, uma baleia ao longe |
 
 ### Cada tema tem um estilo
 
-| Tema | Estilo | Cenas preferidas |
-|---|---|---|
-| **Brasa** | fim de tarde e noite quente | janela, deserto, cidade, montanhas |
-| **Maré** | verde profundo com destaque em pêssego: mar, céu e farol | mar, céu, aurora, montanhas |
-| **Noturno** | espaço, aurora e madrugada | espaço, aurora, cidade, janela |
+| Tema | Direção visual | Capas | Cenas preferidas |
+|---|---|---|---|
+| **Brasa** | tons quentes e carvão | fim de tarde e noite quente | janela, deserto, cidade, montanhas |
+| **Maré** | verde-mar profundo com destaque em coral | o mar por cima e por baixo | mar, recife, céu, aurora |
+| **Noturno** | violeta elétrico, magenta e ciano | madrugada cyberpunk | néon, cidade, espaço, janela |
+| **Azul profundo** | cobalto, gelo e aço | o céu visto de um observatório | observatório, orbital, espaço, aurora |
+| **Terminal** | carvão e verde fósforo | monitores de uma cor só (verde, âmbar, ciano) | código, cidade, orbital, janela |
+| **Luz** | porcelana e azul, interface clara nos dois modos | paisagens à luz do dia | jardim, céu, montanhas, mar |
+| **Grafite** | cinza neutro, sem cor dominante | desenho a nanquim, em tons de cinza | montanhas, floresta, cidade, janela |
+
+![Os sete temas em Ajustes > Aparência](img/temas.png)
+
+A miniatura de cada tema é a sua capa de assinatura (`boas-vindas` em `capas`).
 
 Nos temas que vêm prontos, cada área do catálogo tem um par (cena, paleta) só dela:
 duas áreas nunca ficam com a mesma capa. Uma área que o tema não lista em `capas`
@@ -123,9 +138,10 @@ duas áreas nunca ficam com a mesma capa. Uma área que o tema não lista em `ca
 as `cenas` do tema a partir do nome da área, sempre o mesmo. Uma pasta sua chamada
 "1. Projetos" usa a capa que o tema reservou para `projetos`.
 
-Para escolher a cena de uma área, use **Personalizar** (o ícone ao lado das abas).
-**Ver cenas animadas** abre os previews no mesmo modal. A cena pode ser automática,
-seguindo o tema, ou uma escolha sua.
+Para escolher a capa de uma área, use **Personalizar** (o ícone ao lado das abas).
+O botão da cena abre a grade de prévias animadas: as cenas do estilo do tema vêm
+primeiro, e cada prévia mostra a cena com as cores que a área vai receber ao salvar.
+A cena pode ser automática, seguindo o tema, ou uma escolha sua.
 
 ## Usar a sua própria imagem ou vídeo
 
@@ -161,7 +177,7 @@ capas:
 3. Em **Ajustes**, escolha o tema novo (ou escreva `tema: meu-tema` no `orquestra.yaml`).
 
 Dica de contraste: `texto` sobre `fundo` e `sobre_destaque` sobre `destaque` precisam
-ser bem legíveis, em `cores` e em `cores_claras`. Os três temas que vêm prontos têm
+ser bem legíveis, em `cores` e em `cores_claras`. Os sete temas que vêm prontos têm
 os dois modos e são conferidos por teste automático (`tests/test_aparencia_e_automacoes.py`).
 
 ## Criar uma cena nova (para quem programa)
@@ -185,4 +201,42 @@ CENAS.praia = function (pal, R) {
 
 O canvas tem 320x180 pixels. Há ajudantes para degradê pontilhado, nuvens, serras,
 pinheiros, estrelas e névoa. Depois de criar, acrescente o nome à lista `CENAS` em
-`src/orquestra/temas.py`.
+`src/orquestra/temas.py` (e o nome com acento em `NOMES_CENAS`, se precisar).
+
+![Configuração de aparência](img/configuracao.png)
+
+## Coleção de imagens
+
+Além das cenas desenhadas por código, o Orquestra traz uma pequena coleção de
+ilustrações (e um vídeo em loop), uma para cada tema. Elas ficam no fim da grade de
+**Personalizar**, com as do tema atual primeiro, e podem ser usadas em qualquer tema.
+
+| Peça | Tema | O que mostra |
+|---|---|---|
+| Entardecer | Brasa | cabana no alto de um deserto ao pôr do sol |
+| Enseada | Maré | farol sobre o mar e um recife de coral sob a água |
+| Avenida (imagem e vídeo em loop) | Noturno | avenida cyberpunk com letreiros de néon sob chuva |
+| Observatório | Azul profundo | observatório nas montanhas ao anoitecer |
+| Laboratório | Terminal | mesa com monitores antigos de fósforo verde |
+| Pavilhão | Luz | pavilhão branco à beira de um lago, com cerejeira em flor |
+| Refúgio | Grafite | biblioteca às margens de um lago na hora azul |
+
+![Cenas animadas e coleção de imagens](img/capas.png)
+
+A origem e o prompt de cada peça estão em `src/orquestra/static/arte/README.md`.
+
+Uploads continuam limitados a 2 MB; vídeos devem ser curtos e sem áudio.
+
+Na configuração inicial, miniaturas animadas dos temas acompanham controles
+compactos de modo, fonte, tamanho, cantos e cor. A opção **Animação das capas**
+pode substituir as cenas automáticas do tema; capas próprias de módulos são preservadas.
+Essa preferência usa `aparencia.cena` no `orquestra.yaml` (vazio mantém a variedade do tema).
+
+Temas novos ficam disponíveis também em vaults existentes. Cópias intactas das
+versões antigas de Maré e Noturno usam as novas; arquivos personalizados continuam
+tendo prioridade e não são sobrescritos.
+
+As animações respeitam a preferência de movimento reduzido. Vídeos fora da tela
+ou em abas ocultas são pausados.
+
+[Ver Personalizar no celular](img/personalizar-mobile.png).

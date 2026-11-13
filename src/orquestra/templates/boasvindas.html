@@ -1,3 +1,4 @@
+{% import "partes.html" as p %}
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -145,12 +146,22 @@
         {% for t in temas %}
         <label class="bv-tema" style="--t-fundo:{{ t.cores.fundo }};--t-texto:{{ t.cores.texto }};--t-destaque:{{ t.cores.destaque }};--t-borda:{{ t.cores.borda }}">
           <input type="radio" name="tema" value="{{ t.id }}" data-cores='{{ t.cores|tojson }}' data-capa='{{ t.previa|tojson }}'{% if loop.first %} checked{% endif %}>
-          <span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ t.cores[chave] }}"></i>{% endfor %}</span>
+          <span class="bv-tema-previa">{{ p.capa(t.previa) }}</span><span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ t.cores[chave] }}"></i>{% endfor %}</span>
           <b>{{ t.nome }}</b>
           <small>{{ t.descricao }}</small>
         </label>
         {% endfor %}
       </div>
+      <div class="bv-visual-compacto">
+        <label class="campo"><span>Modo</span><select id="bv-modo"><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="auto">Sistema</option></select></label>
+        <label class="campo"><span>Animação das capas</span><select id="bv-cena"><option value="">Do tema</option>{% for c in cenas %}<option value="{{ c }}">{{ nome_cena(c) }}</option>{% endfor %}</select></label>
+        <label class="campo"><span>Letra</span><select id="bv-fonte">{% for id,pilha in visual.fontes.items() %}<option value="{{ id }}" data-fonte="{{ pilha }}">{{ visual.nomes[id] }}</option>{% endfor %}</select></label>
+        <label class="campo"><span>Cantos</span><select id="bv-cantos">{% for id in visual.cantos %}<option value="{{ id }}"{% if id == 'medio' %} selected{% endif %}>{{ visual.nomes[id] }}</option>{% endfor %}</select></label>
+        <label class="campo"><span>Tamanho</span><select id="bv-tamanho"><option value="pequena">Pequeno</option><option value="padrao" selected>Padrão</option><option value="grande">Grande</option></select></label>
+        <label class="campo"><span>Destaque</span><input type="color" id="bv-destaque" value="{{ tema.cores.destaque }}"></label>
+      </div>
+      <div class="bv-previa-visual" aria-label="Prévia da animação"><canvas class="capa" width="320" height="180" data-cena="{{ capa.cena }}" data-semente="{{ capa.semente }}" data-paleta='{{ capa.paleta|tojson }}' aria-hidden="true"></canvas><span>Seu espaço, do seu jeito</span></div>
+
 
 
       <label class="chave bv-chave"><input type="checkbox" id="backup"><i></i><span>Guardar versões locais do vault (git). Uma cópia externa continua sendo necessária.</span></label>

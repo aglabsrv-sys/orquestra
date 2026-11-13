@@ -151,10 +151,28 @@
       finally { input.disabled = false; liberarEnvio(); }
     };
   });
-  if (escolherCena) escolherCena.onclick = function () { $('#cenas-dialogo').showModal(); };
+  function previaCena(cena, origem){
+    var previa=document.querySelector('.personalizar-previa');if(!previa)return;
+    var anterior=previa.querySelector('.capa'),canvas=document.createElement('canvas');canvas.className='capa';canvas.width=320;canvas.height=180;canvas.dataset.cena=cena;canvas.dataset.semente=(origem&&origem.dataset.semente)||'42';canvas.dataset.paleta=(origem&&origem.dataset.paleta)||(anterior&&anterior.dataset.paleta)||'{}';
+    if(anterior)anterior.replaceWith(canvas);else previa.prepend(canvas);
+    window.Orquestra.iniciarCenas(previa);
+    escolherCena.textContent=$('#p-cena').selectedOptions[0].textContent+' · Alterar';
+    document.querySelectorAll('[data-escolher-cena]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.escolherCena===cena?'true':'false');});
+    document.querySelectorAll('[data-capa-catalogo]').forEach(function(b){b.setAttribute('aria-pressed','false');});
+  }
+  if (escolherCena) escolherCena.onclick = function () { $('#cenas-dialogo').showModal(); window.Orquestra.iniciarCenas($('#cenas-dialogo')); };
   document.querySelectorAll('[data-escolher-cena]').forEach(function (b) {
-    b.onclick = function () { $('#p-cena').value = b.dataset.escolherCena; $('#p-capa').value = ''; $('#p-capa-arquivo').value = ''; $('#p-capa-estado').textContent = 'Cena escolhida. Salve para aplicar.'; $('#cenas-dialogo').close(); };
+    b.onclick = function () { $('#p-cena').value = b.dataset.escolherCena; $('#p-capa').value = ''; $('#p-capa-arquivo').value = ''; previaCena(b.dataset.escolherCena, b.querySelector('canvas')); $('#p-cena').dispatchEvent(new Event('change',{bubbles:true})); $('#p-capa-estado').textContent = 'Cena escolhida. Salve para aplicar.'; $('#cenas-dialogo').close(); };
   });
+  function previaMidia(url,tipo){
+    var anterior=$('.personalizar-previa .capa'),midia=document.createElement(tipo==='video'?'video':'img');midia.className='capa midia';midia.src=url;
+    if(tipo==='video'){midia.loop=true;midia.muted=true;midia.playsInline=true;if(!matchMedia('(prefers-reduced-motion: reduce)').matches)midia.play().catch(function(){});}
+    anterior.replaceWith(midia);escolherCena.textContent='Capa própria · Alterar';
+  }
+  document.querySelectorAll('[data-capa-catalogo]').forEach(function(b){b.onclick=function(){
+    $('#p-capa').value=b.dataset.capaCatalogo;$('#p-cena').value='';$('#p-capa-arquivo').value='';previaMidia(b.dataset.capaCatalogo,b.dataset.tipo);document.querySelectorAll('[data-escolher-cena],[data-capa-catalogo]').forEach(function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});$('#p-capa').dispatchEvent(new Event('change',{bubbles:true}));$('#p-capa-estado').textContent='Capa escolhida. Salve para aplicar.';$('#cenas-dialogo').close();
+  };});
+  if ($('#p-enviar-capa')) $('#p-enviar-capa').onclick=function() { arquivoCapa.click(); };
   if (arquivoCapa) arquivoCapa.onchange = async function () {
     var arquivo = arquivoCapa.files[0], estadoCapa = $('#p-capa-estado'), salvar = $('#p-salvar');
     if (!arquivo) return;
@@ -166,7 +184,7 @@
       var headers = headersExtras('application/octet-stream'); headers['X-Orquestra-Local'] = token.token;
       r = await fetch('/api/capas', {method:'POST', headers:headers, body:arquivo});
       var dados = await r.json(); if (!r.ok) throw new Error(dados.erro || 'Falha no envio.');
-      $('#p-capa').value = dados.caminho; $('#p-cena').value = ''; estadoCapa.textContent = 'Capa enviada. Salve para aplicar.';
+      $('#p-capa').value = dados.caminho; $('#p-cena').value = ''; previaMidia('/arquivo/'+dados.caminho.split('/').map(encodeURIComponent).join('/'),arquivo.type.startsWith('video/')?'video':'imagem'); $('#p-capa').dispatchEvent(new Event('change',{bubbles:true})); estadoCapa.textContent = 'Capa enviada. Salve para aplicar.';
     } catch (erro) { estadoCapa.textContent = erro.message; }
     finally { salvar.disabled = false; }
   };

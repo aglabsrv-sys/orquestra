@@ -1,0 +1,106 @@
+# Tema Grafite: o clássico discreto. Cinza neutro, sem cor dominante.
+# Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
+
+nome: Grafite
+descricao: Grafite e preto, neutro e discreto. Capas em nanquim.
+
+# Cores da interface
+cores:
+  fundo: "#101113"
+  superficie: "#18191c"
+  superficie_alta: "#222428"
+  borda: "#34373d"
+  texto: "#eeeff1"
+  texto_suave: "#a3a7ae"
+  destaque: "#e3e6eb"
+  sobre_destaque: "#17181b"
+  alerta: "#ff9789"
+  ok: "#9bd6bb"
+
+# As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
+cores_claras:
+  fundo: "#f6f6f7"
+  superficie: "#ffffff"
+  superficie_alta: "#eaebed"
+  borda: "#d4d6da"
+  texto: "#17181b"
+  texto_suave: "#5c6068"
+  destaque: "#2a2c31"
+  sobre_destaque: "#ffffff"
+  alerta: "#b8322c"
+  ok: "#22744b"
+
+# Paletas das capas em pixel art (os papéis de cada cor estão em docs/temas.md).
+paletas:
+  nanquim:
+    ceu: ["#0b0c0e", "#1b1d21", "#3a3d44", "#74787f"]
+    astro: "#f1f1ee"
+    nuvem: "#9a9da3"
+    longe: "#3b3e45"
+    meio: "#26282d"
+    perto: "#17181b"
+    sombra: "#0a0b0c"
+    luz: "#f3e3b3"
+    brilho: "#ffffff"
+    noite: true
+  neblina:
+    ceu: ["#2a2c30", "#55585e", "#92959b", "#d2d3d6"]
+    astro: "#ffffff"
+    nuvem: "#e4e5e7"
+    longe: "#7d8087"
+    meio: "#55585f"
+    perto: "#34363b"
+    sombra: "#1b1c1f"
+    luz: "#fff0c2"
+    brilho: "#ffffff"
+  carvao:
+    ceu: ["#050506", "#101113", "#1e2023", "#34373d"]
+    astro: "#d9dce2"
+    nuvem: "#4a4d54"
+    longe: "#25272b"
+    meio: "#1a1b1e"
+    perto: "#111214"
+    sombra: "#060607"
+    luz: "#e6e8ec"
+    brilho: "#ffffff"
+    noite: true
+  aco:
+    ceu: ["#0d1014", "#1e252e", "#3b4654", "#7b8796"]
+    astro: "#eef2f6"
+    nuvem: "#a7b1bd"
+    longe: "#374150"
+    meio: "#252c37"
+    perto: "#161b22"
+    sombra: "#0a0d11"
+    luz: "#b9d2ee"
+    brilho: "#ffffff"
+    noite: true
+
+# O estilo deste tema: desenho a nanquim: paisagens em tons de cinza, com um ponto de luz.
+# `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
+cenas: [montanhas, floresta, cidade, janela, mar, observatorio, ceu]
+
+# Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
+# para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
+# representa o tema na tela de escolha.
+capas:
+  boas-vindas: {cena: montanhas, paleta: neblina}
+  tarefas: {cena: janela, paleta: nanquim}
+  conteudo: {cena: cidade, paleta: nanquim}
+  radar: {cena: observatorio, paleta: carvao}
+  entrada: {cena: mar, paleta: neblina}
+  decidir: {cena: montanhas, paleta: nanquim}
+  diario: {cena: floresta, paleta: neblina}
+  pastas: {cena: floresta, paleta: nanquim}
+  numeros: {cena: orbital, paleta: carvao}
+  notas: {cena: janela, paleta: aco}
+  projetos: {cena: montanhas, paleta: aco}
+  areas: {cena: ceu, paleta: neblina}
+  recursos: {cena: cidade, paleta: aco}
+  arquivos: {cena: espaco, paleta: carvao}
+  clientes: {cena: cidade, paleta: carvao}
+  financas: {cena: mar, paleta: aco}
+  estudos: {cena: observatorio, paleta: aco}
+  agenda: {cena: deserto, paleta: neblina}
+  habitos: {cena: jardim, paleta: neblina}

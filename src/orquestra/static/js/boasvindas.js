@@ -263,6 +263,7 @@
       caminho: (modo === "novo" ? $("#caminho-novo") : $("#caminho-existente")).value.trim(),
       nome: $("#nome").value.trim(),
       tema: tema ? tema.value : "",
+      aparencia: {modo:$('#bv-modo').value,cena:$('#bv-cena').value,fonte:$('#bv-fonte').value,cantos:$('#bv-cantos').value,tamanho:$('#bv-tamanho').value,destaque:$('#bv-destaque').dataset.editado ? $('#bv-destaque').value : ''},
       modulos: $$('input[name="modulo"]:checked').map(function (c) { return c.value; }),
       pastas: pastas,
       exemplos: $("#exemplos").checked,
@@ -409,15 +410,20 @@
   $("#concluir").onclick = concluir;
   raiz.addEventListener("change", resumir);
 
-  // O tema escolhido já pinta a própria tela, para a pessoa ver antes de decidir.
-  $$('input[name="tema"]').forEach(function (r) {
-    r.addEventListener("change", function () {
-      var cores = JSON.parse(r.dataset.cores || "{}");
-      var capa = JSON.parse(r.dataset.capa || "{}");
-      if (window.Orquestra.atualizarCena) window.Orquestra.atualizarCena($(".bv-capa canvas"), capa);
-      Object.keys(cores).forEach(function (nome) { document.documentElement.style.setProperty("--" + nome.replace(/_/g, "-"), cores[nome]); });
-    });
-  });
+  var previaSequencia=0;
+  async function atualizarVisual(){
+    var escolhido=$('input[name="tema"]:checked');if(!escolhido)return;
+    var numero=++previaSequencia,capa=JSON.parse(escolhido.dataset.capa||'{}');
+    if($('#bv-cena').value)capa.cena=$('#bv-cena').value;
+    document.querySelectorAll('.bv-capa canvas,.bv-previa-visual canvas').forEach(function(c){window.Orquestra.atualizarCena(c,capa);});
+    try{var r=await fetch('/api/boas-vindas/visual?tema='+encodeURIComponent(escolhido.value)+'&modo='+$('#bv-modo').value+'&destaque='+encodeURIComponent($('#bv-destaque').dataset.editado?$('#bv-destaque').value:''));if(!r.ok)return;var d=await r.json();if(numero!==previaSequencia)return;
+      var estilo=$('#bv-estilo-previa');if(!estilo){estilo=document.createElement('style');estilo.id='bv-estilo-previa';document.head.appendChild(estilo);}estilo.textContent=d.estilo;
+      var root=document.documentElement;root.style.setProperty('--fonte',$('#bv-fonte').selectedOptions[0].dataset.fonte);root.style.setProperty('--cantos',({reto:0,discreto:.45,medio:1,redondo:1.45})[$('#bv-cantos').value]);root.style.setProperty('--tamanho-fonte',({pequena:'14px',padrao:'16px',grande:'18px'})[$('#bv-tamanho').value]);
+      if(!$('#bv-destaque').dataset.editado)$('#bv-destaque').value=JSON.parse(escolhido.dataset.cores).destaque;
+    }catch(e){/* A seleção continua disponível sem a prévia. */}
+  }
+  $$('input[name="tema"],.bv-visual-compacto select').forEach(function(r){r.addEventListener('change',atualizarVisual);});
+  if($('#bv-destaque'))$('#bv-destaque').addEventListener('input',function(){this.dataset.editado='1';atualizarVisual();});
   var inicio = typeof URLSearchParams !== "undefined" && typeof location !== "undefined" ? new URLSearchParams(location.search).get("modo") : "";
   if (inicio === "novo" || inicio === "existente") mostrar(inicio);
 })();

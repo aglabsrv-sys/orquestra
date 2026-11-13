@@ -106,6 +106,36 @@ def test_cada_area_tem_uma_capa_diferente(tema):
     assert set(tema["cenas"]) <= set(temas.CENAS)
 
 
+@pytest.mark.parametrize("tema", TEMAS, ids=lambda t: t["id"])
+def test_cada_tema_tem_assinatura_e_previas_fieis(tema):
+    # A capa que representa o tema é uma escolha do tema, não um sorteio, e é de uma cena do seu estilo.
+    assinatura = tema["capas"]["boas-vindas"]
+    assert assinatura["cena"] == tema["cenas"][0] and assinatura["paleta"] in tema["paletas"]
+    assert temas.previa(tema) == temas.resolver_capa(tema, "boas-vindas")
+    # Uma prévia por cena, as do estilo do tema primeiro, iguais ao que a área recebe ao salvar a cena.
+    previas = temas.previas_das_cenas(tema, "tarefas")
+    assert [p["cena"] for p in previas[: len(tema["cenas"])]] == tema["cenas"]
+    assert sorted(p["cena"] for p in previas) == sorted(temas.CENAS)
+    assert all(p == temas.resolver_capa(tema, "tarefas", {"cena": p["cena"]}) for p in previas)
+    # As paletas de um tema são de fato diferentes entre si (nada de quatro cópias do mesmo céu).
+    assert len({tuple(p["ceu"]) for p in tema["paletas"].values()}) == len(tema["paletas"]) >= 4
+
+
+def test_temas_sao_distintos_entre_si():
+    assinaturas = [(t["capas"]["boas-vindas"]["cena"], t["cores"]["fundo"], t["cores"]["destaque"]) for t in TEMAS]
+    assert len({a[0] for a in assinaturas}) == len(TEMAS), "dois temas com a mesma cena de assinatura"
+    assert len({a[1] for a in assinaturas}) == len(TEMAS) == len({a[2] for a in assinaturas})
+
+
+def test_colecao_tem_uma_peca_por_tema_e_os_arquivos_existem():
+    arte = Path(temas.__file__).parent / "static" / "arte"
+    assert {p["tema"] for p in temas.COLECAO} == {t["id"] for t in TEMAS}
+    assert all((arte / p["arquivo"]).is_file() and p["alt"] and p["nome"] for p in temas.COLECAO)
+    assert {p.name for p in arte.iterdir()} == {p["arquivo"] for p in temas.COLECAO} | {"README.md"}
+    assert [p["tema"] for p in temas.colecao("luz")][0] == "luz"
+    assert temas.nome_cena("espaco") == "Espaço" and temas.nome_cena("mar") == "Mar"
+
+
 def test_area_que_o_tema_nao_conhece_recebe_capa_livre_e_estavel():
     tema = TEMAS[0]
     usados = {(c["cena"], c["paleta"]) for c in tema["capas"].values()}

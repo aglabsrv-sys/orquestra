@@ -1,0 +1,106 @@
+# Tema Azul profundo: céu frio de alta montanha. Cobalto, gelo e aço.
+# Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
+
+nome: Azul profundo
+descricao: Cobalto, gelo e aço sob um céu de observatório.
+
+# Cores da interface
+cores:
+  fundo: "#0c1421"
+  superficie: "#121e30"
+  superficie_alta: "#1b2b42"
+  borda: "#2b405d"
+  texto: "#e4edf9"
+  texto_suave: "#9bafc9"
+  destaque: "#79b7ff"
+  sobre_destaque: "#09182d"
+  alerta: "#ff8c9b"
+  ok: "#82d9b0"
+
+# As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
+cores_claras:
+  fundo: "#f3f6fb"
+  superficie: "#ffffff"
+  superficie_alta: "#e4ebf6"
+  borda: "#c9d6ea"
+  texto: "#0f1f38"
+  texto_suave: "#51627f"
+  destaque: "#1f5fc4"
+  sobre_destaque: "#ffffff"
+  alerta: "#c0304a"
+  ok: "#1f7a55"
+
+# Paletas das capas em pixel art (os papéis de cada cor estão em docs/temas.md).
+paletas:
+  cobalto:
+    ceu: ["#050b1c", "#0d2046", "#1d4a8c", "#4f8fd8"]
+    astro: "#eaf4ff"
+    nuvem: "#6f9fdc"
+    longe: "#1e3f7a"
+    meio: "#132b57"
+    perto: "#0b1a38"
+    sombra: "#050c1c"
+    luz: "#ffd98a"
+    brilho: "#ffffff"
+    noite: true
+  glacial:
+    ceu: ["#0a1830", "#1f4f7c", "#5fa3c9", "#c6e6f2"]
+    astro: "#ffffff"
+    nuvem: "#e3f2fa"
+    longe: "#4d82ab"
+    meio: "#2c5683"
+    perto: "#17335a"
+    sombra: "#0a1a33"
+    luz: "#ffe9a8"
+    brilho: "#ffffff"
+  polar:
+    ceu: ["#03101f", "#0a2a45", "#136a7a", "#52c7b8"]
+    astro: "#e8fff8"
+    nuvem: "#49b3ac"
+    longe: "#124a66"
+    meio: "#0c3350"
+    perto: "#081f37"
+    sombra: "#040f1f"
+    luz: "#8dffd0"
+    brilho: "#f0fffa"
+    noite: true
+  aco:
+    ceu: ["#0b0f17", "#1c2636", "#3a4d68", "#8097b5"]
+    astro: "#f2f6fb"
+    nuvem: "#9db0c9"
+    longe: "#33445e"
+    meio: "#222f44"
+    perto: "#151e2e"
+    sombra: "#0a0e16"
+    luz: "#79b7ff"
+    brilho: "#e4edf9"
+    noite: true
+
+# O estilo deste tema: o céu visto de um observatório: órbitas, constelações e auroras.
+# `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
+# Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
+cenas: [observatorio, orbital, espaco, aurora, montanhas, cidade, ceu]
+
+# Qual cena e qual paleta cada área usa neste tema. Cada par aparece uma vez só,
+# para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
+# representa o tema na tela de escolha.
+capas:
+  boas-vindas: {cena: observatorio, paleta: cobalto}
+  tarefas: {cena: observatorio, paleta: aco}
+  conteudo: {cena: orbital, paleta: cobalto}
+  radar: {cena: espaco, paleta: cobalto}
+  entrada: {cena: montanhas, paleta: glacial}
+  decidir: {cena: aurora, paleta: polar}
+  diario: {cena: observatorio, paleta: polar}
+  pastas: {cena: orbital, paleta: aco}
+  numeros: {cena: espaco, paleta: aco}
+  notas: {cena: ceu, paleta: glacial}
+  projetos: {cena: montanhas, paleta: cobalto}
+  areas: {cena: mar, paleta: glacial}
+  recursos: {cena: cidade, paleta: cobalto}
+  arquivos: {cena: espaco, paleta: polar}
+  clientes: {cena: cidade, paleta: aco}
+  financas: {cena: orbital, paleta: polar}
+  estudos: {cena: janela, paleta: cobalto}
+  agenda: {cena: aurora, paleta: cobalto}
+  habitos: {cena: montanhas, paleta: aco}

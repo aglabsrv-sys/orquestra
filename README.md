@@ -1,14 +1,8 @@
 # Orquestra
 
-**Um painel local para organizar seu trabalho em cima de uma pasta de arquivos markdown, com ou sem agentes de IA.**
+**Seu vault, em um espaço de trabalho local.**
 
-Feito com carinho por **Claude Fable 5.2, GPT 6.1 Sol e AGLABS**.
-
-Você já usa ChatGPT, Claude ou Gemini todo dia, mas cada conversa começa do zero e
-nada fica organizado em lugar nenhum. O Orquestra resolve isso com uma ideia simples:
-suas tarefas, seus projetos e suas anotações são arquivos de texto numa pasta. O
-painel mostra essa pasta de um jeito bonito e rápido; seus agentes trabalham direto
-nela; e você abre no Obsidian quando quiser.
+Orquestra transforma arquivos Markdown em tarefas, projetos, notas e visualizações conectadas. Funciona com o Obsidian e com agentes de IA, mantendo os arquivos no seu computador.
 
 ![Tela inicial do Orquestra](docs/img/inicio.png)
 
@@ -35,8 +29,8 @@ lista completa, incluindo Ajustes, Pastas e Diário.
 
 </details>
 
-Capturas de 12/11/2026 com dados de demonstração. As telas novas de Agenda e
-Hábitos estão descritas nos [guias](docs/README.md).
+As capturas usam um vault de demonstração, sem dados pessoais. Consulte os
+[guias](docs/README.md) para explorar os recursos.
 
 ## Instalação
 
@@ -196,7 +190,7 @@ As telas e áreas disponíveis dependem do perfil e do que você acrescentar em 
 | **Agenda** | Datas das suas notas em mês, semana, dia ou lista; crie e edite compromissos no vault. |
 | **Hábitos e metas** | Área opcional com meta semanal, marcação diária e histórico em notas Markdown. |
 | **Pomodoro** | Foco e pausas, com duração configurável e continuidade ao navegar na mesma aba. |
-| **Temas** | Três temas, cada um com o seu estilo de capas em pixel art animadas (nove cenas desenhadas por código), em modo claro e escuro. |
+| **Temas** | Sete temas, cada um com o seu estilo de capas em pixel art animadas (quinze cenas desenhadas por código) e uma coleção de ilustrações, em modo claro e escuro. |
 | **Automações sem IA** | Tarefas recorrentes, agenda, cotações e feeds: scripts que você revisa, aprova e pode agendar. Serviços externos podem ter limites ou custos. |
 
 ## Primeiros passos
@@ -325,8 +319,8 @@ Para trocar de vault com o painel aberto: Ajustes > Vault > Trocar de vault.
 
 ## Documentação
 
-O [índice dos guias](docs/README.md) reúne uso, desenvolvimento e histórico das
-revisões. As mudanças recentes ficam no [changelog](CHANGELOG.md).
+O [índice da documentação](docs/README.md) reúne os guias de uso e as referências
+para desenvolvimento. Consulte as mudanças no [changelog](CHANGELOG.md).
 
 | | |
 |---|---|
@@ -343,27 +337,35 @@ revisões. As mudanças recentes ficam no [changelog](CHANGELOG.md).
 | [Histórico e backup](docs/backup.md) | Versões locais quando algo muda, envio diário, e como desfazer |
 | [Arquitetura](docs/arquitetura.md) | Como o código está organizado, para estudar ou contribuir |
 
-## Segurança, em três linhas
+## Segurança e privacidade
 
 - O painel **não tem senha** e escuta só no seu computador (`127.0.0.1`). Escolher ou trocar de vault e aprovar código exigem acesso local direto. Não publique a porta nem encaminhe localhost por um proxy público.
 - No celular, use **`tailscale serve`**. **Nunca** use `tailscale funnel` nem abra a porta no roteador.
 - Chaves de API ficam em `~/.orquestra/.env`, **fora** do vault; copie o [.env.example](.env.example) para esse destino se precisar. URLs privadas de calendários também são segredos. Mantenha o backup em repositório **privado** e confira [SECURITY.md](SECURITY.md).
 
-## Estado do projeto
+## Compatibilidade
 
-As verificações de segurança, recuperação, interface, desempenho, comandos e
-instalação estão nos [registros de revisão](docs/README.md#registros-de-revisão),
-com testes executados e limites de validação de cada rodada.
+Orquestra requer Python 3.11 ou superior e um navegador atual. A instalação com
+`uv` gerencia o ambiente Python. Os arquivos continuam disponíveis no Obsidian ou
+em qualquer editor Markdown, independentemente do painel.
 
-Versão 0.4. Funciona e tem testes automatizados, mas é novo: faça backup.
+As áreas do painel usam pastas da raiz do vault. Subpastas, imagens, vídeos e
+arquivos HTML podem ser explorados em **Pastas**. Templates HTML são exibidos em
+uma prévia isolada, sem executar scripts ou enviar formulários.
 
-- Uso manual anterior no **Windows 10** com Chrome; nesta revisão, **Linux com Chromium** e larguras de 1440, 390 e 320 px. A CI verifica Python em Windows, macOS e Linux. Emulação de largura não substitui Safari/iOS, Android e uso real do Obsidian em cada sistema.
-- A leitura da lista de cofres do Obsidian, o acesso por Tailscale e o início automático no macOS/Linux foram escritos seguindo a documentação de cada sistema e ainda precisam de confirmação de quem usa.
-- Só pastas da raiz do vault viram área do painel; subpastas aparecem dentro da área e em "Pastas".
+## Espaço de trabalho
 
-O que vem depois: arquivos `.base` para as visões aparecerem também no
-Obsidian, conector MCP remoto (para apps no celular), mais cenas e um guia para
-compartilhar módulos.
+**Pastas** abre no grafo de ligações. A árvore lateral permanece disponível ao
+ler notas e arquivos; use **Notas** para navegar pela lista. O grafo aceita zoom,
+arraste e centralização automática.
+
+![Explorador e grafo de notas](docs/img/pastas.png)
+
+Em **Ajustes → Aparência**, escolha entre Brasa, Maré, Noturno, Azul profundo,
+Terminal, Luz e Grafite. Personalize fontes, cores e cantos. Cada área pode ter
+sua própria cena animada, imagem ou vídeo em **Personalizar pasta**.
+
+![Personalização de uma área](docs/img/personalizar.png)
 
 ## Contribuir
 

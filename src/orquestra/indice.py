@@ -15,7 +15,7 @@ from orquestra.caminhos import CaminhoInseguro, arquivos_do_vault, caminho_no_va
 from orquestra.modulos import NOTAS_DE_CONTRATO, ZONAS, Modulo, descobrir
 from orquestra.notas import Nota, ler_nota
 
-EXT_MIDIA = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".mp4", ".webm"}
+EXT_MIDIA = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif", ".bmp", ".ico", ".mp4", ".webm"}
 
 
 def deve_ignorar(rel: str) -> bool:

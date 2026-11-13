@@ -78,6 +78,7 @@
     </button>
     {% endfor %}
   </div>
+  <div class="bloco"><label class="campo"><span>Animação das capas automáticas</span><select id="ap-cena"><option value="">Variadas, conforme o tema</option>{% for c in cenas %}<option value="{{ c }}"{% if cfg.aparencia.cena == c %} selected{% endif %}>{{ nome_cena(c) }}</option>{% endfor %}</select><small class="campo-ajuda">Capas escolhidas em Personalizar pasta são preservadas.</small></label></div>
   <h3 class="sub">Do seu jeito</h3>
   <div class="bloco aparencia" id="aparencia">
     <div class="ap-linha">

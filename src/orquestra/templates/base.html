@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/static/css/refino.css?v={{ marca }}">
   {% block estilos %}{% endblock %}
   <style>{{ estilo|safe }}</style>
+{% if request.query_params.get('explorador') == '1' %}<link rel="stylesheet" href="/static/css/leitor.css?v={{ marca }}">{% endif %}
 </head>
 <body data-vault-id="{{ vault_id }}" data-observa="{% block observa %}{% endblock %}">
   <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -102,6 +103,7 @@
   <script src="/static/js/experiencia.js?v={{ marca }}"></script>
   <script src="/static/js/foco-engine.js?v={{ marca }}"></script>
   <script src="/static/js/foco.js?v={{ marca }}"></script>
+  {% if request.query_params.get('explorador') == '1' %}<script src="/static/js/leitor.js?v={{ marca }}"></script>{% endif %}
   {% block scripts %}{% endblock %}
 </body>
 </html>
