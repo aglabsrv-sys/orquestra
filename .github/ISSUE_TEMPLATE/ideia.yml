@@ -1,0 +1,15 @@
+name: Ideia
+description: Uma melhoria, um módulo novo ou um tema.
+labels: ["ideia"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Que problema isso resolve
+      description: Conte o que você tenta fazer hoje e onde o painel atrapalha.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Como você imagina

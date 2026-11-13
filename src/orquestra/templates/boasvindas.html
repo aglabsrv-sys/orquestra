@@ -9,6 +9,8 @@
   <link rel="icon" href="/static/icone.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/css/app.css?v={{ marca }}">
   <link rel="stylesheet" href="/static/css/refino.css?v={{ marca }}">
+  <link rel="stylesheet" href="/static/css/boasvindas-refino.css?v={{ marca }}">
+  <link rel="stylesheet" href="/static/css/tipografia.css?v={{ marca }}">
   <style>{{ estilo|safe }}</style>
 </head>
 <body class="bv">
@@ -139,30 +141,45 @@
 
       </div><div data-bv-pagina="visual">
       <h3 class="bv-sub">Do seu jeito</h3>
-      <div class="grade-campos">
-        <label class="campo"><span id="rotulo-nome">Nome do painel</span><input type="text" id="nome" value="Orquestra" maxlength="60" required aria-labelledby="rotulo-nome" aria-describedby="ajuda-nome erro-nome"><small class="campo-ajuda" id="ajuda-nome">Aparece no topo do painel. Você pode mudar depois em Ajustes.</small><small class="campo-erro" id="erro-nome" hidden></small></label>
+      <div class="bv-identidade-linha">
+        <label class="campo bv-nome"><span id="rotulo-nome">Nome do painel</span><input type="text" id="nome" value="Orquestra" maxlength="60" required aria-labelledby="rotulo-nome" aria-describedby="ajuda-nome erro-nome"><small class="somente-leitor" id="ajuda-nome">Aparece no topo do painel. Você pode mudar depois em Ajustes.</small><small class="campo-erro" id="erro-nome" hidden></small></label>
+        <fieldset class="bv-controle bv-modos"><legend>Modo</legend>
+          <div class="bv-segmentos" role="group" aria-label="Modo de aparência">
+            <button type="button" data-visual="bv-modo" data-valor="claro" aria-pressed="false" title="Claro"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg><span>Claro</span></button>
+            <button type="button" data-visual="bv-modo" data-valor="escuro" aria-pressed="true" title="Escuro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A8.5 8.5 0 0 1 10 4a8.5 8.5 0 1 0 10 10z"/></svg><span>Escuro</span></button>
+            <button type="button" data-visual="bv-modo" data-valor="auto" aria-pressed="false" title="Seguir o sistema"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>Sistema</span></button>
+          </div>
+          <select id="bv-modo" hidden aria-label="Modo escolhido"><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="auto">Sistema</option></select>
+        </fieldset>
       </div>
-      <div class="bv-temas" role="radiogroup" aria-label="Tema">
-        {% for t in temas %}
-        <label class="bv-tema" style="--t-fundo:{{ t.cores.fundo }};--t-texto:{{ t.cores.texto }};--t-destaque:{{ t.cores.destaque }};--t-borda:{{ t.cores.borda }}">
-          <input type="radio" name="tema" value="{{ t.id }}" data-cores='{{ t.cores|tojson }}' data-capa='{{ t.previa|tojson }}'{% if loop.first %} checked{% endif %}>
-          <span class="bv-tema-previa">{{ p.capa(t.previa) }}</span><span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ t.cores[chave] }}"></i>{% endfor %}</span>
-          <b>{{ t.nome }}</b>
-          <small>{{ t.descricao }}</small>
-        </label>
-        {% endfor %}
+      <div class="bv-tema-atual">
+        <span class="bv-tema-miniatura">{{ p.capa(capa, 'bv-tema-escolhido-capa') }}</span>
+        <div class="bv-tema-identidade"><small>Tema</small><b id="bv-tema-nome">{{ temas[0].nome }}</b><span id="bv-tema-cores" class="amostras" aria-hidden="true">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ temas[0].cores[chave] }}"></i>{% endfor %}</span></div>
+        <button type="button" class="botao pequeno" id="bv-escolher-tema" aria-haspopup="dialog" aria-controls="bv-temas-dialogo">Escolher {{ icone('chevron_dir', 13) }}</button>
       </div>
       <div class="bv-visual-compacto">
-        <label class="campo"><span>Modo</span><select id="bv-modo"><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="auto">Sistema</option></select></label>
-        <label class="campo"><span>Animação das capas</span><select id="bv-cena"><option value="">Do tema</option>{% for c in cenas %}<option value="{{ c }}">{{ nome_cena(c) }}</option>{% endfor %}</select></label>
-        <label class="campo"><span>Letra</span><select id="bv-fonte">{% for id,pilha in visual.fontes.items() %}<option value="{{ id }}" data-fonte="{{ pilha }}">{{ visual.nomes[id] }}</option>{% endfor %}</select></label>
-        <label class="campo"><span>Cantos</span><select id="bv-cantos">{% for id in visual.cantos %}<option value="{{ id }}"{% if id == 'medio' %} selected{% endif %}>{{ visual.nomes[id] }}</option>{% endfor %}</select></label>
-        <label class="campo"><span>Tamanho</span><select id="bv-tamanho"><option value="pequena">Pequeno</option><option value="padrao" selected>Padrão</option><option value="grande">Grande</option></select></label>
-        <label class="campo"><span>Destaque</span><input type="color" id="bv-destaque" value="{{ tema.cores.destaque }}"></label>
+        <fieldset class="bv-controle"><legend>Letra</legend><div class="bv-segmentos bv-letras" role="group" aria-label="Estilo da letra">
+          {% for id,pilha in visual.fontes.items() %}<button type="button" data-visual="bv-fonte" data-valor="{{ id }}" aria-label="Letra {{ visual.nomes[id] }}" title="{{ visual.nomes[id] }}" aria-pressed="{{ 'true' if id == 'sistema' else 'false' }}" style="font-family:{{ pilha|e }}">Aa</button>{% endfor %}
+          </div><select id="bv-fonte" hidden aria-label="Letra escolhida">{% for id,pilha in visual.fontes.items() %}<option value="{{ id }}" data-fonte="{{ pilha }}">{{ visual.nomes[id] }}</option>{% endfor %}</select>
+        </fieldset>
+        <fieldset class="bv-controle"><legend>Cantos</legend><div class="bv-segmentos bv-cantos" role="group" aria-label="Formato dos cantos">
+          {% for id in visual.cantos %}<button type="button" data-visual="bv-cantos" data-valor="{{ id }}" aria-label="Cantos {{ visual.nomes[id]|lower }}" title="{{ visual.nomes[id] }}" aria-pressed="{{ 'true' if id == 'discreto' else 'false' }}"><span class="bv-canto-desenho" style="border-radius:{{ {'reto':0,'discreto':3,'medio':7,'redondo':12}[id] }}px" aria-hidden="true"></span></button>{% endfor %}
+          </div><select id="bv-cantos" hidden aria-label="Cantos escolhidos">{% for id in visual.cantos %}<option value="{{ id }}"{% if id == 'discreto' %} selected{% endif %}>{{ visual.nomes[id] }}</option>{% endfor %}</select>
+        </fieldset>
+        <fieldset class="bv-controle"><legend>Tamanho</legend><div class="bv-segmentos bv-tamanhos" role="group" aria-label="Tamanho da letra">
+          {% for id,nome,tamanho in [('pequena','Pequeno',12),('padrao','Padrão',15),('grande','Grande',18),('xl','XL',20),('xxl','XXL',22)] %}<button type="button" data-visual="bv-tamanho" data-valor="{{ id }}" aria-label="Tamanho {{ nome }}" title="{{ nome }}" aria-pressed="{{ 'true' if id == 'padrao' else 'false' }}"><span{% if id not in ('xl','xxl') %} style="font-size:{{ tamanho }}px"{% endif %} aria-hidden="true">{{ nome if id in ('xl','xxl') else 'A' }}</span></button>{% endfor %}
+          </div><select id="bv-tamanho" hidden aria-label="Tamanho escolhido"><option value="pequena">Pequeno</option><option value="padrao" selected>Padrão</option><option value="grande">Grande</option><option value="xl">XL</option><option value="xxl">XXL</option></select>
+        </fieldset>
+        <fieldset class="bv-controle bv-destaques"><legend>Cor de destaque</legend>
+          <div class="bv-cores" role="group" aria-label="Cor de destaque">
+            <button type="button" class="bv-cor bv-cor-tema" data-destaque="" aria-label="Usar a cor do tema" title="Usar a cor do tema" aria-pressed="true">{{ icone('atualizar', 15) }}</button>
+            {% for cor,nome in [('#ff6467','Vermelho'),('#ff8a65','Coral'),('#f2c14e','Amarelo'),('#58c79b','Verde'),('#31b7b1','Turquesa'),('#6499f7','Azul'),('#b095f9','Violeta'),('#f180ba','Rosa')] %}<button type="button" class="bv-cor" data-destaque="{{ cor }}" style="--cor:{{ cor }}" aria-label="{{ nome }}" title="{{ nome }}" aria-pressed="false"></button>{% endfor %}
+            <label class="bv-cor bv-cor-livre" title="Escolher outra cor">{{ icone('paleta', 16) }}<span class="somente-leitor">Cor personalizada</span><input type="color" id="bv-destaque" value="{{ tema.cores.destaque }}" aria-label="Escolher cor personalizada"></label>
+          </div>
+        </fieldset>
       </div>
-      <div class="bv-previa-visual" aria-label="Prévia da animação"><canvas class="capa" width="320" height="180" data-cena="{{ capa.cena }}" data-semente="{{ capa.semente }}" data-paleta='{{ capa.paleta|tojson }}' aria-hidden="true"></canvas><span>Seu espaço, do seu jeito</span></div>
-
-
+      <p class="bv-capinhas-ajuda campo-ajuda">As capas acompanham o tema. Você pode personalizar cada pasta depois.</p>
+      <input type="hidden" id="bv-cena" value="">
 
       <label class="chave bv-chave"><input type="checkbox" id="backup"><i></i><span>Guardar versões locais do vault (git). Uma cópia externa continua sendo necessária.</span></label>
       <p class="suave pequeno" id="aviso-backup" hidden></p>
@@ -180,10 +197,21 @@
       </div>
     </section>
 
+    <dialog id="bv-temas-dialogo" class="dialogo bv-temas-dialogo" aria-labelledby="bv-temas-titulo"><div class="dialogo-corpo">
+      <div class="bv-temas-topo"><div><h2 id="bv-temas-titulo">Escolha seu tema</h2><p class="suave">Cores e capas que combinam entre si.</p></div><button type="button" class="botao discreto" id="bv-temas-fechar" aria-label="Fechar temas">{{ icone('x', 18) }}</button></div>
+      <div class="bv-temas" role="radiogroup" aria-label="Tema">
+        {% for t in temas %}<label class="bv-tema" style="--t-fundo:{{ t.cores.fundo }};--t-texto:{{ t.cores.texto }};--t-destaque:{{ t.cores.destaque }};--t-borda:{{ t.cores.borda }}">
+          <input type="radio" name="tema" value="{{ t.id }}" data-nome="{{ t.nome }}" data-cores='{{ t.cores|tojson }}' data-capa='{{ t.previa|tojson }}'{% if loop.first %} checked{% endif %}>
+          <span class="bv-tema-previa">{{ p.capa(t.previa) }}</span><span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ t.cores[chave] }}"></i>{% endfor %}</span><b>{{ t.nome }}</b><small>{{ t.descricao }}</small>
+        </label>{% endfor %}
+      </div>
+      <div class="dialogo-acoes"><button type="button" class="botao principal" id="bv-temas-usar">Usar tema</button></div>
+    </div></dialog>
+
     {# ------------------------------------------------------------ 4. pronto #}
     <dialog id="passo-pronto" class="dialogo bv-pronto" aria-labelledby="pronto-titulo">
       <div class="dialogo-corpo">
-        <span class="pronto-icone">{{ icone('check', 28) }}</span>
+        <span class="pronto-icone" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></span>
         <h2 id="pronto-titulo">Seu espaço está pronto</h2>
         <p id="pronto-texto"></p>
         <ul class="bv-avisos" id="pronto-avisos"></ul>

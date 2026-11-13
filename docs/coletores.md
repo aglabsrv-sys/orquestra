@@ -1,7 +1,51 @@
-# Coletores
+# Automações
 
-Um coletor é um script que busca informação fora (vídeos novos, posts, assuntos em
-alta) e entrega ao painel, que transforma cada item em uma nota com `status: novo`.
+Uma automação busca informação ou executa uma rotina e entrega itens ao painel,
+que os guarda em notas. O destino pode ser uma pasta existente, inclusive uma
+subpasta, sem instalar um módulo pronto. Os estados seguem o contrato da pasta;
+uma pasta comum não ganha um quadro ou um status por receber uma automação.
+
+## Catálogo independente
+
+Abra **Ajustes → Automações → Catálogo**. As nove opções distribuídas aparecem
+mesmo sem Radar, Tarefas ou Números instalados. Em **Pastas**, o botão de raio
+abre o catálogo com a pasta atual selecionada.
+
+1. Escolha a automação e configure a fonte pelo formulário.
+2. Em **Guardar em**, navegue pelas pastas e confirme o destino. Escolha execução
+   manual, por intervalo ou horário diário.
+3. Use **Continuar** para conferir destino e política de gravação. Em
+   **Propriedades da pasta**, o mapeamento opcional permite usar nomes existentes.
+4. Confira a configuração e adicione. A autorização local cobre o código, a
+   configuração, os segredos declarados, o destino, o mapeamento e o horário.
+5. Em **Minhas automações → Execução e opções**, **Testar fonte** consulta a fonte
+   de uma automação independente e mostra uma amostra sem gravar notas.
+   **Executar** importa; **Pausar** interrompe o agendamento.
+
+É possível adicionar várias instâncias da mesma automação. As métricas podem
+completar uma nota diária; configurações que disputem o mesmo campo são recusadas.
+Valores alterados manualmente são preservados. **Configurar** mantém a identidade da
+instância e exige revisão da nova configuração. **Remover** preserva as notas.
+
+As configurações ficam em `_orquestra/automacoes.json`; os aceites e os segredos
+ficam neste computador. Para um endereço iCal privado, guarde o endereço em
+**Segredos** e informe seu nome no formulário. As automações de módulos existentes
+aparecem na mesma lista com **Configurar**, também disponível na aba **Máquina**.
+Feeds RSS, canais e assuntos de busca podem ser alterados pelo formulário. O botão
+**?** explica cada opção. **Usar em outra pasta** cria outra instância explicitamente;
+a configuração da área mantém seu destino e as notas existentes.
+
+Quando um auxiliar nativo antigo é reconhecido integralmente, **Atualizar
+automação** oferece a atualização com recuperação da cópia anterior. Código
+personalizado permanece na área, com revisão em opções avançadas; ele não é
+substituído ou autorizado pelo formulário de uma automação nativa.
+
+O agendador funciona enquanto o serviço está executando. Ao reabrir, uma rotina
+atrasada é consultada na situação atual; dias perdidos não são reproduzidos. A
+importação iCal ainda não expande `RRULE` nem acompanha cancelamentos e alterações.
+
+O [resumo do dia](../README.md) e a [verificação de links](vinculos.md) são recursos
+nativos disponíveis sem instalar uma automação.
 
 **Coletor não usa IA.** Buscar e guardar é trabalho mecânico: um script faz a
 coleta conforme sua configuração. Serviços externos podem ter custos e limites. A IA entra depois, na triagem, quando já
@@ -9,7 +53,7 @@ existe o que avaliar.
 
 ## Antes de executar: revise o código
 
-Os originais distribuídos com a instalação podem executar sem aceite extra enquanto
+Nos módulos legados, os originais distribuídos com a instalação podem executar sem aceite extra enquanto
 código, auxiliares, configuração e chaves declaradas coincidirem exatamente com o
 catálogo instalado. Uma revogação explícita continua bloqueando o original. As
 orientações de aprovação abaixo se aplicam a versões personalizadas ou importadas

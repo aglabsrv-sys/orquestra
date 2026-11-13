@@ -3,22 +3,26 @@
 {% block titulo %}{{ trilha[-1].nome if trilha else 'Pastas' }}{% endblock %}
 {% block trilha %}{% if trilha %}<a href="/pastas">Pastas</a>{% else %}Pastas{% endif %}{% endblock %}
 {% block observa %}tudo{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/grafo.css?v={{ marca }}">{% endblock %}
 
 {% block conteudo %}
 <section class="explorador" data-pasta="{{ rel }}">
   <aside class="explorador-lateral" aria-label="Arquivos do cofre">
-    <header><a href="/pastas" class="explorador-nome">{{ icone('pasta', 17) }} {{ cfg.nome }}</a><a class="botao pequeno so-icone" href="/ajustes/vault" title="Gerenciar cofres" aria-label="Gerenciar cofres">{{ icone('ajustes', 16) }}</a></header>
+    <header><a href="/pastas" class="explorador-nome">{{ icone('pasta', 17) }} {{ cfg.nome }}</a><a class="botao pequeno so-icone" href="/ajustes/vault" title="Gerenciar cofres" aria-label="Gerenciar cofres">{{ icone('caixa', 16) }}</a></header>
     <a class="explorador-busca" href="/buscar">{{ icone('busca', 15) }} Buscar no cofre</a>
     <nav id="arvore-pastas" aria-label="Pastas e notas"><p class="campo-ajuda">Carregando arquivos…</p></nav>
     <p id="arvore-estado" class="campo-ajuda" role="status"></p>
   </aside>
   <div id="pasta-painel" class="explorador-painel" data-rel="{{ rel }}">
-    <header class="explorador-topo"><div class="explorador-titulo"><span class="sobretitulo">{{ 'Pasta' if rel else 'Seu cofre' }}</span><h1>{{ trilha[-1].nome if trilha else cfg.nome }}</h1></div><div class="linha-botoes sem-topo">
+    <header class="explorador-topo"><div class="explorador-titulo">{% if rel %}<a class="botao pequeno so-icone explorador-voltar" href="{{ trilha[-2].url if trilha|length > 1 else '/pastas' }}" aria-label="Voltar à pasta anterior" title="Voltar à pasta anterior">{{ icone('seta_esq', 17) }}</a>{% endif %}<h1>{{ trilha[-1].nome if trilha else cfg.nome }}</h1></div><div class="linha-botoes sem-topo">
       <div class="segmentos" role="group" aria-label="Visualização dos arquivos"><button type="button" data-pasta-visao="notas" aria-pressed="false">Notas</button><button type="button" data-pasta-visao="grafo" aria-pressed="true">Grafo</button></div>
       {% if modulo and trilha|length == 1 %}<a class="botao pequeno" href="/m/{{ modulo.id|urlencode }}">{{ icone(modulo.icone, 15) }} Ver painel</a>{% endif %}
       {% if pode_criar %}<button class="botao principal pequeno" type="button" id="abrir-nota-pasta">{{ icone('mais', 16) }} Nova nota</button>{% endif %}
+      <a class="botao pequeno so-icone" href="/vinculos?rel={{ rel|urlencode }}" title="Verificar links nesta pasta" aria-label="Verificar links nesta pasta">{{ icone('link', 16) }}</a>
+      <a class="botao pequeno so-icone" href="/ajustes/automacoes?destino={{ rel|urlencode }}" title="Adicionar automação nesta pasta" aria-label="Adicionar automação nesta pasta">{{ icone('raio', 16) }}</a>
+      <a class="botao pequeno so-icone" href="/personalizar/pastas" title="Personalizar Pastas" aria-label="Personalizar Pastas">{{ icone('paleta', 16) }}</a>
     </div></header>
-    {% if trilha %}<nav class="explorador-trilha" aria-label="Pasta atual"><a href="/pastas">Cofre</a>{% for parte in trilha %}<span>/</span><a href="{{ parte.url }}"{% if loop.last %} aria-current="page"{% endif %}>{{ parte.nome }}</a>{% endfor %}</nav>{% endif %}
+    {% if capa_pasta %}<div class="pagina-capa">{{ p.capa(capa_pasta) }}</div>{% endif %}
     <div id="pasta-notas" hidden>
   {% if pastas %}
   <div class="pastas-linhas">
@@ -55,8 +59,25 @@
   {% endif %}
   {{ p.paginar(paginacao|default(none)) }}
     </div>
-    <section id="pasta-grafo" class="pasta-grafo" aria-label="Grafo de ligações entre notas"><div class="grafo-controles"><span id="grafo-estado" class="campo-ajuda" role="status"></span><button type="button" class="botao pequeno" id="grafo-centralizar">Centralizar</button></div><canvas id="grafo-canvas" tabindex="0" aria-label="Ligações entre notas. Use a lista abaixo para abrir uma nota pelo teclado."></canvas><details class="grafo-lista"><summary>Notas do grafo</summary><ul id="grafo-notas"></ul></details></section>
-    <section id="pasta-leitor" hidden aria-label="Arquivo aberto"><div class="leitor-barra"><span id="leitor-titulo"></span><button class="botao pequeno" type="button" id="leitor-fechar">Voltar ao grafo</button></div><iframe id="leitor-frame" title="Nota do cofre"></iframe></section>
+    <section id="pasta-grafo" class="pasta-grafo" aria-label="Grafo de ligações entre notas">
+      <div class="grafo-controles">
+        <span id="grafo-estado" class="campo-ajuda" role="status"></span>
+        <div class="grafo-ferramentas">
+          <details class="grafo-opcoes"><summary class="botao pequeno so-icone" aria-label="Filtrar grafo" title="Filtrar grafo"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></svg></summary>
+            <div><label class="campo"><span>Encontrar uma nota</span><input id="grafo-busca" type="search" placeholder="Nome da nota…" autocomplete="off"></label>
+            <label class="grafo-chave"><input id="grafo-isoladas" type="checkbox" checked> Notas sem ligações</label>
+            <label class="grafo-chave"><input id="grafo-rotulos" type="checkbox" checked> Nomes das notas</label>
+            <p>Arraste notas para organizar. Arraste o fundo para mover e use a roda para aproximar.</p></div>
+          </details>
+          <button type="button" class="botao pequeno so-icone" id="grafo-menos" aria-label="Afastar grafo" title="Afastar">−</button>
+          <button type="button" class="botao pequeno so-icone" id="grafo-mais" aria-label="Aproximar grafo" title="Aproximar">+</button>
+          <button type="button" class="botao pequeno so-icone" id="grafo-centralizar" aria-label="Centralizar grafo" title="Centralizar"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6"/></svg></button>
+        </div>
+      </div>
+      <canvas id="grafo-canvas" tabindex="0" aria-label="Ligações entre notas. Use as setas para escolher uma nota, Enter para abrir, mais e menos para zoom e zero para centralizar." aria-describedby="grafo-estado"></canvas>
+      <details class="grafo-lista"><summary>Notas do grafo</summary><ul id="grafo-notas"></ul></details>
+    </section>
+    <section id="pasta-leitor" hidden aria-label="Arquivo aberto"><div class="leitor-barra"><button class="botao pequeno so-icone" type="button" id="leitor-fechar" aria-label="Voltar ao grafo" title="Voltar ao grafo">{{ icone('seta_esq', 17) }}</button><span id="leitor-titulo"></span></div><iframe id="leitor-frame" title="Nota do cofre"></iframe></section>
   </div>
 </section>
 {% endblock %}

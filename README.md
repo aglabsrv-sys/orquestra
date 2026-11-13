@@ -1,224 +1,149 @@
 # Orquestra
 
-**Seu vault, em um espaço de trabalho local.**
+**Suas notas em Markdown viram um painel de trabalho, no seu computador.**
 
-Orquestra transforma arquivos Markdown em tarefas, projetos, notas e visualizações conectadas. Funciona com o Obsidian e com agentes de IA, mantendo os arquivos no seu computador.
+[![Qualidade](https://github.com/aglabsrv-sys/orquestra/actions/workflows/qualidade.yml/badge.svg)](https://github.com/aglabsrv-sys/orquestra/actions/workflows/qualidade.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab)
+![Local-first](https://img.shields.io/badge/local--first-sem%20nuvem-2f7d3b)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)](LICENSE)
 
-![Tela inicial do Orquestra](docs/img/inicio.png)
+O Orquestra lê uma pasta de arquivos Markdown (um vault do Obsidian, por exemplo)
+e mostra tarefas, projetos, conteúdo, agenda e hábitos em quadros, listas e
+calendários. Cada item continua sendo um arquivo `.md` comum: você edita no painel,
+no Obsidian ou pede a um agente de IA, e é sempre o mesmo arquivo.
 
-- **Roda no seu computador.** O painel não exige conta nem envia suas notas para uma nuvem própria. Os dados são arquivos seus; coletores e agentes opcionais podem acessar serviços externos.
-- **Aproveita o Obsidian que você já tem.** Aponte para o seu vault: nenhuma nota muda de lugar, e as pastas que você escolher viram quadros e listas.
-- **Do seu jeito.** Comece pelo essencial, por conteúdo ou por negócio e escolha os módulos na mesma tela. Depois mude tudo pela tela, sem escrever código: áreas, campos, tema, modo claro ou escuro, cor de destaque, cantos e letra.
-- **Funciona com qualquer agente, e sem nenhum.** Claude, Codex, Gemini: basta dar acesso à pasta. As regras ficam num `AGENTS.md`. Quem só quer se organizar não precisa de IA.
-- **Separa o que você disse do que a IA escreveu.** Um resumo da máquina nunca vira "fala sua".
-- **Abre no celular** pela sua rede privada do Tailscale.
+![Início do Orquestra no tema Brasa](docs/img/inicio.png)
 
-| Quadro de tarefas | Pipeline de conteúdo |
+| Tarefas · tema Luz, destaque rosa | Conteúdo · tema Brasa |
 |---|---|
-| ![Módulo Tarefas](docs/img/tarefas.png) | ![Módulo Conteúdo](docs/img/conteudo.png) |
+| ![Quadro de tarefas no tema Luz claro](docs/img/tarefas.png) | ![Pipeline de conteúdo no tema Brasa](docs/img/conteudo.png) |
 
 <details>
-<summary>Veja também no celular</summary>
+<summary>No celular</summary>
 
-| Início | Tarefas |
+| Início · Luz | Tarefas · Brasa |
 |---|---|
-| ![Início em tela de 390 px](docs/img/inicio-mobile.png) | ![Quadro de tarefas em tela de 390 px, com criação e navegação acessíveis](docs/img/tarefas-mobile.png) |
-
-Capturas com notas fictícias do catálogo. No celular, **Todas as áreas** abre a
-lista completa, incluindo Ajustes, Pastas e Diário.
+| <img src="docs/img/inicio-mobile.png" alt="Início no celular, tema Luz" width="300"> | <img src="docs/img/tarefas-mobile.png" alt="Quadro de tarefas no celular, tema Brasa" width="300"> |
 
 </details>
 
-As capturas usam um vault de demonstração, sem dados pessoais. Consulte os
-[guias](docs/README.md) para explorar os recursos.
+As capturas usam um vault de demonstração com notas fictícias.
+
+## Por que usar
+
+- **Seus arquivos, no seu computador.** Sem conta e sem nuvem própria. O painel
+  escuta só em `localhost`; as notas são arquivos que você pode abrir em qualquer editor.
+- **Funciona com o vault que você já tem.** Nenhuma nota muda de lugar. Você escolhe
+  quais pastas aparecem no painel.
+- **Com agentes de IA, ou sem nenhum.** Claude, Codex, Gemini ou qualquer agente que
+  leia uma pasta. As regras ficam num `AGENTS.md`; quem só quer se organizar não precisa de IA.
+- **O que é seu fica separado do que a IA escreveu.** Cada nota diz quem a criou, e a
+  pasta `humano/` guarda as suas decisões, que os agentes leem e não reescrevem.
+- **Do seu jeito, pela tela.** Áreas, campos, sete temas com capas animadas em pixel
+  art, modo claro ou escuro, cor de destaque, cantos e letra.
 
 ## Instalação
 
-Leva uns dez minutos. Você precisa de duas ferramentas gratuitas: o **uv**
-(instala o Python e as dependências sozinho) e o **git**.
+Você precisa de duas ferramentas gratuitas: o [uv](https://docs.astral.sh/uv/)
+(que cuida do Python) e o [Git](https://git-scm.com/).
 
-### Windows
+<details>
+<summary><b>Windows</b></summary>
 
-1. Abra o **PowerShell** e instale o uv:
+No PowerShell:
 
-   ```powershell
-   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-   ```
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
-2. Instale o git: baixe em <https://git-scm.com/download/win> e avance com as opções padrão.
-3. **Feche e abra o PowerShell de novo**, para ele enxergar os dois.
+Instale o Git em <https://git-scm.com/download/win> com as opções padrão. Depois
+feche e abra o PowerShell.
 
-### macOS e Linux
+</details>
 
-1. Abra o **Terminal** e instale o uv:
+<details>
+<summary><b>macOS e Linux</b></summary>
 
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+No Terminal:
 
-2. Confira `git --version`. No macOS, o sistema oferece instalar as ferramentas de linha de comando. No Linux, instale o Git pelo gerenciador da sua distribuição (`sudo apt install git` em Debian/Ubuntu; `sudo dnf install git` em Fedora).
-3. Feche e abra o Terminal de novo.
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-### Baixar e abrir (todos os sistemas)
+Confira `git --version`. No macOS o sistema oferece instalar o Git; no Linux use o
+gerenciador da distribuição (`sudo apt install git`, `sudo dnf install git`). Depois
+feche e abra o Terminal.
+
+</details>
+
+Com as duas instaladas, em qualquer sistema:
 
 ```bash
 git clone https://github.com/aglabsrv-sys/orquestra.git
-```
-
-```bash
 cd orquestra
-```
-
-```bash
 uv sync --locked
 uv run --frozen orquestra
 ```
 
-O navegador abre em <http://localhost:8420> e faz uma pergunta só:
+O navegador abre em <http://localhost:8420>. Na primeira vez, escolha entre:
 
-- **Já tenho um vault do Obsidian.** O painel mostra os cofres que encontrou no seu
-  Obsidian (ou você indica a pasta), olha o que há lá sem alterar nada e pergunta
-  quais pastas você quer ver no painel.
-- **Criar um vault novo.** Você escolhe a pasta, um ponto de partida e o tema.
+- **Já tenho um vault do Obsidian:** o painel lista os cofres que encontrou, olha a
+  pasta sem alterar nada e pergunta quais pastas você quer ver.
+- **Criar um vault novo:** escolha a pasta, um ponto de partida e o tema.
 
-Nos dois casos dá para dar nome ao painel, escolher o tema e marcar as áreas que
-quer. Na primeira vez o `uv` baixa o que precisa e demora um pouco mais.
-
-Para encerrar, `Ctrl+C` no terminal. Nas próximas vezes, `uv run --frozen orquestra`
-inicia direto no vault escolhido; abra a URL mostrada no terminal. Para abrir o
-navegador também nessas vezes, use `uv run --frozen orquestra iniciar --abrir`.
-
-> Algo não funcionou? Rode `uv run --frozen orquestra doctor`. Ele confere a instalação e
-> explica, em português, o que falta.
-
-## Recursos
-
-O primeiro uso é dividido em passos: pasta, modelo, módulos, aparência e revisão.
-Ao terminar, o painel explica como manter o processo aberto e iniciar com o computador.
-Os ajustes têm páginas próprias, incluindo tamanho da fonte, variáveis e acesso pelo celular.
-
-- **Pomodoro:** ícone de cronômetro ao lado da busca, com tela própria, mostrador
-  de progresso, foco e pausas. O timer continua ao navegar na mesma aba. Ajuste
-  as durações pelo botão de ajustes da própria tela.
-- **Agenda:** visões de mês, semana, dia e lista, com busca, filtros, cores e
-  criação/edição de eventos nos arquivos do vault. Clique nos dias da home para
-  abrir o dia, ou em Agenda no menu inferior. Detalhes em [docs/agenda.md](docs/agenda.md). “Conectar agenda”
-  ensina a obter o link iCal e guarda o endereço no `.env` local. A importação é de
-  leitura, com as limitações descritas em [guia dos novos fluxos](docs/experiencia-comunidade.md).
-- **Hábitos e metas:** pasta/módulo com visões Progresso e Lista, modelos de academia
-  3×, leitura 5× e caminhada 4×, registro diário e mapa de treze semanas. Crie e
-  ajuste a meta pela própria tela; cada hábito continua sendo uma nota no vault.
-  “Áreas” continua disponível para quem usa o método PARA.
-- **Criativos:** em Conteúdo, envie uma miniatura e use `em_aprovacao`. O preview
-  aparece em Para decidir, com Aprovar criativo e Pedir ajustes. Pipelines existentes
-  têm o botão “Ativar aprovação neste pipeline”, que preserva suas opções anteriores.
-- **Capas:** escolha cenas animadas por preview ou envie imagens e vídeos de até
-  2 MB. Os vídeos ficam em loop, sem áudio, pausados fora da tela.
-- **GitHub:** em Ajustes → Backup, o login oficial usa o GitHub CLI instalado no
-  computador. Escolha um repositório privado; a vinculação não envia notas. Revise
-  e autorize o destino antes do primeiro backup.
-- **Variáveis:** busca, criação e atualização em modal, sem exibir os valores já salvos.
-- **Cofres:** em Ajustes → Cofres, crie um novo ou abra uma pasta existente.
-- **Pastas:** árvore lateral com ramos sob demanda e grafo das ligações entre notas.
-- **Notas:** duplo clique ou Enter abre a edição; Escape ou clique fora salva. Propriedades e recuperação ficam recolhidas.
-  Elas ficam em `~/.orquestra/.env`, fora do vault, disponíveis aos coletores que as
-  declaram em `requer`. O arquivo é texto local, não um cofre criptografado.
-
-Detalhes, limites e comandos em [Experiência da comunidade](docs/experiencia-comunidade.md).
-
-## Encerrar, iniciar automaticamente e remover
-
-Fechar o terminal encerra o processo. Para reabrir: `uv run --frozen orquestra`.
-Em Ajustes → Vault, “Iniciar com o computador” configura a inicialização **ao entrar
-na sua conta do sistema**. Também é possível executar:
-
-```bash
-uv run --frozen orquestra autostart ativar
-uv run --frozen orquestra autostart status
-uv run --frozen orquestra autostart desativar
-```
-
-`uv run --frozen orquestra desinstalar` (ou `uninstall`) explica a remoção.
-Com `--confirmar`, remove a entrada de início automático. Depois encerre o processo
-e remova a pasta clonada pelo gerenciador de arquivos. O comando preserva o vault,
-os backups e `~/.orquestra`, inclusive suas variáveis; não apaga suas notas.
-
-## Já usa o Obsidian?
-
-Você não precisa reorganizar nada. Ao escolher o seu vault:
-
-- **A preparação preserva suas notas no lugar.** O painel acrescenta os arquivos de configuração que faltam:
-  `orquestra.yaml`, a pasta `_orquestra/` (temas) e o `AGENTS.md`. Se você já tem
-  um `AGENTS.md`, o seu fica como está e o do painel vai para `AGENTS.orquestra.md`.
-- **Suas pastas aparecem em "Pastas"**, navegáveis, do jeito que estão no disco.
-- **Qualquer pasta da raiz pode virar área do painel** com um clique em "Mostrar no
-  painel". O Orquestra lê os campos que suas notas já têm no topo (status, datas,
-  tags) e monta lista e quadro a partir deles. O único arquivo criado é um
-  `_modulo.yaml` dentro da pasta.
-- **O painel reconhece os jeitos mais comuns de organizar** (PARA, Zettelkasten,
-  Johnny Decimal, ACE, diário) e sugere a partir daí.
-- **O histórico em git fica desligado** até você ligar, para não interferir com
-  OneDrive, iCloud, Obsidian Sync ou um git que você já use.
-
-Detalhes em [docs/vault-existente.md](docs/vault-existente.md).
+Nas próximas vezes, `uv run --frozen orquestra` abre direto no vault escolhido.
+Se algo não funcionar, rode `uv run --frozen orquestra doctor`: ele confere a
+instalação e explica, em português, o que falta.
 
 ## O que vem pronto
 
-Um vault novo nasce de um **perfil**, que é só uma lista de áreas. Depois você
-acrescenta e tira áreas à vontade, em Ajustes. A tela inicial oferece três pontos de
-partida compactos (Essencial, Criador e Negócio); os demais perfis também continuam
-disponíveis pela linha de comando.
-
-| Perfil | Áreas |
-|---|---|
-| **Essencial** | Tarefas, Notas, Entrada |
-| **Criador de conteúdo** | Tarefas, Conteúdo, Radar, Números, Entrada |
-| **PARA** | Projetos, Áreas, Recursos, Arquivos, Entrada |
-| **Negócio ou freelancer** | Tarefas, Clientes, Projetos, Finanças, Entrada |
-| **Estudos** | Tarefas, Estudos, Recursos, Entrada |
-| **Em branco** | nenhuma: você monta |
-
-As telas e áreas disponíveis dependem do perfil e do que você acrescentar em Ajustes:
-
 | | |
 |---|---|
-| **Entrada** | Quando a área de captura está configurada, anote do celular e organize depois (você ou um agente). |
-| **Decidir** | Uma fila só com tudo que espera você, incluindo perguntas dos agentes. |
-| **Números** | Área opcional com uma nota por dia e um gráfico de cada número que você acompanha. |
-| **Pastas** | O vault como ele é no disco, inclusive o que não é área do painel. |
+| **Áreas** | Tarefas, Conteúdo, Projetos, Clientes, Finanças, Estudos, Radar, Números, Entrada e outras, em quadro, lista ou gráfico. Qualquer pasta sua também pode virar área. |
+| **Decidir** | Uma fila com tudo que espera você, inclusive perguntas dos agentes. |
+| **Agenda** | Mês, semana, dia e lista; compromissos gravados no vault e leitura de calendários iCal. |
+| **Hábitos e Pomodoro** | Metas semanais com marcação diária, e um timer de foco que continua ao navegar. |
+| **Pastas** | O vault como está no disco, com árvore, grafo de ligações, imagens, vídeos e HTML. |
 | **Diário** | O que mudou no vault e o que cada agente fez, com autor e horário. |
-| **Agenda** | Datas das suas notas em mês, semana, dia ou lista; crie e edite compromissos no vault. |
-| **Hábitos e metas** | Área opcional com meta semanal, marcação diária e histórico em notas Markdown. |
-| **Pomodoro** | Foco e pausas, com duração configurável e continuidade ao navegar na mesma aba. |
-| **Temas** | Sete temas, cada um com o seu estilo de capas em pixel art animadas (quinze cenas desenhadas por código) e uma coleção de ilustrações, em modo claro e escuro. |
-| **Automações sem IA** | Tarefas recorrentes, agenda, cotações e feeds: scripts que você revisa, aprova e pode agendar. Serviços externos podem ter limites ou custos. |
+| **Resumo do dia** | Prazos, decisões, hábitos e atividade de um dia numa visão compacta. |
+| **Links do cofre** | Referências, anexos e blocos verificados, com notas futuras separadas do que precisa de revisão. |
+| **Automações** | Recorrências, agenda, cotações e feeds, sem IA, na pasta que você escolher. São scripts pequenos e legíveis que rodam com a sua aprovação. |
+| **Histórico** | Versões locais em Git a cada mudança e, se quiser, backup num repositório privado. |
+| **Celular** | Acesso pela sua rede privada do [Tailscale](docs/tailscale.md), sem expor nada à internet. |
 
-## Primeiros passos
+Um vault novo começa de um perfil (**Essencial**, **Criador de conteúdo**,
+**Negócio**, **PARA** ou **Estudos**). Depois você acrescenta e tira áreas em **Ajustes**.
 
-1. **Olhe em volta.** Arraste um cartão no quadro, abra uma nota, aperte `C` para capturar uma ideia.
-2. **Ajuste as áreas.** Em **Ajustes**, acrescente uma área pronta, crie uma em branco ou tire do painel o que não usa (a pasta fica). O ícone ao lado das abas de cada área abre **Personalizar**: nome, ícone, capa, campos e opções.
-3. **Diga quem você é.** Nas áreas com a aba **Humano**, registre como prioriza, sua voz e o que te interessa. É o que os agentes leem antes de agir. Entrada fica dedicada à captura e não mostra essa aba.
-4. **Conecte um agente** (opcional). Abra o Claude Code ou o Codex na pasta do vault e peça: "leia o AGENTS.md e processe a minha entrada". Veja [docs/agentes.md](docs/agentes.md). Para apps de conversa, use o [conector MCP](docs/mcp.md).
-5. **Conheça os coletores** (opcional). As versões originais distribuídas com o app podem rodar sem aprovação adicional. Personalizações exigem revisão local de código e configuração; o agendamento é uma escolha separada. Scripts executam com as permissões da sua conta. Veja [docs/coletores.md](docs/coletores.md).
-6. **Abra no celular.** Siga [docs/tailscale.md](docs/tailscale.md).
+### Temas
+
+Sete temas, cada um com paletas e um estilo de capas próprio, em modo claro e escuro.
+As capas são cenas em pixel art desenhadas pelo navegador e animadas; também dá para
+usar uma imagem ou um vídeo seu.
+
+| Brasa | Maré | Noturno | Azul profundo |
+|---|---|---|---|
+| ![Brasa](docs/img/temas/brasa.png) | ![Maré](docs/img/temas/mare.png) | ![Noturno](docs/img/temas/noturno.png) | ![Azul profundo](docs/img/temas/azul.png) |
+| **Terminal** | **Luz** | **Luz (escuro)** | **Grafite** |
+| ![Terminal](docs/img/temas/terminal.png) | ![Luz](docs/img/temas/luz-claro.png) | ![Luz no modo escuro](docs/img/temas/luz-escuro.png) | ![Grafite](docs/img/temas/grafite.png) |
+
+Veja [Temas e aparência](docs/temas.md) para criar o seu.
 
 ## Como funciona
 
-```
+```text
 seu vault/
   AGENTS.md            as regras que todo agente lê
-  orquestra.yaml       nome, tema, backup
-  tarefas/             uma área (módulo)
-    _modulo.yaml       campos, status, visões
+  orquestra.yaml       nome, tema e preferências do painel
+  tarefas/             uma área
+    _modulo.yaml       campos, status e visões
     itens/             uma nota .md por tarefa
-    humano/            o que VOCÊ disse (agentes leem, não reescrevem)
-    maquina/           instruções e aprendizados dos agentes, coletores
-  Minhas Pastas/       qualquer pasta sua; vira área com um _modulo.yaml dentro
-  diario/              o que mudou e o que os agentes fizeram
+    humano/            o que você disse (agentes leem, não reescrevem)
+    maquina/           instruções, aprendizados e automações
+  diario/              o que mudou e quem mudou
   _orquestra/temas/    cores e capas
 ```
 
-Uma tarefa é só isto:
+Uma tarefa é só um arquivo:
 
 ```markdown
 ---
@@ -231,156 +156,63 @@ origem: humano
 Gravar o vídeo principal da semana.
 ```
 
-Você edita no painel, no Obsidian ou pede a um agente: é o mesmo arquivo. O painel
-confere a versão antes de gravar e avisa quando encontra uma alteração externa.
-Mudanças no disco atualizam os contadores e avisam quando há novidades na tela.
-Use **Atualizar** para abrir o conteúdo novo, preservando seu formulário até essa
-escolha.
-Em conflito, você pode copiar o rascunho ou salvá-lo como outra nota. Rascunhos
-pendentes também ficam neste navegador, separados por vault e por aba; armazenamento
-privado, quota ou limpeza do navegador podem impedir essa recuperação.
+O painel confere a versão antes de gravar, avisa quando o arquivo mudou por fora e
+guarda versões de recuperação em `~/.orquestra/recuperacao/`. Detalhes em
+[Histórico e backup](docs/backup.md).
 
-As gravações preservam versões de recuperação fora do vault, em
-`~/.orquestra/recuperacao/`. Isso reduz o risco de perder uma edição, mas não impede
-que outro programa sobrescreva um arquivo depois. Evite duas edições simultâneas
-da mesma nota e mantenha uma cópia externa. Veja [recuperação e backup](docs/backup.md).
-
-### Humano e máquina
-
-É a regra que mais importa. Em cada área:
-
-- `humano/` guarda o que você disse ou decidiu. Agentes leem sempre e nunca reescrevem.
-- `maquina/` guarda o que faz o sistema andar: instruções, scripts e os **aprendizados**.
-- Toda nota tem um campo `origem` (`humano`, `agente` ou `coletor`). Nota sem `origem` é sua.
-
-Sem isso, depois de algumas semanas ninguém sabe mais o que foi ideia sua e o que
-foi um resumo que a IA fez de uma ideia sua.
-
-### Agentes que melhoram a cada rodada
-
-Cada área tem um `maquina/aprendizados.md`. Todo agente lê antes de começar e
-acrescenta uma linha ao terminar, quando aprendeu algo que vale para a próxima vez:
-uma correção sua, o que rendeu, o que evitar. O trabalho deixa de se repetir igual.
-
-### Coletar é script, decidir é IA
-
-Buscar os vídeos novos de um canal não precisa de inteligência: um script pode
-fazer a coleta após sua aprovação. A IA entra depois, para dizer quais valem o seu tempo. Os coletores
-do Orquestra são scripts Python pequenos, que você pode ler e adaptar.
-
-O Orquestra não tenta substituir os conectores que os agentes já têm (e-mail,
-agenda, documentos). Quem faz a ação é o agente; o vault é onde fica o registro.
-
-## Comandos
-
-Rode dentro da pasta do aplicativo, onde estão `pyproject.toml` e `uv.lock`, depois
-de `uv sync --locked`. O vault fica em outra pasta. Para conferir os argumentos:
-
-```bash
-uv run --frozen orquestra --help
-uv run --frozen orquestra iniciar --help
-uv run --frozen orquestra confiar --help
-```
-
-| Comando | O que faz |
-|---|---|
-| `uv run --frozen orquestra` | Inicia o painel; na primeira vez, abre a escolha do vault |
-| `uv run --frozen orquestra iniciar --abrir` | Inicia e abre o navegador também nas próximas vezes |
-| `uv run --frozen orquestra iniciar --porta 8421` | Escolhe outra porta local para esta execução |
-| `uv run --frozen orquestra criar "PASTA NOVA" --perfil essencial --sem-exemplos` | Cria um vault essencial sem exemplos; omita `--sem-exemplos` para incluí-los |
-| `uv run --frozen orquestra adotar "PASTA EXISTENTE"` | Prepara uma pasta existente, preservando suas notas |
-| `uv run --frozen orquestra doctor` | Diagnostica instalação, vault, Git e acesso remoto disponível |
-| `uv run --frozen orquestra coletar radar` | Roda os coletores aprovados do Radar; omita `radar` para todos |
-| `uv run --frozen orquestra confiar coletor radar rss.py` | Mostra assinatura e arquivos do coletor para revisão local |
-| `uv run --frozen orquestra confiar backup` | Mostra configuração e destinos do histórico para revisão local |
-| `uv run --frozen orquestra backup --enviar` | Cria snapshot e envia ao remoto aprovado; omita `--enviar` para manter local |
-| `uv run --frozen orquestra mcp --vault "PASTA DO VAULT"` | Inicia MCP por stdio; o cliente MCP deve iniciar esse processo |
-| `uv run --frozen orquestra autostart ativar` | Configura o início automático; também aceita `status` e `desativar` |
-| `uv run --frozen orquestra iniciar --vault "OUTRO VAULT"` | Abre outro vault e passa a lembrá-lo como padrão |
-
-Os caminhos entre aspas são exemplos: substitua pelo caminho completo desejado.
-`--vault` seleciona o destino dos comandos existentes, como `doctor`, `mcp`,
-`coletar`, `backup` e `confiar`; em `criar` e `adotar`, o destino é o argumento
-posicional `caminho`. Os aliases `init` e `diagnostico` equivalem a `criar` e `doctor`.
-Não use `--vault` com `criar`/`init` ou `adotar`: esses comandos recusam a opção
-para evitar criar ou preparar uma pasta diferente da desejada.
-
-`autostart status` e `autostart desativar` funcionam mesmo se o vault anterior
-não existir mais. Em scripts, código de saída `0` indica conclusão sem erro,
-`1` indica falha de operação/diagnóstico e `2` indica argumentos inválidos.
-Avisos do `doctor` são mostrados no relatório e, sozinhos, não geram saída `1`.
-
-Consultar `confiar` não aprova execução. Leia os arquivos apresentados e repita o
-comando com `--assinatura HASH` usando a assinatura revisada. `--revogar` retira
-a autorização. As instruções completas estão nos guias de [coletores](docs/coletores.md)
-e [backup](docs/backup.md).
-
-Para trocar de vault com o painel aberto: Ajustes > Vault > Trocar de vault.
+**Com agentes:** abra o Claude Code ou o Codex na pasta do vault e peça "leia o
+AGENTS.md e processe a minha entrada". Para apps de conversa, use o
+[conector MCP](docs/mcp.md). Cada área tem um `maquina/aprendizados.md` que os
+agentes leem antes de começar e completam ao terminar.
 
 ## Documentação
 
-O [índice da documentação](docs/README.md) reúne os guias de uso e as referências
-para desenvolvimento. Consulte as mudanças no [changelog](CHANGELOG.md).
-
-| | |
+| Guia | Para quê |
 |---|---|
-| [Usar um vault que já existe](docs/vault-existente.md) | O que o painel cria, como as pastas viram áreas, estilos reconhecidos |
-| [Módulos](docs/modulos.md) | Áreas prontas, personalizar pela tela e a referência do `_modulo.yaml` |
-| [Conectar agentes](docs/agentes.md) | Claude Code, Codex, Gemini e o que pedir a eles |
-| [Conector MCP](docs/mcp.md) | O vault como ferramenta para apps de conversa |
-| [Celular com Tailscale](docs/tailscale.md) | Acesso remoto sem expor nada à internet |
-| [Temas e aparência](docs/temas.md) | Claro e escuro, cor de destaque, cantos, letra, capas e como criar um tema |
-| [Coletores](docs/coletores.md) | As automações gratuitas que vêm prontas e como escrever a sua |
-| [Agenda](docs/agenda.md) | Mês, semana, dia e lista; compromissos no vault e conexão iCal |
-| [Pomodoro e Hábitos](docs/foco-e-habitos.md) | Timer próprio e metas semanais com mapa de atividade |
-| [Experiência da comunidade](docs/experiencia-comunidade.md) | Primeiros passos, variáveis, GitHub, celular e limites das integrações |
-| [Histórico e backup](docs/backup.md) | Versões locais quando algo muda, envio diário, e como desfazer |
-| [Arquitetura](docs/arquitetura.md) | Como o código está organizado, para estudar ou contribuir |
+| [Vault existente](docs/vault-existente.md) | Usar suas notas sem reorganizar nada |
+| [Módulos](docs/modulos.md) | Áreas prontas, personalização e o `_modulo.yaml` |
+| [Temas e aparência](docs/temas.md) | Cores, capas, cenas e como criar um tema |
+| [Agentes](docs/agentes.md) e [MCP](docs/mcp.md) | Claude, Codex, Gemini e apps de conversa |
+| [Automações](docs/coletores.md) | As automações prontas e como escrever a sua |
+| [Pastas e links](docs/pastas.md) | Árvore, grafo e [verificação de links](docs/vinculos.md) |
+| [Agenda](docs/agenda.md) e [Pomodoro e hábitos](docs/foco-e-habitos.md) | Compromissos, iCal, foco e metas |
+| [Histórico e backup](docs/backup.md) | Versões locais, backup e como desfazer |
+| [Celular](docs/tailscale.md) | Acesso remoto com Tailscale |
+| [Comandos](docs/comandos.md) | Todos os comandos, início automático e remoção |
+
+O [índice completo](docs/README.md) reúne os demais guias. As mudanças ficam no
+[CHANGELOG](CHANGELOG.md).
 
 ## Segurança e privacidade
 
-- O painel **não tem senha** e escuta só no seu computador (`127.0.0.1`). Escolher ou trocar de vault e aprovar código exigem acesso local direto. Não publique a porta nem encaminhe localhost por um proxy público.
-- No celular, use **`tailscale serve`**. **Nunca** use `tailscale funnel` nem abra a porta no roteador.
-- Chaves de API ficam em `~/.orquestra/.env`, **fora** do vault; copie o [.env.example](.env.example) para esse destino se precisar. URLs privadas de calendários também são segredos. Mantenha o backup em repositório **privado** e confira [SECURITY.md](SECURITY.md).
+- O painel **não tem senha** e escuta só em `127.0.0.1`. Não publique a porta nem
+  encaminhe `localhost` por um proxy público.
+- No celular, use `tailscale serve`. **Nunca** `tailscale funnel` ou porta aberta no roteador.
+- Chaves de API e URLs privadas de calendário ficam em `~/.orquestra/.env`, fora do
+  vault. Mantenha o backup em repositório **privado**.
 
-## Compatibilidade
-
-Orquestra requer Python 3.11 ou superior e um navegador atual. A instalação com
-`uv` gerencia o ambiente Python. Os arquivos continuam disponíveis no Obsidian ou
-em qualquer editor Markdown, independentemente do painel.
-
-As áreas do painel usam pastas da raiz do vault. Subpastas, imagens, vídeos e
-arquivos HTML podem ser explorados em **Pastas**. Templates HTML são exibidos em
-uma prévia isolada, sem executar scripts ou enviar formulários.
-
-## Espaço de trabalho
-
-**Pastas** abre no grafo de ligações. A árvore lateral permanece disponível ao
-ler notas e arquivos; use **Notas** para navegar pela lista. O grafo aceita zoom,
-arraste e centralização automática.
-
-![Explorador e grafo de notas](docs/img/pastas.png)
-
-Em **Ajustes → Aparência**, escolha entre Brasa, Maré, Noturno, Azul profundo,
-Terminal, Luz e Grafite. Personalize fontes, cores e cantos. Cada área pode ter
-sua própria cena animada, imagem ou vídeo em **Personalizar pasta**.
-
-![Personalização de uma área](docs/img/personalizar.png)
+Para relatar uma vulnerabilidade, veja [SECURITY.md](SECURITY.md).
 
 ## Contribuir
 
-O código é comentado em português e feito para ser lido. Comece pelo
-[CONTRIBUTING.md](CONTRIBUTING.md) e por [docs/arquitetura.md](docs/arquitetura.md).
+Issues e pull requests são bem-vindos. O código é comentado em português e feito
+para ser lido: comece pelo [CONTRIBUTING.md](CONTRIBUTING.md) e pela
+[arquitetura](docs/arquitetura.md).
 
 ```bash
 uv sync --locked
-uv run --frozen python -m pytest
+uv run --frozen python -m pytest -q
 uv run --frozen ruff check src tests scripts .github/scripts
-node --test tests/js/*.test.cjs
 ```
 
-Ideias, problemas e módulos novos são bem-vindos nas issues.
+## Créditos
+
+O Orquestra começou com o **Claude Fable 5.2**, cresceu em parceria com o
+**GPT 6.1 Sol** e ganhou temas, capas e acabamento com o **Claude Opus 5.5**,
+sempre com o **Antonio Garcia** na direção.
+
+Feito com carinho por Antonio Garcia, Claude Fable 5.2, GPT 6.1 Sol e Claude Opus 5.5 · **AG LABS**.
 
 ## Licença
 
-[MIT](LICENSE). Use, modifique e distribua à vontade.
+[MIT](LICENSE): use, modifique e distribua à vontade.

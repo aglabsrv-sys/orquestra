@@ -1,1 +1,6 @@
-body { padding:0; } body > .topo, body > .dock, body > .carrossel { display:none; } #ambiente { display:none; } .nota { margin:0; max-width:none; padding:24px; }
+body { padding:0; min-height:0; } body > .topo, body > .dock, body > .carrossel { display:none; } #ambiente { display:none; } .nota { margin:0; max-width:none; padding:clamp(16px,3vw,28px); }
+.nota .texto { max-width:78ch; width:100%; margin-inline:auto; min-height:0; }
+.nota .editor { min-height:0; }
+.nota-cabecalho { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; }
+.nota-cabecalho .nota-titulo { font-size:clamp(20px,2.7vw,30px); min-height:40px; }
+@media(max-width:600px) { .nota-cabecalho { grid-template-columns:minmax(0,1fr); gap:6px; } .nota-cabecalho .nota-acoes { justify-content:flex-end; } }

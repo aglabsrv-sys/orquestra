@@ -3,6 +3,8 @@
 {% block titulo %}{{ nota.titulo }}{% endblock %}
 {% block trilha %}{% if modulo and zona %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a>{% else %}<a href="{{ url_pasta(pasta) }}">{{ pasta or 'Pastas' }}</a>{% endif %}{% endblock %}
 {% block observa %}nota:{{ nota.rel }}{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/editor-inline.css?v={{ marca }}">{% endblock %}
+{% block scripts %}<script src="/static/js/editor-inline.js?v={{ marca }}"></script>{% endblock %}
 
 {% block conteudo %}
 <div class="faixa alerta recuperacao-nota" id="faixa-conflito" role="status" hidden>
@@ -36,9 +38,9 @@
     <input class="nota-titulo" id="nota-titulo" value="{{ nota.titulo }}" aria-label="Título da nota" aria-describedby="estado-salvo" maxlength="500"{% if nota.erro %} disabled{% endif %}>
     <div class="nota-acoes">
       {% if not nota.erro %}
-      <button class="botao pequeno" type="button" id="editar">{{ icone('editar', 15) }}<span>Editar</span></button>
-      <button class="botao principal" type="button" id="salvar" title="Salvar texto (Ctrl+S ou Cmd+S)" hidden>Salvar texto</button>
-      <button class="botao" type="button" id="cancelar" hidden>Cancelar</button>
+      <button class="botao pequeno so-icone" type="button" id="editar" aria-label="Editar nota" title="Editar nota">{{ icone('editar', 15) }}</button>
+      <button class="botao pequeno so-icone principal" type="button" id="salvar" aria-label="Salvar texto" title="Salvar texto (Ctrl+S ou Cmd+S)" hidden><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+      <button class="botao pequeno so-icone" type="button" id="cancelar" aria-label="Cancelar edição" title="Cancelar edição" hidden>{{ icone('x', 15) }}</button>
       {% endif %}
       <a class="botao pequeno so-icone" aria-label="Abrir no Obsidian" href="{{ link_obsidian }}" title="Abrir este arquivo no Obsidian">{{ icone('externo', 15) }}</a>
       {% if modulo and zona in ("itens", "humano") %}
@@ -76,7 +78,9 @@
     {% if campo_imagem and not nota.erro %}<div class="nota-anexo"><label class="botao pequeno discreto" title="Arraste ou cole uma imagem na nota">{{ icone('mais', 14) }} Imagem<input type="file" id="nota-anexo" accept="image/png,image/jpeg,image/webp" class="somente-leitor"></label><span class="campo-ajuda" id="anexo-estado" role="status">Arraste ou cole uma imagem aqui.</span></div>{% endif %}
     {% if imagem %}<img class="nota-imagem" src="{{ imagem }}" alt="Criativo da nota">{% endif %}
     <div class="texto" id="ver" tabindex="0" title="Clique duas vezes para editar" aria-label="Texto da nota. Clique duas vezes ou pressione Enter para editar.">{% if nota.corpo.strip() %}{{ html }}{% else %}<p class="suave">Clique duas vezes para começar a escrever.</p>{% endif %}</div>
-    <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" aria-describedby="estado-salvo" maxlength="1000000" hidden spellcheck="true">{{ nota.corpo }}</textarea>
+    {# O parser HTML remove o primeiro LF de textarea; este LF pertence ao template. #}
+    <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" aria-describedby="estado-salvo" maxlength="1000000" hidden spellcheck="true">
+{{ nota.corpo }}</textarea>
   </div>
 
 

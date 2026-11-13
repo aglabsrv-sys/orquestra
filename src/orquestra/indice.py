@@ -47,6 +47,8 @@ class Indice:
         self.modulos: dict[str, Modulo] = {}
         self.notas: dict[str, Nota] = {}
         self.midias: dict[str, str] = {}  # nome do arquivo em minúsculas -> caminho relativo
+        self.arquivos: set[str] = set()  # existência de anexos, inclusive sem prévia
+        self.revisao = 0
         self._assinaturas: dict[str, tuple[int, int, int]] = {}
         self._links: dict[str, set[str]] = {}
         self._zonas: dict[tuple[str, str], dict[str, Nota]] = {}
@@ -59,8 +61,12 @@ class Indice:
         self.recarregar_modulos()
         self.notas = {}
         self.midias = {}
+        self.arquivos = set()
+        self._referencias_vinculos = {}
+        self._ancoras_vinculos = {}
         self._assinaturas = {}
         for rel, caminho, info in arquivos_do_vault(self.vault):
+            self.arquivos.add(rel)
             if caminho.suffix.lower() == ".md":
                 try:
                     self.notas[rel] = ler_nota(caminho, self.vault, somente_indice=True)
@@ -70,6 +76,7 @@ class Indice:
             elif caminho.suffix.lower() in EXT_MIDIA:
                 self.midias[caminho.name.lower()] = rel
         self._reindexar()
+        self.revisao += 1
 
     def recarregar_modulos(self) -> None:
         novos = descobrir(self.vault)
@@ -132,8 +139,10 @@ class Indice:
             self.recarregar_modulos()
             self._schemas = schemas
         vistos: set[str] = set()
+        arquivos: set[str] = set()
         self.midias = {}
         for rel, caminho, info in arquivos_do_vault(self.vault):
+            arquivos.add(rel)
             if caminho.suffix.lower() in EXT_MIDIA:
                 self.midias[caminho.name.lower()] = rel
             if caminho.suffix.lower() != ".md":
@@ -145,6 +154,10 @@ class Indice:
         for rel in [r for r in self.notas if r not in vistos]:
             self._remover_consultas(rel, self.notas.pop(rel))
             self._assinaturas.pop(rel, None)
+            self.revisao += 1
+        if arquivos != self.arquivos:
+            self.arquivos = arquivos
+            self.revisao += 1
 
     def atualizar(self, caminho: Path) -> Mudanca | None:
         """Relê um arquivo que mudou no disco. Devolve o que mudou (ou None)."""
@@ -155,6 +168,13 @@ class Indice:
             return None
         if deve_ignorar(rel):
             return None
+        existia = rel in self.arquivos
+        if caminho.is_file():
+            self.arquivos.add(rel)
+        else:
+            self.arquivos.discard(rel)
+        if existia != (rel in self.arquivos):
+            self.revisao += 1
         sufixo = caminho.suffix.lower()
         if sufixo in EXT_MIDIA:
             if caminho.is_file():
@@ -172,6 +192,9 @@ class Indice:
             del self.notas[rel]
             self._remover_consultas(rel, antes)
             self._assinaturas.pop(rel, None)
+            self.revisao += 1
+            getattr(self, "_referencias_vinculos", {}).pop(rel, None)
+            getattr(self, "_ancoras_vinculos", {}).pop(rel, None)
             return Mudanca("removido", rel, antes, None)
         try:
             for _tentativa in range(3):
@@ -193,6 +216,7 @@ class Indice:
         if antes:
             self._remover_consultas(rel, antes)
         self.notas[rel] = depois
+        self.revisao += 1
         self._adicionar_consultas(rel, depois)
         return Mudanca("editado" if antes else "criado", rel, antes, depois)
 
@@ -315,14 +339,18 @@ class Indice:
                 no_corpo.append(nota)
         return (no_titulo + no_corpo)[:limite]
 
-    def resolver_link(self, nome: str) -> str | None:
+    def referencias_de(self, rel: str):
+        from orquestra.vinculos import referencias_da_nota
+        return referencias_da_nota(self, rel)
+
+    def resolver_referencia(self, referencia, origem: str = "", *, tipo: str = "wiki"):
+        from orquestra.vinculos import resolver_referencia
+        return resolver_referencia(self, referencia, origem, tipo=tipo)
+
+    def resolver_link(self, nome: str, origem: str = "") -> str | None:
         """Resolve um [[wikilink]] do Obsidian para o caminho relativo da nota."""
-        alvo = nome.strip().lower().removesuffix(".md")
-        encontrados = self._links.get(alvo, set())
-        if len(encontrados) == 1:
-            return next(iter(encontrados))
-        # Um link pelo caminho completo é inequívoco; nomes repetidos não levam à nota errada.
-        return next((r for r in encontrados if r.lower().removesuffix(".md") == alvo), None)
+        resolucao = self.resolver_referencia(nome, origem)
+        return resolucao.rel if resolucao.estado in {"valido", "ancora_ausente"} and resolucao.rel in self.notas else None
 
 
 def espera_decisao(nota: Nota, modulo: Modulo) -> bool:
@@ -331,6 +359,8 @@ def espera_decisao(nota: Nota, modulo: Modulo) -> bool:
     - o status dela está na lista `decidir` do módulo (ex.: item recém-coletado);
     - um agente deixou uma `pergunta` no frontmatter, esperando resposta humana.
     """
+    if str(nota.campo(modulo.campo_status) or "") in modulo.concluidos:
+        return False
     if str(nota.meta.get("pergunta") or "").strip():
         return True
     return str(nota.campo(modulo.campo_status) or "") in modulo.decidir

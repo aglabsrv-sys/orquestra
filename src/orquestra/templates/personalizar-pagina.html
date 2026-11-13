@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "partes.html" as p %}
+{% block titulo %}Personalizar {{ nome_pagina }}{% endblock %}
+{% block trilha %}<a href="/{{ alvo }}">{{ nome_pagina }}</a>{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/pagina-personalizar.css?v={{ marca }}">{% endblock %}
+{% block conteudo %}
+<section class="pagina personalizar-pagina" data-alvo="{{ alvo }}" data-versao="{{ config_versao }}">
+  <header class="pagina-topo"><div><span class="sobretitulo">{{ nome_pagina }}</span><h1>Personalizar página</h1></div><div class="linha-botoes sem-topo"><a class="botao discreto" href="/{{ alvo }}">Cancelar</a><button class="botao principal" type="submit" form="pagina-aparencia">Salvar alterações</button></div></header>
+  <form id="pagina-aparencia">
+    <fieldset class="pagina-capa-opcoes"><legend>Capa</legend>
+      <label><input type="radio" name="escolha" value="tema"{% if escolha is none %} checked{% endif %}><span>Do tema <small>{{ tema.nome }}</small></span></label>
+      <label><input type="radio" name="escolha" value="ocultar"{% if escolha is sameas false %} checked{% endif %}><span>Sem capa</span></label>
+      {% if escolha and escolha is string and escolha not in colecao|map(attribute='url')|list %}<label><input type="radio" name="escolha" value="arquivo:{{ escolha }}" checked><span>Capa atual</span></label>{% endif %}
+    </fieldset>
+    <details class="pagina-capa-grupo"{% if escolha is mapping %} open{% endif %}><summary>Cenas animadas</summary><div class="pagina-capas-grade">
+      {% for c in cenas %}<label><input type="radio" name="escolha" value="cena:{{ c.cena }}"{% if escolha is mapping and escolha.get('cena') == c.cena %} checked{% endif %}>{{ p.capa(c) }}<span>{{ nome_cena(c.cena) }}</span></label>{% endfor %}
+    </div></details>
+    <details class="pagina-capa-grupo"{% if escolha is string %} open{% endif %}><summary>Imagens e vídeos</summary><div class="pagina-capas-grade">
+      {% for c in colecao %}<label><input type="radio" name="escolha" value="arquivo:{{ c.url }}"{% if escolha == c.url %} checked{% endif %}>{% if c.tipo == 'video' %}<video class="capa midia" src="{{ c.url }}" muted loop playsinline preload="metadata" aria-hidden="true"></video>{% else %}<img class="capa midia" src="{{ c.url }}" alt="" loading="lazy">{% endif %}<span>{{ c.nome }}{% if c.tipo == 'video' %} · vídeo{% endif %}</span></label>{% endfor %}
+    </div></details>
+    <div class="pagina-capa-enviar"><label class="botao"><span>{{ icone('mais', 15) }} Enviar imagem ou vídeo</span><input type="file" id="pagina-capa-arquivo" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" class="somente-leitor"></label><small class="suave">Até 2 MB</small></div>
+    <p class="campo-ajuda" id="pagina-capa-estado" role="status">As mudanças entram em vigor ao salvar.</p>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/js/pagina-personalizar.js?v={{ marca }}"></script>{% endblock %}

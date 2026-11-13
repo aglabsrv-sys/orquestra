@@ -87,7 +87,7 @@ cenas: [janela, deserto, cidade, montanhas, floresta, mar, ceu, espaco]
 # para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
 # representa o tema na tela de escolha.
 capas:
-  boas-vindas: {cena: janela, paleta: brasa}
+  boas-vindas: {cena: janela, paleta: poente}
   tarefas: {cena: janela, paleta: poente}
   conteudo: {cena: cidade, paleta: brasa}
   radar: {cena: espaco, paleta: cobre}

@@ -5,10 +5,10 @@
 {% block observa %}tudo{% endblock %}
 
 {% block conteudo %}
-<section class="pagina">
+<section class="pagina decidir-pagina">
   <header class="pagina-topo">
-    <h1>{{ "Aprovação de criativos" if aprovacao else "Para decidir" }}</h1>
-    <p class="suave">{% if total %}{{ total }} {{ 'item espera' if total == 1 else 'itens esperam' }} uma resposta sua.{% else %}Nada esperando por você.{% endif %}</p>
+    <div><h1>{{ "Aprovação de criativos" if aprovacao else "Para decidir" }}</h1><p class="suave">{% if total %}{{ total }} {{ 'item espera' if total == 1 else 'itens esperam' }} uma resposta sua.{% else %}Nada esperando por você.{% endif %}</p></div>
+    <a class="botao pequeno so-icone" href="/personalizar/decidir" title="Capa de Decidir no Início" aria-label="Personalizar capa de Decidir no Início">{{ icone('paleta', 17) }}</a>
   </header>
 
   {% for g in grupos %}
@@ -32,7 +32,7 @@
     {% endfor %}
   </div>
   {% else %}
-  {{ p.vazio("Nenhum criativo em aprovação" if aprovacao else "Tudo decidido", "Os criativos enviados para aprovação aparecem aqui com uma prévia." if aprovacao else "Quando um coletor trouxer novidades ou um agente precisar da sua aprovação, aparece aqui.") }}
+  {{ p.vazio("Nenhum criativo em aprovação" if aprovacao else "Tudo decidido", "Os criativos enviados para aprovação aparecem aqui com uma prévia." if aprovacao else "Quando uma automação trouxer novidades ou um agente precisar da sua aprovação, aparece aqui.") }}
   {% endfor %}
   {{ p.paginar(paginacao|default(none)) }}
 </section>

@@ -9,6 +9,20 @@ do computador.
 | Recuperação de gravações | Conteúdo anterior e proposta de cada edição feita pelo Orquestra | `~/.orquestra/recuperacao/` ou `ORQUESTRA_HOME/recuperacao/` |
 | Snapshots Git | Arquivos do vault em momentos escolhidos | Referência local `refs/orquestra/backups`; cópia remota opcional |
 
+## Sincronização opcional
+
+O backup Git do Orquestra cria versões recuperáveis e pode enviá-las ao remoto.
+Ele não faz `pull` nem sincronização bidirecional do diretório de trabalho.
+
+Em **Ajustes → Backup → Sincronização opcional**, há acessos ao Syncthing, ao
+Obsidian Sync e ao acesso remoto pelo celular. Nenhum sincronizador é instalado,
+ativado ou configurado automaticamente. O acesso pelo Tailscale usa o mesmo cofre
+no computador onde o serviço está aberto e não oferece cópia offline no celular.
+
+Ao usar um sincronizador, escolha um por cofre e configure nele a exclusão de
+`.git`, credenciais e arquivos temporários/estado específicos de cada aparelho.
+Mantenha o backup: a sincronização também pode propagar exclusões e conflitos.
+
 ## Com Obsidian aberto
 
 O painel usa a versão lida do arquivo como pré-condição, coordena suas próprias

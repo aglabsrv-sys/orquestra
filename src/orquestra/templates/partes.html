@@ -78,3 +78,8 @@
 </nav>
 {% endif %}
 {% endmacro %}
+
+{# Uma cor por modo: o CSS usa a do modo em uso (--modo-claro vem do estilo do tema, 1 no claro). #}
+{% macro duo(escuro, claro) -%}
+color-mix(in srgb, {{ claro }} calc(var(--modo-claro, 0) * 100%), {{ escuro }})
+{%- endmacro %}

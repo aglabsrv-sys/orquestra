@@ -96,10 +96,13 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     assert page.locator(".bv-perfil").count() == 3
     page.locator("#bv-proximo").click()
     capa_inicial = page.locator('.bv-capa canvas').get_attribute('data-paleta')
+    page.locator("#bv-escolher-tema").click()
     page.locator('.bv-tema:has(input[value="mare"])').click()
+    page.locator("#bv-temas-usar").click()
     assert page.locator('.bv-capa canvas').get_attribute('data-paleta') != capa_inicial
-    page.locator('#bv-cena').select_option('orbital')
-    page.locator('#bv-fonte').select_option('sistema')
+    # A capa acompanha o tema; controles visuais preservam os valores do formulário.
+    expect(page.locator('#bv-cena')).to_have_value('')
+    page.locator('[data-visual="bv-fonte"][data-valor="sistema"]').click()
     expect(page.locator("#bv-destaque")).to_have_value("#ff9d8a", timeout=15000)
     assert page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--fundo').trim()") == "#081a1b"
     if capturas:
@@ -140,6 +143,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     else:
         raise AssertionError('As notas de demonstração não chegaram ao índice.')
     page.goto(base + "/pastas/Est%C3%BAdio", wait_until="domcontentloaded")
+    page.locator('[data-pasta-visao="grafo"]').click()
     expect(page.locator('#grafo-estado')).to_contain_text('2 notas')
     expect(page.locator('#pasta-grafo')).to_be_visible()
     page.locator('#arvore-pastas a.arvore-nota').filter(has_text='Projeto').click()
@@ -161,7 +165,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
 
     page.goto(base + "/pastas", wait_until="domcontentloaded")
     page.locator('#arvore-pastas a[data-pasta="tarefas"]').click()
-    expect(page.locator('#pasta-painel')).to_have_attribute('data-rel', 'tarefas')
+    expect(page.locator('#arvore-pastas details[data-rel="tarefas"]')).to_have_attribute('open', '')
+    expect(page.locator('#pasta-painel')).to_have_attribute('data-rel', '')
     page.locator('[data-pasta-visao="grafo"]').click()
     expect(page.locator('#grafo-estado')).to_contain_text('notas')
 
@@ -185,6 +190,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
              "/m/conteudo", "/m/numeros", "/m/radar", "/m/entrada", "/ajustes", "/m/tarefas/personalizar",
              "/buscar?q=vídeo", "/pastas", "/decidir", "/diario", "/agenda", "/agenda?visao=semana",
              "/agenda?visao=dia", "/agenda?visao=lista", "/foco", "/m/habitos",
+             "/personalizar/diario", "/personalizar/decidir", "/personalizar/pastas",
              *["/ajustes/" + s for s in ("painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis")])
     for largura in (1440, 390, 320):
         page.set_viewport_size({"width": largura, "height": 900})
@@ -192,9 +198,10 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
             resposta = page.goto(base + rota, wait_until="domcontentloaded")
             assert resposta.status == 200, rota
             conferir_layout(page)
-            if capturas and largura != 320 and rota in ("/", "/m/tarefas", "/m/conteudo", "/ajustes", "/pastas", "/m/tarefas/personalizar"):
+            nomes_captura = {"/": "inicio", "/m/tarefas": "tarefas", "/m/conteudo": "conteudo", "/ajustes": "ajustes", "/pastas": "pastas", "/m/tarefas/personalizar": "personalizar", "/decidir": "decidir", "/diario": "diario", "/ajustes/variaveis": "segredos", "/ajustes/aparencia": "aparencia", "/personalizar/diario": "personalizar-diario"}
+            if capturas and largura != 320 and rota in nomes_captura:
                 page.wait_for_timeout(220)
-                nome = {"/": "inicio", "/m/tarefas": "tarefas", "/m/conteudo": "conteudo", "/ajustes": "ajustes", "/pastas": "pastas", "/m/tarefas/personalizar": "personalizar"}[rota]
+                nome = nomes_captura[rota]
                 page.screenshot(path=str(capturas / f"{nome}{'-mobile' if largura == 390 else ''}.png"), full_page=True)
         page.goto(base + "/m/tarefas", wait_until="domcontentloaded")
         if largura < 700:
@@ -329,7 +336,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     for numero in range(100):
         (vault / "tarefas/itens" / f"Volume {numero:03}.md").write_text("---\nstatus: a_fazer\n---\n", encoding="utf-8")
     page.wait_for_timeout(1700)
-    page.goto(base + "/m/tarefas", wait_until="domcontentloaded")
+    page.goto(base + "/m/tarefas?aba=v0", wait_until="domcontentloaded")
     coluna = page.locator('.coluna[data-valor="a_fazer"]')
     total = int(coluna.locator(".conta").inner_text())
     assert total > 80
@@ -439,6 +446,17 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         if capturas:
             nome = urlsplit(page.url).path.strip("/").replace("/", "-")
             page.screenshot(path=str(capturas / f"{nome}-claro-fonte-grande-320.png"), full_page=True)
+
+    for tamanho, pixels in (("xl", "20px"), ("xxl", "22px")):
+        page.goto(base + "/ajustes/aparencia", wait_until="domcontentloaded")
+        with page.expect_response(lambda r: r.url.endswith("/api/config")) as tamanho_salvo:
+            page.locator(f'[data-visual="tamanho"][data-valor="{tamanho}"]').click()
+        assert tamanho_salvo.value.status == 200
+        for rota in ("/agenda?visao=semana", "/m/habitos", "/foco"):
+            page.goto(base + rota, wait_until="domcontentloaded")
+            conferir_layout(page)
+            assert page.evaluate("getComputedStyle(document.documentElement).fontSize") == pixels
+            assert page.locator("html").get_attribute("data-tamanho") == tamanho
 
     page.goto(base, wait_until="domcontentloaded")
     page.wait_for_timeout(350)

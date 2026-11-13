@@ -45,4 +45,4 @@ Não foram alterados vaults pessoais, conectadas contas externas ou publicada um
 A integração iCal conserva os limites anteriores: somente leitura, sem RRULE completo
 e sem sincronização bidirecional.
 
-Uso e modelo de dados: [Agenda](agenda.md).
+Uso e modelo de dados: [Agenda](../agenda.md).

@@ -931,7 +931,7 @@ body.bv { padding-bottom: 40px; }
 .confirmacao p { line-height: 1.65; overflow-wrap: anywhere; }
 .dica-tecla { margin-right: auto; font-size: 12px; display: none; }
 
-#avisos { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 40; display: grid; gap: 10px; transform: translateX(-50%); width: min(460px, calc(100vw - 24px)); max-height: min(60dvh, 520px); overflow-y: auto; padding: 4px; pointer-events: none; }
+#avisos { position: fixed; right: max(20px,env(safe-area-inset-right)); bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 40; display: grid; gap: 8px; width: min(360px, calc(100vw - 24px)); max-height: min(60dvh, 520px); overflow-y: auto; padding: 4px; pointer-events: none; }
 .aviso {
   display: flex;
   align-items: flex-start;

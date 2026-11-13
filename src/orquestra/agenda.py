@@ -12,7 +12,7 @@ import asyncio
 import datetime as dt
 import logging
 
-from orquestra import backup, coletores, confianca
+from orquestra import automacoes, backup, coletores, confianca
 from orquestra.painel import Painel
 
 INTERVALO = 30  # segundos entre verificações
@@ -45,6 +45,13 @@ async def verificar(painel: Painel, agora: dt.datetime | None = None) -> None:
                 resultado = await painel.rodar_coletor(modulo, coletor)
                 if not resultado.ok:
                     registro.warning("Coletor %s/%s falhou: %s", modulo.id, coletor.script, resultado.erro)
+
+    # ---- automações independentes dos modelos de pasta
+    try:
+        await automacoes.verificar(painel, agora)
+    except Exception:
+        # Uma configuração opcional inválida nunca pode suspender o backup Git.
+        registro.exception("Não consegui verificar as automações independentes; o backup continuará normalmente.")
 
     # ---- backup
     cfg = painel.config.backup

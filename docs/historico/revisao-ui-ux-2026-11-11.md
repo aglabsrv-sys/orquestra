@@ -25,11 +25,11 @@ A paleta de apresentação ajusta textos, links e cores de estado nas superfíci
 
 Isso valida os pares de cores testados; não representa certificação de conformidade de todas as telas, imagens ou temas personalizados.
 
-![Formulário no modo escuro](img/formulario-refinado.png)
+![Formulário no modo escuro](../img/formulario-refinado.png)
 
-![Confirmação de descarte](img/confirmacao-refinada.png)
+![Confirmação de descarte](../img/confirmacao-refinada.png)
 
-![Erro dentro do modal em tela pequena](img/erro-formulario-celular.png)
+![Erro dentro do modal em tela pequena](../img/erro-formulario-celular.png)
 
 ## Verificação executada
 

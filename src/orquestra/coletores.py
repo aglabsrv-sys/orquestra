@@ -116,6 +116,24 @@ def _ocultar(texto: str, segredos: dict[str, str]) -> str:
     return texto
 
 
+def _falha_sem_itens(stderr: bytes) -> str:
+    """Diagnósticos dos coletores distribuídos não viram sucesso com zero itens.
+
+    O retorno é uma mensagem fechada: os diagnósticos podem conter endereços de
+    feeds privados ou parâmetros da fonte. Avisos do interpretador/uv não contam.
+    """
+    linhas = stderr.decode("utf-8", errors="replace").splitlines()
+    prefixos = ("Falha em ", "Não consegui ler ", "Não achei o canal ", "Não entendi ",
+                "Diga quais moedas ", "Sem cotação para ")
+    if not any(linha.startswith(prefixos) for linha in linhas):
+        return ""
+    if any("excede o limite de 8 MB" in linha for linha in linhas):
+        return "A resposta da fonte excede o limite de 8 MB."
+    if any(linha.startswith("Não entendi ") for linha in linhas):
+        return "Confira a regra no campo Quando da tarefa recorrente."
+    return "Não consegui consultar as fontes. Confira a configuração e tente novamente."
+
+
 def _job_windows(processo: subprocess.Popen):
     """Job Object mata os descendentes ao fechar; não é isolamento de permissões.
 
@@ -338,7 +356,8 @@ def _rodar_autorizado(vault: Path, modulo: Modulo, coletor: ColetorDef, cancelam
             if len(itens) >= LIMITE_ITENS:
                 return [], "O coletor excedeu 2.000 itens. Reduza a quantidade por execução."
             itens.append(item)
-    return ([], "A execução foi interrompida porque o vault foi fechado.") if cancelamento.is_set() else (itens, "")
+    erro_fontes = _falha_sem_itens(stderr) if not itens else ""
+    return ([], "A execução foi interrompida porque o vault foi fechado.") if cancelamento.is_set() else (itens, erro_fontes)
 
 
 def _campos_do_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -347,18 +366,19 @@ def _campos_do_item(item: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in item.items() if k not in CHAVES_RESERVADAS}
 
 
-def _nota_para_atualizar(indice: Indice, modulo: Modulo, id_externo: str, titulo: str) -> Nota | None:
+def _nota_para_atualizar(indice: Indice, modulo: Modulo, id_externo: str, titulo: str, *, escopo_pasta: bool = False) -> Nota | None:
     """Acha a nota que um item com "atualizar" deve completar: pelo id ou pelo nome do arquivo."""
     prefixo = modulo.id + "/"
     for rel, nota in indice.notas.items():
-        if rel.startswith(prefixo) and str(nota.meta.get("id_externo") or "") == id_externo:
+        pertence = nota.caminho.parent == modulo.pasta_itens if escopo_pasta else rel.startswith(prefixo)
+        if pertence and str(nota.meta.get("id_externo") or "") == id_externo:
             caminho = caminho_no_vault(indice.vault, nota.caminho)
             return ler_nota(caminho, indice.vault) if caminho.is_file() else None
     caminho = caminho_no_vault(indice.vault, modulo.pasta_itens / f"{nome_de_arquivo(titulo)}.md")
     return ler_nota(caminho, indice.vault) if caminho.is_file() else None
 
 
-def _atualizar(nota: Nota, modulo: Modulo, coletor: ColetorDef, item: dict[str, Any], id_externo: str) -> bool:
+def _atualizar(nota: Nota, modulo: Modulo, coletor: ColetorDef, item: dict[str, Any], id_externo: str, *, preservar_campos: bool = False, rastreio_fonte: str = "") -> bool:
     """Completa dados sem tomar posse de campos que a pessoa já preencheu.
 
     Depois da primeira coleta, só campos ainda iguais ao último valor coletado
@@ -369,8 +389,17 @@ def _atualizar(nota: Nota, modulo: Modulo, coletor: ColetorDef, item: dict[str, 
     vinculos = nota.meta.get("_orquestra_coleta", CommentedMap())
     if not isinstance(vinculos, dict):
         return False  # não substitui metadado existente com formato desconhecido
-    chave = f"{modulo.id}/{coletor.script}"
+    prefixo_chave = f"{modulo.id}/{coletor.script}"
+    chave = prefixo_chave + (":fonte=" + rastreio_fonte if rastreio_fonte else "")
     rastreio = vinculos.get(chave, CommentedMap())
+    if not rastreio and rastreio_fonte:
+        # A mesma instância pode trocar a configuração após novo aceite. Uma
+        # instância recriada só retoma valores de uma fonte comprovadamente igual.
+        candidatos = [v for k, v in vinculos.items() if isinstance(k, str) and k.startswith(prefixo_chave + ":fonte=") and isinstance(v, dict)]
+        if not candidatos:
+            candidatos = [v for k, v in vinculos.items() if isinstance(k, str) and k.endswith(":fonte=" + rastreio_fonte) and isinstance(v, dict)]
+        if candidatos:
+            rastreio = CommentedMap(candidatos[-1])
     if not isinstance(rastreio, dict):
         return False
     protegida = str(nota.meta.get("origem") or "humano") != "coletor"
@@ -388,14 +417,20 @@ def _atualizar(nota: Nota, modulo: Modulo, coletor: ColetorDef, item: dict[str, 
         atual = nota.meta.get(nome)
         vazio = atual in (None, "", [])
         da_coleta = nome in rastreio and atual == rastreio[nome]
-        if protegida and not (vazio or da_coleta):
+        if (protegida or preservar_campos) and not (vazio or da_coleta):
             continue
         if convertido is not None and atual != convertido:
             nota.meta[nome] = convertido
             rastreio[nome] = convertido
             mudou = True
+        elif rastreio_fonte and chave not in vinculos and da_coleta and convertido is not None:
+            mudou = True  # registra a retomada da mesma fonte sem mudar o valor
     if not mudou:
         return False
+    if rastreio_fonte:
+        for antiga in list(vinculos):
+            if isinstance(antiga, str) and antiga.startswith(prefixo_chave + ":fonte=") and antiga != chave:
+                del vinculos[antiga]
     vinculos[chave] = rastreio
     nota.meta["_orquestra_coleta"] = vinculos
     nota.meta.setdefault("id_externo", id_externo)
@@ -404,9 +439,11 @@ def _atualizar(nota: Nota, modulo: Modulo, coletor: ColetorDef, item: dict[str, 
     return True
 
 
-def importar(indice: Indice, modulo: Modulo, coletor: ColetorDef, itens: list[dict[str, Any]]) -> tuple[list[Nota], int]:
+def importar(indice: Indice, modulo: Modulo, coletor: ColetorDef, itens: list[dict[str, Any]], *, escopo_pasta: bool = False, rastreio_fonte: str = "") -> tuple[list[Nota], int]:
     """Transforma itens coletados em notas. Devolve (notas criadas, quantos já existiam)."""
-    conhecidos = indice.ids_externos(modulo.id)
+    conhecidos = ({str(n.meta["id_externo"]) for n in indice.notas.values()
+                   if n.caminho.parent == modulo.pasta_itens and n.meta.get("id_externo")}
+                  if escopo_pasta else indice.ids_externos(modulo.id))
     criadas: list[Nota] = []
     repetidos = 0
     for item in itens:
@@ -415,9 +452,9 @@ def importar(indice: Indice, modulo: Modulo, coletor: ColetorDef, itens: list[di
         if item.get("atualizar"):
             # Item que representa um estado (os números de hoje, por exemplo): se a nota
             # já existe, completamos os campos em vez de criar outra ou ignorar.
-            existente = _nota_para_atualizar(indice, modulo, id_externo, titulo)
+            existente = _nota_para_atualizar(indice, modulo, id_externo, titulo, escopo_pasta=escopo_pasta)
             if existente is not None:
-                if _atualizar(existente, modulo, coletor, item, id_externo):
+                if _atualizar(existente, modulo, coletor, item, id_externo, preservar_campos=escopo_pasta, rastreio_fonte=rastreio_fonte):
                     criadas.append(existente)
                 else:
                     repetidos += 1
@@ -452,6 +489,10 @@ def importar(indice: Indice, modulo: Modulo, coletor: ColetorDef, itens: list[di
         meta["coletor"] = Path(coletor.script).stem
         meta["id_externo"] = id_externo
         meta["coletado_em"] = dt.date.today()
+        if escopo_pasta and item.get("atualizar"):
+            chave = f"{modulo.id}/{coletor.script}" + (":fonte=" + rastreio_fonte if rastreio_fonte else "")
+            meta["_orquestra_coleta"] = {chave: {nome: meta[nome] for nome in _campos_do_item(item)
+                                                 if nome in meta and nome not in CAMPOS_DE_CONTROLE}}
 
         corpo = str(item.get("corpo") or "").strip()
         pasta = caminho_no_vault(indice.vault, modulo.pasta_itens)

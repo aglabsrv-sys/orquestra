@@ -88,4 +88,4 @@ O painel continua local, sem autenticação por usuário. Disponibilizar o códi
 comunidade não significa publicar um vault na internet. Não usar Funnel ou exposição
 pública direta como implantação desta versão.
 
-Guia do usuário: [Experiência da comunidade](experiencia-comunidade.md).
+Guia do usuário: [Experiência da comunidade](../experiencia-comunidade.md).

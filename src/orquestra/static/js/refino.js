@@ -27,7 +27,7 @@
     agenda: [
       ['Conecte sua agenda', 'O endereço iCal importa compromissos para as tarefas. É uma leitura periódica: editar uma tarefa aqui não altera a agenda original.'],
       ['Encontre o link', 'Google Agenda (Android): configurações da agenda → Integrar agenda → endereço secreto iCal. iPhone/iCloud: Calendário → Calendários → informações → compartilhar calendário público → copiar link. Um link público pode ser lido por quem o conhecer.'],
-      ['Aplicar endereço', 'Cole o link HTTPS ou webcal. Ele será guardado no .env local, fora do vault. O coletor importa os próximos 14 dias. Recorrências complexas, exclusões e mudanças de eventos ainda precisam de conferência.', null, 'agenda']
+      ['Aplicar endereço', 'Cole o link HTTPS ou webcal. Ele será guardado no .env local, fora do vault. A automação importa os próximos 14 dias. Recorrências complexas, exclusões e mudanças de eventos ainda precisam de conferência.', null, 'agenda']
     ]
   };
   function abrirGuia(nome) {
@@ -88,14 +88,32 @@
       intervalo = setInterval(async function () { try { var s = await local('/api/github/estado'); codigoGit.textContent = s.codigo ? 'Código: ' + s.codigo : ''; if (s.estado === 'conectado' || s.estado === 'falhou') { clearInterval(intervalo); estadoGit.textContent = s.estado === 'conectado' ? 'Login concluído. Escolha o repositório.' : 'Login não concluído. Feche e tente novamente.'; } } catch (e) { clearInterval(intervalo); estadoGit.textContent = e.message; } }, 1800);
     } catch (erro) { estadoGit.textContent = erro.message; }
   };
-  document.querySelectorAll('[data-autostart]').forEach(function (b) {
-    b.onclick = async function () {
-      b.disabled = true;
-      try { var resultado = await local('/api/autostart', {acao:b.dataset.autostart}); $('#autostart-estado').textContent = resultado.mensagem; }
-      catch (erro) { $('#autostart-estado').textContent = erro.message; }
-      finally { b.disabled = false; }
-    };
-  });
+  var botoesAutostart = Array.from(document.querySelectorAll('[data-autostart]'));
+  if (botoesAutostart.length) {
+    var estadoAutostart = null, mudandoAutostart = false;
+    function mostrarAutostart(estado) {
+      estadoAutostart = estado;
+      $('#autostart-estado').textContent = estado.descricao;
+      botoesAutostart.forEach(function (b) {
+        b.disabled = mudandoAutostart || estado.estado === 'indisponivel' || (b.dataset.autostart === 'ativar' ? estado.ativo : !estado.presente);
+        b.setAttribute('aria-pressed',String(b.dataset.autostart === 'ativar' ? estado.ativo : !estado.presente));
+      });
+    }
+    local('/api/autostart').then(mostrarAutostart).catch(function (e) { $('#autostart-estado').textContent = e.message; });
+    botoesAutostart.forEach(function (b) {
+      b.onclick = async function () {
+        if (mudandoAutostart || b.disabled) return;
+        mudandoAutostart = true; botoesAutostart.forEach(function (alvo) { alvo.disabled = true; });
+        try { var resultado = await local('/api/autostart', {acao:b.dataset.autostart}); estadoAutostart = resultado; window.OrquestraInterface.avisar('Pronto'); }
+        catch (e) {
+          window.OrquestraInterface.avisar(e.message,'erro');
+          try { estadoAutostart = await local('/api/autostart'); }
+          catch (_) { estadoAutostart = null; $('#autostart-estado').textContent = e.message; }
+        }
+        finally { mudandoAutostart = false; if (estadoAutostart) mostrarAutostart(estadoAutostart); }
+      };
+    });
+  }
 
   var escolherCena = $('#escolher-cena'), arquivoCapa = $('#p-capa-arquivo');
   var prepararAprovacao = $('#preparar-aprovacao');

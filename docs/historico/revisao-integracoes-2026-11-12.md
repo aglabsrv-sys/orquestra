@@ -14,8 +14,8 @@ A captura mobile tem resolução física 750 × 1334; não é um teste em iPhone
 As imagens abaixo registram o levantamento, **antes dos ajustes finais** de
 compactação e cabeçalho:
 
-- [Hábitos em desktop](img/revisoes/habitos-desktop-antes-2026-11-12.png).
-- [Hábitos em mobile](img/revisoes/habitos-mobile-antes-2026-11-12.png).
+- [Hábitos em desktop](../img/revisoes/habitos-desktop-antes-2026-11-12.png).
+- [Hábitos em mobile](../img/revisoes/habitos-mobile-antes-2026-11-12.png).
 
 O topo mobile cortava a trilha e deixava pouco espaço para o nome. Os cartões e o
 histórico ocupavam mais altura do que o necessário. Foram ajustados truncamento,
@@ -55,7 +55,7 @@ apresentadas como novas.
 - README com navegação coerente, limites das integrações e data das capturas.
 - Guias de temas, backup e módulos alinhados a tamanho da fonte, seleção de cenas,
   upload, consulta de recuperação, GitHub e módulos de Agenda/Hábitos.
-- [Índice da documentação](README.md) separa guias atuais dos relatórios datados.
+- [Índice da documentação](../README.md) separa guias atuais dos relatórios datados.
 - CONTRIBUTING descreve validação visual com dados fictícios e evidência por fluxo.
 - A CI confere destinos de links e imagens locais com um script sem dependências.
 - Removidos caches descartáveis e o inventário gerado de auditoria. Ambientes,

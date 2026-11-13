@@ -51,6 +51,16 @@ test("erro persiste até fechar; texto externo é inserido sem interpretação H
   assert.equal(caixa.children.length, 0);
 });
 
+test("sucesso Pronto aparece uma vez e mensagens de erro mantêm seu conteúdo", () => {
+  const { api, caixa } = preparar();
+  api.avisar("Pronto");
+  const sucesso = caixa.children[0];
+  assert.equal(sucesso.querySelector("strong").textContent, "Pronto");
+  assert.equal(sucesso.querySelector("p"), null);
+  api.avisar("Não foi possível concluir", "erro");
+  assert.equal(caixa.children[1].querySelector("p").textContent, "Não foi possível concluir");
+});
+
 test("aviso temporário pausa no ponteiro e no teclado, retomando só depois de ambos saírem", () => {
   const { api, caixa, avancar } = preparar();
   api.avisar("Salvo"); const aviso = caixa.children[0];

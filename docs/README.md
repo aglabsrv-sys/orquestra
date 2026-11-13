@@ -10,6 +10,7 @@ apresentam os recursos e as opções de configuração do painel.
 | Aproveitar minhas notas sem reorganizar o vault | [Vault existente](vault-existente.md) |
 | Entender tarefas, humano/máquina e integrações | [Experiência da comunidade](experiencia-comunidade.md) |
 | Explorar notas, imagens, HTML e ligações | [Pastas e grafo](pastas.md) |
+| Encontrar links quebrados e anexos ausentes | [Links do cofre](vinculos.md) |
 | Criar ou ajustar uma pasta do painel | [Módulos](modulos.md) |
 | Organizar compromissos e conectar um calendário | [Agenda](agenda.md) |
 | Usar o timer e acompanhar metas semanais | [Pomodoro e hábitos](foco-e-habitos.md) |
@@ -18,9 +19,9 @@ apresentam os recursos e as opções de configuração do painel.
 | Configurar rotinas e fontes de dados | [Coletores](coletores.md) |
 | Recuperar uma edição ou manter uma cópia externa | [Histórico e backup](backup.md) |
 | Acessar o painel pelo celular | [Tailscale](tailscale.md) |
+| Ver todos os comandos, iniciar com o computador ou remover | [Comandos](comandos.md) |
 
 Para contribuir, veja [CONTRIBUTING](../CONTRIBUTING.md), [arquitetura](arquitetura.md)
 e a [política de segurança](../SECURITY.md). As mudanças ficam no [changelog](../CHANGELOG.md).
 
-
-Referências para manutenção: [histórico técnico](historico-tecnico.md).
+Registros de revisões e testes de cada etapa ficam no [histórico técnico](historico/README.md).

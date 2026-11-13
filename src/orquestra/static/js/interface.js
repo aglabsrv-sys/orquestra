@@ -60,7 +60,7 @@
     var conteudo = criar("div", "aviso-conteudo");
     var titulo = criar("strong", "aviso-titulo", { erro: "Não foi possível concluir", alerta: "Atenção", info: "Informação", sucesso: "Pronto" }[tipo]);
     conteudo.appendChild(titulo);
-    conteudo.appendChild(criar("p", "aviso-texto", String(texto)));
+    if (tipo !== "sucesso" || String(texto).trim() !== titulo.textContent) conteudo.appendChild(criar("p", "aviso-texto", String(texto)));
     el.appendChild(icone); el.appendChild(conteudo);
     var tempo = tipo === "erro" || tipo === "alerta" || acao ? 0 : 6000, restante = tempo, iniciou = 0, timer = null;
     var ponteiro = false, foco = false, removido = false;

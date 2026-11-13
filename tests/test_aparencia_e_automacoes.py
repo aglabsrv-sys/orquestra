@@ -68,7 +68,7 @@ def test_tema_sem_paleta_clara_ganha_uma_derivada():
 def test_estilo_por_modo():
     tema = TEMAS[0]
     escuro = aparencia.estilo(tema, Aparencia())
-    assert "color-scheme:dark" in escuro and "prefers-color-scheme" not in escuro and "--cantos:1.0" in escuro
+    assert "color-scheme:dark" in escuro and "prefers-color-scheme" not in escuro and "--cantos:0.45" in escuro
     claro = aparencia.estilo(tema, Aparencia(modo="claro", cantos="reto", fonte="mono"))
     assert "color-scheme:light" in claro and "--cantos:0.0" in claro and "ui-monospace" in claro
     auto = aparencia.estilo(tema, Aparencia(modo="auto"))
@@ -91,6 +91,17 @@ def test_aparencia_pela_api(cliente, vault):
 def test_definir_config_recusa_visual_invalido(painel):
     with pytest.raises(Recusado):
         painel.definir_config(visual={"cantos": "pill"})
+
+
+@pytest.mark.parametrize("tamanho,pixels", [("xl", "20px"), ("xxl", "22px")])
+def test_fontes_ampliadas_persistem_e_renderizam(cliente, vault, tamanho, pixels):
+    resposta = cliente.post("/api/config", json={"aparencia": {"tamanho": tamanho}})
+    assert resposta.status_code == 200
+    assert ler_config_painel(vault).aparencia.tamanho == tamanho
+    pagina = cliente.get("/ajustes/aparencia")
+    assert f"--tamanho-fonte:{pixels}" in pagina.text
+    assert f'data-valor="{tamanho}"' in pagina.text
+    assert aparencia.ler({"tamanho": tamanho}).tamanho == tamanho
 
 
 # ---------------------------------------------------------------- capas

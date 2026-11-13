@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import os
 import plistlib
+import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -28,7 +30,7 @@ def _comando(vault: Path) -> list[str]:
 
 def _arquivo() -> Path:
     if sys.platform == "win32":
-        return Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "Orquestra.vbs"
+        return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "Orquestra.vbs"
     if sys.platform == "darwin":
         return Path.home() / "Library" / "LaunchAgents" / f"{ROTULO}.plist"
     return Path.home() / ".config" / "autostart" / "orquestra.desktop"
@@ -63,6 +65,68 @@ def _conteudo(vault: Path) -> str:
     return f"[Desktop Entry]\nType=Application\nName=Orquestra\nExec={linha}\nX-GNOME-Autostart-enabled=true\n"
 
 
+def _argumentos_configurados(texto: str) -> list[str] | None:
+    """Reconhece apenas nossos lançadores, sem executar seu conteúdo."""
+    if sys.platform == "darwin":
+        try:
+            dados = plistlib.loads(texto.encode("utf-8"))
+        except (ValueError, plistlib.InvalidFileException):
+            return None
+        if not isinstance(dados, dict) or dados.get("Label") != ROTULO or dados.get("RunAtLoad") is not True:
+            return None
+        argumentos = dados.get("ProgramArguments")
+    elif sys.platform == "win32":
+        linha = re.fullmatch(r'\s*CreateObject\("WScript\.Shell"\)\.Run "((?:""|[^"])*)", 0, False\s*', texto, re.I)
+        if not linha:
+            return None
+        comando = linha.group(1).replace('""', '"')
+        partes = re.fullmatch(r'(?P<exe>"[^"]+"|[^"\s]+) -m orquestra iniciar --vault (?P<vault>"[^"]+"|[^"\s]+)', comando)
+        if not partes:
+            return None
+        argumentos = [partes.group("exe").strip('"'), "-m", "orquestra", "iniciar", "--vault", partes.group("vault").strip('"')]
+    else:
+        dados = dict(linha.split("=", 1) for linha in texto.splitlines() if "=" in linha)
+        if dados.get("Type") != "Application" or dados.get("X-GNOME-Autostart-enabled", "true").lower() != "true" or dados.get("Hidden", "false").lower() == "true":
+            return None
+        try:
+            argumentos = [p.replace("\\$", "$").replace("\\`", "`").replace("%%", "%")
+                          for p in shlex.split(dados.get("Exec", "").replace("\\\\", "\\"))]
+        except ValueError:
+            return None
+    if not isinstance(argumentos, list) or len(argumentos) != 6 or argumentos[1:5] != ["-m", "orquestra", "iniciar", "--vault"] or not all(isinstance(a, str) for a in argumentos):
+        return None
+    return argumentos
+
+
+def resumo(vault: Path) -> dict:
+    """Estado local do lançador e vínculo com o cofre aberto; não expõe caminhos."""
+    resultado = {"presente": False, "ativo": False, "neste_cofre": False,
+                 "estado": "desligado", "descricao": "Desativado neste computador."}
+    try:
+        arquivo = _arquivo()
+        if not arquivo.is_file():
+            return resultado
+        resultado["presente"] = True
+        if arquivo.stat().st_size > 64 * 1024:
+            return {**resultado, "estado": "revisar", "descricao": "A configuração de inicialização precisa ser atualizada."}
+        argumentos = _argumentos_configurados(arquivo.read_text(encoding="utf-8-sig"))
+        if not argumentos:
+            return {**resultado, "estado": "revisar", "descricao": "A configuração de inicialização precisa ser atualizada."}
+        if not Path(argumentos[0]).is_file():
+            return {**resultado, "estado": "revisar", "descricao": "A instalação mudou. Ative novamente para atualizar a inicialização."}
+        neste_cofre = os.path.normcase(str(Path(argumentos[5]).resolve())) == os.path.normcase(str(vault.resolve()))
+        resultado["neste_cofre"] = neste_cofre
+        if not neste_cofre:
+            return {**resultado, "estado": "outro_cofre", "descricao": "Ativado para outro cofre neste computador."}
+        if sys.platform == "darwin":
+            r = subprocess.run(["launchctl", "list", ROTULO], capture_output=True, timeout=15)
+            if r.returncode != 0:
+                return {**resultado, "estado": "pendente", "descricao": "Configurado; o macOS ainda não confirmou a ativação."}
+        return {**resultado, "ativo": True, "estado": "ativo", "descricao": "Ativado para este cofre."}
+    except (OSError, UnicodeError, ValueError, subprocess.TimeoutExpired):
+        return {**resultado, "estado": "indisponivel", "descricao": "Não consegui conferir a inicialização. Tente novamente."}
+
+
 def executar(acao: str, vault: Path | None = None) -> str:
     if acao not in ("status", "ativar", "desativar"):
         raise ValueError("Use status, ativar ou desativar para o início automático.")
@@ -77,7 +141,15 @@ def executar(acao: str, vault: Path | None = None) -> str:
     if acao == "ativar":
         if vault is None:
             raise ValueError("Escolha um vault com --vault antes de ativar o início automático.")
+        if resumo(vault)["ativo"]:
+            return "O início automático já está ligado para este cofre."
         conteudo = _conteudo(vault).encode("utf-8")
+        if sys.platform == "darwin" and arquivo.exists():
+            carregado = subprocess.run(["launchctl", "list", ROTULO], capture_output=True, timeout=15)
+            if carregado.returncode == 0:
+                r = subprocess.run(["launchctl", "unload", str(arquivo)], capture_output=True, timeout=15)
+                if r.returncode != 0:
+                    raise RuntimeError("O macOS não confirmou a atualização do início automático. A configuração foi preservada.")
         atualizar_bytes(arquivo, lambda anterior: conteudo)
         if sys.platform == "darwin":
             r = subprocess.run(["launchctl", "load", str(arquivo)], capture_output=True, timeout=15)

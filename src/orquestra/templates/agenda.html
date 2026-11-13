@@ -6,9 +6,9 @@
 {% block scripts %}<script src="/static/js/calendario.js?v={{ marca }}"></script>{% endblock %}
 
 {% macro evento(e, classe='') %}
-<button type="button" class="cal-evento cal-cor-{{ e.cor }} {{ classe }}{% if e.concluido %} cal-concluido{% endif %}" data-evento="{{ e.rel }}" data-versao="{{ e.versao }}" draggable="{{ 'true' if e.editavel else 'false' }}" title="{{ e.titulo }} · {{ e.hora or 'Sem horário' }} · {{ e.pasta }}">
+{% if e.editavel %}<button type="button" class="cal-evento cal-cor-{{ e.cor }} {{ classe }}{% if e.concluido %} cal-concluido{% endif %}" data-evento="{{ e.rel }}" data-versao="{{ e.versao }}" draggable="true" title="{{ e.titulo }} · {{ e.hora or 'Sem horário' }} · {{ e.pasta }}">{% else %}<a class="cal-evento cal-cor-{{ e.cor }} {{ classe }}{% if e.concluido %} cal-concluido{% endif %}" href="{{ e.url }}" title="{{ e.titulo }} · {{ e.hora or 'Sem horário' }} · {{ e.pasta }}">{% endif %}
   {% if e.hora %}<span class="cal-evento-hora">{{ e.hora }}</span>{% endif %}<span class="cal-evento-titulo">{{ e.titulo }}</span>
-</button>
+{% if e.editavel %}</button>{% else %}</a>{% endif %}
 {% endmacro %}
 
 {% block conteudo %}
@@ -56,7 +56,7 @@
     </div>
   </div>
   {% else %}
-  <div class="cal-lista" aria-labelledby="cal-periodo-titulo">{% for d in cal.dias if d.eventos %}<section class="cal-lista-dia"><header><b>{{ d.num }}</b><span>{{ d.nome }}</span>{% if d.hoje %}<small>Hoje</small>{% endif %}</header><div>{% for e in d.eventos %}<button type="button" class="cal-lista-evento cal-cor-{{ e.cor }}{% if e.concluido %} cal-concluido{% endif %}" data-evento="{{ e.rel }}" data-versao="{{ e.versao }}"><time>{{ e.hora or 'Dia inteiro' }}{% if e.hora_fim %}–{{ e.hora_fim }}{% endif %}</time><i class="cal-ponto"></i><span><b>{{ e.titulo }}</b><small>{{ e.pasta }}{% for t in e.tags[:3] %} · #{{ t }}{% endfor %}</small></span><em>{{ e.categoria }}</em></button>{% endfor %}</div></section>{% else %}<div class="cal-vazio">{{ icone('calendario', 28) }}<h3>Nenhum evento neste período</h3><p>Escolha outra data, limpe os filtros ou acrescente um compromisso.</p><button class="botao" type="button" data-cal-novo>Criar evento</button></div>{% endfor %}</div>
+  <div class="cal-lista" aria-labelledby="cal-periodo-titulo">{% for d in cal.dias if d.eventos %}<section class="cal-lista-dia"><header><b>{{ d.num }}</b><span>{{ d.nome }}</span>{% if d.hoje %}<small>Hoje</small>{% endif %}</header><div>{% for e in d.eventos %}{% if e.editavel %}<button type="button" class="cal-lista-evento cal-cor-{{ e.cor }}{% if e.concluido %} cal-concluido{% endif %}" data-evento="{{ e.rel }}" data-versao="{{ e.versao }}">{% else %}<a class="cal-lista-evento cal-cor-{{ e.cor }}{% if e.concluido %} cal-concluido{% endif %}" href="{{ e.url }}">{% endif %}<time>{{ e.hora or 'Dia inteiro' }}{% if e.hora_fim %}–{{ e.hora_fim }}{% endif %}</time><i class="cal-ponto"></i><span><b>{{ e.titulo }}</b><small>{{ e.pasta }}{% for t in e.tags[:3] %} · #{{ t }}{% endfor %}</small></span><em>{{ e.categoria }}</em>{% if e.editavel %}</button>{% else %}</a>{% endif %}{% endfor %}</div></section>{% else %}<div class="cal-vazio">{{ icone('calendario', 28) }}<h3>Nenhum evento neste período</h3><p>Escolha outra data, limpe os filtros ou acrescente um compromisso.</p><button class="botao" type="button" data-cal-novo>Criar evento</button></div>{% endfor %}</div>
   {% endif %}
   <footer class="cal-rodape"><span>{{ icone('pasta', 13) }} Datas dos seus arquivos · horários locais</span><span>Importações iCal são de leitura.</span></footer>
   <script type="application/json" id="cal-eventos">{{ cal.eventos|tojson }}</script>

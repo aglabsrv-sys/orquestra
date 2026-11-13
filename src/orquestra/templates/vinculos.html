@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block titulo %}Links do cofre{% endblock %}
+{% block trilha %}<a href="/pastas">Pastas</a> / Links{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/vinculos.css?v={{ marca }}">{% endblock %}
+{% block conteudo %}
+<section class="pagina vinculos-pagina">
+  <header class="pagina-topo vinculos-topo"><div class="vinculos-titulo"><a href="{{ url_pasta }}" class="botao pequeno so-icone" aria-label="Voltar à pasta" title="Voltar à pasta">{{ icone('seta_esq', 17) }}</a><div><h1>Links do cofre</h1><p class="campo-ajuda">{{ rel or 'Todo o cofre' }} · {{ resultado.notas }} notas</p></div></div><a class="botao pequeno" href="/vinculos?rel={{ rel|urlencode }}&filtro={{ filtro }}" aria-label="Verificar links novamente">{{ icone('atualizar', 15) }} Verificar</a></header>
+  <div class="vinculos-resumo" aria-label="Resumo da verificação"><span><b>{{ resultado.resumo.valido }}</b> {{ 'válido' if resultado.resumo.valido == 1 else 'válidos' }}</span><span{% if resultado.resumo.revisao %} class="vinculos-revisao"{% endif %}><b>{{ resultado.resumo.revisao }}</b> para revisar</span><span><b>{{ resultado.resumo.futuro }}</b> {{ 'nota futura' if resultado.resumo.futuro == 1 else 'notas futuras' }}</span></div>
+  <nav class="vinculos-filtros" aria-label="Filtrar links"><a href="/vinculos?rel={{ rel|urlencode }}&filtro=revisao"{% if filtro == 'revisao' %} aria-current="page"{% endif %}>Para revisar</a><a href="/vinculos?rel={{ rel|urlencode }}&filtro=futuro"{% if filtro == 'futuro' %} aria-current="page"{% endif %}>Notas futuras</a><a href="/vinculos?rel={{ rel|urlencode }}&filtro=todos"{% if filtro == 'todos' %} aria-current="page"{% endif %}>Todos os pendentes</a></nav>
+  {% if filtro == 'futuro' %}<p class="campo-ajuda vinculos-ajuda">Referências a notas ainda não criadas podem fazer parte da sua escrita.</p>{% endif %}
+  <ul class="vinculos-lista">
+    {% for v in ocorrencias %}<li class="vinculo-item">
+      <span class="vinculo-simbolo">{{ icone('nota' if v.estado == 'futuro' else 'link', 17) }}</span>
+      <div class="vinculo-conteudo"><a href="{{ v.url_origem }}" class="vinculo-origem">{{ v.titulo }}</a><span class="vinculo-alvo">{{ v.alvo }}</span><small>{{ v.origem }} · linha {{ v.linha }} do texto</small>
+      {% if v.opcoes %}<details class="vinculo-opcoes"><summary>{{ v.opcoes|length }} destinos possíveis</summary>{% for opcao in v.opcoes %}<a href="{{ opcao.url }}">{{ opcao.rel }}</a>{% endfor %}</details>{% endif %}</div>
+      <span class="vinculo-estado">{{ rotulos_vinculos[v.estado] }}{% if v.url_destino %}<a class="link" href="{{ v.url_destino }}">Abrir destino {{ icone('seta_dir', 12) }}</a>{% endif %}</span>
+      <a href="{{ v.url_origem }}" class="botao pequeno so-icone" aria-label="Abrir {{ v.titulo }}" title="Abrir nota de origem">{{ icone('chevron_dir', 15) }}</a>
+    </li>{% else %}<li class="vinculos-vazio">{{ icone('check', 22) }}<p>{{ 'Nenhum link precisa de revisão.' if filtro == 'revisao' else 'Nenhuma referência nesta categoria.' }}</p></li>{% endfor %}
+  </ul>
+  {% if resultado.limitado %}<p class="campo-ajuda">Exibindo parte das referências. Abra uma pasta específica para ver um recorte menor.</p>{% endif %}
+  <p class="campo-ajuda vinculos-rodape">Verificação local de notas, anexos, títulos e blocos. Nenhum arquivo é alterado.</p>
+</section>
+{% endblock %}

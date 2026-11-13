@@ -24,7 +24,7 @@
 - Toda gravação exige a versão atual da nota. Registros malformados são recusados
   ao marcar; datas futuras não contam para a realização da semana.
 
-Uso e limites: [Pomodoro e hábitos](foco-e-habitos.md).
+Uso e limites: [Pomodoro e hábitos](../foco-e-habitos.md).
 
 ## Desempenho
 

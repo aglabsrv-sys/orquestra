@@ -29,7 +29,17 @@ from orquestra.config import ler_yaml
 from orquestra.caminhos import CaminhoInseguro, caminho_no_vault
 from orquestra.notas import simples
 
-TEMAS_ORIGINAIS_ANTIGOS = {'mare': 'fd4e9a85c7a74f27c202b1e4432e442656325ed46e7662837787c9098700c986', 'noturno': '586fc158e1ee13ecd08a05254b7fd382c3497575905447b4abe6ee19c7b310ed'}
+# Versões antigas dos temas que vêm com o app (sha256 do arquivo com fim de linha LF).
+# Uma cópia intacta delas no vault é ignorada, e o vault passa a usar a versão atual;
+# uma cópia editada pela pessoa continua valendo. Ao mudar um tema, acrescente aqui o
+# hash da versão anterior.
+TEMAS_ORIGINAIS_ANTIGOS: dict[str, set[str]] = {
+    'mare': {'fd4e9a85c7a74f27c202b1e4432e442656325ed46e7662837787c9098700c986'},
+    'noturno': {'586fc158e1ee13ecd08a05254b7fd382c3497575905447b4abe6ee19c7b310ed'},
+    'brasa': {'3e9b49ab871a987a45057a25b90496ceac7e9cd47bdfb09703d2bacb70438966', 'fad94b49ed631e7f49b27d548a45665aeab8306f2bc295ca078ec44ed7a4eb28'},
+    'luz': {'4946bf4bf846823af17b4c6ce8fe63d1326bd397ded04449618efa0e2b76c87b'},
+    'grafite': {'5793dfd55f7233a896de10c6d40675a53669122cb30b5e7d996dbaed4c2aee64'},
+}
 
 PASTA_TEMAS = "_orquestra/temas"
 CENAS = [
@@ -126,7 +136,7 @@ def listar(vault: Path) -> list[dict[str, Any]]:
             try:
                 arquivo = caminho_no_vault(vault, sub / "tema.yaml")
                 if arquivo.is_file():
-                    if hashlib.sha256(arquivo.read_bytes().replace(b"\r\n", b"\n")).hexdigest() == TEMAS_ORIGINAIS_ANTIGOS.get(sub.name):
+                    if hashlib.sha256(arquivo.read_bytes().replace(b"\r\n", b"\n")).hexdigest() in TEMAS_ORIGINAIS_ANTIGOS.get(sub.name, set()):
                         continue  # Atualiza apenas cópias originais; preserva temas editados no vault.
                     temas.append(_normalizar(sub.name, simples(dict(ler_yaml(arquivo)))))
             except (ValueError, TypeError, AttributeError, OSError):
@@ -154,7 +164,7 @@ def _chave(nome: str) -> str:
     return re.sub(r"^[\d\s.\-_]+", "", sem_acento).strip().lower()
 
 
-def resolver_capa(tema: dict[str, Any], alvo: str, propria: Any = None) -> dict[str, Any]:
+def resolver_capa(tema: dict[str, Any], alvo: str, propria: Any = None, *, variacao: int | None = None) -> dict[str, Any]:
     """Decide a capa de um módulo.
 
     Prioridade: `capa` do próprio módulo (escolha do usuário) > `capas` do tema >
@@ -187,7 +197,7 @@ def resolver_capa(tema: dict[str, Any], alvo: str, propria: Any = None) -> dict[
             com_a_cena = [(cena, p) for p in (paletas or [None])]
             livres = [par for par in com_a_cena if par not in usados] or com_a_cena
         # Com a cena já escolhida, ela entra no sorteio: cenas diferentes caem em paletas diferentes.
-        sorteio = semente + zlib.crc32(cena.encode("utf-8")) if cena in CENAS else semente
+        sorteio = semente + zlib.crc32(cena.encode("utf-8")) if cena in CENAS else (variacao if variacao is not None else semente)
         escolhida, nome_paleta = livres[sorteio % len(livres)]
         cena = cena if cena in CENAS else escolhida
         paleta = paleta if (isinstance(paleta, dict) or paleta in paletas) else nome_paleta

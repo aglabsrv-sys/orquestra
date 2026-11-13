@@ -195,7 +195,7 @@
       var campos = {};
       $$("[data-novo]", form).forEach(function (el) { campos[el.name] = el.type === "checkbox" ? el.checked : el.value; });
       var concluir = window.OrquestraInterface.ocupado(salvar, "Criando…");
-      api("POST", "/api/notas", { modulo: dialogo.dataset.modulo, zona: dialogo.dataset.zona, titulo: titulo.value, campos: campos, corpo: $("#novo-corpo").value })
+      api("POST", "/api/notas", { modulo: dialogo.dataset.modulo, subpasta: dialogo.dataset.subpasta || '', zona: dialogo.dataset.zona, titulo: titulo.value, campos: campos, corpo: $("#novo-corpo").value })
         .then(function () { location.reload(); })
         .catch(mostrarErro).finally(concluir);
     });
@@ -298,7 +298,11 @@
         .catch(function (erro) { $$("button", item).forEach(function (b) { b.disabled = false; }); mostrarErro(erro); return false; });
     }
     $$("[data-acao]").forEach(function (botao) {
-      botao.onclick = function () { resolver(botao.closest(".fila-item"), JSON.parse(botao.dataset.acao)); };
+      botao.onclick = function () {
+        var item=botao.closest('.fila-item'),campos=JSON.parse(botao.dataset.acao);
+        if($('[data-responder]',item)&&!Object.prototype.hasOwnProperty.call(campos,'pergunta'))campos.pergunta='';
+        resolver(item,campos);
+      };
     });
     // Pergunta de um agente: a resposta fica no frontmatter (campo `resposta`) e a pergunta sai da fila.
     var dialogo = $("#dialogo-resposta"), texto = $("#resposta-texto"), itemAtual = null;
@@ -335,7 +339,7 @@
     var metaOriginal = {};
     try { metaOriginal = JSON.parse(raiz.dataset.metaOriginal || "{}"); } catch (e) { /* Metadados ausentes não impedem preservar o texto. */ }
     var original = editor ? editor.value : "", tituloOriginal = titulo ? titulo.value : "";
-    var camposOriginais = {}, estadoFila = { ativa: false, pendentes: 0, erro: null }, armazenamentoAvisado = false;
+    var camposOriginais = {}, estadoFila = { ativa: false, pendentes: 0, erro: null }, armazenamentoAvisado = false, emEdicao = false;
 
     function valor(el) { return el.type === "checkbox" ? el.checked : el.value; }
     campos.forEach(function (el) { camposOriginais[el.name] = valor(el); });
@@ -370,11 +374,16 @@
         }
       } catch (e) { avisarArmazenamento(); }
     }
-    function modoEdicao(ligado) {
+    var edicaoInline = window.OrquestraEdicao ? window.OrquestraEdicao.criar(ver, editor, {aoMudar:guardarRascunho, aoConcluir:function(){salvarTexto(function(){ver.focus();});}}) : null;
+    function modoEdicao(ligado, alvo) {
       if (!bEditar) return;
-      ver.hidden = ligado; editor.hidden = !ligado;
+      emEdicao = !!ligado;
+      if (edicaoInline) {
+        ver.hidden = false; editor.hidden = true;
+        if(ligado)edicaoInline.abrir(alvo);else edicaoInline.fechar();
+      } else { ver.hidden = ligado; editor.hidden = !ligado; }
       bEditar.hidden = ligado; bSalvar.hidden = !ligado; bCancelar.hidden = !ligado;
-      if (ligado) editor.focus();
+      if (ligado && !edicaoInline) editor.focus();
     }
     var fila = window.OrquestraNotas.criarFila(function (dados) {
       if (bloqueioExterno) {
@@ -446,26 +455,33 @@
       if (editor.value === original && !estadoFila.pendentes) { modoEdicao(false); if (depois) depois(); return; }
       if (bloqueioExterno) { if (bloqueioExterno) faixa.hidden = false; return; }
       gravar({ corpo: editor.value }, function (r, salvo) {
-        ver.innerHTML = r.html || '<p class="suave">Sem texto.</p>';
         // Digitar durante a requisição não marca o texto posterior como salvo.
-        if (editor.value === salvo.corpo) { modoEdicao(false); if (depois) depois(); }
+        if (editor.value === salvo.corpo) {
+          modoEdicao(false); ver.innerHTML = r.html || '<p class="suave">Sem texto.</p>';
+          if(edicaoInline)edicaoInline.atualizar(original);
+          if (depois) depois();
+        } else if(!edicaoInline)ver.innerHTML = r.html || '<p class="suave">Sem texto.</p>';
 
       });
     }
     if (bEditar) {
       bEditar.onclick = function () { modoEdicao(true); };
-      ver.addEventListener("dblclick", function (e) { if (!e.target.closest("a")) modoEdicao(true); });
+      ver.addEventListener("dblclick", function (e) { if (!e.target.closest("a")) modoEdicao(true,e.target); });
       ver.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target === ver) { e.preventDefault(); modoEdicao(true); } });
       editor.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); salvarTexto(); ver.focus(); } });
       document.addEventListener("pointerdown", function (e) {
-        if (editor.hidden || e.target === editor || e.target.closest(".nota-acoes, dialog, #falha-gravacao, #faixa-conflito")) return;
+        if (!emEdicao || e.target === editor || edicaoInline && edicaoInline.contem(e.target) || e.target.closest(".nota-acoes, dialog, #falha-gravacao, #faixa-conflito")) return;
         salvarTexto();
       });
       document.addEventListener("click", function (e) {
         var link = e.target.closest("a[href]");
-        if (!link || !notaSuja || editor.hidden || e.ctrlKey || e.metaKey || e.shiftKey || link.target === "_blank" || link.getAttribute("href").charAt(0) === "#") return;
-        e.preventDefault(); salvarTexto(function () { location.href = link.href; });
-      });
+        if (!link || !notaSuja || !emEdicao || e.ctrlKey || e.metaKey || e.shiftKey || link.target === "_blank" || link.getAttribute("href").charAt(0) === "#") return;
+        e.preventDefault(); salvarTexto(function () {
+          var destino=new URL(link.href,location.href);
+          if(window.parent!==window&&new URLSearchParams(location.search).get('explorador')==='1'&&destino.origin===location.origin&&/^\/(n|documento|pastas)(?:\/|$)/.test(destino.pathname))window.parent.postMessage({tipo:'orquestra:leitor',url:destino.href,titulo:link.textContent},location.origin);
+          else location.href = link.href;
+        });
+      }, true);
       bSalvar.onclick = salvarTexto;
       bCancelar.onclick = async function () {
         if (editor.value !== original && !await confirmar({ titulo: "Descartar alterações do texto?", texto: "O texto volta à última versão salva. As propriedades já salvas continuam como estão.", confirmar: "Descartar texto", perigoso: true })) return;
@@ -473,7 +489,7 @@
       };
       editor.addEventListener("input", guardarRascunho);
       document.addEventListener("keydown", function (e) {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !editor.hidden) { e.preventDefault(); salvarTexto(); }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && emEdicao) { e.preventDefault(); salvarTexto(); }
       });
     }
     window.addEventListener("beforeunload", function (e) {
@@ -482,7 +498,7 @@
     });
     bRepetir.onclick = function () {
       if (bloqueioExterno || !fila.descartar()) return;
-      gravar(dadosAtuais(), function (r) { if (typeof r.html === "string") ver.innerHTML = r.html; });
+      gravar(dadosAtuais(), function (r) { if (typeof r.html === "string" && editor.value === original) { modoEdicao(false); ver.innerHTML = r.html; if(edicaoInline)edicaoInline.atualizar(original); } });
     };
     async function reverter() {
       if (!await confirmar({ titulo: "Descartar rascunho desta aba?", texto: "Suas alterações não salvas serão descartadas. A página abrirá novamente a versão atual do arquivo no vault.", confirmar: "Descartar e recarregar", perigoso: true })) return;
@@ -500,8 +516,9 @@
 
     $("#copiar-rascunho").onclick = function () {
       var texto = titulo.value + "\n\n" + editor.value;
-      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(texto).then(function () { avisar("Rascunho copiado."); }).catch(function () { modoEdicao(true); editor.select(); avisar("Selecionei o texto. Use Ctrl+C ou Cmd+C."); });
-      else { modoEdicao(true); editor.select(); avisar("Selecionei o texto. Use Ctrl+C ou Cmd+C."); }
+      function selecionar(){modoEdicao(true);if(edicaoInline)edicaoInline.selecionar();else editor.select();avisar("Selecionei o texto. Use Ctrl+C ou Cmd+C.");}
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(texto).then(function () { avisar("Rascunho copiado."); }).catch(selecionar);
+      else selecionar();
     };
     $("#salvar-copia").onclick = function () {
       var b = this;
@@ -844,10 +861,10 @@
           var conf = JSON.parse(revisao.dataset.confianca || "{}");
           var acao = confiar.dataset.confiar;
           if (!await confirmar({
-            titulo: acao === "revogar" ? "Revogar autorização do coletor?" : "Autorizar a execução do coletor?",
+            titulo: acao === "revogar" ? "Revogar autorização da automação?" : "Autorizar a execução da automação?",
             texto: acao === "revogar" ? "“" + dados.script + "” deixará de ter autorização para rodar neste computador." : "“" + dados.script + "” poderá executar com as permissões da sua conta. Confira o código e a configuração antes de autorizar.",
             detalhes: acao === "revogar" ? "" : "Arquivos:\n" + (conf.arquivos || []).join("\n") + "\n\nChaves declaradas: " + ((conf.requer || []).join(", ") || "nenhuma") + "\n\nAssinatura: " + conf.assinatura,
-            confirmar: acao === "revogar" ? "Revogar autorização" : "Autorizar coletor", perigoso: acao !== "revogar"
+            confirmar: acao === "revogar" ? "Revogar autorização" : "Autorizar automação", perigoso: acao !== "revogar"
           })) return;
           confiar.disabled = true;
           api("POST", "/api/coletores/confiar", { modulo: dados.modulo, script: dados.script, assinatura: conf.assinatura, acao: acao })
@@ -866,7 +883,7 @@
       };
       ativar.onchange = function () {
         api("POST", "/api/coletores/ativo", { modulo: dados.modulo, script: dados.script, ativo: ativar.checked })
-          .then(function () { avisar(ativar.checked ? "Coletor automático ligado." : "Coletor automático desligado."); })
+          .then(function () { avisar(ativar.checked ? "Execução automática ligada." : "Execução automática desligada."); })
           .catch(function (erro) { ativar.checked = !ativar.checked; mostrarErro(erro); });
       };
     });
@@ -918,6 +935,7 @@
         var estilo = $("#aparencia-dinamica");
         if (!estilo) { estilo = document.createElement("style"); estilo.id = "aparencia-dinamica"; document.head.appendChild(estilo); }
         if (r.estilo) estilo.textContent = r.estilo;
+        if (chave === 'tamanho') document.documentElement.dataset.tamanho = valor;
         opcoes.forEach(function (opcao) { opcao.disabled = false; });
         if (grupo) grupo.removeAttribute("aria-busy");
 
@@ -1059,8 +1077,9 @@
       if (document.body.dataset.vaultId && dados.vault_id !== document.body.dataset.vaultId) { recarregarLogo(true, true); return; }
       // Nomes de pastas podem conter aspas: não os interpolar em seletores CSS.
       $$("[data-selo-de]").forEach(function (item) {
-        var numero = (dados.selos || {})[item.dataset.seloDe], selo = $(".selo", item);
-        if (selo && numero !== undefined) { selo.textContent = numero; selo.hidden = !numero; }
+        var numero = Number((dados.selos || {})[item.dataset.seloDe] || 0), selo = $(".selo", item);
+        numero = Number.isFinite(numero) ? Math.max(0, Math.floor(numero)) : 0;
+        if (selo) { selo.textContent = numero > 99 ? '99+' : numero; selo.hidden = numero === 0; selo.title = numero + ' pendências'; }
       });
       $$('[data-conta="decidir"]').forEach(function (el) { el.textContent = dados.decidir; });
       $$('[data-conta="hoje"]').forEach(function (el) { el.textContent = dados.hoje; });
@@ -1132,6 +1151,7 @@
   }
 
   window.Orquestra = window.Orquestra || {};
+  window.Orquestra.api = api;
   window.Orquestra.prepararPastas = function (novos) { dialogos(novos); pastas(); };
   window.Orquestra.prepararModulo = function (dialogosNovos) { dialogos(dialogosNovos); novoItem(); quadro(); maquina(); tabela(); numeros(); };
 

@@ -1,0 +1,51 @@
+{% macro ajuda(texto, id, nome) %}<span class="auto-ajuda"><button type="button" class="auto-pergunta" aria-label="Sobre {{ nome }}" aria-describedby="{{ id }}" data-auto-ajuda>?</button><span id="{{ id }}" class="auto-tooltip" role="tooltip">{{ texto }}</span></span>{% endmacro %}
+{% macro instancia(a, id) %}
+{% set info = (catalogo_automacoes|selectattr('id', 'equalto', a.definicao)|list)|first %}
+<article class="auto-instancia" data-auto-id="{{ a.id }}">
+  <div class="auto-linha"><span class="auto-simbolo">{{ icone(info.icone, 17) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(info.ajuda, 'ajuda-instancia-' ~ id, a.nome) }}</span><small>{{ a.destino or 'Raiz do cofre' }}</small></span><span class="auto-estado">{{ 'Manual' if not a.a_cada and not a.diario_as else 'Ativa' if a.ativo else 'Pausada' }}</span><button class="botao pequeno" type="button" data-auto-acao="editar" aria-label="Configurar {{ a.nome }}">Configurar</button></div>
+  {% if a.atualizacao_disponivel %}<p class="auto-atualizacao"><span>Atualização disponível</span><button class="botao pequeno" type="button" data-auto-acao="atualizar">Atualizar automação</button></p>{% endif %}
+  <details class="auto-controles"><summary>Execução e opções {{ icone('chevron_dir', 12) }}</summary><div class="auto-instancia-corpo">
+    <p class="campo-ajuda" data-auto-resultado>{% if a.ultima.ultima %}Última execução: {{ a.ultima.ultima[:16]|replace('T', ' ') }}{% else %}{{ 'Todos os dias às ' ~ a.diario_as if a.diario_as else 'A cada ' ~ a.a_cada if a.a_cada else 'Execução manual' }}{% endif %}</p>
+    <div class="linha-botoes sem-topo">
+      {% if not a.legado %}<button class="botao pequeno" type="button" data-auto-acao="testar">Testar fonte</button>{% endif %}
+      <button class="botao pequeno" type="button" data-auto-acao="rodar">Executar</button>
+      {% if a.a_cada or a.diario_as %}<button class="botao pequeno" type="button" data-auto-acao="ativo" data-ativo="{{ 'false' if a.ativo else 'true' }}">{{ 'Pausar' if a.ativo else 'Ativar' }}</button>{% endif %}
+      <a class="botao pequeno discreto" href="/pastas{% if a.destino %}/{{ a.destino|urlencode }}{% endif %}">Abrir pasta</a>
+      {% if not a.legado %}<button class="botao pequeno discreto" type="button" data-auto-acao="remover">Remover</button>{% else %}<button class="botao pequeno discreto" type="button" data-auto-acao="copiar">Usar em outra pasta</button>{% endif %}
+    </div><pre class="auto-amostra" data-auto-amostra hidden></pre>
+  </div></details>
+</article>
+{% endmacro %}
+<section id="automacoes" data-destino="{{ request.query_params.get('destino', '') }}" data-modulo="{{ request.query_params.get('modulo', '') }}" data-script="{{ request.query_params.get('script', '') }}">
+  <div class="auto-nativas"><a href="/dia/{{ hoje.isoformat() }}">{{ icone('calendario', 16) }} Resumo do dia</a><a href="/vinculos">{{ icone('link', 16) }} Verificar links</a><a href="/ajustes/backup">{{ icone('nuvem', 16) }} Backup Git</a></div>
+  <div class="auto-abas" role="tablist" aria-label="Automações"><button type="button" role="tab" id="auto-tab-minhas" aria-controls="auto-minhas" aria-selected="true" tabindex="0" data-auto-aba="minhas">Minhas automações <small>{{ automacoes|length + coletores|length }}</small></button><button type="button" role="tab" id="auto-tab-catalogo" aria-controls="auto-catalogo" aria-selected="false" tabindex="-1" data-auto-aba="catalogo">Catálogo <small>{{ catalogo_automacoes|length }}</small></button></div>
+  <div id="auto-minhas" role="tabpanel" aria-labelledby="auto-tab-minhas" tabindex="0">
+    {% for a in automacoes %}{{ instancia(a, 'nova-' ~ loop.index) }}{% endfor %}
+    {% for a in automacoes_legadas|default([]) %}{% if a.codigo_nativo %}{{ instancia(a, 'pasta-' ~ loop.index) }}{% else %}<div class="auto-linha"><span class="auto-simbolo">{{ icone('raio', 17) }}</span><span class="auto-nome"><b>{{ a.nome }}</b><small>Personalizada · {{ a.legado.modulo }}</small></span><a class="botao pequeno" href="/m/{{ a.legado.modulo|urlencode }}?aba=maquina">Revisar na pasta</a></div>{% endif %}{% endfor %}
+    {% for c in coletores %}{% set conhecidos = automacoes_legadas|default([])|selectattr('legado.modulo', 'equalto', c.modulo.id)|selectattr('legado.script', 'equalto', c.def.script)|list %}{% if not conhecidos %}<div class="auto-linha"><span class="auto-simbolo">{{ icone(c.modulo.icone, 17) }}</span><span class="auto-nome"><b>{{ c.def.nome }}</b><small>{{ c.modulo.nome }}</small></span><a class="botao pequeno" href="/m/{{ c.modulo.id|urlencode }}?aba=maquina">Configurar</a></div>{% endif %}{% endfor %}
+    {% if not automacoes and not coletores %}<div class="auto-vazio"><p>Nenhuma automação adicionada.</p><button class="botao pequeno" type="button" data-auto-ver-catalogo>Explorar catálogo {{ icone('seta_dir', 14) }}</button></div>{% endif %}
+  </div>
+  <div id="auto-catalogo" role="tabpanel" aria-labelledby="auto-tab-catalogo" tabindex="0" hidden>
+    <p class="campo-ajuda auto-intro">Escolha uma automação para a sua pasta.</p>
+    {% for a in catalogo_automacoes %}<div class="auto-linha"><span class="auto-simbolo">{{ icone(a.icone, 18) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(a.ajuda, 'ajuda-catalogo-' ~ loop.index, a.nome) }}</span></span><span class="auto-estado">{{ 'Local' if not a.rede else 'Requer chave' if a.requer else 'Sem chave' }}</span><button class="botao pequeno" type="button" data-auto-adicionar="{{ a.id }}" aria-label="Adicionar {{ a.nome }}">{{ icone('mais', 14) }} Adicionar</button></div>{% endfor %}
+  </div>
+  <p class="auto-agenda-nota campo-ajuda">As execuções agendadas funcionam enquanto o Orquestra estiver aberto.</p>
+  <script id="automacoes-dados" type="application/json">{{ {'catalogo': catalogo_automacoes, 'instancias': automacoes, 'legadas': automacoes_legadas|default([])}|tojson }}</script>
+</section>
+<dialog id="automacao-dialogo" class="dialogo" aria-labelledby="automacao-titulo">
+  <form class="dialogo-corpo" id="automacao-form">
+    <div class="auto-dialogo-topo"><h2 id="automacao-titulo">Adicionar automação</h2><span class="auto-ajuda"><button type="button" class="auto-pergunta" aria-label="Sobre esta automação" aria-describedby="automacao-descricao" data-auto-ajuda>?</button><span id="automacao-descricao" role="tooltip" class="auto-tooltip"></span></span><button class="botao pequeno so-icone" type="button" data-fechar aria-label="Fechar">{{ icone('x', 16) }}</button></div>
+    <div id="automacao-atualizacao" class="auto-atualizacao" hidden><span>Atualize a automação para configurar.</span><button class="botao pequeno" id="automacao-atualizar" type="button">Atualizar automação</button></div>
+    <div class="auto-form-principal"><label class="campo"><span>Nome</span><input id="automacao-nome" maxlength="120" required></label>
+      <div class="campo auto-pasta-campo"><span id="automacao-pasta-rotulo">Guardar em</span><input type="hidden" id="automacao-destino"><button class="auto-pasta-abrir" type="button" id="automacao-pasta-abrir" aria-labelledby="automacao-pasta-rotulo automacao-pasta-nome" aria-expanded="false" aria-controls="automacao-pasta-picker">{{ icone('pasta', 16) }}<span id="automacao-pasta-nome">Raiz do cofre</span>{{ icone('chevron_dir', 14) }}</button>
+        <div id="automacao-pasta-picker" class="auto-pasta-picker" hidden><div class="auto-pasta-topo"><button class="botao pequeno so-icone" id="automacao-pasta-voltar" type="button" aria-label="Pasta anterior">{{ icone('seta_esq', 15) }}</button><b id="automacao-pasta-atual">Raiz do cofre</b></div><div id="automacao-pasta-lista" class="auto-pasta-lista" aria-label="Subpastas"></div><p id="automacao-pasta-estado" class="campo-ajuda" role="status"></p><button id="automacao-pasta-usar" class="botao pequeno" type="button">Escolher esta pasta</button></div>
+      </div>
+    </div>
+    <div id="automacao-config"></div><details id="automacao-parametros-avancados" class="auto-campos-avancados"><summary>Mais opções</summary><div id="automacao-config-avancada"></div></details>
+    <p id="automacao-segredos" class="campo-ajuda" hidden></p>
+    <div class="auto-form-principal auto-agendamento"><label class="campo"><span>Executar</span><select id="automacao-frequencia"><option value="manual">Manualmente</option><option value="diaria">Todos os dias</option><option value="1h">A cada hora</option><option value="6h">A cada 6 horas</option><option value="12h">A cada 12 horas</option><option value="24h">A cada 24 horas</option></select></label><label class="campo" id="automacao-horario-campo" hidden><span>Horário local</span><input id="automacao-horario" type="time" value="08:00"></label></div>
+    <details class="auto-campos-avancados" id="automacao-campos-avancados"><summary>Propriedades da pasta</summary><p class="campo-ajuda">Opcional. Escolha outros nomes para as propriedades produzidas.</p><div id="automacao-mapeamentos"></div><button class="botao pequeno discreto" id="automacao-mapear" type="button">{{ icone('mais', 13) }} Propriedade</button></details>
+    <div id="automacao-previa" class="auto-previa" hidden><b>Conferir configuração</b><p class="campo-ajuda" id="automacao-previa-destino"></p><pre id="automacao-previa-texto"></pre></div>
+    <p id="automacao-form-estado" role="status" class="campo-ajuda" aria-live="polite"></p><div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button type="submit" class="botao principal" id="automacao-salvar">Continuar</button></div>
+  </form>
+</dialog>

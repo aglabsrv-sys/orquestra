@@ -3,6 +3,8 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.from((r || document).querySelectorAll(s)); };
+  var secoes=$('.navega-ajustes'),secaoAtiva=$('.navega-ajustes [aria-current=page]');
+  if(secoes&&secaoAtiva&&secoes.scrollWidth>secoes.clientWidth){secoes.scrollLeft=secaoAtiva.offsetLeft-secoes.offsetLeft-(secoes.clientWidth-secaoAtiva.offsetWidth)/2;}
   function erro(e) { window.OrquestraInterface.avisar(e.message || 'Não foi possível concluir.', 'erro'); }
   var capacidade = null, uploads = 0;
   async function localHeaders(tipo) {
@@ -16,6 +18,11 @@
 
   // Só o painel da visão é substituído. A capa e seu relógio continuam vivos.
   var pedido = 0, controlador;
+  // O histórico restaura a visão daquela entrada, mesmo se a preferência mudar.
+  if ($('#modulo-painel')) {
+    var guiaInicial=$('.abas .aba[aria-current]');
+    if(guiaInicial){var entradaInicial=new URL(location.href),escolhaInicial=new URL(guiaInicial.href,location.href).searchParams.get('aba');if(escolhaInicial)entradaInicial.searchParams.set('aba',escolhaInicial);history.replaceState(Object.assign({},history.state,{orquestraVisao:entradaInicial.href}),'');}
+  }
   async function navegar(url, historico) {
     if (uploads) return;
     var painel = $('#modulo-painel');
@@ -35,8 +42,10 @@
       dialogos.replaceWith(novos);
       var numeros = $('.cab-numeros'), novosNumeros = $('.cab-numeros',doc);
       if (numeros && novosNumeros) numeros.replaceWith(document.importNode(novosNumeros,true));
+      var trilhaAtual=$('.topo .aqui'),novaTrilha=$('.topo .aqui',doc);
+      if(trilhaAtual&&novaTrilha)trilhaAtual.replaceWith(document.importNode(novaTrilha,true));
       document.title = doc.title;
-      if (historico) history.pushState({},'',url);
+      if (historico) history.pushState({orquestraVisao:url},'',url);
       window.Orquestra.prepararModulo(novos);
       var ativa = $('.aba[aria-current]'); if (ativa) ativa.focus({preventScroll:true});
     } catch (e) { if (e.name !== 'AbortError') erro(e); }
@@ -49,7 +58,7 @@
     if (url.pathname !== location.pathname || url.origin !== location.origin) return;
     e.preventDefault(); if (url.href !== location.href) navegar(url.href,true);
   });
-  window.addEventListener('popstate', function () { if ($('#modulo-painel')) navegar(location.href,false); });
+  window.addEventListener('popstate', function () { if ($('#modulo-painel')) navegar(history.state && history.state.orquestraVisao || location.href,false); });
 
   // Imagens entram por arrastar, colar ou pelo botão de anexo; nenhuma URL é pedida.
   async function anexar(alvo, arquivo) {
@@ -88,7 +97,8 @@
   var anexo=$('#nota-anexo'); if (anexo) anexo.onchange=function () { anexar($('.nota'),anexo.files[0]); anexo.value=''; };
   window.addEventListener('beforeunload',function (e) { if (uploads) { e.preventDefault(); e.returnValue=''; } });
 
-  var cenaGlobal=$('#ap-cena');if(cenaGlobal)cenaGlobal.onchange=async function(){cenaGlobal.disabled=true;try{await requisitar('/api/config',{aparencia:{cena:cenaGlobal.value}});location.reload();}catch(e){erro(e);cenaGlobal.disabled=false;}};
+  var escolherTema=$('#ajustes-escolher-tema');
+  if (escolherTema) escolherTema.onclick=function () { $('#ajustes-temas').showModal(); };
   // Ordem das pastas: uma única alteração atômica na configuração do cofre.
   var lista=$('#areas-ordem'), movida=null, salvando=false;
   if (lista) {
@@ -108,30 +118,32 @@
     lista.addEventListener('click',function (e) { var b=e.target.closest('[data-mover]'); if (!b || salvando) return; var antes=linhas(), l=b.closest('.area-linha'), i=antes.indexOf(l), alvo=antes[i+Number(b.dataset.mover)]; if (!alvo) return; lista.insertBefore(l,Number(b.dataset.mover)<0 ? alvo : alvo.nextSibling); salvar(antes); b.focus(); }); botoes();
   }
 
-  // Variáveis: mostrar nomes e estado, nunca solicitar valores existentes.
+  // Segredos: mostrar apenas os nomes, nunca solicitar valores existentes.
   var form=$('#variaveis-form');
   if (form) {
-    var dialogo=$('#variavel-dialogo'), estado=$('#variaveis-estado'), nomes=[], ocupado=false;
-    function abrir(nome) { form.reset(); $('#variavel-valor').type='password'; $('#variavel-nome').value=nome || ''; $('#variavel-nome').readOnly=!!nome; $('#variavel-titulo').textContent=nome ? 'Atualizar variável' : 'Nova variável'; $('#variavel-form-estado').textContent=''; dialogo.showModal(); $(nome ? '#variavel-valor' : '#variavel-nome').focus(); }
+    var dialogo=$('#variavel-dialogo'), estado=$('#variaveis-estado'), nomes=[], nomesConhecidos=false, ocupado=false;
+    function ocultarValor() { $('#variavel-valor').type='password'; $('#variavel-revelar').setAttribute('aria-pressed','false'); $('#variavel-revelar').setAttribute('aria-label','Mostrar valor'); $('#variavel-revelar').title='Mostrar valor'; }
+    function abrir(nome) { form.reset(); ocultarValor(); $('#variavel-nome').value=nome || ''; $('#variavel-nome').readOnly=!!nome; $('#variavel-titulo').textContent=nome ? (nomes.includes(nome) ? 'Atualizar segredo' : 'Adicionar valor') : 'Novo segredo'; $('#variavel-form-estado').textContent=''; dialogo.showModal(); $(nome ? '#variavel-valor' : '#variavel-nome').focus(); }
     $('#variavel-adicionar').onclick=function () { abrir(''); };
-    $('#variavel-revelar').onchange=function () { $('#variavel-valor').type=this.checked ? 'text' : 'password'; };
-    dialogo.addEventListener('close',function () { form.reset(); $('#variavel-valor').type='password'; });
+    $('#variavel-revelar').onclick=function () { var mostrar=$('#variavel-valor').type==='password'; $('#variavel-valor').type=mostrar ? 'text' : 'password'; this.setAttribute('aria-pressed',String(mostrar)); this.setAttribute('aria-label',mostrar ? 'Ocultar valor' : 'Mostrar valor'); this.title=mostrar ? 'Ocultar valor' : 'Mostrar valor'; $('#variavel-valor').focus(); };
+    dialogo.addEventListener('close',function () { form.reset(); ocultarValor(); });
     dialogo.addEventListener('cancel',function (e) { if (ocupado) e.preventDefault(); });
     function pintar() {
-      var lista=$('#variaveis-lista'), busca=$('#variavel-busca').value.trim().toUpperCase(), filtrados=nomes.filter(function (n) { return n.includes(busca); }); lista.replaceChildren();
-      $('#variaveis-contagem').textContent=nomes.length+' configurada'+(nomes.length===1 ? '' : 's');
-      if (!filtrados.length) { var vazio=document.createElement('li'); vazio.className='vazio'; var t=document.createElement('b'), p=document.createElement('p'); t.textContent=busca ? 'Nenhuma variável encontrada' : 'Suas conexões começam aqui'; p.textContent=busca ? 'Experimente outro nome.' : 'Adicione a chave exigida pelo seu coletor. O valor fica fora do cofre.'; vazio.append(t,p); lista.appendChild(vazio); }
-      filtrados.forEach(function (nome) {
-        var li=document.createElement('li'), info=document.createElement('div'), n=document.createElement('code'), detalhe=document.createElement('small'), acoes=document.createElement('div'), editar=document.createElement('button'), excluir=document.createElement('button');
-        n.textContent=nome; detalhe.textContent='Configurada · valor não exibido'; info.append(n,detalhe); acoes.className='linha-botoes sem-topo';
-        editar.type=excluir.type='button'; editar.className=excluir.className='botao pequeno discreto'; editar.textContent='Atualizar'; excluir.textContent='Excluir'; editar.setAttribute('aria-label','Atualizar '+nome); excluir.setAttribute('aria-label','Excluir '+nome); editar.onclick=function () { abrir(nome); };
-        excluir.onclick=async function () { if (!await window.OrquestraInterface.confirmar({titulo:'Excluir '+nome+'?',texto:'Coletores que dependem desta variável precisarão de um novo valor para funcionar.',confirmar:'Excluir variável',perigoso:true})) return; excluir.disabled=true; try { await requisitar('/api/variaveis',{nome:nome,valor:null}); await carregar(); estado.textContent='Variável excluída.'; } catch (e) { erro(e); excluir.disabled=false; } };
-        acoes.append(editar,excluir); li.append(info,acoes); lista.appendChild(li);
+      var lista=$('#variaveis-lista'); lista.replaceChildren();
+      $('#variaveis-contagem').textContent=nomesConhecidos ? nomes.length+' configurado'+(nomes.length===1 ? '' : 's') : '';
+      Array.from(new Set(['YOUTUBE_API_KEY'].concat(nomes))).forEach(function (nome) {
+        var li=document.createElement('li'), info=document.createElement('div'), n=document.createElement('code'), acoes=document.createElement('div'), editar=document.createElement('button'), excluir=document.createElement('button');
+        var configurado=nomes.includes(nome); li.dataset.segredo=nome;
+        n.textContent=nome; info.className='segredo-identidade'; info.append(n); acoes.className='linha-botoes sem-topo';
+        if (nome==='YOUTUBE_API_KEY') { var dica=$('#segredo-youtube-dica'); if(dica) info.append(dica.content.cloneNode(true)); }
+        if (nomesConhecidos && !configurado) { var semValor=document.createElement('small'); semValor.className='segredo-situacao'; semValor.textContent='Sem valor'; info.append(semValor); }
+        editar.type=excluir.type='button'; editar.className=excluir.className='botao pequeno discreto'; editar.textContent=configurado ? 'Atualizar' : nomesConhecidos ? 'Adicionar valor' : 'Preencher'; excluir.textContent='Excluir'; editar.setAttribute('aria-label',(configurado ? 'Atualizar ' : 'Adicionar valor de ')+nome); excluir.setAttribute('aria-label','Excluir '+nome); editar.onclick=function () { abrir(nome); };
+        excluir.onclick=async function () { if (!await window.OrquestraInterface.confirmar({titulo:'Excluir '+nome+'?',texto:'Automações que dependem deste segredo precisarão de um novo valor para funcionar.',confirmar:'Excluir segredo',perigoso:true})) return; excluir.disabled=true; try { await requisitar('/api/variaveis',{nome:nome,valor:null}); await carregar(); estado.textContent='Segredo excluído.'; } catch (e) { erro(e); excluir.disabled=false; } };
+        acoes.append(editar); if(configurado) acoes.append(excluir); li.append(info,acoes); lista.appendChild(li);
       });
     }
-    async function carregar() { try { nomes=(await requisitar('/api/variaveis')).nomes.sort(); pintar(); } catch (e) { estado.textContent=e.message; } }
-    $('#variavel-busca').oninput=pintar;
+    async function carregar() { try { var dados=await requisitar('/api/variaveis'); if(!Array.isArray(dados.nomes)||!dados.nomes.every(function(n){return typeof n==='string';}))throw new Error('Não consegui consultar os segredos. Atualize a página e tente novamente.'); nomes=dados.nomes.sort(); nomesConhecidos=true; pintar(); } catch (e) { estado.textContent=e.message; } }
     $('#variavel-nome').addEventListener('input',function () { this.value=this.value.toUpperCase().replace(/\s/g,'_'); });
-    form.onsubmit=async function (e) { e.preventDefault(); if (ocupado || !form.reportValidity()) return; ocupado=true; var b=$('button[type=submit]',form); b.disabled=true; try { await requisitar('/api/variaveis',{nome:$('#variavel-nome').value,valor:$('#variavel-valor').value}); dialogo.close(); await carregar(); estado.textContent='Variável salva.'; } catch (e) { $('#variavel-form-estado').textContent=e.message; } finally { ocupado=false; b.disabled=false; } }; carregar();
+    form.onsubmit=async function (e) { e.preventDefault(); if (ocupado || !form.reportValidity()) return; ocupado=true; var b=$('button[type=submit]',form); b.disabled=true; try { await requisitar('/api/variaveis',{nome:$('#variavel-nome').value,valor:$('#variavel-valor').value}); dialogo.close(); await carregar(); estado.textContent='Segredo salvo.'; } catch (e) { $('#variavel-form-estado').textContent=e.message; } finally { ocupado=false; b.disabled=false; } }; pintar(); carregar();
   }
 })();

@@ -12,23 +12,29 @@
 .habitos-resumo > div { display:flex; align-items:center; gap:5px; }
 .habitos-resumo b { color:var(--texto); font-weight:550; }
 .habitos-status-ponto { width:6px; height:6px; border-radius:50%; background:var(--destaque); margin-right:5px; }
-.habitos-grade { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr)); gap:16px; }
-.habito-card { padding:18px; border:1px solid var(--borda); border-radius:16px; background:color-mix(in srgb,var(--superficie) 88%,transparent); min-width:0; }
+.habitos-grade { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr)); gap:12px; align-items:start; }
+.habito-card { padding:14px; border:1px solid var(--borda); border-radius:calc(12px * var(--cantos,1)); background:color-mix(in srgb,var(--superficie) 88%,transparent); min-width:0; }
 .habito-card-topo { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-.habito-nome { display:block; font-size:16px; font-weight:550; letter-spacing:-.25px; overflow-wrap:anywhere; }
+.habito-nome { display:block; font-size:14px; font-weight:550; letter-spacing:-.15px; overflow-wrap:anywhere; }
 .habito-nome:hover { color:var(--destaque); }
 .habito-card-topo p { margin:5px 0 0; font-size:11px; color:var(--texto-suave); }
 .habito-editar { flex:none; color:var(--texto-suave); border-color:transparent; background:transparent; }
-.habito-progresso { width:100%; height:3px; background:var(--borda); border-radius:3px; overflow:hidden; margin:16px 0; }
+.habito-progresso { width:100%; height:3px; background:var(--borda); border-radius:3px; overflow:hidden; margin:12px 0; }
 .habito-progresso i { display:block; height:100%; background:var(--destaque); border-radius:3px; transition:width .2s ease; }
-.habito-semana { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; margin-bottom:16px; }
+.habito-semana { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; margin-bottom:12px; }
 .habito-semana > span { display:flex; align-items:center; flex-direction:column; gap:6px; }
-.habito-semana i { display:grid; place-items:center; border:1px solid var(--borda); width:29px; height:29px; border-radius:50%; font-style:normal; font-size:10px; color:var(--texto-suave); }
+.habito-semana i { display:grid; place-items:center; border:1px solid var(--borda); width:25px; height:25px; border-radius:50%; font-style:normal; font-size:10px; color:var(--texto-suave); }
 .habito-semana .hoje i { border-color:var(--destaque); }
 .habito-semana .feito i { background:var(--destaque); color:var(--sobre-destaque); border-color:var(--destaque); }
 .habito-semana .futuro { opacity:.4; }
 .habito-semana small { font-size:9px; color:var(--texto-suave); }
 .habito-mapa-wrap { width:100%; max-width:232px; border-top:1px solid var(--borda); padding-top:11px; margin:0 auto 14px; }
+.habito-historico { margin:0 0 12px; font-size:10px; color:var(--texto-suave); }
+.habito-historico > summary { display:flex; align-items:center; gap:6px; list-style:none; padding:6px 0; }
+.habito-historico > summary::before { content:'›'; transition:transform .15s; }
+.habito-historico[open] > summary::before { transform:rotate(90deg); }
+.habito-historico > summary span { margin-left:auto; font-size:9px; }
+.habito-historico .habito-mapa-wrap { margin-block:8px 0; }
 .habito-mapa-meses { display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); margin-bottom:6px; font-size:8px; color:var(--texto-suave); }
 .habito-mapa { display:grid; grid-template-rows:repeat(7,1fr); grid-template-columns:repeat(13,minmax(0,1fr)); grid-auto-flow:column; gap:4px; }
 .habito-dia { aspect-ratio:1; min-height:9px; border-radius:3px; background:var(--superficie-alta); border:1px solid color-mix(in srgb,var(--borda) 70%,transparent); }
@@ -71,9 +77,10 @@
 .habito-meta-opcoes input:checked + span { color:var(--sobre-destaque); background:var(--destaque); border-color:var(--destaque); }
 .habito-meta-opcoes input:focus-visible + span { outline:2px solid var(--destaque); outline-offset:3px; }
 .habitos-lista { grid-template-columns:1fr; }
-.habitos-lista .habito-card { display:grid; grid-template-columns:minmax(140px,1fr) minmax(170px,1fr) auto; align-items:center; gap:15px; padding:15px 20px; }
+.habitos-lista .habito-card { display:grid; grid-template-columns:minmax(140px,1fr) minmax(170px,1fr) auto; align-items:center; gap:12px; padding:12px 16px; }
 .habitos-lista .habito-progresso { display:none; }
 .habitos-lista .habito-semana { margin:0; }
 .habitos-lista .habito-estado { grid-column:1/-1; }
 @media(max-width:600px) { .habitos-pagina { padding:25px 16px 16px; } .habitos-cabecalho { gap:10px; } .habitos-cabecalho h1 { font-size:24px; } .habitos-cabecalho .principal { font-size:11px; padding:8px 11px; } .habitos-sobrancelha { font-size:8px; } .habitos-abas > div { gap:19px; } .habitos-abas a { font-size:11px; } .habitos-modelos-grade { grid-template-columns:1fr; } .habitos-modelos-nota { display:none; } .habitos-lista .habito-card { grid-template-columns:1fr; } .habitos-lista .habito-card-rodape { justify-content:space-between; } .habito-semana i { width:31px; height:31px; } .habito-card { padding:19px; } .habitos-rodape { align-items:flex-start; line-height:1.6; } }
 @media(prefers-reduced-motion:reduce) { .habito-progresso i { transition:none; } }
+@media(max-width:600px) { .habito-card { padding:14px; } .habito-semana i { width:27px; height:27px; } }

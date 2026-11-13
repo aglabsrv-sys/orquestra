@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- Grafite com capas em tons pastel; Luz ganha modo escuro em preto absoluto; Brasa volta a ter a janela de poente como capa de assinatura.
+- Cópias intactas de versões antigas dos temas no vault passam a receber a versão nova; temas editados continuam com prioridade.
+- Cor de destaque ajustada ao modo mantendo o tom (sem ficar acinzentada), e amostras de Ajustes mostram a cor que de fato será usada.
+- README reescrito, guia de comandos separado, relatórios de revisão em `docs/historico/` e capturas renovadas, com uma por tema.
 - Explorador abre no grafo, mantém a árvore durante a leitura e oferece um canvas mais amplo com centralização pelas posições reais das notas.
 - Imagens relativas à nota e anexos soltos no vault são reconhecidos; templates HTML têm prévia isolada com estilos inline e imagens locais ou HTTPS.
 - Personalização compacta com salvar no topo, cena selecionada identificada e prévia imediata de cenas, imagens e vídeos.
@@ -34,6 +38,6 @@
 - Roteiro Chromium, benchmark sintético, capturas atualizadas e guia de lançamento.
 - CI sem execução duplicada entre branch e PR; scanner de segredos com a leitura de commits do PR declarada no próprio job.
 
-Evidências e limites em [Sincronização e revisão da comunidade](docs/sincronizacao-comunidade-2026-11-12.md)
-e [Revisão de lançamento anterior](docs/revisao-lancamento-2026-11-12.md).
+Evidências e limites em [Sincronização e revisão da comunidade](docs/historico/sincronizacao-comunidade-2026-11-12.md)
+e [Revisão de lançamento anterior](docs/historico/revisao-lancamento-2026-11-12.md).
 A versão publicada continua sendo a indicada pelo aplicativo; esta seção não representa um lançamento já feito.

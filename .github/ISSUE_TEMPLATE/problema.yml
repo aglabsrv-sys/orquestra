@@ -1,0 +1,24 @@
+name: Problema
+description: Algo não funciona como deveria.
+labels: ["problema"]
+body:
+  - type: textarea
+    id: o-que
+    attributes:
+      label: O que aconteceu
+      description: O que você fez, o que esperava e o que viu. Prints ajudam.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Saída do doctor
+      description: Rode `uv run --frozen orquestra doctor` e cole o resultado. Confira antes se não há caminhos ou nomes que você prefira não publicar.
+      render: text
+  - type: input
+    id: sistema
+    attributes:
+      label: Sistema e navegador
+      placeholder: Windows 11, Chrome 131
+    validations:
+      required: true

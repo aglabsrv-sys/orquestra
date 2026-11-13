@@ -59,11 +59,11 @@ temporária. Verifica criação/edição, recuperação local, conflito externo 
 personalização pendente, números, decisão, captura com falha e repetição, totais
 do Kanban e parada/retomada de animações. A gaveta é exercitada com teclado.
 
-![Quadro no celular com ações e gaveta acessíveis](img/tarefas-mobile.png)
+![Quadro no celular com ações e gaveta acessíveis](../img/tarefas-mobile.png)
 
 O grupo opcional `browser` contém Playwright. Usuários do painel não precisam
 instalá-lo. O job Chromium da CI executa o mesmo roteiro descrito em
-[Contribuir](../CONTRIBUTING.md), sem coletores, backups ou credenciais reais.
+[Contribuir](../../CONTRIBUTING.md), sem coletores, backups ou credenciais reais.
 Testes Node cobrem reconexão, isolamento entre vaults, consultas sobrepostas e
 retorno pelo cache do navegador; teste ASGI cobre pedidos concorrentes durante
 a renderização de uma nota.
@@ -92,5 +92,5 @@ e o histórico alcançável sem encontrar segredos.
 - Repetir auditoria de dependências e histórico antes de tornar o código público. A auditoria local desta revisão não encontrou vulnerabilidades conhecidas nas dependências consultadas.
 
 Os limites de conservação de arquivos e execução de scripts continuam descritos
-em [Segurança](../SECURITY.md) e [Backup](backup.md). Não foram usados vaults,
+em [Segurança](../../SECURITY.md) e [Backup](../backup.md). Não foram usados vaults,
 tokens, remotos de backup ou integrações reais do usuário.

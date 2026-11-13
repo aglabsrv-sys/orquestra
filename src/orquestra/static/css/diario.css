@@ -1,0 +1,41 @@
+.diario-pagina { max-width:1000px; }
+.diario-topo { align-items:center; gap:12px; margin-bottom:22px; }
+.diario-topo h1 { font-size:clamp(1.5rem,3vw,2rem); }
+.diario-ferramentas { display:flex; align-items:center; gap:8px; }
+.diario-ferramentas .botao { min-height:32px; width:32px; padding:0; }
+.diario-ferramentas .navega-dia { display:flex; align-items:center; gap:5px; }
+.diario-ferramentas time { min-width:72px; text-align:center; font-size:.78rem; font-weight:550; }
+.diario-ferramentas .navega-dia .botao { border-color:transparent; background:transparent; }
+.diario-atividade { margin:0 0 8px; font-size:.78rem; font-weight:550; }
+.diario-atividade small { font-size:.7rem; font-weight:450; }
+.diario-registro { gap:0; border-top:1px solid var(--borda); }
+.diario-registro > li { display:block; padding:0; border:0; border-bottom:1px solid color-mix(in srgb,var(--borda) 70%,transparent); border-radius:0; background:transparent; }
+.diario-evento > summary { display:grid; grid-template-columns:40px 80px minmax(0,1fr) 14px; align-items:center; gap:12px; padding:10px 0; list-style:none; font-size:.75rem; line-height:1.5; }
+.diario-evento > summary::-webkit-details-marker,.diario-sessoes > summary::-webkit-details-marker { display:none; }
+.diario-evento > summary:hover { background:color-mix(in srgb,var(--superficie) 48%,transparent); }
+.diario-evento time,.diario-evento .reg-tipo { font-size:.68rem; color:var(--texto-suave); }
+.diario-arquivo { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.diario-arquivo a:hover { color:var(--destaque); }
+.diario-abrir { display:flex; justify-content:center; color:var(--texto-suave); }
+.diario-evento[open] .diario-abrir { transform:rotate(90deg); }
+.diario-detalhes { padding:0 20px 12px 144px; font-size:.72rem; color:var(--texto-suave); overflow-wrap:anywhere; line-height:1.6; }
+.diario-detalhes code { display:block; margin-bottom:6px; padding:0; background:none; font-size:.68rem; white-space:normal; }
+.diario-detalhes p { margin-top:5px; color:var(--texto); }
+.diario-vazio { margin:0; padding:20px 0; border-top:1px solid var(--borda); font-size:.8rem; }
+.diario-sessoes { margin-top:20px; border-block:1px solid var(--borda); }
+.diario-sessoes > summary { display:flex; align-items:center; gap:8px; list-style:none; padding:12px 0; color:var(--texto-suave); font-size:.76rem; }
+.diario-sessoes > summary > .icone:last-child { margin-left:auto; }
+.diario-sessoes[open] > summary > .icone:last-child { transform:rotate(90deg); }
+.diario-sessoes > .texto { padding:4px 0 16px; font-size:.82rem; }
+.diario-dias { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-top:16px; }
+.diario-dias a { padding:4px 8px; border-radius:6px; font-size:.68rem; color:var(--texto-suave); }
+.diario-dias a:hover,.diario-dias a[aria-current] { color:var(--destaque); background:var(--superficie); }
+@media(max-width:600px) {
+  .diario-topo { margin-bottom:18px; }
+  .diario-ferramentas { gap:2px; }
+  .diario-ferramentas .botao { width:30px; min-height:32px; }
+  .diario-ferramentas time { min-width:60px; font-size:.73rem; }
+  .diario-evento > summary { grid-template-columns:34px 62px minmax(0,1fr) 12px; gap:7px; padding-block:11px; }
+  .diario-evento .reg-tipo { font-size:.6rem; }
+  .diario-detalhes { padding-left:48px; }
+}

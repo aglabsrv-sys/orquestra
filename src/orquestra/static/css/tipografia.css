@@ -1,0 +1,60 @@
+/* XL e XXL ampliam a leitura e deixam o layout crescer junto com o texto. */
+html:is([data-tamanho=xl],[data-tamanho=xxl]) body { line-height:1.6; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) :is(.pagina-topo,.linha-botoes,.navega-dia,.explorador-topo) { gap:.6rem .75rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .pagina-topo h1 { font-size:clamp(1.4rem,4vw,2rem); line-height:1.2; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .botao { min-height:2.15rem; padding:.4rem .65rem; line-height:1.35; white-space:normal; text-align:center; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .botao.so-icone { width:2.15rem; padding:0; flex:none; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .campo { gap:.35rem; margin-bottom:.8rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .campo > span:first-child { min-height:0; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .chave > i { flex:none; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .chave > span { font-size:.7rem; line-height:1.5; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .campo :is(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),select) { height:auto; min-height:2.5rem; padding:.5rem .6rem; line-height:1.45; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .grade-campos { grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap:.85rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .segmentos { flex-wrap:wrap; max-width:100%; gap:.2rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .segmentos button { min-height:2rem; padding:.35rem .5rem; line-height:1.4; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .grupo-titulo { flex-wrap:wrap; line-height:1.4; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) :is(.cartao-pergunta,.cartao-trecho,.linha-nota span,.registro,.vazio p) { font-size:.8rem; line-height:1.55; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .linha-nota { padding:.65rem .7rem; gap:.25rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .linha-nota small { font-size:.65rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .et { font-size:.65rem; line-height:1.4; padding:.15rem .4rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .tabela { font-size:.8rem; line-height:1.5; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .tabela :is(td,th) { padding:.55rem .65rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .tabela .cel-titulo { min-width:12rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .aba { font-size:.8rem; padding:.4rem .55rem; line-height:1.4; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .abas { align-items:center; gap:.4rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .gaveta-item { font-size:.8rem; padding:.45rem .5rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .habito-nome { font-size:.85rem; line-height:1.4; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) :is(.habito-card-topo p,.habito-card-rodape > span,.habito-historico,.habito-marcar) { font-size:.65rem; line-height:1.5; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .habito-card-rodape { flex-wrap:wrap; gap:.5rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .habito-semana { margin-block:.6rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .habito-semana i { width:1.4rem; height:1.4rem; font-size:.55rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-segmentos { flex-wrap:wrap; }
+.bv-tamanhos { flex-wrap:wrap; }
+.bv-tamanhos button[data-valor=xl],.bv-tamanhos button[data-valor=xxl] { font-size:.7rem; font-weight:650; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-controle legend { font-size:.7rem; line-height:1.4; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-tema-atual { gap:.65rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-pasta { flex-wrap:wrap; gap:.4rem .6rem; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-modos { margin-left:0; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-identidade-linha { flex-wrap:wrap; }
+html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-tema-miniatura { flex:none; }
+@media(max-width:900px) {
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .habitos-lista .habito-card { grid-template-columns:1fr; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) #personalizar .campo-editor { grid-template-columns:minmax(0,1fr); gap:.6rem; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) #personalizar .campo-editor-opcoes[hidden] { display:none!important; }
+}
+@media(max-width:600px) {
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .topo { padding-inline:12px; gap:6px; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .topo .marca { font-size:.7rem; letter-spacing:.05em; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .topo-dir { gap:5px; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .topo .relogio { font-size:.9rem; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .topo .botao { min-height:2rem; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .topo .botao.so-icone { width:2rem; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .abas { flex-wrap:wrap; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .abas-visoes { flex:1 1 100%; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .abas-fim { margin-left:auto; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .navega-dia { flex-wrap:wrap; justify-content:flex-start; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .fila-acoes .botao { font-size:.7rem; padding:.35rem .5rem; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-tema-atual { flex-wrap:wrap; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-visual-compacto { grid-template-columns:1fr; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-temas-dialogo .bv-temas { grid-template-columns:1fr; }
+}

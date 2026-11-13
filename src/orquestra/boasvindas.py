@@ -149,6 +149,11 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
         if modo not in ("novo", "existente"):
             raise Recusa("Diga se o vault é novo ou se já existe.")
 
+        if modo == "existente" and ja_e_vault:
+            lembrar_vault(vault)
+            await hospedeiro.abrir(vault)
+            return {"ok": True, "reaberto": True, "avisos": []}
+
         disponiveis = preparo.catalogo()
         modulos = [str(m) for m in dados.get("modulos") or [] if str(m) in disponiveis]
         pastas = [

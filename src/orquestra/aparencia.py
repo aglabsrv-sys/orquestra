@@ -7,7 +7,7 @@ pessoais, guardadas em `aparencia:` no orquestra.yaml:
     destaque  uma cor em hexadecimal; vazio usa a do tema
     cantos    reto | discreto | medio | redondo
     fonte     sistema | serifada | arredondada | mono
-    tamanho   pequena | padrao | grande
+    tamanho   pequena | padrao | grande | xl | xxl
 
 Tudo vira variáveis de CSS escritas no topo de cada página (`estilo`). O arquivo de
 estilos não sabe qual é o tema nem o modo: ele só usa as variáveis.
@@ -19,7 +19,7 @@ baixado da internet: o painel funciona sem conexão.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 MODOS = ["escuro", "claro", "auto"]
@@ -30,7 +30,7 @@ FONTES = {
     "arredondada": 'ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI Variable Display", "Trebuchet MS", system-ui, sans-serif',
     "mono": 'ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace',
 }
-TAMANHOS = {"pequena": "14px", "padrao": "16px", "grande": "18px"}
+TAMANHOS = {"pequena": "14px", "padrao": "16px", "grande": "18px", "xl": "20px", "xxl": "22px"}
 NOMES = {
     "escuro": "Escuro", "claro": "Claro", "auto": "Igual ao sistema",
     "reto": "Retos", "discreto": "Discretos", "medio": "Médios", "redondo": "Redondos",
@@ -46,7 +46,7 @@ _COR = re.compile(r"#[0-9a-fA-F]{6}")
 class Aparencia:
     modo: str = "escuro"
     destaque: str = ""
-    cantos: str = "medio"
+    cantos: str = "discreto"
     fonte: str = "sistema"
     tamanho: str = "padrao"
     cena: str = ""
@@ -108,6 +108,21 @@ def _rgb(cor: str) -> tuple[int, int, int]:
 def misturar(a: str, b: str, t: float) -> str:
     A, B = _rgb(a), _rgb(b)
     return "#" + "".join(f"{max(0, min(255, round(x + (y - x) * t))):02x}" for x, y in zip(A, B))
+
+
+def mudar_luz(cor: str, alvo: float, t: float) -> str:
+    """Leva a luminosidade (HSL) da cor em direção a `alvo` (0 escuro, 1 claro), mantendo o matiz.
+
+    Misturar com preto deixa um rosa pastel cor de terra; mexer só na luz o mantém rosa.
+    """
+    import colorsys
+
+    r, g, b = (v / 255 for v in _rgb(cor))
+    h, luz, sat = colorsys.rgb_to_hls(r, g, b)
+    luz = luz + (alvo - luz) * t
+    # Muito perto do branco ou do preto a cor some; um pouco mais de saturação compensa.
+    sat = min(1.0, sat * (1 + 0.35 * t)) if sat > 0.05 else sat
+    return "#" + "".join(f"{round(v * 255):02x}" for v in colorsys.hls_to_rgb(h, luz, sat))
 
 
 def luminancia(cor: str) -> float:
@@ -175,9 +190,9 @@ def cores(tema: dict[str, Any], aparencia: Aparencia, claro: bool) -> dict[str, 
     # especialmente no modo claro. Só a saída CSS muda; o tema do vault é intacto.
     for chave in ("texto", "texto_suave", "destaque", "alerta", "ok"):
         original = base[chave]
-        alvo = "#000000" if luminancia(base["fundo"]) > 0.5 else "#ffffff"
+        alvo = 0.0 if luminancia(base["fundo"]) > 0.5 else 1.0
         for passo in range(101):
-            ajustada = misturar(original, alvo, passo / 100)
+            ajustada = mudar_luz(original, alvo, passo / 100)
             fundos = superficies
             if chave in ("destaque", "alerta", "ok"):
                 fundos = [*superficies, *(misturar(fundo, ajustada, 0.20) for fundo in superficies)]
@@ -192,6 +207,8 @@ def _variaveis(paleta: dict[str, str], claro: bool) -> str:
     claro = luminancia(paleta["fundo"]) > 0.5
     partes = [f"--{nome.replace('_', '-')}:{cor}" for nome, cor in paleta.items()]
     partes.append("color-scheme:" + ("light" if claro else "dark"))
+    # 1 no modo claro, 0 no escuro: as amostras de Ajustes escolhem a cor do modo em uso com isso.
+    partes.append("--modo-claro:" + ("1" if claro else "0"))
     # A sombra e o brilho de fundo pesam demais numa tela clara.
     partes.append("--sombra:" + ("rgb(60 45 30 / 0.28)" if claro else "#000"))
     partes.append("--ambiente:" + ("0.22" if claro else "0.5"))
@@ -210,6 +227,26 @@ def estilo(tema: dict[str, Any], aparencia: Aparencia) -> str:
     if aparencia.modo == "auto":
         return f":root{{{escuro};{fixas}}}@media (prefers-color-scheme: light){{:root{{{claro}}}}}"
     return f":root{{{escuro};{fixas}}}"
+
+
+def amostras(tema: dict[str, Any], aparencia: Aparencia) -> dict[str, Any]:
+    """As cores como o painel vai de fato mostrar, nos dois modos.
+
+    O destaque é ajustado ao modo para ter contraste (um tom pastel escurece no claro).
+    As amostras de Ajustes usam estas cores, e não as escritas no tema, para a bolinha
+    que a pessoa clica ser a mesma cor que aparece nos botões.
+    """
+    def par(cor: str) -> dict[str, str]:
+        com = replace(aparencia, destaque=cor)
+        return {"escuro": cores(tema, com, False)["destaque"], "claro": cores(tema, com, True)["destaque"]}
+
+    sem = replace(aparencia, destaque="")
+    return {
+        "tema": {"escuro": cores(tema, sem, False), "claro": cores(tema, sem, True)},
+        "do_tema": {"escuro": cores(tema, sem, False)["destaque"], "claro": cores(tema, sem, True)["destaque"]},
+        "sugestoes": [{"valor": cor, **par(cor)} for cor in SUGESTOES],
+        "atual": par(aparencia.destaque) if aparencia.destaque else None,
+    }
 
 
 def cor_do_navegador(tema: dict[str, Any], aparencia: Aparencia) -> str:

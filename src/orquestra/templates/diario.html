@@ -3,46 +3,49 @@
 {% block titulo %}Diário{% endblock %}
 {% block trilha %}Diário{% endblock %}
 {% block observa %}{% if e_hoje %}tudo{% endif %}{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/diario.css?v={{ marca }}">{% endblock %}
 
 {% block conteudo %}
-<section class="pagina">
-  <header class="pagina-topo">
+<section class="pagina diario-pagina">
+  <header class="pagina-topo diario-topo">
     <h1>Diário</h1>
-    <div class="navega-dia">
-      <a class="botao so-icone" href="?dia={{ anterior }}" aria-label="Dia anterior">{{ icone('chevron_esq', 18) }}</a>
-      <b>{{ 'Hoje · ' if e_hoje }}{{ dia_longo }}</b>
-      {% if proximo %}<a class="botao so-icone" href="?dia={{ proximo }}" aria-label="Dia seguinte">{{ icone('chevron_dir', 18) }}</a>{% endif %}
+    <div class="diario-ferramentas">
+      <nav class="navega-dia" aria-label="Dia do diário">
+        <a class="botao pequeno so-icone" href="?dia={{ anterior }}" aria-label="Dia anterior">{{ icone('chevron_esq', 16) }}</a>
+        <time datetime="{{ dia.isoformat() }}" title="{{ dia_longo }}">{{ 'Hoje' if e_hoje else dia.strftime('%d/%m/%Y') }}</time>
+        {% if proximo %}<a class="botao pequeno so-icone" href="?dia={{ proximo }}" aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</a>{% else %}<button class="botao pequeno so-icone" type="button" disabled aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</button>{% endif %}
+      </nav>
+      <a class="botao pequeno so-icone" href="/personalizar/diario" title="Capa do Diário no Início" aria-label="Personalizar capa do Diário no Início">{{ icone('paleta', 16) }}</a>
     </div>
   </header>
 
-  <h2 class="grupo-titulo">{{ icone('chip', 18) }} Sessões dos agentes</h2>
-  {% if sessoes.strip() %}
-  <div class="texto bloco">{{ sessoes }}</div>
-  {% else %}
-  <p class="suave">Nenhum agente registrou sessão neste dia. Pelo AGENTS.md, todo agente escreve aqui um resumo do que fez ao terminar.</p>
-  {% endif %}
-
-  <h2 class="grupo-titulo">{{ icone('pulso', 18) }} Registro de mudanças <small>{{ entradas|length }}</small></h2>
+  <h2 class="grupo-titulo diario-atividade">Atividade registrada <small>{{ entradas|length }}</small></h2>
   {% if entradas %}
-  <ol class="registro">
+  <ol class="registro diario-registro" aria-label="Atividade do dia">
     {% for e in entradas %}
     <li class="reg-{{ e.tipo }}">
-      <time>{{ e.hora[:5] }}</time>
-      <span class="et reg-tipo">{{ e.tipo }}</span>
-      <div>
-        {% if e.existe %}<a href="{{ url_nota(e.rel) }}">{{ e.rel }}</a>{% else %}<span>{{ e.rel }}</span>{% endif %}
-        {% if e.detalhe %}<small>{{ e.detalhe }}</small>{% endif %}
-      </div>
-      <span class="et{% if e.autor == 'painel' %} zona-humano{% else %} zona-maquina{% endif %}">{{ 'fora do painel' if e.autor.startswith('externo') else e.autor }}</span>
+      <details class="diario-evento">
+        <summary>
+          <time>{{ e.hora[:5] }}</time>
+          <span class="reg-tipo">{{ e.tipo }}</span>
+          <span class="diario-arquivo">{% if e.existe %}<a href="{{ url_nota(e.rel) }}" title="{{ e.rel }}">{{ e.rel.rsplit('/', 1)[-1].removesuffix('.md') }}</a>{% else %}<span title="{{ e.rel }}">{{ e.rel.rsplit('/', 1)[-1].removesuffix('.md') }}</span>{% endif %}</span>
+          <span class="diario-abrir" aria-hidden="true">{{ icone('chevron_dir', 13) }}</span>
+        </summary>
+        <div class="diario-detalhes"><code>{{ e.rel }}</code><span class="diario-autor">{{ 'Fora do painel' if e.autor.startswith('externo') else e.autor }}</span>{% if e.detalhe %}<p>{{ e.detalhe }}</p>{% endif %}</div>
+      </details>
     </li>
     {% endfor %}
   </ol>
   {% else %}
-  {{ p.vazio("Nenhuma mudança registrada", "Toda criação, edição ou remoção de nota neste dia aparece aqui, não importa quem fez.") }}
+  <p class="diario-vazio suave">Nenhuma atividade registrada neste dia.</p>
+  {% endif %}
+
+  {% if sessoes.strip() %}
+  <details class="diario-sessoes"><summary>{{ icone('chip', 15) }} Sessões dos agentes {{ icone('chevron_dir', 13) }}</summary><div class="texto">{{ sessoes }}</div></details>
   {% endif %}
 
   {% if dias %}
-  <p class="suave outros-dias">Outros dias: {% for d in dias %}<a href="?dia={{ d }}">{{ d[8:] }}/{{ d[5:7] }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  <nav class="outros-dias diario-dias" aria-label="Dias recentes">{% for d in dias %}<a href="?dia={{ d }}"{% if d == dia.isoformat() %} aria-current="date"{% endif %}>{{ d[8:] }}/{{ d[5:7] }}</a>{% endfor %}</nav>
   {% endif %}
 </section>
 {% endblock %}

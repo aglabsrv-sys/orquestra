@@ -243,6 +243,7 @@ class Painel:
         zona: str = "itens",
         origem: str = "humano",
         autor: str = "painel",
+        subpasta: str = "",
     ) -> Nota:
         modulo = self._modulo_para_escrita(self.modulo(modulo_id))
         titulo = (titulo or "").strip()
@@ -271,6 +272,15 @@ class Painel:
 
         corpo = (corpo or "").replace("\r\n", "\n").strip()
         pasta = caminho_no_vault(self.vault, modulo.pasta_itens if zona == "itens" else modulo.pasta / zona)
+        if subpasta:
+            partes = subpasta.replace("\\", "/").split("/")
+            if zona != "itens" or not modulo.itens_na_raiz or any(p in ("", ".", "..", "humano", "maquina", "arquivo") or p.startswith((".", "_")) for p in partes):
+                raise Recusado("Escolha uma subpasta desta área.")
+            pasta = caminho_no_vault(self.vault, pasta / "/".join(partes))
+            if not pasta.is_relative_to(modulo.pasta_itens.resolve()):
+                raise Recusado("Escolha uma subpasta desta área.")
+            if not pasta.is_dir():
+                raise Recusado("Esta subpasta não existe mais. Reabra a área.")
         caminho = caminho_no_vault(self.vault, caminho_livre(pasta, titulo))
         nota = Nota(
             caminho=caminho,
@@ -630,6 +640,40 @@ class Painel:
             raise Recusado(str(e)) from None
         self.recarregar_tudo()
         return self.modulo(modulo_id)
+
+    @_sincronizado
+    def personalizar_pagina(self, alvo: str, dados: dict[str, Any]) -> None:
+        """Capas das páginas próprias, com as mesmas mídias das pastas."""
+        if alvo not in {"diario", "decidir", "pastas"}:
+            raise NaoEncontrado(alvo)
+        arquivo = caminho_no_vault(self.vault, "orquestra.yaml")
+        yaml = ler_yaml(arquivo)
+        if not dados.get("versao") or dados["versao"] != armazenamento.versao(yaml._orq_original or b""):
+            raise Conflito("Os ajustes mudaram. Reabra a personalização antes de salvar.")
+        if not isinstance(yaml.get("capas"), dict):
+            yaml["capas"] = CommentedMap()
+        if dados.get("padrao"):
+            yaml["capas"].pop(alvo, None)
+        elif dados.get("ocultar"):
+            yaml["capas"][alvo] = False
+        elif dados.get("cena"):
+            cena = str(dados["cena"])
+            if cena not in temas.CENAS:
+                raise Recusado("Escolha uma cena disponível.")
+            yaml["capas"][alvo] = CommentedMap(cena=cena)
+        elif dados.get("capa"):
+            capa = str(dados["capa"])
+            if capa not in temas.CAPAS_CATALOGO:
+                midia = caminho_no_vault(self.vault, capa)
+                if not midia.is_file() or midia.suffix.lower() not in {".png", ".jpg", ".webp", ".mp4", ".webm"}:
+                    raise Recusado("Escolha uma imagem ou vídeo enviado ao vault.")
+                capa = midia.relative_to(self.vault).as_posix()
+            yaml["capas"][alvo] = capa
+        else:
+            raise Recusado("Escolha uma capa ou use a capa do tema.")
+        gravar_yaml(arquivo, yaml)
+        self.recarregar_config()
+        self.eventos.publicar({"tipo": "config"})
 
     @_sincronizado
     def criar_modulo(self, nome: str, icone: str = "nota", com_quadro: bool = True) -> Modulo:

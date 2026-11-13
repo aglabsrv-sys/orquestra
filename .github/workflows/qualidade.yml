@@ -60,6 +60,8 @@ jobs:
       - run: uv sync --locked --group browser
       - run: uv run --frozen --group browser playwright install --with-deps chromium
       - run: uv run --frozen --group browser python scripts/verificar_interface.py
+      - run: uv run --frozen --group browser python scripts/verificar_grafo.py
+      - run: uv run --frozen --group browser python scripts/verificar_editor.py
 
   mcp-compativel:
     name: MCP SDK ${{ matrix.mcp }} / Python 3.11

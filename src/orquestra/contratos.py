@@ -17,6 +17,7 @@ class CriarNota(Pedido):
     campos: dict[str, Any] = Field(default_factory=dict, max_length=200)
     corpo: str = Field(default="", max_length=1_000_000)
     zona: Literal["itens", "humano"] = "itens"
+    subpasta: str = Field(default="", max_length=1000)
 
 
 class EditarNota(Pedido):
@@ -46,6 +47,11 @@ class Captura(Pedido):
     texto: str = Field(default="", max_length=1_000_000)
 
 
+class SalvarSegredo(Pedido):
+    nome: str = Field(min_length=2, max_length=80)
+    valor: str | None = Field(max_length=8192)
+
+
 class Coletor(Pedido):
     modulo: str
     script: str
@@ -58,6 +64,53 @@ class AtivarColetor(Coletor):
 class ConfiarColetor(Coletor):
     acao: Literal["confiar", "revogar"] = "confiar"
     assinatura: str = ""
+
+
+class ConfigurarColetor(Coletor):
+    config: dict[str, Any] | None = Field(default=None, max_length=100)
+    nome: str = Field(default="", max_length=120)
+    a_cada: str = Field(default="", max_length=20)
+    diario_as: str = Field(default="", max_length=5)
+    versao: str = Field(default="", max_length=128)
+
+
+class AtualizarColetor(Coletor):
+    versao: str = Field(min_length=1, max_length=128)
+    assinatura: str = Field(min_length=1, max_length=128)
+
+
+class PedidoAutomacao(Pedido):
+    definicao: str = Field(min_length=1, max_length=100)
+    destino: str = Field(default="", max_length=1000)
+    nome: str = Field(default="", max_length=120)
+    config: dict[str, Any] = Field(default_factory=dict, max_length=100)
+    mapeamento: dict[str, str] = Field(default_factory=dict, max_length=100)
+    a_cada: str | None = Field(default=None, max_length=20)
+    diario_as: str | None = Field(default=None, max_length=5)
+
+
+class IdAutomacao(Pedido):
+    id: str = Field(min_length=1, max_length=64)
+
+
+class EditarAutomacao(PedidoAutomacao):
+    id: str = Field(min_length=1, max_length=64)
+
+
+class PreviaAutomacao(PedidoAutomacao):
+    id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class AtivarAutomacao(IdAutomacao):
+    ativo: bool
+
+
+class ConfiarAutomacao(IdAutomacao):
+    assinatura: str = Field(min_length=1, max_length=128)
+
+
+class ExecutarAutomacao(IdAutomacao):
+    previa: bool = False
 
 
 class Tema(Pedido):

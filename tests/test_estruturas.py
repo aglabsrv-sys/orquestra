@@ -443,7 +443,9 @@ def test_criar_vault_pela_tela_abre_o_painel(isolado):
         assert r.status_code == 200 and r.json()["ok"]
         inicio = c.get("/")
         assert inicio.status_code == 200 and "Meu canto" in inicio.text and "Tarefas" in inicio.text
-        assert "Trocar de vault" in c.get("/ajustes/vault").text
+        cofres = c.get("/ajustes/vault").text
+        assert 'href="/boas-vindas?modo=existente"' in cofres
+        assert 'href="/boas-vindas?modo=novo"' in cofres
         assert c.get("/boas-vindas").status_code == 200  # continua acessível, para trocar de vault
     assert localizar_vault() == destino.resolve()
     assert ler_config_painel(destino).tema == "noturno"

@@ -54,6 +54,15 @@ test("rajada de 100 eventos agrupa a consulta de resumo e aceita nomes com aspas
   assert.equal(p.pedidos.length, 2); assert.equal(p.selo.textContent, 3); assert.equal(p.selo.hidden, false);
 });
 
+test("selos zerados ou ausentes somem e contagens altas ficam compactas", async () => {
+  for (const [numero, texto, oculto] of [["0", 0, true], [-3, 0, true], [undefined, 0, true], [120, "99+", false]]) {
+    const p = pagina(async () => ({ ok: true, json: async () => ({ vault_id: "vault-a", selos: { 'Pasta com "aspas"': numero } }) }));
+    p.selo.textContent = 5; p.selo.hidden = false;
+    p.fontes[0].onopen(); await p.avancar(180);
+    assert.equal(p.selo.textContent, texto); assert.equal(p.selo.hidden, oculto);
+  }
+});
+
 test("reconexão ressincroniza inclusive depois de falha na primeira abertura", async () => {
   for (const abriuAntes of [false, true]) {
     const p = pagina();

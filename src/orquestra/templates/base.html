@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" class="cantos-{{ cfg.aparencia.cantos }}">
+<html lang="pt-BR" class="cantos-{{ cfg.aparencia.cantos }}" data-tamanho="{{ cfg.aparencia.tamanho }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,6 +10,7 @@
   {# Cores, cantos e fonte: o tema ativo mais as escolhas de Ajustes > Aparência (aparencia.py). #}
   <link rel="stylesheet" href="/static/css/refino.css?v={{ marca }}">
   {% block estilos %}{% endblock %}
+  <link rel="stylesheet" href="/static/css/tipografia.css?v={{ marca }}">
   <style>{{ estilo|safe }}</style>
 {% if request.query_params.get('explorador') == '1' %}<link rel="stylesheet" href="/static/css/leitor.css?v={{ marca }}">{% endif %}
 </head>
@@ -43,18 +44,18 @@
     <a class="dock-item{% if dock.inicio_ativo %} ativo{% endif %}" href="/"{% if dock.inicio_ativo %} aria-current="page"{% endif %} data-dica="Início" aria-label="Início">{{ icone('inicio', 20) }}</a>
     {% for m in dock.barra %}
     <a class="dock-item{% if not m.no_mobile %} dock-so-desktop{% endif %}{% if m.ativo %} ativo{% endif %}" href="{{ m.url }}"{% if m.ativo %} aria-current="page"{% endif %} data-dica="{{ m.nome }}" aria-label="{{ m.nome }}" data-selo-de="{{ m.id }}">
-      {{ icone(m.icone, 20) }}<b class="selo"{% if not m.selo %} hidden{% endif %}>{{ m.selo }}</b>
+      {{ icone(m.icone, 20) }}<b class="selo"{% if not m.selo %} hidden{% endif %}>{{ "99+" if m.selo > 99 else m.selo }}</b>
     </a>
     {% endfor %}
     {% if dock.gaveta %}
     <button class="dock-item{% if not dock.gaveta_desktop %} dock-so-mobile{% endif %}{% if dock.gaveta_ativa %} ativo-desktop{% endif %}{% if dock.gaveta_mobile_ativa %} ativo-mobile{% endif %}" type="button" id="abrir-gaveta" data-dica="Todas as áreas" aria-label="Todas as áreas" aria-expanded="false" aria-controls="gaveta" data-selo-de="_gaveta">
-      {{ icone('grade', 20) }}<b class="selo dock-so-desktop"{% if not dock.gaveta_selo %} hidden{% endif %}>{{ dock.gaveta_selo }}</b>
+      {{ icone('grade', 20) }}<b class="selo dock-so-desktop"{% if not dock.gaveta_selo %} hidden{% endif %}>{{ "99+" if dock.gaveta_selo > 99 else dock.gaveta_selo }}</b>
     </button>
     {% endif %}
     <span class="dock-sep" aria-hidden="true"></span>
     {% for s in dock.sistema_barra %}
     <a class="dock-item{% if s.id != 'decidir' %} dock-so-desktop{% endif %}{% if s.ativo %} ativo{% endif %}" href="{{ s.url }}"{% if s.ativo %} aria-current="page"{% endif %} data-dica="{{ s.nome }}" aria-label="{{ s.nome }}" data-selo-de="{{ s.id }}">
-      {{ icone(s.icone, 20) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ s.selo }}</b>
+      {{ icone(s.icone, 20) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ "99+" if s.selo > 99 else s.selo }}</b>
     </a>
     {% endfor %}
   </nav>
@@ -63,7 +64,7 @@
   <div class="gaveta" id="gaveta" hidden>
     {% for i in dock.gaveta %}
     <a class="gaveta-item{% if i.ativo %} ativo{% endif %}" href="{{ i.url }}"{% if i.ativo %} aria-current="page"{% endif %} data-selo-de="{{ i.id }}">
-      {{ icone(i.icone, 20) }}<span>{{ i.nome }}</span><b class="selo"{% if not i.selo %} hidden{% endif %}>{{ i.selo }}</b>
+      {{ icone(i.icone, 20) }}<span>{{ i.nome }}</span><b class="selo"{% if not i.selo %} hidden{% endif %}>{{ "99+" if i.selo > 99 else i.selo }}</b>
     </a>
     {% endfor %}
   </div>

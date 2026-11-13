@@ -23,6 +23,8 @@ Para verificar as jornadas no navegador:
 uv sync --locked --group browser
 uv run --frozen --group browser playwright install chromium
 uv run --frozen --group browser python scripts/verificar_interface.py
+uv run --frozen --group browser python scripts/verificar_grafo.py
+uv run --frozen --group browser python scripts/verificar_editor.py
 ```
 
 Em Linux sem as bibliotecas necessárias, use `playwright install --with-deps chromium`

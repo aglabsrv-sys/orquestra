@@ -27,8 +27,8 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from orquestra import __version__, adocao, agenda, aparencia, armazenamento, backup, coletores, confianca, contratos, diario, graficos, preparo, temas, segredos
-from orquestra.caminhos import CaminhoInseguro, ignorar
+from orquestra import __version__, adocao, agenda, aparencia, armazenamento, automacoes, backup, coletores, confianca, contratos, diario, graficos, preparo, temas, segredos, vinculos
+from orquestra.caminhos import CaminhoInseguro, eh_link, ignorar
 from orquestra.config import ConfigInvalida
 from orquestra import apresentacao as ap
 from orquestra.indice import EXT_MIDIA, data_de, deve_ignorar, espera_decisao
@@ -139,6 +139,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.exception_handler(ConfigInvalida)
     @app.exception_handler(CaminhoInseguro)
     @app.exception_handler(backup.ErroBackup)
+    @app.exception_handler(automacoes.ErroAutomacao)
     async def recusado(request: Request, erro: Exception):
         return JSONResponse({"erro": str(erro)}, status_code=400)
 
@@ -303,10 +304,19 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
 
     @app.get("/m/{modulo_id}", response_class=HTMLResponse)
     @leitura
-    def ver_modulo(request: Request, modulo_id: str, aba: str = "v0"):
+    def ver_modulo(request: Request, modulo_id: str, aba: str = "", pasta: str = ""):
+        preferencia = "orq-visao-" + hashlib.sha256(f"{vault_id}:{modulo_id}".encode()).hexdigest()[:20]
+        escolha_explicita = aba
+        aba = aba or request.cookies.get(preferencia, "")
         if modulo_id == "habitos" and aba in ("v0", "progresso", "lista", "v1"):
             from orquestra import habitos
-            return pagina(request, "habitos.html", "m:habitos", **habitos.montar(painel, aba))
+            resposta = pagina(request, "habitos.html", "m:habitos", **habitos.montar(painel, aba))
+            if escolha_explicita:
+                resposta.set_cookie(preferencia, aba, max_age=31536000, httponly=True, samesite="strict")
+            return resposta
+        if modulo_id == "habitos" and not aba:
+            from orquestra import habitos
+            return pagina(request, "habitos.html", "m:habitos", **habitos.montar(painel, "v0"))
         modulo = painel.modulo(modulo_id)
         hoje = dt.date.today()
         contexto: dict[str, Any] = {
@@ -339,12 +349,46 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     "rodando": f"{modulo.id}/{c.script}" in painel.rodando,
                     "quando": c.a_cada and f"a cada {c.a_cada}" or c.diario_as and f"todo dia às {c.diario_as}" or "só manual",
                     "confianca": estado_confianca(modulo, c),
+                    "ajuda": automacoes.ajuda_coletor(c.script),
+                    "atualizacao_disponivel": automacoes.legado_desatualizado(painel, modulo.id, c.script),
                 }
                 for c in modulo.coletores
             ]
             contexto["arquivadas"] = len(painel.indice.notas_em(modulo.id, "arquivo"))
         else:
             itens = painel.indice.itens(modulo.id)
+            # Pastas existentes conservam a hierarquia: abrir uma pasta mostra
+            # suas notas diretas e seus filhos, em vez de achatar o vault.
+            if modulo.itens_na_raiz:
+                pasta = pasta.replace("\\", "/").strip("/")
+                if pasta and any(p in ("", ".", "..", "humano", "maquina", "arquivo") or p.startswith((".", "_")) for p in pasta.split("/")):
+                    raise Recusado("Escolha uma subpasta desta área.")
+                prefixo = modulo.id + "/" + (pasta + "/" if pasta else "")
+                filhas: dict[str, int] = {}
+                diretas = []
+                for nota in itens:
+                    if not nota.rel.startswith(prefixo):
+                        continue
+                    resto = nota.rel[len(prefixo):]
+                    if "/" in resto:
+                        filha = resto.split("/", 1)[0]
+                        filhas[filha] = filhas.get(filha, 0) + 1
+                    else:
+                        diretas.append(nota)
+                if pasta and not diretas and not filhas:
+                    raise NaoEncontrado(pasta)
+                contexto["pasta_atual"] = pasta
+                contexto["subpastas"] = [{"nome": nome, "total": total, "caminho": "/".join(filter(None, (pasta, nome)))} for nome, total in sorted(filhas.items(), key=lambda p: p[0].casefold())]
+                partes = pasta.split("/") if pasta else []
+                contexto["trilha_pastas"] = [{"nome": nome, "caminho": "/".join(partes[:i + 1])} for i, nome in enumerate(partes)]
+                itens = diretas
+            if not aba:
+                # Coleções e hierarquias funcionam melhor como listas. Um quadro
+                # só é sugerido quando há distribuição real entre status.
+                lista = next((i for i, v in enumerate(modulo.visoes) if v.tipo == "tabela"), 0)
+                primeira = modulo.visoes[0]
+                valores = {str(n.campo(primeira.agrupar_por)) for n in itens if n.campo(primeira.agrupar_por) not in (None, "")}
+                aba = f"v{lista}" if contexto.get("subpastas") or (primeira.tipo == "kanban" and itens and len(valores) < 2) else "v0"
             try:
                 indice_visao = max(0, min(int(aba.lstrip("v") or 0), len(modulo.visoes) - 1))
             except ValueError:
@@ -388,6 +432,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             else:
                 itens, contexto["paginacao"] = paginar(request, itens)
                 nomes = visao.colunas or ["titulo", *modulo.campos.keys()]
+                if modulo.itens_na_raiz:
+                    nomes = [n for n in nomes if n == "titulo" or any(nota.campo(n) not in (None, "", []) for nota in itens)]
                 contexto["colunas_tabela"] = [
                     {"nome": n, "rotulo": "Título" if n == "titulo" else (modulo.campos[n].rotulo if n in modulo.campos else rotulo(n))}
                     for n in nomes
@@ -416,7 +462,10 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                             celulas.append({"tipo": "texto", "texto": str(valor)})
                     linhas.append({"cartao": c, "celulas": celulas})
                 contexto["linhas"] = linhas
-        return pagina(request, "modulo.html", f"m:{modulo.id}", **contexto)
+        resposta = pagina(request, "modulo.html", f"m:{modulo.id}", **contexto)
+        if escolha_explicita and escolha_explicita in {f"v{i}" for i in range(len(modulo.visoes))}:
+            resposta.set_cookie(preferencia, contexto["aba"], max_age=31536000, httponly=True, samesite="strict")
+        return resposta
 
     @app.get("/n/{rel:path}", response_class=HTMLResponse)
     @leitura
@@ -473,7 +522,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             c["trecho"] = ap.trecho(nota, 180)
             c["por_status"] = str(nota.campo(modulo.campo_status) or "") in modulo.decidir
             grupos.setdefault(modulo.id, {"modulo": modulo, "cartoes": []})["cartoes"].append(c)
-        return pagina(request, "decidir.html", "decidir", grupos=list(grupos.values()), total=len(pendentes), paginacao=paginacao, aprovacao=aprovacao)
+        return pagina(request, "decidir.html", "decidir", grupos=list(grupos.values()), total=len(pendentes), paginacao=paginacao, aprovacao=aprovacao, capa=None if painel.config.capas.get("decidir") is False else ap.capa_de(painel, "decidir"))
 
     @app.get("/diario", response_class=HTMLResponse)
     @leitura
@@ -490,6 +539,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             request,
             "diario.html",
             "diario",
+            capa=None if painel.config.capas.get("diario") is False else ap.capa_de(painel, "diario"),
             dia=alvo,
             dia_longo=ap.data_longa(alvo),
             e_hoje=alvo == hoje,
@@ -508,21 +558,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             alvo = dt.date.fromisoformat(data)
         except ValueError:
             raise NaoEncontrado(data) from None
-        grupos = []
-        for modulo in painel.indice.modulos.values():
-            if not modulo.campo_data:
-                continue
-            cartoes = []
-            for nota in painel.indice.itens(modulo.id):
-                dia = data_de(nota, modulo)
-                if dia is None or str(nota.campo(modulo.campo_status) or "") in modulo.concluidos:
-                    continue
-                # Na página de hoje também entram os atrasados (só onde existe status para atrasar).
-                if dia == alvo or (alvo == hoje and dia < hoje and modulo.tem_status):
-                    cartoes.append(ap.cartao(nota, modulo, hoje))
-            if cartoes:
-                grupos.append({"modulo": modulo, "cartoes": cartoes})
-        return pagina(request, "dia.html", "inicio", dia=alvo, dia_longo=ap.data_longa(alvo), e_hoje=alvo == hoje, grupos=grupos, dias_agenda=[alvo + dt.timedelta(days=i) for i in range(-3, 4)])
+        return pagina(request, "dia.html", "inicio", dia=alvo, dia_longo=ap.data_longa(alvo), e_hoje=alvo == hoje, resumo=diario.resumo_dia(painel, alvo, hoje))
 
     @app.get("/agenda", response_class=HTMLResponse)
     @app.get("/agenda/{data}", response_class=HTMLResponse)
@@ -651,6 +687,15 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         elemento = f'<video src="{url}" controls muted playsinline></video>' if caminho.suffix.lower() in {".mp4", ".webm"} else f'<img src="{url}" alt="{escape(caminho.name, quote=True)}">'
         return HTMLResponse('<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#111318}img,video{max-width:100%;max-height:100vh;object-fit:contain}</style>' + elemento, headers={"Content-Security-Policy": "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'; sandbox"})
 
+    def conteudo_visivel_da_pasta(rel: str):
+        subpastas, notas = painel.indice.conteudo_da_pasta(rel)
+        nomes = dict(subpastas)
+        for filho in painel.caminho_seguro(rel).iterdir():
+            caminho = (rel + "/" + filho.name).strip("/")
+            if filho.is_dir() and not eh_link(filho) and not deve_ignorar(caminho + "/x.md"):
+                nomes.setdefault(filho.name, 0)
+        return nomes, notas
+
     @app.get("/api/pastas/arvore")
     @leitura
     def arvore_pastas(request: Request, rel: str = ""):
@@ -658,12 +703,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         pasta = painel.caminho_seguro(rel)
         if not pasta.is_dir() or (rel and deve_ignorar(rel + "/x.md")):
             raise NaoEncontrado(rel)
-        subpastas, notas = painel.indice.conteudo_da_pasta(rel)
-        nomes = dict(subpastas)
-        for filho in pasta.iterdir():
-            caminho = (rel + "/" + filho.name).strip("/")
-            if filho.is_dir() and not filho.is_symlink() and not deve_ignorar(caminho + "/x.md"):
-                nomes.setdefault(filho.name, 0)
+        nomes, notas = conteudo_visivel_da_pasta(rel)
         return {
             "pastas": [{"nome": n, "rel": (rel + "/" + n).strip("/"), "url": ap.url_pasta((rel + "/" + n).strip("/")), "notas": nomes[n]} for n in sorted(nomes, key=str.casefold)],
             "notas": [{"titulo": n.titulo, "rel": n.rel, "url": ap.url_nota(n.rel)} for n in notas[:300]],
@@ -674,7 +714,6 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.get("/api/pastas/grafo")
     @leitura
     def grafo_pastas(request: Request, rel: str = ""):
-        import re
         rel = rel.strip("/")
         if rel:
             pasta = painel.caminho_seguro(rel)
@@ -684,16 +723,47 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         selecionadas = sorted(notas, key=lambda n: n.rel.casefold())[:600]
         ids = {n.rel for n in selecionadas}
         ligacoes = set()
-        for n in selecionadas:
-            for alvo in re.finditer(r"\[\[([^\]|#]+)(?:[^\]]*)\]\]", n.corpo):
-                destino = painel.indice.resolver_link(alvo.group(1).strip())
-                if destino in ids and destino != n.rel:
-                    ligacoes.add(tuple(sorted((n.rel, destino))))
+        with vinculos.resolver_em_lote(painel.indice):
+            for n in selecionadas:
+                for referencia in painel.indice.referencias_de(n.rel):
+                    destino = painel.indice.resolver_referencia(referencia, n.rel).rel
+                    if destino in ids and destino != n.rel:
+                        ligacoes.add(tuple(sorted((n.rel, destino))))
+                    if len(ligacoes) >= 3000:
+                        break
                 if len(ligacoes) >= 3000:
                     break
-            if len(ligacoes) >= 3000:
-                break
         return {"limitado": len(notas) > len(selecionadas) or len(ligacoes) >= 3000, "notas": [{"id": n.rel, "titulo": n.titulo, "url": ap.url_nota(n.rel)} for n in selecionadas], "ligacoes": sorted(ligacoes), "total": len(notas)}
+
+    def conferir_pasta_vinculos(rel: str) -> str:
+        rel = rel.strip("/")
+        pasta = painel.caminho_seguro(rel)
+        if not pasta.is_dir() or (rel and deve_ignorar(rel + "/x.md")):
+            raise NaoEncontrado(rel)
+        return rel
+
+    @app.get("/api/vinculos")
+    @leitura
+    def api_vinculos(request: Request, rel: str = "", limite: int = 1000, filtro: str = "todos"):
+        return vinculos.verificar_links(painel.indice, conferir_pasta_vinculos(rel), limite, filtro=filtro)
+
+    @app.get("/vinculos", response_class=HTMLResponse)
+    @leitura
+    def ver_vinculos(request: Request, rel: str = "", filtro: str = "revisao"):
+        rel = conferir_pasta_vinculos(rel)
+        if filtro not in {"revisao", "futuro", "todos"}:
+            filtro = "revisao"
+        resultado = vinculos.verificar_links(painel.indice, rel, filtro=filtro)
+        ocorrencias = []
+        for item in resultado["ocorrencias"]:
+            if filtro == "revisao" and item["estado"] == "futuro" or filtro == "futuro" and item["estado"] != "futuro":
+                continue
+            nota = painel.indice.notas.get(item["origem"])
+            ocorrencias.append({**item, "titulo": nota.titulo if nota else item["origem"], "url_origem": ap.url_nota(item["origem"]),
+                                "url_destino": ap.url_nota(item["rel"]) if item["rel"] in painel.indice.notas else "",
+                                "opcoes": [{"rel": candidato, "url": ap.url_nota(candidato)} for candidato in item["candidatos"] if candidato in painel.indice.notas]})
+        return pagina(request, "vinculos.html", "pastas", resultado=resultado, ocorrencias=ocorrencias, rel=rel, filtro=filtro,
+                      url_pasta=ap.url_pasta(rel), rotulos_vinculos={"ausente": "Anexo ausente", "ambiguo": "Destino ambíguo", "ancora_ausente": "Seção ou bloco ausente", "bloqueado": "Destino indisponível", "futuro": "Nota ainda não criada"})
 
     @app.get("/pastas", response_class=HTMLResponse)
     @app.get("/pastas/{rel:path}", response_class=HTMLResponse)
@@ -706,9 +776,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             if not caminho.is_dir() or deve_ignorar(rel + "/x.md"):
                 raise NaoEncontrado(rel)
         hoje = dt.date.today()
-        subpastas, notas = painel.indice.conteudo_da_pasta(rel)
+        nomes, notas = conteudo_visivel_da_pasta(rel)
         notas, paginacao = paginar(request, notas)
-        nomes = dict(subpastas)
         if not rel:
             for modulo in painel.indice.modulos.values():  # módulos vazios também aparecem
                 nomes.setdefault(modulo.id, 0)
@@ -730,6 +799,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             request,
             "pastas.html",
             "pastas",
+            capa_pasta=ap.capa_de(painel, "pastas") if painel.config.capas.get("pastas") else None,
             paginacao=paginacao,
             rel=rel,
             trilha=[{"nome": parte, "url": ap.url_pasta("/".join(partes[: i + 1]))} for i, parte in enumerate(partes)],
@@ -748,6 +818,23 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             modulo=painel.indice.modulos.get(partes[0]) if partes else None,
             pode_criar=not (len(partes) > 1 and partes[0] in painel.indice.modulos and partes[1] == "maquina"),
         )
+
+    @app.get("/personalizar/{alvo}", response_class=HTMLResponse)
+    @leitura
+    def personalizar_pagina(request: Request, alvo: str):
+        nomes = {"diario": "Diário", "decidir": "Decidir", "pastas": "Pastas"}
+        if alvo not in nomes:
+            raise NaoEncontrado(alvo)
+        return pagina(request, "personalizar-pagina.html", alvo, alvo=alvo, nome_pagina=nomes[alvo],
+                      capa=ap.capa_de(painel, alvo), escolha=painel.config.capas.get(alvo),
+                      config_versao=armazenamento.versao((painel.vault / "orquestra.yaml").read_bytes() if (painel.vault / "orquestra.yaml").is_file() else b""),
+                      cenas=temas.previas_das_cenas(painel.tema, alvo), colecao=temas.colecao(painel.tema["id"]))
+
+    @app.post("/api/paginas/{alvo}/personalizar")
+    async def api_personalizar_pagina(request: Request, alvo: str):
+        dados = await corpo_json(request)
+        await asyncio.to_thread(painel.personalizar_pagina, alvo, dados)
+        return {"url": "/" + alvo}
 
     @app.get("/m/{modulo_id}/personalizar", response_class=HTMLResponse)
     @leitura
@@ -773,10 +860,28 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             pode_grafico=bool(modulo.campos_numericos),
         )
 
+    def destinos_automacoes() -> list[str]:
+        """Pastas reais, inclusive vazias, sem seguir links ou incluir metadados."""
+        encontrados = [""]
+        pendentes = [painel.vault]
+        while pendentes:
+            pasta = pendentes.pop()
+            painel.caminho_seguro(str(pasta.relative_to(painel.vault)).replace("\\", "/"))
+            for filho in pasta.iterdir():
+                rel = filho.relative_to(painel.vault).as_posix()
+                if filho.name.startswith("_") or eh_link(filho) or deve_ignorar(rel + "/x.md") or not filho.is_dir():
+                    continue
+                painel.caminho_seguro(rel)
+                encontrados.append(rel)
+                pendentes.append(filho)
+        return sorted(encontrados, key=str.casefold)
+
     @app.get("/ajustes", response_class=HTMLResponse)
     @app.get("/ajustes/{secao}", response_class=HTMLResponse)
     @leitura
     def ajustes(request: Request, secao: str = "painel"):
+        if secao == "automacoes":
+            secao = "coletores"
         if secao not in {"painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis"}:
             raise NaoEncontrado(secao)
         # Cada seção é uma página independente: não ler catálogos, scripts ou Git
@@ -784,6 +889,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         contexto: dict[str, Any] = {"secao": secao, "icones": ap.ICONES_DE_MODULO}
         if secao == "painel":
             contexto["areas"] = [{"modulo": m} for m in painel.indice.modulos.values()]
+            contexto.update(vault=str(painel.vault), n_notas=len(painel.indice.notas))
         elif secao == "areas":
             contexto["areas"] = [
                 {"modulo": m, "itens": len(painel.indice.notas_em(m.id, "itens")), "propria": m.itens_na_raiz}
@@ -795,7 +901,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         elif secao == "aparencia":
             contexto["cenas"] = temas.CENAS
             contexto["temas"] = [
-                {**tema, "previa": temas.previa(tema), "atual": tema["id"] == painel.tema["id"]}
+                {**tema, "previa": temas.previa(tema), "atual": tema["id"] == painel.tema["id"],
+                 "efetivas": aparencia.amostras(tema, painel.config.aparencia)["tema"]}
                 for tema in temas.listar(painel.vault)
             ]
             contexto["visual"] = {
@@ -805,6 +912,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 "nomes": aparencia.NOMES,
                 "sugestoes": aparencia.SUGESTOES,
                 "destaque_do_tema": painel.tema["cores"]["destaque"],
+                "amostras": aparencia.amostras(painel.tema, painel.config.aparencia),
             }
         elif secao == "backup":
             confianca_backup = backup.resumo(painel.vault)
@@ -823,6 +931,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 {"modulo": m, "def": c, "ultima": ultimas.get(f"{m.id}/{c.script}", {})}
                 for m in painel.indice.modulos.values() for c in m.coletores
             ]
+            contexto.update(catalogo_automacoes=automacoes.catalogo(), automacoes=automacoes.listar(painel), automacoes_legadas=automacoes.legadas(painel))
         elif secao == "acesso":
             contexto["host"] = request.headers.get("host", "")
         elif secao == "vault":
@@ -845,6 +954,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             dados.get("campos") if isinstance(dados.get("campos"), dict) else {},
             str(dados.get("corpo") or ""),
             zona=str(dados.get("zona") or "itens"),
+            subpasta=str(dados.get("subpasta") or ""),
         )
         return {"rel": nota.rel, "url": ap.url_nota(nota.rel), "versao": nota.versao}
 
@@ -903,6 +1013,68 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         titulo = primeira if len(primeira) <= 70 else primeira[:67].rstrip() + "..."
         nota = await asyncio.to_thread(painel.criar_nota, painel.config.captura, titulo, {}, texto, origem="humano")
         return {"rel": nota.rel, "url": ap.url_nota(nota.rel)}
+
+    @app.get("/api/automacoes/catalogo")
+    @leitura
+    def api_catalogo_automacoes(request: Request):
+        return {"catalogo": automacoes.catalogo(), "instancias": automacoes.listar(painel), "legadas": automacoes.legadas(painel), "pastas": destinos_automacoes()}
+
+    @app.post("/api/automacoes/legado/prever")
+    async def api_prever_automacao_legada(request: Request):
+        dados = await corpo_json(request, contratos.ConfigurarColetor)
+        return await asyncio.to_thread(automacoes.prever_legada, painel, **dados)
+
+    @app.post("/api/automacoes/legado/editar")
+    async def api_editar_automacao_legada(request: Request):
+        dados = await corpo_json(request, contratos.ConfigurarColetor)
+        return await asyncio.to_thread(automacoes.atualizar_legada, painel, **{"versao": "", **dados})
+
+    @app.post("/api/automacoes/legado/atualizar")
+    async def api_atualizar_automacao_legada(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        dados = await corpo_json(request, contratos.AtualizarColetor)
+        return await asyncio.to_thread(automacoes.atualizar_codigo_legado, painel, **dados)
+
+    @app.post("/api/automacoes/prever")
+    async def api_prever_automacao(request: Request):
+        dados = await corpo_json(request, contratos.PreviaAutomacao)
+        return await asyncio.to_thread(automacoes.prever, painel, dados["definicao"], dados.get("destino", ""), dados.get("config"), dados.get("mapeamento"), ignorar_id=dados.get("id"))
+
+    @app.post("/api/automacoes/criar")
+    async def api_criar_automacao(request: Request):
+        dados = await corpo_json(request, contratos.PedidoAutomacao)
+        return await asyncio.to_thread(automacoes.criar, painel, **{"destino": "", **dados})
+
+    @app.post("/api/automacoes/editar")
+    async def api_editar_automacao(request: Request):
+        dados = await corpo_json(request, contratos.EditarAutomacao)
+        identificador = dados.pop("id")
+        return await asyncio.to_thread(automacoes.atualizar, painel, identificador, **{"destino": "", **dados})
+
+    @app.post("/api/automacoes/confiar")
+    async def api_confiar_automacao(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        dados = await corpo_json(request, contratos.ConfiarAutomacao)
+        return await asyncio.to_thread(automacoes.autorizar, painel, dados["id"], dados["assinatura"])
+
+    @app.post("/api/automacoes/ativo")
+    async def api_automacao_ativa(request: Request):
+        dados = await corpo_json(request, contratos.AtivarAutomacao)
+        return await asyncio.to_thread(automacoes.ativar, painel, dados["id"], dados["ativo"])
+
+    @app.post("/api/automacoes/remover")
+    async def api_remover_automacao(request: Request):
+        dados = await corpo_json(request, contratos.IdAutomacao)
+        await asyncio.to_thread(automacoes.remover, painel, dados["id"])
+        return {"ok": True}
+
+    @app.post("/api/automacoes/rodar")
+    async def api_rodar_automacao(request: Request):
+        dados = await corpo_json(request, contratos.ExecutarAutomacao)
+        resultado = await automacoes.rodar(painel, dados["id"], previa=dados.get("previa", False))
+        return JSONResponse(resultado, status_code=200 if resultado.get("ok", True) else 502)
 
     @app.post("/api/coletores/rodar")
     async def api_rodar_coletor(request: Request):
@@ -1063,14 +1235,19 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_salvar_variavel(request: Request):
         if erro := exigir_local(request):
             return erro
-        dados = await corpo_json(request)
-        if not isinstance(dados.get("nome"), str) or (dados.get("valor") is not None and not isinstance(dados["valor"], str)):
-            raise Recusado("Nome e valor precisam ser texto.")
+        dados = await corpo_json(request, contratos.SalvarSegredo)
         try:
-            await asyncio.to_thread(segredos.salvar, painel.vault, dados["nome"], dados.get("valor"))
+            await asyncio.to_thread(segredos.salvar, painel.vault, dados["nome"], dados["valor"])
             return {"ok": True}
         except ValueError as erro:
             raise Recusado(str(erro)) from None
+
+    @app.get("/api/autostart")
+    async def api_estado_autostart(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        from orquestra import autostart
+        return await asyncio.to_thread(autostart.resumo, painel.vault)
 
     @app.post("/api/autostart")
     async def api_autostart(request: Request):
@@ -1081,7 +1258,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         acao = dados.get("acao")
         if acao not in {"ativar", "desativar", "status"}:
             raise Recusado("Escolha ativar, desativar ou status.")
-        return {"mensagem": await asyncio.to_thread(autostart.executar, acao, painel.vault if acao == "ativar" else None)}
+        try:
+            await asyncio.to_thread(autostart.executar, acao, painel.vault if acao in {"ativar", "status"} else None)
+            estado = await asyncio.to_thread(autostart.resumo, painel.vault)
+            return {**estado, "mensagem": "Pronto"}
+        except (ValueError, RuntimeError, subprocess.TimeoutExpired) as erro:
+            raise Recusado(str(erro)) from None
 
     @app.post("/api/tailscale/host")
     async def api_tailscale_host(request: Request):

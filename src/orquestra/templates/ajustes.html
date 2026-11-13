@@ -2,17 +2,28 @@
 {% import "partes.html" as p %}
 {% block titulo %}Ajustes{% endblock %}
 {% block trilha %}Ajustes{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/ajustes-refino.css?v={{ marca }}">{% if secao == 'coletores' %}<link rel="stylesheet" href="/static/css/automacoes.css?v={{ marca }}">{% endif %}{% endblock %}
 
 {% block conteudo %}
-<section class="pagina">
-  <header class="pagina-topo"><h1>Ajustes</h1></header>
-  <p class="config-resumo suave" id="estado-config" role="status" aria-live="polite">As preferências são salvas ao mudar. Organize suas áreas e deixe o painel do seu jeito.</p>
+<section class="pagina ajustes-pagina">
+  <div class="ajustes-layout">
+  <header class="pagina-topo ajustes-cabecalho"><div><span class="sobretitulo">Seu espaço</span><h1>Ajustes</h1></div></header>
   <nav class="navega-ajustes" aria-label="Seções dos ajustes">
-    <a href="/ajustes/painel"{% if secao == "painel" %} aria-current="page"{% endif %}>Painel</a><a href="/ajustes/areas"{% if secao == "areas" %} aria-current="page"{% endif %}>Pastas</a><a href="/ajustes/aparencia"{% if secao == "aparencia" %} aria-current="page"{% endif %}>Aparência</a><a href="/ajustes/backup"{% if secao == "backup" %} aria-current="page"{% endif %}>Backup</a><a href="/ajustes/coletores"{% if secao == "coletores" %} aria-current="page"{% endif %}>Coletores</a><a href="/ajustes/acesso"{% if secao == "acesso" %} aria-current="page"{% endif %}>Celular</a><a href="/ajustes/vault"{% if secao == "vault" %} aria-current="page"{% endif %}>Cofres</a>
-  <a href="/ajustes/variaveis"{% if secao == "variaveis" %} aria-current="page"{% endif %}>Variáveis</a></nav>
+    {% for id, nome, simbolo in [('painel', 'Painel', 'ajustes'), ('areas', 'Pastas', 'pasta'), ('aparencia', 'Aparência', 'paleta'), ('backup', 'Backup', 'nuvem'), ('coletores', 'Automações', 'raio'), ('acesso', 'Celular', 'celular'), ('vault', 'Cofres', 'caixa'), ('variaveis', 'Segredos', 'chip')] %}
+    <a href="/ajustes/{{ id }}"{% if secao == id %} aria-current="page"{% endif %}>{{ icone(simbolo, 17) }}<span>{{ nome }}</span></a>
+    {% endfor %}
+  </nav>
+  <div class="ajustes-conteudo">
+  {% set cabecalhos = {'painel': ('Painel', 'editar', 'painel'), 'areas': ('Pastas do painel', 'pasta', 'areas'), 'aparencia': ('Tema e aparência', 'paleta', 'aparencia-secao'), 'backup': ('Histórico e backup', 'nuvem', 'backup-secao'), 'coletores': ('Automações', 'raio', 'coletores-secao'), 'acesso': ('Acesso', 'celular', 'acesso-secao'), 'vault': ('Gerenciar cofres', 'pasta', 'vault-secao'), 'variaveis': ('Segredos', 'chip', 'segredos-secao')} %}
+  {% set cabecalho = cabecalhos[secao] %}
+  <header class="ajustes-intro">
+    <div class="ajustes-intro-linha"><h2 class="grupo-titulo" id="{{ cabecalho[2] }}">{{ icone(cabecalho[1], 18) }} {{ cabecalho[0] }}</h2>{% if secao == 'variaveis' %}<button type="button" class="botao pequeno principal" id="variavel-adicionar">{{ icone('mais', 16) }} Novo segredo</button>{% endif %}</div>
+    <p class="config-resumo suave" id="estado-config" role="status" aria-live="polite"{% if secao in ['coletores', 'variaveis', 'vault', 'acesso'] %} hidden{% endif %}>As preferências são salvas ao mudar.</p>
+    {% if secao == 'variaveis' %}<span class="campo-ajuda" id="variaveis-contagem"></span>{% endif %}
+  </header>
+  <div class="ajustes-corpo">
 
   {% if secao == "painel" %}
-  <h2 class="grupo-titulo" id="painel">{{ icone('editar', 18) }} Painel</h2>
   <div class="bloco">
     <div class="grade-campos">
       <label class="campo"><span id="rotulo-cfg-nome">Nome do painel</span><input type="text" id="cfg-nome" value="{{ cfg.nome }}" maxlength="60" required autocomplete="off" aria-labelledby="rotulo-cfg-nome" aria-describedby="ajuda-cfg-nome erro-cfg-nome"><small class="campo-ajuda" id="ajuda-cfg-nome">Como seu painel aparece no topo e nas abas do navegador.</small><small class="campo-erro" id="erro-cfg-nome" hidden></small></label>
@@ -26,18 +37,24 @@
     </div>
   </div>
 
+  <h2 class="grupo-titulo" id="aplicativo-secao">{{ icone('relogio', 18) }} Inicialização e aplicativo</h2>
+  <div class="bloco aplicativo-info">
+    <div class="aplicativo-linha"><div><b>Iniciar com o computador</b><p class="campo-ajuda">Abra o Orquestra ao entrar na sua conta.</p></div><div class="linha-botoes sem-topo"><button class="botao pequeno" type="button" data-autostart="ativar" disabled>Ativar</button><button class="botao pequeno discreto" type="button" data-autostart="desativar" disabled>Desativar</button></div></div>
+    <p id="autostart-estado" class="campo-ajuda" role="status" aria-live="polite">Conferindo inicialização…</p>
+    <details><summary>Informações do aplicativo</summary><p>Orquestra {{ versao }} · {{ n_notas }} notas</p><code>{{ vault }}</code><p class="campo-ajuda">O terminal mantém o painel e as automações funcionando. Para abrir novamente: <code>uv run --frozen orquestra</code>.</p></details>
+  </div>
+
   {% endif %}
   {% if secao == "areas" %}
-  <h2 class="grupo-titulo" id="areas">{{ icone('pasta', 18) }} Pastas do painel</h2>
-  <p class="campo-ajuda">Arraste pela alça para organizar a navegação. Pelo teclado, use os botões mover para cima ou para baixo.</p>
   <div class="bloco areas-ordenaveis" id="areas-ordem" aria-label="Ordem das pastas">
+    <p class="campo-ajuda">Arraste pela alça para organizar. Pelo teclado, use os botões para mover.</p>
     {% for a in areas %}
     <div class="area-linha" draggable="true" data-modulo="{{ a.modulo.id }}">
       <span class="arraste-alca" aria-hidden="true" title="Arrastar para reordenar">⠿</span>{{ icone(a.modulo.icone, 18) }}
       <span class="area-nome"><b>{{ a.modulo.nome }}</b><small class="suave">{{ a.modulo.id }}/ · {{ a.itens }} {{ 'item' if a.itens == 1 else 'itens' }}{% if a.propria %} · pasta sua{% endif %}</small></span>
       <span class="ordem-acoes"><button class="botao pequeno so-icone" type="button" data-mover="-1" aria-label="Mover {{ a.modulo.nome }} para cima">↑</button><button class="botao pequeno so-icone" type="button" data-mover="1" aria-label="Mover {{ a.modulo.nome }} para baixo">↓</button></span>
-      <a class="botao pequeno" href="/m/{{ a.modulo.id|urlencode }}/personalizar">Personalizar</a>
-      <button class="botao pequeno discreto" type="button" data-desligar aria-label="Tirar {{ a.modulo.nome }} do painel" title="Tira a área do painel. A pasta e as notas continuam no vault.">Tirar do painel</button>
+      <a class="botao pequeno" href="/m/{{ a.modulo.id|urlencode }}/personalizar" aria-label="Personalizar {{ a.modulo.nome }}"><span class="area-acao-desktop">Personalizar</span><span class="area-acao-mobile">Editar</span></a>
+      <button class="botao pequeno discreto" type="button" data-desligar aria-label="Tirar {{ a.modulo.nome }} do painel" title="Tira a área do painel. A pasta e as notas continuam no vault.">Tirar<span class="area-acao-desktop"> do painel</span></button>
     </div>
     {% else %}
     <p class="suave">Nenhuma área ainda. Acrescente uma pronta abaixo, crie uma em branco ou mostre uma pasta sua em <a class="link" href="/pastas">Pastas</a>.</p>
@@ -46,12 +63,10 @@
   </div>
 
   <h3 class="sub">Acrescentar uma área pronta</h3>
-  <div class="grade-prontos">
+  <div class="grade-prontos prontos-compactos">
     {% for m in prontos %}
-    <button class="pronto" type="button" data-pronto="{{ m.id }}">
-      {{ icone(m.icone, 20) }}
-      <b>{{ m.nome }}</b>
-      <small>{{ m.descricao }}</small>
+    <button class="pronto" type="button" data-pronto="{{ m.id }}" title="{{ m.descricao }}" aria-label="Acrescentar {{ m.nome }}">
+      {{ icone(m.icone, 18) }}<b>{{ m.nome }}</b>{{ icone('mais', 14) }}
     </button>
     {% else %}
     <p class="suave">Todas as áreas prontas já estão no seu vault.</p>
@@ -65,20 +80,14 @@
 
   {% endif %}
   {% if secao == "aparencia" %}
-  <h2 class="grupo-titulo" id="aparencia-secao">{{ icone('paleta', 18) }} Tema e aparência</h2>
-  <div class="temas">
-    {% for t in temas %}
-    <button class="tema{% if t.atual %} atual{% endif %}" type="button" data-tema="{{ t.id }}" aria-pressed="{{ 'true' if t.atual else 'false' }}" style="--t-fundo:{{ t.cores.fundo }};--t-texto:{{ t.cores.texto }};--t-destaque:{{ t.cores.destaque }};--t-borda:{{ t.cores.borda }}">
-      <span class="tema-previa">{{ p.capa(t.previa) }}</span>
-      <span class="tema-info">
-        <b>{{ t.nome }}</b>
-        <small>{{ t.descricao }}</small>
-        <span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ t.cores[chave] }}"></i>{% endfor %}</span>
-      </span>
-    </button>
+  <div class="bloco tema-selecionado">
+    {% for t in temas if t.atual %}
+    <span class="tema-mini-previa">{{ p.capa(t.previa) }}</span>
+    <div><small class="suave">Tema atual</small><b>{{ t.nome }}</b><span class="amostras" aria-hidden="true">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ p.duo(t.efetivas.escuro[chave], t.efetivas.claro[chave]) }}"></i>{% endfor %}</span></div>
     {% endfor %}
+    <button class="botao pequeno" type="button" id="ajustes-escolher-tema" aria-haspopup="dialog" aria-controls="ajustes-temas">Escolher {{ icone('chevron_dir', 13) }}</button>
   </div>
-  <div class="bloco"><label class="campo"><span>Animação das capas automáticas</span><select id="ap-cena"><option value="">Variadas, conforme o tema</option>{% for c in cenas %}<option value="{{ c }}"{% if cfg.aparencia.cena == c %} selected{% endif %}>{{ nome_cena(c) }}</option>{% endfor %}</select><small class="campo-ajuda">Capas escolhidas em Personalizar pasta são preservadas.</small></label></div>
+  <p class="campo-ajuda">As capas acompanham o tema. Para mudar uma delas, abra as configurações da própria pasta.</p>
   <h3 class="sub">Do seu jeito</h3>
   <div class="bloco aparencia" id="aparencia">
     <div class="ap-linha">
@@ -90,9 +99,9 @@
     <div class="ap-linha">
       <span class="ap-rotulo">Cor de destaque</span>
       <div class="cores" role="radiogroup" aria-label="Cor de destaque">
-        <button type="button" class="cor do-tema" role="radio" aria-checked="{{ 'true' if not cfg.aparencia.destaque else 'false' }}" data-visual="destaque" data-valor="" style="--c:{{ visual.destaque_do_tema }}" title="A cor do tema">tema</button>
-        {% for c in visual.sugestoes %}<button type="button" class="cor" role="radio" aria-checked="{{ 'true' if cfg.aparencia.destaque == c else 'false' }}" data-visual="destaque" data-valor="{{ c }}" style="--c:{{ c }}" title="{{ c }}" aria-label="{{ c }}"></button>{% endfor %}
-        <label class="cor livre{% if cfg.aparencia.destaque and cfg.aparencia.destaque not in visual.sugestoes %} escolhida{% endif %}" title="Escolher outra cor" style="--c:{{ cfg.aparencia.destaque or visual.destaque_do_tema }}">
+        <button type="button" class="cor do-tema" role="radio" aria-label="Restaurar a cor do tema" aria-checked="{{ 'true' if not cfg.aparencia.destaque else 'false' }}" data-visual="destaque" data-valor="" style="--c:{{ p.duo(visual.amostras.do_tema.escuro, visual.amostras.do_tema.claro) }}" title="Restaurar a cor do tema">{{ icone('atualizar', 15) }}</button>
+        {% for c in visual.amostras.sugestoes %}<button type="button" class="cor" role="radio" aria-checked="{{ 'true' if cfg.aparencia.destaque == c.valor else 'false' }}" data-visual="destaque" data-valor="{{ c.valor }}" style="--c:{{ p.duo(c.escuro, c.claro) }}" title="{{ c.valor }}" aria-label="{{ c.valor }}"></button>{% endfor %}
+        {% set livre = visual.amostras.atual or visual.amostras.do_tema %}<label class="cor livre{% if cfg.aparencia.destaque and cfg.aparencia.destaque not in visual.sugestoes %} escolhida{% endif %}" title="Escolher outra cor" style="--c:{{ p.duo(livre.escuro, livre.claro) }}">
           <input type="color" id="cor-livre" value="{{ cfg.aparencia.destaque or visual.destaque_do_tema }}" aria-label="Escolher outra cor">
           {{ icone('paleta', 14) }}
         </label>
@@ -101,7 +110,7 @@
     <div class="ap-linha">
       <span class="ap-rotulo">Cantos</span>
       <div class="segmentos" role="radiogroup" aria-label="Cantos">
-        {% for c in visual.cantos %}<button type="button" role="radio" aria-checked="{{ 'true' if cfg.aparencia.cantos == c else 'false' }}" data-visual="cantos" data-valor="{{ c }}"><i class="amostra-canto c-{{ c }}"></i>{{ visual.nomes[c] }}</button>{% endfor %}
+        {% for c in visual.cantos %}<button type="button" role="radio" aria-label="{{ visual.nomes[c] }}" title="{{ visual.nomes[c] }}" aria-checked="{{ 'true' if cfg.aparencia.cantos == c else 'false' }}" data-visual="cantos" data-valor="{{ c }}"><i class="amostra-canto c-{{ c }}" aria-hidden="true"></i><span class="somente-leitor">{{ visual.nomes[c] }}</span></button>{% endfor %}
       </div>
     </div>
     <div class="ap-linha">
@@ -111,17 +120,16 @@
       </div>
     </div>
     <div class="ap-linha"><span class="ap-rotulo">Tamanho da fonte</span><div class="segmentos" role="radiogroup" aria-label="Tamanho da fonte">
-      {% for valor, nome in [('pequena', 'Pequena'), ('padrao', 'Padrão'), ('grande', 'Grande')] %}<button type="button" role="radio" aria-checked="{{ 'true' if cfg.aparencia.tamanho == valor else 'false' }}" data-visual="tamanho" data-valor="{{ valor }}">{{ nome }}</button>{% endfor %}
+      {% for valor, nome, descricao in [('pequena', 'Pequena', 'Fonte pequena'), ('padrao', 'Padrão', 'Fonte padrão'), ('grande', 'Grande', 'Fonte grande'), ('xl', 'XL', 'Grande extra'), ('xxl', 'XXL', 'Muito grande')] %}<button type="button" role="radio" aria-label="{{ descricao }}" title="{{ descricao }}" aria-checked="{{ 'true' if cfg.aparencia.tamanho == valor else 'false' }}" data-visual="tamanho" data-valor="{{ valor }}">{{ nome }}</button>{% endfor %}
     </div></div>
     <p class="suave pequeno">Valem para qualquer tema. As letras são as do seu computador: nada é baixado. No modo claro, uma cor de destaque muito suave é escurecida um pouco para continuar legível.</p>
   </div>
 
-  <p class="suave">Cada tema é uma pasta em <code>_orquestra/temas/</code>. Para criar o seu, copie uma delas e edite o <code>tema.yaml</code>, ou peça a um agente: “crie um tema verde-escuro com capas de floresta”.</p>
+  <details class="aparencia-avancado"><summary>Criar um tema próprio</summary><p class="campo-ajuda">Copie uma pasta em <code>_orquestra/temas/</code> e edite o <code>tema.yaml</code>, ou peça a um agente para criar seu tema.</p></details>
 
   {% endif %}
   {% if secao == "backup" %}
   <div class="linha-botoes"><button class="botao" type="button" id="github-conectar">Login no GitHub</button><button class="botao pequeno" type="button" data-guia="github">Como funciona</button></div>
-  <h2 class="grupo-titulo" id="backup-secao">{{ icone('nuvem', 18) }} Histórico e backup</h2>
   {% set conf_backup = confianca_backup|default({}) %}
   <div class="bloco" id="revisao-backup" data-confianca-backup='{{ conf_backup|tojson }}'>
     <details{% if not conf_backup.confiavel %} open{% endif %}>
@@ -148,7 +156,7 @@
     <label class="chave linha-chave"><input type="checkbox" id="cfg-auto-commit"{% if cfg.backup.auto_commit %} checked{% endif %}{% if not conf_backup.confiavel %} disabled{% endif %}><i></i><span>guardar versões automaticamente</span></label>
     {% elif tem_git_instalado %}
     <p>Este vault não tem histórico. Com ele, o painel guarda versões locais após mudanças (respeitando o intervalo de {{ cfg.backup.intervalo_min }} minutos). Notas anteriores ao primeiro snapshot precisam de outra cópia para recuperação.</p>
-    <p class="suave">Ligar cria um repositório git dentro da pasta do vault. Se você já sincroniza essa pasta por outro meio (OneDrive, iCloud, Obsidian Sync), os dois convivem, mas a pasta <code>.git</code> também será sincronizada.</p>
+    <p class="suave">O histórico usa um repositório Git local. Se também usa um sincronizador de arquivos, configure a exclusão da pasta <code>.git</code> nele.</p>
     <div class="linha-botoes"><button class="botao" type="button" id="ligar-historico" hidden>Preparar histórico local</button></div>
     {% else %}
     <p>O vault não tem histórico, e o git não está instalado. Instale em <a class="link" href="https://git-scm.com" target="_blank" rel="noopener noreferrer">git-scm.com</a> e volte aqui para ligar.</p>
@@ -156,21 +164,18 @@
     <p class="suave pequeno">Snapshots ficam em <code>refs/orquestra/backups</code>, sem mover sua branch ou staging. O envio usa a branch remota <code>orquestra-backup</code>. Uma versão local no mesmo disco não substitui cópia externa.</p>
   </div>
 
+  <details class="bloco sync-opcional"><summary>Sincronização opcional</summary>
+    <p class="campo-ajuda">O Git guarda versões para recuperar. Para manter arquivos em outros aparelhos, você pode usar um sincronizador de sua escolha.</p>
+    <div class="sync-opcoes"><a class="link" href="https://syncthing.net/" target="_blank" rel="noopener noreferrer">Syncthing</a><span class="campo-ajuda">Entre computadores · gratuito</span><a class="link" href="https://obsidian.md/sync" target="_blank" rel="noopener noreferrer">Obsidian Sync</a><span class="campo-ajuda">Integração com Obsidian · assinatura</span><a class="link" href="/ajustes/acesso">Acesso pelo celular</a><span class="campo-ajuda">Abra este mesmo cofre pelo Tailscale</span></div>
+    <p class="campo-ajuda">Escolha um sincronizador por cofre. Mantenha o backup e exclua do sincronizador a pasta <code>.git</code>, credenciais e arquivos temporários. Nenhuma sincronização é ativada pelo Orquestra.</p>
+  </details>
+
   {% endif %}
   {% if secao == "coletores" %}
-  <h2 class="grupo-titulo" id="coletores-secao">{{ icone('radar', 18) }} Coletores</h2>
-  <div class="bloco">
-    {% for c in coletores %}
-    <p><b>{{ c.def.nome }}</b> em <a class="link" href="/m/{{ c.modulo.id }}?aba=maquina">{{ c.modulo.nome }}</a> ·
-      {{ 'automático' if c.def.ativo else 'manual' }}
-      {% if c.ultima %}· última vez {{ c.ultima.ultima|replace('T', ' ') }}{% if not c.ultima.ok %} <span class="erro-texto">(falhou)</span>{% endif %}{% endif %}
-    </p>
-    {% else %}<p class="suave">Nenhum coletor configurado.</p>{% endfor %}
-  </div>
+  {% include 'automacoes.html' %}
 
   {% endif %}
   {% if secao == "acesso" %}
-  <h2 class="grupo-titulo">{{ icone('celular', 18) }} Acesso</h2>
   <div class="bloco">
     <button class="botao" type="button" data-guia="celular">Conecte seu celular</button>
     <p>Você está acessando por <code>{{ host }}</code>. O painel escuta apenas neste computador (127.0.0.1).</p>
@@ -179,41 +184,38 @@
 
   {% endif %}
   {% if secao == "vault" %}
-  <h2 class="grupo-titulo" id="vault-secao">{{ icone('pasta', 18) }} Gerenciar cofres</h2>
   <div class="cofre-atual bloco"><span class="et">Cofre atual</span><h3>{{ cfg.nome }}</h3><code>{{ vault }}</code><p class="suave">{{ n_notas }} notas · Orquestra {{ versao }}</p><a class="botao pequeno" href="{{ link_obsidian }}">{{ icone('externo', 15) }} Abrir no Obsidian</a></div>
   {% if pode_trocar %}<div class="cofres-acoes"><a class="pronto" href="/boas-vindas?modo=novo">{{ icone('mais', 22) }}<b>Criar novo cofre</b><small>Um espaço novo para suas notas e projetos.</small></a><a class="pronto" href="/boas-vindas?modo=existente">{{ icone('pasta', 22) }}<b>Abrir pasta como cofre</b><small>Use uma pasta existente, inclusive do Obsidian.</small></a></div>{% endif %}
-  <details class="bloco cofre-avancado"><summary>Inicialização e informações do aplicativo</summary>
-  <div class="bloco">
-    <p>O terminal mantém o Orquestra funcionando. Fechá-lo encerra o painel e os coletores. Para voltar: <code>uv run --frozen orquestra</code>.</p>
-    <p>Para iniciar ao entrar no computador: <code>uv run --frozen orquestra autostart ativar</code>. Desligar: <code>uv run --frozen orquestra autostart desativar</code>.</p>
-    <div class="linha-botoes"><button class="botao" type="button" data-autostart="ativar">Iniciar com o computador</button><button class="botao pequeno" type="button" data-autostart="desativar">Desligar início automático</button></div><p id="autostart-estado" role="status"></p>
-    <p><code>{{ vault }}</code> · {{ n_notas }} notas · Orquestra {{ versao }}</p>
-    <div class="linha-botoes">
-      <a class="botao" href="{{ link_obsidian }}">{{ icone('externo', 15) }}<span>Abrir no Obsidian</span></a>
-      {% if pode_trocar %}<a class="botao" href="/boas-vindas">{{ icone('atualizar', 15) }}<span>Trocar de vault</span></a>{% endif %}
-    </div>
-  </div></details>
     {% for nome, aviso in avisos %}<p class="erro-texto">{{ icone('aviso', 14) }} {{ nome }}: {{ aviso }}</p>{% endfor %}
   {% endif %}
   {% if secao == "variaveis" %}
-  <header class="pagina-topo variaveis-topo"><div><h2 class="grupo-titulo">Variáveis</h2><p class="suave">Conexões prontas para seus coletores, com as chaves fora das notas.</p></div><button type="button" class="botao principal" id="variavel-adicionar">{{ icone('mais', 16) }} Nova variável</button></header>
-  <div class="variaveis-barra"><label class="campo"><span class="somente-leitor">Buscar variável</span><input type="search" id="variavel-busca" placeholder="Buscar pelo nome…" autocomplete="off"></label><span class="et" id="variaveis-contagem"></span></div>
-  <div class="bloco">
-    <p class="suave">Guardadas no .env local, fora do vault e do backup. Valores nunca são devolvidos ao navegador. Somente coletores com a chave declarada em “requer” a recebem.</p>
-
-<ul id="variaveis-lista" class="variaveis-lista"></ul><p id="variaveis-estado" role="status"></p>
-  </div>
+  <ul id="variaveis-lista" class="variaveis-lista segredos-lista" aria-label="Segredos"><li class="segredo-nativo"><div class="segredo-identidade"><code>YOUTUBE_API_KEY</code></div><span class="campo-ajuda">Carregando…</span></li></ul><p id="variaveis-estado" class="campo-ajuda" role="status"></p>
+  <template id="segredo-youtube-dica"><details class="segredo-ajuda"><summary aria-label="Onde obter a chave do YouTube" title="Onde obter a chave do YouTube">?</summary><div class="segredo-dica" role="note">No Google Cloud, ative a YouTube Data API v3 e crie uma chave em Credenciais. Restrinja a chave a essa API. <a class="link" href="https://developers.google.com/youtube/data/guides/authentication" target="_blank" rel="noopener noreferrer">Guia oficial</a></div></details></template>
+  <p class="campo-ajuda segredos-ajuda">Valores no .env deste computador, fora das notas e do backup. O arquivo é texto local, sem criptografia.</p>
   {% endif %}
+  </div>
+  </div>
+  </div>
 </section>
 {% endblock %}
 
+{% block scripts %}{% if secao == 'coletores' %}<script src="/static/js/automacoes.js?v={{ marca }}"></script>{% endif %}{% endblock %}
+
 {% block dialogos %}
+{% if secao == 'aparencia' %}
+<dialog id="ajustes-temas" class="dialogo ajustes-temas" aria-labelledby="ajustes-temas-titulo"><div class="dialogo-corpo">
+  <div class="pagina-topo"><h2 id="ajustes-temas-titulo">Escolher tema</h2><button class="botao pequeno so-icone" type="button" data-fechar aria-label="Fechar temas">{{ icone('x', 16) }}</button></div>
+  <div class="temas">
+    {% for t in temas %}<button class="tema{% if t.atual %} atual{% endif %}" type="button" data-tema="{{ t.id }}" aria-pressed="{{ 'true' if t.atual else 'false' }}" style="{% for chave in ['fundo', 'texto', 'destaque', 'borda'] %}--t-{{ chave }}:{{ p.duo(t.efetivas.escuro[chave], t.efetivas.claro[chave]) }};{% endfor %}"><span class="tema-previa">{{ p.capa(t.previa) }}</span><span class="tema-info"><b>{{ t.nome }}</b><small>{{ t.descricao }}</small><span class="amostras">{% for chave in ['fundo', 'superficie_alta', 'destaque', 'texto'] %}<i style="background:{{ p.duo(t.efetivas.escuro[chave], t.efetivas.claro[chave]) }}"></i>{% endfor %}</span></span></button>{% endfor %}
+  </div>
+</div></dialog>
+{% endif %}
 {% if secao == 'variaveis' %}
-<dialog id="variavel-dialogo" class="dialogo" aria-labelledby="variavel-titulo"><div class="dialogo-corpo"><h2 id="variavel-titulo">Nova variável</h2><p class="suave">O valor fica neste computador e não volta a ser exibido.</p>
+<dialog id="variavel-dialogo" class="dialogo" aria-labelledby="variavel-titulo"><div class="dialogo-corpo"><h2 id="variavel-titulo">Novo segredo</h2><p class="suave">O valor fica neste computador e não volta a ser exibido.</p>
     <form id="variaveis-form" autocomplete="off">
       <div class="grade-campos"><label class="campo"><span>Nome</span><input id="variavel-nome" required pattern="[A-Z][A-Z0-9_]{1,79}" placeholder="YOUTUBE_API_KEY" spellcheck="false"></label>
-      <label class="campo"><span>Valor</span><input id="variavel-valor" type="password" required maxlength="8192" autocomplete="new-password"></label></div>
-      <label class="chave"><input type="checkbox" id="variavel-revelar"><i></i><span>Mostrar valor enquanto digito</span></label><p id="variavel-form-estado" class="campo-erro" role="status"></p><div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button class="botao principal" type="submit">Guardar variável</button></div>
+      <div class="campo"><label for="variavel-valor">Valor</label><div class="segredo-valor"><input id="variavel-valor" type="password" required maxlength="8192" autocomplete="new-password"><button id="variavel-revelar" type="button" class="segredo-olho" aria-label="Mostrar valor" aria-pressed="false" title="Mostrar valor"><svg class="icone" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="segredo-olho-risco" d="m3 3 18 18"/></svg></button></div></div></div>
+      <p id="variavel-form-estado" class="campo-erro" role="status"></p><div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button class="botao principal" type="submit">Guardar segredo</button></div>
     </form></div></dialog>
 {% endif %}
 <dialog id="dialogo-area" class="dialogo" aria-labelledby="titulo-dialogo-area">

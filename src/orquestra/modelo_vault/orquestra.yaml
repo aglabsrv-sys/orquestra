@@ -13,7 +13,7 @@ dock: []
 aparencia:
   modo: escuro         # escuro | claro | auto (segue o sistema)
   destaque: ""         # uma cor, como "#7cc4ff"; vazio usa a do tema
-  cantos: medio        # reto | discreto | medio | redondo
+  cantos: discreto        # reto | discreto | medio | redondo
   fonte: sistema       # sistema | serifada | arredondada | mono
 
 # Só preencha se acessar o painel por um nome diferente de localhost ou *.ts.net.

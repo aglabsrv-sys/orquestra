@@ -1,8 +1,8 @@
-# Tema Grafite: o clássico discreto. Cinza neutro, sem cor dominante.
+# Tema Grafite: interface em cinza neutro, com capas em tons pastel.
 # Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
 
 nome: Grafite
-descricao: Grafite e preto, neutro e discreto. Capas em nanquim.
+descricao: Cinza neutro e discreto, com capas em tons pastel.
 
 # Cores da interface
 cores:
@@ -32,51 +32,49 @@ cores_claras:
 
 # Paletas das capas em pixel art (os papéis de cada cor estão em docs/temas.md).
 paletas:
-  nanquim:
-    ceu: ["#0b0c0e", "#1b1d21", "#3a3d44", "#74787f"]
-    astro: "#f1f1ee"
-    nuvem: "#9a9da3"
-    longe: "#3b3e45"
-    meio: "#26282d"
-    perto: "#17181b"
-    sombra: "#0a0b0c"
-    luz: "#f3e3b3"
+  lavanda:
+    ceu: ["#2b2a3a", "#4a4766", "#8a84b0", "#d6cfe8"]
+    astro: "#fff4e6"
+    nuvem: "#efe6f5"
+    longe: "#6f6a8f"
+    meio: "#4f4b68"
+    perto: "#34324a"
+    sombra: "#1e1d2b"
+    luz: "#ffd9a8"
     brilho: "#ffffff"
-    noite: true
-  neblina:
-    ceu: ["#2a2c30", "#55585e", "#92959b", "#d2d3d6"]
-    astro: "#ffffff"
-    nuvem: "#e4e5e7"
-    longe: "#7d8087"
-    meio: "#55585f"
-    perto: "#34363b"
-    sombra: "#1b1c1f"
-    luz: "#fff0c2"
+  pessego:
+    ceu: ["#3a2e33", "#6e5560", "#d9a59a", "#f6dcc8"]
+    astro: "#fff6e8"
+    nuvem: "#fbe8dc"
+    longe: "#a07f86"
+    meio: "#6f5862"
+    perto: "#463840"
+    sombra: "#272025"
+    luz: "#ffe2b0"
     brilho: "#ffffff"
-  carvao:
-    ceu: ["#050506", "#101113", "#1e2023", "#34373d"]
-    astro: "#d9dce2"
-    nuvem: "#4a4d54"
-    longe: "#25272b"
-    meio: "#1a1b1e"
-    perto: "#111214"
-    sombra: "#060607"
-    luz: "#e6e8ec"
+  menta:
+    ceu: ["#22302d", "#3f5a54", "#8cbcae", "#d9efe6"]
+    astro: "#fffbea"
+    nuvem: "#eef8f3"
+    longe: "#6a8f86"
+    meio: "#486660"
+    perto: "#2f4440"
+    sombra: "#1a2624"
+    luz: "#fff0b8"
     brilho: "#ffffff"
-    noite: true
-  aco:
-    ceu: ["#0d1014", "#1e252e", "#3b4654", "#7b8796"]
-    astro: "#eef2f6"
-    nuvem: "#a7b1bd"
-    longe: "#374150"
-    meio: "#252c37"
-    perto: "#161b22"
-    sombra: "#0a0d11"
-    luz: "#b9d2ee"
+  nevoa:
+    ceu: ["#1b2130", "#343f58", "#7487a8", "#c9d5e6"]
+    astro: "#fffaf0"
+    nuvem: "#e4eaf3"
+    longe: "#5c6c88"
+    meio: "#414c63"
+    perto: "#2b3343"
+    sombra: "#161b25"
+    luz: "#ffe6b5"
     brilho: "#ffffff"
     noite: true
 
-# O estilo deste tema: desenho a nanquim: paisagens em tons de cinza, com um ponto de luz.
+# O estilo deste tema: paisagens suaves em lavanda, pêssego, menta e azul-névoa.
 # `cenas` é a ordem de preferência para as áreas que não estão listadas em `capas`.
 # Cenas disponíveis: janela, cidade, montanhas, mar, floresta, espaco, ceu, aurora, deserto, observatorio, jardim, orbital, codigo, neon, recife
 cenas: [montanhas, floresta, cidade, janela, mar, observatorio, ceu]
@@ -85,22 +83,22 @@ cenas: [montanhas, floresta, cidade, janela, mar, observatorio, ceu]
 # para duas áreas nunca ficarem com a mesma capa. `boas-vindas` é a capa que
 # representa o tema na tela de escolha.
 capas:
-  boas-vindas: {cena: montanhas, paleta: neblina}
-  tarefas: {cena: janela, paleta: nanquim}
-  conteudo: {cena: cidade, paleta: nanquim}
-  radar: {cena: observatorio, paleta: carvao}
-  entrada: {cena: mar, paleta: neblina}
-  decidir: {cena: montanhas, paleta: nanquim}
-  diario: {cena: floresta, paleta: neblina}
-  pastas: {cena: floresta, paleta: nanquim}
-  numeros: {cena: orbital, paleta: carvao}
-  notas: {cena: janela, paleta: aco}
-  projetos: {cena: montanhas, paleta: aco}
-  areas: {cena: ceu, paleta: neblina}
-  recursos: {cena: cidade, paleta: aco}
-  arquivos: {cena: espaco, paleta: carvao}
-  clientes: {cena: cidade, paleta: carvao}
-  financas: {cena: mar, paleta: aco}
-  estudos: {cena: observatorio, paleta: aco}
-  agenda: {cena: deserto, paleta: neblina}
-  habitos: {cena: jardim, paleta: neblina}
+  boas-vindas: {cena: montanhas, paleta: lavanda}
+  tarefas: {cena: janela, paleta: lavanda}
+  conteudo: {cena: cidade, paleta: nevoa}
+  radar: {cena: observatorio, paleta: nevoa}
+  entrada: {cena: mar, paleta: pessego}
+  decidir: {cena: montanhas, paleta: pessego}
+  diario: {cena: floresta, paleta: menta}
+  pastas: {cena: floresta, paleta: lavanda}
+  numeros: {cena: orbital, paleta: nevoa}
+  notas: {cena: janela, paleta: pessego}
+  projetos: {cena: montanhas, paleta: menta}
+  areas: {cena: ceu, paleta: pessego}
+  recursos: {cena: cidade, paleta: lavanda}
+  arquivos: {cena: espaco, paleta: nevoa}
+  clientes: {cena: cidade, paleta: pessego}
+  financas: {cena: mar, paleta: menta}
+  estudos: {cena: observatorio, paleta: lavanda}
+  agenda: {cena: deserto, paleta: pessego}
+  habitos: {cena: jardim, paleta: menta}

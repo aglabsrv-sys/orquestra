@@ -33,6 +33,34 @@ def texto_busca(texto: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFKD", texto.casefold()) if not unicodedata.combining(c))
 
 
+def fontes(painel) -> list[tuple]:
+    """Fontes datadas reais e saídas reconhecidas das automações de tarefas.
+
+    A presença de uma automação não transforma a pasta toda em tarefas. O caminho
+    direto e os metadados emitidos pelo importador precisam corresponder. Notas de
+    módulos continuam usando seu contrato original, inclusive status e conclusão.
+    """
+    from orquestra import automacoes
+
+    resultado = [(modulo, list(painel.indice.registros_em(modulo.id)))
+                 for modulo in painel.indice.modulos.values()]
+    cobertas = {nota.rel for _, notas in resultado for nota in notas}
+    por_pasta = defaultdict(list)
+    for nota in painel.indice.notas.values():
+        if nota.rel not in cobertas and nota.campo("origem") == "coletor":
+            por_pasta[nota.caminho.parent].append(nota)
+    for destino in automacoes.destinos_tarefas(painel):
+        modulo = destino["modulo"]
+        notas = [nota for nota in por_pasta[modulo.pasta_itens]
+                 if nota.rel not in cobertas and not nota.erro
+                 and str(nota.campo("coletor") or "").removesuffix(".py") == destino["coletor"]
+                 and data_de(nota, modulo) is not None]
+        if notas:
+            resultado.append((modulo, notas))
+            cobertas.update(nota.rel for nota in notas)
+    return resultado
+
+
 def evento(nota, modulo) -> dict | None:
     inicio = data_de(nota, modulo)
     # Notas antigas podem conter qualquer ano válido para datetime. Datas fora
@@ -41,7 +69,7 @@ def evento(nota, modulo) -> dict | None:
         return None
     comeco = hora(nota.campo("hora"))
     # Reconhece os compromissos importados pelo coletor iCal anterior.
-    if not comeco and str(nota.campo("coletor") or "").endswith("agenda_ics.py"):
+    if not comeco and str(nota.campo("coletor") or "").removesuffix(".py") == "agenda_ics":
         m = re.match(r"^(\d{2}:\d{2})\s", nota.titulo)
         comeco = hora(m.group(1)) if m else ""
     fim = max(inicio, data(nota.campo("data_fim")) or inicio)
@@ -59,7 +87,7 @@ def evento(nota, modulo) -> dict | None:
             "categoria": str(nota.campo("categoria") or modulo.nome), "modulo": modulo.id,
             "pasta": modulo.nome, "cor": cor, "tags": [str(t) for t in tags] if isinstance(tags, list) else [],
             "concluido": str(nota.campo(modulo.campo_status) or "") in modulo.concluidos,
-            "editavel": not nota.erro and not modulo.invalido, "url": url_nota(nota.rel)}
+            "editavel": not nota.erro and not modulo.invalido and not modulo.id.startswith("@automacao:"), "url": url_nota(nota.rel)}
 
 
 def periodo(alvo: dt.date, visao: str) -> tuple[dt.date, dt.date]:
@@ -123,11 +151,11 @@ def montar(painel, alvo: dt.date, visao="mes", q="", pasta="", categoria="", cor
     de, ate = periodo(alvo, visao)
     opcoes_pastas, categorias, tags = [], set(), set()
     todos = []
-    for modulo in painel.indice.modulos.values():
+    for modulo, notas in fontes(painel):
         if not modulo.campo_data:
             continue
         opcoes_pastas.append({"id": modulo.id, "nome": modulo.nome})
-        for nota in painel.indice.registros_em(modulo.id):
+        for nota in notas:
             e = evento(nota, modulo)
             if not e:
                 continue

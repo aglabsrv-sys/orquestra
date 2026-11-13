@@ -1,24 +1,52 @@
 {% extends "base.html" %}
-{% import "partes.html" as p %}
-{% block titulo %}{{ dia_longo|capitalize }}{% endblock %}
-{% block trilha %}Agenda{% endblock %}
-{% block observa %}tudo{% endblock %}
+{% block titulo %}{{ 'Hoje' if e_hoje else dia.strftime('%d/%m/%Y') }}{% endblock %}
+{% block trilha %}Resumo do dia{% endblock %}
+{% block observa %}{% if e_hoje %}tudo{% endif %}{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/dia.css?v={{ marca }}">{% endblock %}
+
+{% macro linha(item, atrasado=false) %}
+<li class="dia-item{% if item.concluido %} dia-concluido{% endif %}">
+  <span class="dia-item-marca{% if atrasado %} dia-prazo{% endif %}">{% if atrasado %}{{ item.data[8:] }}/{{ item.data[5:7] }}{% elif item.hora %}{{ item.hora }}{% else %}{{ icone('check' if item.concluido else 'nota', 15) }}{% endif %}</span>
+  <a href="{{ item.url }}" class="dia-item-titulo">{{ item.titulo }}</a>
+  <span class="dia-item-contexto" title="{{ item.pasta }}{% if item.status %} · {{ item.status }}{% endif %}">{{ item.status if item.concluido else item.pasta }}</span>
+</li>
+{% endmacro %}
+{% macro lista(itens, atrasado=false) %}
+<ul class="dia-lista">{% for item in itens[:6] %}{{ linha(item, atrasado) }}{% endfor %}</ul>
+{% if itens|length > 6 %}<details class="dia-mais"><summary>Mais {{ itens|length - 6 }} {{ icone('chevron_dir', 12) }}</summary><ul class="dia-lista">{% for item in itens[6:] %}{{ linha(item, atrasado) }}{% endfor %}</ul></details>{% endif %}
+{% endmacro %}
 
 {% block conteudo %}
-<section class="pagina">
-  <header class="pagina-topo">
-    <h1>{{ 'Hoje' if e_hoje else dia_longo|capitalize }}</h1>
-    <p class="suave">{% if e_hoje %}{{ dia_longo|capitalize }}. Inclui o que está atrasado.{% else %}O que está marcado para este dia.{% endif %}</p>
+<section class="pagina dia-pagina">
+  <header class="pagina-topo dia-topo">
+    <div><h1>{{ 'Hoje' if e_hoje else dia.strftime('%d/%m/%Y') }}</h1><p class="dia-data suave">{{ dia_longo|capitalize }}</p></div>
+    <div class="dia-ferramentas">
+      <nav class="dia-navegar" aria-label="Dia do resumo">
+        {% if resumo.anterior %}<a class="botao pequeno so-icone" href="{{ resumo.anterior }}" aria-label="Dia anterior">{{ icone('chevron_esq', 16) }}</a>{% endif %}
+        {% if not e_hoje %}<a class="botao pequeno" href="/dia/{{ hoje.isoformat() }}">Hoje</a>{% endif %}
+        {% if resumo.proximo %}<a class="botao pequeno so-icone" href="{{ resumo.proximo }}" aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</a>{% endif %}
+      </nav>
+      <a class="botao pequeno so-icone" href="/agenda/{{ dia.isoformat() }}?visao=dia" title="Abrir agenda do dia" aria-label="Abrir agenda do dia">{{ icone('calendario', 16) }}</a>
+      <a class="botao pequeno so-icone" href="/diario?dia={{ dia.isoformat() }}" title="Abrir registro do dia" aria-label="Abrir registro do dia">{{ icone('livro', 16) }}</a>
+    </div>
   </header>
-  <nav class="agenda-dias" aria-label="Dias da agenda">{% for d in dias_agenda %}<a href="/agenda/{{ d.isoformat() }}"{% if d == dia %} aria-current="date"{% endif %}><small>{{ ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'][d.weekday()] }}</small><br><b>{{ d.day }}</b></a>{% endfor %}</nav>
-  <div class="linha-botoes"><a class="botao" href="/agenda/{{ hoje.isoformat() }}">Hoje</a><button class="botao" type="button" data-guia="agenda">Conectar agenda</button></div>
-  {% for g in grupos %}
-  <h2 class="grupo-titulo">{{ icone(g.modulo.icone, 18) }} <a href="/m/{{ g.modulo.id }}">{{ g.modulo.nome }}</a> <small>{{ g.cartoes|length }}</small></h2>
-  <div class="grade-cartoes">
-    {% for c in g.cartoes %}{{ p.cartao(c, g.modulo.campos[g.modulo.campo_status].opcoes if g.modulo.campo_status in g.modulo.campos else None, g.modulo.campo_status) }}{% endfor %}
+
+  {% if resumo.historico %}<p class="dia-contexto suave">Itens datados para este dia, com o estado atual das notas.</p>{% endif %}
+  {% if resumo.tem_conteudo %}
+  <nav class="dia-indicadores" aria-label="Resumo">
+    {% if resumo.totais.itens %}<a href="#dia-itens"><b>{{ resumo.totais.itens }}</b> no dia</a>{% endif %}
+    {% if resumo.totais.atrasados %}<a href="#dia-atrasados"><b>{{ resumo.totais.atrasados }}</b> atrasados</a>{% endif %}
+    {% if resumo.totais.decisoes %}<a href="#dia-decisoes"><b>{{ resumo.totais.decisoes }}</b> para decidir</a>{% endif %}
+    {% if resumo.totais.atividade %}<a href="#dia-atividade"><b>{{ resumo.totais.arquivos }}</b> {{ 'arquivo alterado' if resumo.totais.arquivos == 1 else 'arquivos alterados' }}</a>{% endif %}
+    {% if resumo.totais.habitos %}<a href="#dia-habitos"><b>{{ resumo.totais.habitos_feitos }}/{{ resumo.totais.habitos }}</b> hábitos</a>{% endif %}
+  </nav>
+  <div class="dia-secoes">
+    {% if resumo.itens %}<section class="dia-bloco" id="dia-itens"><h2>No dia <small>{{ resumo.totais.itens }}</small></h2>{{ lista(resumo.itens) }}</section>{% endif %}
+    {% if resumo.atrasados %}<section class="dia-bloco" id="dia-atrasados"><h2>Atrasados <small>{{ resumo.totais.atrasados }}</small></h2>{{ lista(resumo.atrasados, true) }}</section>{% endif %}
+    {% if resumo.decisoes %}<section class="dia-bloco" id="dia-decisoes"><h2><a href="/decidir">Para decidir</a> <small>{{ resumo.totais.decisoes }}</small></h2>{{ lista(resumo.decisoes) }}</section>{% endif %}
+    {% if resumo.habitos %}<section class="dia-bloco" id="dia-habitos"><h2><a href="/m/habitos">Hábitos</a> <small>{{ resumo.totais.habitos_feitos }}/{{ resumo.totais.habitos }}</small></h2><ul class="dia-lista">{% for h in resumo.habitos %}<li class="dia-item"><span class="dia-item-marca{% if h.marcado %} dia-feito{% endif %}">{{ icone('check' if h.marcado else 'pulso', 15) }}</span><a href="{{ h.url }}" class="dia-item-titulo">{{ h.titulo }}</a><span class="dia-item-contexto">{{ h.semana }}/{{ h.meta }} na semana</span></li>{% endfor %}</ul></section>{% endif %}
+    {% if resumo.atividade %}<section class="dia-bloco" id="dia-atividade"><h2><a href="/diario?dia={{ dia.isoformat() }}">Atividade observada</a> <small>{{ resumo.totais.atividade }}</small></h2><ul class="dia-lista">{% for e in resumo.atividade %}<li class="dia-item"><time class="dia-item-marca">{{ e.hora[:5] }}</time>{% if e.url %}<a href="{{ e.url }}" class="dia-item-titulo">{{ e.titulo }}</a>{% else %}<span class="dia-item-titulo">{{ e.titulo }}</span>{% endif %}<span class="dia-item-contexto">{{ e.tipo }}{% if e.quantidade > 1 %} · {{ e.quantidade }}×{% endif %}</span></li>{% endfor %}</ul><a class="dia-ver-tudo" href="/diario?dia={{ dia.isoformat() }}">Ver registro {{ icone('seta_dir', 13) }}</a></section>{% endif %}
   </div>
-  {% else %}
-  {{ p.vazio("Dia livre", "Nenhum item em aberto com esta data.") }}
-  {% endfor %}
+  {% else %}<div class="dia-vazio"><span>{{ icone('calendario', 24) }}</span><p>Nenhum item para este dia.</p><a class="botao pequeno" href="/agenda/{{ dia.isoformat() }}?visao=dia">Abrir agenda</a></div>{% endif %}
 </section>
 {% endblock %}

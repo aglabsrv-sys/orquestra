@@ -102,7 +102,7 @@ def _ja_registrado(caminho: Path, tipo: str, rel: str, agora: dt.datetime, janel
     except OSError:
         return False
     for linha in ultimas:
-        partes = [p.strip() for p in linha[2:].split(" | ")] if linha.startswith("- ") else []
+        partes = [p.strip() for p in linha[2:].split("|")] if linha.startswith("- ") else []
         if len(partes) < 5 or partes[1] != tipo or partes[2] != rel or partes[4] == "externo":
             continue
         try:
@@ -125,7 +125,7 @@ def ler_registro(vault: Path, dia: dt.date) -> list[Entrada]:
     for linha in caminho.read_text(encoding="utf-8", errors="replace").splitlines():
         if not linha.startswith("- "):
             continue
-        partes = [p.strip() for p in linha[2:].split(" | ")]
+        partes = [p.strip() for p in linha[2:].split("|")]
         if len(partes) >= 5:
             entradas.append(Entrada(*partes[:5]))
     entradas.reverse()  # mais recentes primeiro
@@ -156,3 +156,82 @@ def dias_com_registro(vault: Path) -> list[dt.date]:
             except ValueError:
                 pass
     return sorted(dias, reverse=True)
+
+
+def resumo_dia(painel, alvo: dt.date, hoje: dt.date | None = None) -> dict:
+    """Retrato local do dia, sem reconstruir estados ou atividade não observados.
+
+    Datas antigas usam as datas das notas e seu estado *atual*. Pendências sem
+    data e atrasados só pertencem à visão de hoje. O registro continua sendo a
+    fonte de atividade; mtime não é evidência de uma sessão ou tarefa concluída.
+    """
+    from orquestra import calendario, habitos
+    from orquestra.apresentacao import url_nota
+    from orquestra.indice import data_de, espera_decisao
+    from orquestra.modulos import rotulo
+
+    hoje = hoje or dt.date.today()
+    itens, atrasados, decisoes = [], [], []
+    iso = alvo.isoformat()
+    for modulo, notas in calendario.fontes(painel):
+        for nota in notas:
+            if nota.erro:
+                continue
+            status = str(nota.campo(modulo.campo_status) or "")
+            concluido = status in modulo.concluidos
+            item = {"rel": nota.rel, "titulo": nota.titulo, "url": url_nota(nota.rel),
+                    "pasta": modulo.nome, "status": rotulo(status), "concluido": concluido,
+                    "hora": "", "data": "", "tipo": "item"}
+            if alvo == hoje and espera_decisao(nota, modulo):
+                decisoes.append(item.copy())
+            data = data_de(nota, modulo)
+            if data is None:
+                continue
+            item["data"] = data.isoformat()
+            evento = calendario.evento(nota, modulo)
+            if evento:
+                item["hora"] = evento["hora"]
+                item["tipo"] = "compromisso" if (evento["hora"] or nota.campo("data_fim")
+                    or modulo.id == "agenda" or str(nota.campo("coletor") or "").removesuffix(".py") == "agenda_ics") else "item"
+                no_dia = evento["data"] <= iso <= evento["data_fim"]
+                # A agenda usa término exclusivo: meia-noite não ocupa o dia seguinte.
+                if (evento["hora"] and evento["hora_fim"] == "00:00"
+                        and iso == evento["data_fim"] and iso != evento["data"]):
+                    no_dia = False
+            else:
+                no_dia = data == alvo
+            if no_dia and (alvo < hoje or not concluido):
+                itens.append(item)
+            elif alvo == hoje and data < hoje and modulo.tem_status and not concluido and item["tipo"] != "compromisso":
+                atrasados.append(item)
+    itens.sort(key=lambda i: (not bool(i["hora"]), i["hora"], i["titulo"].casefold(), i["rel"]))
+    atrasados.sort(key=lambda i: (i["data"], i["titulo"].casefold(), i["rel"]))
+    decisoes.sort(key=lambda i: (i["pasta"].casefold(), i["titulo"].casefold(), i["rel"]))
+
+    entradas = ler_registro(painel.vault, alvo)
+    # Várias gravações da mesma nota ocupam uma linha no resumo. O diário guarda
+    # cada evento, seu autor e seus detalhes sem atribuir relatos a outras pessoas.
+    por_arquivo: dict[str, dict] = {}
+    for entrada in entradas:
+        if entrada.rel not in por_arquivo:
+            nota = painel.indice.notas.get(entrada.rel)
+            por_arquivo[entrada.rel] = {"rel": entrada.rel,
+                "titulo": nota.titulo if nota else Path(entrada.rel).stem,
+                "url": url_nota(entrada.rel) if nota else "", "hora": entrada.hora,
+                "tipo": entrada.tipo, "quantidade": 0}
+        por_arquivo[entrada.rel]["quantidade"] += 1
+
+    itens_habitos = []
+    modulo_habitos = painel.indice.modulos.get("habitos")
+    if alvo <= hoje and modulo_habitos and "registros" in modulo_habitos.campos:
+        itens_habitos = [habitos.apresentar(nota, alvo) for nota in painel.indice.registros_em("habitos") if not nota.erro]
+        itens_habitos.sort(key=lambda item: (not item["marcado"], item["titulo"].casefold(), item["rel"]))
+
+    totais = {"itens": len(itens), "atrasados": len(atrasados), "decisoes": len(decisoes),
+              "atividade": len(entradas), "arquivos": len(por_arquivo), "habitos": len(itens_habitos),
+              "habitos_feitos": sum(item["marcado"] for item in itens_habitos)}
+    return {"itens": itens, "atrasados": atrasados, "decisoes": decisoes,
+            "atividade": list(por_arquivo.values())[:8], "habitos": itens_habitos, "totais": totais,
+            "anterior": f"/dia/{alvo - dt.timedelta(days=1)}" if alvo > dt.date.min else "",
+            "proximo": f"/dia/{alvo + dt.timedelta(days=1)}" if alvo < dt.date.max else "",
+            "historico": alvo < hoje, "tem_conteudo": any(totais.values())}

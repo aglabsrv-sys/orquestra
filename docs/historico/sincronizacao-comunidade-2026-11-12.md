@@ -80,11 +80,11 @@ via TestClient, sem navegador/rede; não representam um vault real ou um SLA.
 Geradas em 12/11/2026 pelo roteiro, com vault de demonstração descartável. As
 imagens de início, tarefas e conteúdo do README também foram atualizadas.
 
-![Agenda em desktop, 1440 px](img/revisoes/agenda-desktop-2026-11-12.png)
+![Agenda em desktop, 1440 px](../img/revisoes/agenda-desktop-2026-11-12.png)
 
 | Hábitos, 390 px | Pomodoro, 390 px | Claro e fonte ampliada, 320 px |
 |---|---|---|
-| ![Hábitos](img/revisoes/habitos-mobile-2026-11-12.png) | ![Pomodoro](img/revisoes/pomodoro-mobile-2026-11-12.png) | ![Hábitos em claro](img/revisoes/habitos-claro-fonte-grande-2026-11-12.png) |
+| ![Hábitos](../img/revisoes/habitos-mobile-2026-11-12.png) | ![Pomodoro](../img/revisoes/pomodoro-mobile-2026-11-12.png) | ![Hábitos em claro](../img/revisoes/habitos-claro-fonte-grande-2026-11-12.png) |
 
 ## Publicação e limites
 

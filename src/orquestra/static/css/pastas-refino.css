@@ -1,0 +1,13 @@
+/* Subpastas seguem a mesma margem das listas, tabelas e quadros da área. */
+.modulo-pastas { margin:8px var(--margem) 18px; min-width:0; }
+.modulo-navegacao { display:flex; align-items:center; gap:10px; margin-bottom:10px; min-width:0; }
+.modulo-navegacao:last-child { margin-bottom:0; }
+.modulo-voltar { flex:none; min-height:30px; padding:4px 7px; font-size:.72rem; }
+.modulo-pasta-atual { display:none; }
+.modulo-subpastas { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr)); gap:8px; margin:0; }
+.modulo-subpastas a { display:flex; align-items:center; gap:9px; min-width:0; padding:10px 12px; background:var(--superficie); border:1px solid var(--borda); border-radius:calc(10px * var(--cantos,1)); color:var(--texto); }
+.modulo-subpastas a:hover { border-color:var(--destaque); background:var(--superficie-alta); }
+.modulo-subpastas a > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; font-size:.86rem; }
+.modulo-subpastas small { font-size:.72rem; color:var(--texto-suave); }
+.modulo-subpastas svg { flex:none; color:var(--texto-suave); }
+@media(max-width:520px) { .modulo-pasta-atual { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.78rem; color:var(--texto-suave); } }

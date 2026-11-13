@@ -1,21 +1,21 @@
-# Tema Luz: interface clara nos dois modos, com capas de dia.
+# Tema Luz: porcelana e azul de dia; preto absoluto no modo escuro. Capas de dia.
 # Cores sempre em hexadecimal. Salve e o painel recarrega sozinho.
 
 nome: Luz
-descricao: Porcelana, grafite e azul. Clareza para trabalhar de dia.
+descricao: Porcelana e azul de dia, preto absoluto à noite.
 
 # Cores da interface
 cores:
-  fundo: "#f5f6f8"
-  superficie: "#ffffff"
-  superficie_alta: "#e9edf3"
-  borda: "#d3d9e3"
-  texto: "#202b3c"
-  texto_suave: "#59677b"
-  destaque: "#285cbd"
-  sobre_destaque: "#ffffff"
-  alerta: "#b52d46"
-  ok: "#26724e"
+  fundo: "#000000"
+  superficie: "#0b0b0c"
+  superficie_alta: "#151517"
+  borda: "#2a2b2f"
+  texto: "#f2f3f5"
+  texto_suave: "#a4a9b3"
+  destaque: "#7aa7ff"
+  sobre_destaque: "#04122b"
+  alerta: "#ff8597"
+  ok: "#6fd6a0"
 
 # As mesmas cores para o modo claro (Ajustes > Aparência > Claro).
 cores_claras:

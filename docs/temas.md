@@ -32,8 +32,9 @@ Três detalhes de como isso funciona:
 
 - **A cor de destaque se ajusta ao modo.** Um tom pastel aparece bem no escuro e
   some no claro. Em vez de recusar a sua cor, o painel escurece (ou clareia) só o
-  necessário para ela continuar legível, e escolhe sozinho se o texto em cima dela
-  fica preto ou branco.
+  necessário para ela continuar legível, mantendo o mesmo tom, e escolhe sozinho se
+  o texto em cima dela fica preto ou branco. As amostras em Ajustes já mostram a cor
+  ajustada para o modo em uso, igual à dos botões.
 - **As letras são as do seu computador.** Nada é baixado da internet, então o painel
   continua funcionando sem conexão. Por isso a mesma opção pode ter um desenho um
   pouco diferente no Windows, no macOS e no celular.
@@ -125,12 +126,16 @@ problema de licença.
 | **Noturno** | violeta elétrico, magenta e ciano | madrugada cyberpunk | néon, cidade, espaço, janela |
 | **Azul profundo** | cobalto, gelo e aço | o céu visto de um observatório | observatório, orbital, espaço, aurora |
 | **Terminal** | carvão e verde fósforo | monitores de uma cor só (verde, âmbar, ciano) | código, cidade, orbital, janela |
-| **Luz** | porcelana e azul, interface clara nos dois modos | paisagens à luz do dia | jardim, céu, montanhas, mar |
-| **Grafite** | cinza neutro, sem cor dominante | desenho a nanquim, em tons de cinza | montanhas, floresta, cidade, janela |
-
-![Os sete temas em Ajustes > Aparência](img/temas.png)
+| **Luz** | porcelana e azul de dia, preto absoluto no modo escuro | paisagens à luz do dia | jardim, céu, montanhas, mar |
+| **Grafite** | cinza neutro, sem cor dominante | tons pastel: lavanda, pêssego, menta e azul-névoa | montanhas, floresta, cidade, janela |
 
 A miniatura de cada tema é a sua capa de assinatura (`boas-vindas` em `capas`).
+
+| Brasa | Maré | Noturno | Azul profundo |
+|---|---|---|---|
+| ![Brasa](img/temas/brasa.png) | ![Maré](img/temas/mare.png) | ![Noturno](img/temas/noturno.png) | ![Azul profundo](img/temas/azul.png) |
+| **Terminal** | **Luz** | **Luz (escuro)** | **Grafite** |
+| ![Terminal](img/temas/terminal.png) | ![Luz](img/temas/luz-claro.png) | ![Luz no modo escuro](img/temas/luz-escuro.png) | ![Grafite](img/temas/grafite.png) |
 
 Nos temas que vêm prontos, cada área do catálogo tem um par (cena, paleta) só dela:
 duas áreas nunca ficam com a mesma capa. Uma área que o tema não lista em `capas`

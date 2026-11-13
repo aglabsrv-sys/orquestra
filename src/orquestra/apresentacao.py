@@ -9,13 +9,13 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from markdown_it import MarkdownIt
 from markupsafe import Markup, escape
 
 from orquestra import temas
 from orquestra.indice import Indice, data_de
 from orquestra.modulos import Modulo, rotulo, validar
 from orquestra.notas import Nota
+from orquestra.vinculos import Referencia, externo, markdown_local, normalizar_ancora, resolver_em_lote
 from orquestra.painel import Painel
 
 DIAS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
@@ -27,6 +27,7 @@ MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "
 # Ícones de traço, desenhados para uma grade de 24x24. Para usar um ícone num
 # módulo, coloque o nome dele em `icone:` no _modulo.yaml.
 ICONES = {
+    "link": '<path d="m10 13 4-4"/><path d="M8 16H6a4 4 0 0 1 0-8h4M14 8h4a4 4 0 0 1 0 8h-4"/>',
     "inicio": '<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>',
     "check": '<path d="m4 6 1.5 1.5L8 5"/><path d="m4 12 1.5 1.5L8 11"/><path d="m4 18 1.5 1.5L8 17"/><path d="M11 6h9M11 12h9M11 18h9"/>',
     "video": '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/>',
@@ -141,59 +142,92 @@ def modificado_em(nota: Nota, hoje: dt.date) -> str:
 
 # ---------------------------------------------------------------- markdown
 
-_md = MarkdownIt("commonmark", {"html": False, "breaks": True}).enable(["table", "strikethrough"])
-_EMBUTIDO = re.compile(r"!\[\[([^\]]+)\]\]")
-_WIKILINK = re.compile(r"\[\[([^\]|#]+)(#[^\]|]*)?(?:\|([^\]]+))?\]\]")
-_IMG_RELATIVA = re.compile(r'<img src="(?!https?:|/|data:)([^"]+)"')
+_md = markdown_local()
+
+
+def _url_referencia(resolucao, indice: Indice) -> str:
+    if resolucao.rel in indice.notas:
+        url = url_nota(resolucao.rel)
+        return url + ("#" + quote(resolucao.fragmento) if resolucao.fragmento else "")
+    from orquestra.indice import EXT_MIDIA
+    from pathlib import PurePosixPath
+    if PurePosixPath(resolucao.rel).suffix.lower() in EXT_MIDIA:
+        return "/arquivo/" + quote(resolucao.rel)
+    if PurePosixPath(resolucao.rel).suffix.lower() in {".html", ".htm"}:
+        return "/documento/" + quote(resolucao.rel)
+    return ""
+
+
+def _render_wiki(tokens, numero, options, env):
+    from html import escape
+    token = tokens[numero]
+    indice, origem = env["indice"], env["origem"]
+    ref = Referencia(token.meta["alvo"], token.content, embutido=token.meta["embutido"])
+    resolucao = indice.resolver_referencia(ref, origem)
+    url = _url_referencia(resolucao, indice)
+    rotulo = escape(token.content)
+    if url and ref.embutido and url.startswith("/arquivo/"):
+        return '<img src="' + escape(url, quote=True) + '" alt="' + rotulo + '">'
+    if url:
+        classe = ' class="nota-embutida"' if ref.embutido else ""
+        return '<a href="' + escape(url, quote=True) + '"' + classe + '>' + rotulo + '</a>'
+    return '<span class="vinculo-pendente" title="' + escape(ref.alvo, quote=True) + '">' + rotulo + '</span>'
+
+
+_md.renderer.rules["wikilink"] = _render_wiki
 
 
 def render_markdown(texto: str, indice: Indice, origem: str = "") -> Markup:
-    """Markdown -> HTML seguro (HTML cru é desativado), entendendo [[links]] do Obsidian."""
+    """Markdown seguro com o mesmo resolvedor usado pelo grafo e diagnóstico."""
+    with resolver_em_lote(indice):
+        return _render_markdown(texto, indice, origem)
 
-    from pathlib import PurePosixPath
-    from urllib.parse import unquote
-    import posixpath
-    from html import escape, unescape
 
-    def midia(nome: str) -> str | None:
-        nome = unquote(unescape(nome)).replace("\\", "/").split("#", 1)[0]
-        candidatos = [posixpath.normpath(str(PurePosixPath(origem).parent / nome)), nome.lstrip("/")]
-        from orquestra.caminhos import CaminhoInseguro, caminho_no_vault, ignorar
-        from orquestra.indice import EXT_MIDIA
-        for candidato in candidatos:
-            try:
-                arquivo = caminho_no_vault(indice.vault, candidato)
-                if not ignorar(candidato) and arquivo.is_file() and arquivo.suffix.lower() in EXT_MIDIA:
-                    return arquivo.relative_to(indice.vault).as_posix()
-            except (CaminhoInseguro, OSError):
+def _render_markdown(texto: str, indice: Indice, origem: str) -> Markup:
+    from markdown_it.token import Token
+
+    tokens = _md.parse(texto)
+    mapas = not any(
+        filho.type == "wikilink" and filho.meta.get("multilinha")
+        for token in tokens for filho in token.children or []
+    )
+    titulos = {}
+    for i, token in enumerate(tokens):
+        if mapas and token.level == 0 and token.map and token.block:
+            token.attrSet("data-md-inicio", str(token.map[0]))
+            token.attrSet("data-md-fim", str(token.map[1]))
+        if token.type == "heading_open" and i + 1 < len(tokens):
+            titulo = "".join(t.content for t in tokens[i + 1].children or [] if t.type not in {"html_inline", "link_open", "link_close"})
+            ancora = normalizar_ancora(titulo)
+            titulos[ancora] = titulos.get(ancora, 0) + 1
+            token.attrSet("id", ancora + ("-" + str(titulos[ancora]) if titulos[ancora] > 1 else ""))
+        if token.type != "inline":
+            continue
+        for filho in token.children or []:
+            if filho.type not in {"link_open", "image"}:
                 continue
-        encontrados = [r for r in indice.midias.values() if r.casefold().endswith("/" + nome.casefold()) or r.casefold() == nome.casefold()]
-        if len(encontrados) == 1:
-            return encontrados[0]
-        return indice.midias.get(PurePosixPath(nome).name.lower())
-
-    def embutir(m: re.Match) -> str:
-        nome = m.group(1).split("|")[0].strip()
-        rel = midia(nome)
-        return f"![{nome}](</arquivo/{quote(rel)}>)" if rel else m.group(0)
-
-    def ligar(m: re.Match) -> str:
-        alvo = m.group(1).strip()
-        texto_link = (m.group(3) or alvo).strip()
-        rel = indice.resolver_link(alvo)
-        return f"[{texto_link}]({url_nota(rel)})" if rel else texto_link
-
-    texto = _EMBUTIDO.sub(embutir, texto)
-    texto = _WIKILINK.sub(ligar, texto)
-    html = _md.render(texto)
-    def imagem(m: re.Match) -> str:
-        nome = m.group(1)
-        if nome.startswith(("http:", "https:", "data:", "/arquivo/")):
-            return m.group(0)
-        rel = midia(nome)
-        return '<img src="' + escape('/arquivo/' + quote(rel or unquote(nome).lstrip('/')), quote=True) + '"'
-
-    html = re.sub(r'<img src="([^"]+)"', imagem, html)
+            atributo = "href" if filho.type == "link_open" else "src"
+            alvo = filho.attrGet(atributo) or ""
+            if externo(alvo):
+                continue
+            resolucao = indice.resolver_referencia(Referencia(alvo, tipo="markdown", embutido=filho.type == "image"), origem)
+            url = _url_referencia(resolucao, indice)
+            if url:
+                filho.attrSet(atributo, url)
+            else:
+                filho.attrSet(atributo, "")
+                filho.attrSet("title", "Referência local não disponível")
+        # IDs de bloco são âncoras locais, sem criar HTML a partir do texto da pessoa.
+        if token.children:
+            ultimo = token.children[-1]
+            if ultimo.type == "text":
+                bloco = re.search(r"(?:^|\s)\^([A-Za-z0-9-]+)\s*$", ultimo.content)
+                if bloco:
+                    ultimo.content = ultimo.content[:bloco.start()].rstrip()
+                    marcador = Token("html_inline", "", 0)
+                    marcador.content = '<span id="bloco-' + bloco.group(1).casefold() + '"></span>'
+                    token.children.append(marcador)
+    html = _md.renderer.render(tokens, _md.options, {"indice": indice, "origem": origem})
     html = html.replace("<li>[ ] ", '<li class="tarefa"><input type="checkbox" disabled> ')
     html = html.replace("<li>[x] ", '<li class="tarefa"><input type="checkbox" disabled checked> ')
     return Markup(html)
@@ -312,11 +346,11 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
                 "nome": modulo.nome,
                 "icone": modulo.icone,
                 "url": f"/m/{quote(modulo.id)}",
-                # O número do dock: "para hoje" se o módulo tem datas; senão o que espera
-                # decisão; e, se o módulo não usa nem um nem outro, o que está em aberto.
+                # O dock sinaliza prazos e decisões. O estoque de notas ou de
+                # tarefas abertas continua no painel, sem virar notificação.
                 "selo": resumo.hoje
                 if (modulo.campo_data and modulo.tem_status)
-                else (resumo.decidir if (modulo.decidir or not modulo.tem_status) else resumo.abertos),
+                else resumo.decidir,
                 "ativo": ativo == f"m:{modulo.id}",
             }
         )
@@ -394,7 +428,30 @@ def montar_semana(painel: Painel, hoje: dt.date) -> tuple[list[dict[str, Any]], 
 
 
 def capa_de(painel: Painel, alvo: str, propria: Any = None) -> dict[str, Any]:
-    return temas.resolver_capa(painel.tema, alvo, propria or ({"cena": painel.config.aparencia.cena} if painel.config.aparencia.cena else None))
+    propria = propria or painel.config.capas.get(alvo)
+    # A capa padrão pertence ao tema. A antiga cena global repetia a mesma
+    # composição em quase todas as pastas de um cofre existente.
+    desconhecidos = sorted(
+        m.id for m in painel.indice.modulos.values()
+        if not m.capa and not (painel.tema["capas"].get(m.id) or painel.tema["capas"].get(temas._chave(m.id)))
+    )
+    variacao = None
+    if alvo in desconhecidos and not propria:
+        # Cada pasta começa pelo próprio hash. Só deslocamos os pares que
+        # colidirem, sem trocar todas as capas ao acrescentar uma pasta.
+        usados = set()
+        for nome in desconhecidos:
+            tentativa = 0
+            while True:
+                candidato = temas.resolver_capa(painel.tema, nome, variacao=tentativa if tentativa else None)
+                par = (candidato["cena"], str(candidato["paleta"]))
+                if par not in usados or tentativa >= len(painel.tema["cenas"]) * max(1, len(painel.tema["paletas"])):
+                    break
+                tentativa += 1
+            usados.add(par)
+            if nome == alvo:
+                return candidato
+    return temas.resolver_capa(painel.tema, alvo, propria, variacao=variacao)
 
 
 def e(valor: Any) -> str:

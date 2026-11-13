@@ -17,6 +17,7 @@ import urllib.request
 
 CONFIG = json.loads(os.environ.get("ORQUESTRA_CONFIG") or "{}")
 NAVEGADOR = {"User-Agent": "Mozilla/5.0 (compatible; coletor-rss)", "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"}
+LIMITE_DOWNLOAD = 8 * 1024 * 1024
 
 # Em muitas redes o IPv6 está anunciado, mas não funciona. O Python tenta IPv6
 # primeiro e fica esperando até desistir (dezenas de segundos por endereço).
@@ -38,7 +39,12 @@ except (AttributeError, ValueError):
 
 def baixar(url: str, tempo: int = 20) -> bytes:
     with urllib.request.urlopen(urllib.request.Request(url, headers=NAVEGADOR), timeout=tempo) as resposta:
-        return resposta.read()
+        # Não confiar no tamanho informado: respostas sem Content-Length ou
+        # com comprimento incorreto também precisam permanecer limitadas.
+        dados = resposta.read(LIMITE_DOWNLOAD + 1)
+        if len(dados) > LIMITE_DOWNLOAD:
+            raise ValueError("A resposta da fonte excede o limite de 8 MB.")
+        return dados
 
 
 def emitir(id: str, titulo: str, corpo: str = "", **campos) -> None:

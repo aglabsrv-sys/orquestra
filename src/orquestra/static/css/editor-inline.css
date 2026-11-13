@@ -1,0 +1,8 @@
+/* A nota permanece no mesmo documento ao entrar em edição. */
+.nota .nota-editor-bloco { display:block; width:100%; max-width:100%; min-width:0; box-sizing:border-box; padding:0; border:0; border-radius:0; background:transparent; color:inherit; font:inherit; line-height:inherit; resize:none; overflow:hidden; outline:0; box-shadow:-2px 0 0 color-mix(in srgb,var(--destaque) 70%,transparent); white-space:pre-wrap; overflow-wrap:break-word; }
+.nota .nota-editor-bloco:focus { border:0; outline:0; background:transparent; box-shadow:-2px 0 0 var(--destaque); }
+.nota .texto.em-edicao { cursor:text; }
+.nota .texto.em-edicao .nota-editor-bloco { padding-left:0; padding-right:0; }
+.nota-cabecalho .nota-acoes { flex-wrap:nowrap; }
+.nota-cabecalho .nota-acoes .so-icone { min-height:32px; }
+@media(max-width:600px) { .nota-cabecalho { gap:8px; } }
