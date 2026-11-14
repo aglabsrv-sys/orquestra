@@ -58,3 +58,8 @@ múltiplas ocorrências por dia continuam fora deste modelo simples.
 ![foco-e-habitos — exemplo com dados de demonstração](img/habitos-1440.png)
 
 No celular: [Pomodoro](img/foco-390.png) e [Hábitos](img/habitos-390.png).
+
+A semana de cada hábito aparece em sete quadrados compactos, sem os nomes dos
+dias. Passe o mouse ou navegue com Tab para consultar a data e a realização.
+O ícone + ao lado de Editar marca hoje; quando marcado, vira ✓ e permite
+desmarcar. O histórico de treze semanas continua disponível em Histórico.

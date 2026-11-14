@@ -56,11 +56,12 @@
         if (r.hoje !== raiz.dataset.hoje) { location.reload(); return; }
         card.dataset.versao=r.versao; itens.set(r.rel,item); atualizarResumo(r.resumo);
         marcar.setAttribute('aria-pressed',String(item.marcado)); marcar.classList.toggle('feito',item.marcado); card.classList.toggle('habito-feito',item.marcado);
-        $('[data-habito-rotulo]',card).textContent=item.marcado ? 'Feito por hoje' : 'Marcar hoje'; $('[data-habito-check]',card).textContent=item.marcado ? '✓' : '+';
+        marcar.title=item.marcado ? 'Desmarcar hoje' : 'Marcar hoje'; marcar.setAttribute('aria-label',marcar.title+' · '+item.titulo); $('[data-habito-check]',card).textContent=item.marcado ? '✓' : '+';
         $('[data-habito-semana]',card).textContent=item.semana; $('[data-habito-meta-estado]',card).textContent=item.semana>=item.meta ? 'Meta alcançada' : 'No seu ritmo';
         var progresso=$('.habito-progresso',card); progresso.setAttribute('aria-valuenow',item.semana); progresso.setAttribute('aria-valuemax',Math.max(item.meta,item.semana)); $('i',progresso).style.width=item.percentual+'%';
-        var dia=$('[data-habito-dia="'+r.hoje+'"]',card); if (dia) { var dadoDia=item.dias.find(function (d) { return d.iso===r.hoje; }); dia.classList.toggle('feito',item.marcado); dia.title=dadoDia.rotulo+' · '+(item.marcado?'realizado':'sem registro'); $('i',dia).textContent=item.marcado?'✓':dadoDia.nome; }
-        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.title=r.hoje+' · '+(item.marcado?'realizado':'sem registro'); }
+        var dia=$('[data-habito-dia="'+r.hoje+'"]',card), dataHoje=r.hoje.slice(8,10)+'/'+r.hoje.slice(5,7)+'/'+r.hoje.slice(0,4), dica=dataHoje+' · '+(item.marcado?'realizado':'sem registro');
+        if (dia) { dia.classList.toggle('feito',item.marcado); dia.dataset.habitoTooltip=dica; dia.setAttribute('aria-label',dica); }
+        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.title=dataHoje+' · '+(item.marcado?'realizado':'sem registro'); }
         var mapa=$('.habito-mapa',card); if (mapa) mapa.setAttribute('aria-label','Histórico das últimas treze semanas de '+item.titulo+'. '+item.total_registros+' dias realizados ao todo.');
       } catch (erro) { estado.textContent=erro.message; }
       finally { marcar.disabled=false; }

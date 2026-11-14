@@ -2,6 +2,9 @@
 
 ## Em desenvolvimento
 
+- Hábitos com semana compacta em quadrados, data e realização no hover ou foco;
+  Marcar hoje vira um ícone junto de Editar.
+
 - Novo contato começa com Nome, Telefone e E-mail; os dois últimos são opcionais.
   A lista usa Nome como coluna principal e oculta propriedades sem dados relevantes.
   O seletor de ações em lote tem mais espaço entre o texto e a seta.
