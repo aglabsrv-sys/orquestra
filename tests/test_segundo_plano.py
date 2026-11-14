@@ -20,6 +20,29 @@ from orquestra.servidor import criar_app
 from orquestra.seguranca import CapabilityLocal
 
 
+def test_porta_com_servidor_ativo_nao_e_considerada_livre():
+    with socket.socket() as servidor:
+        if os.name != "nt":
+            servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        servidor.bind(("127.0.0.1", 0))
+        servidor.listen()
+        assert not cli._porta_livre(servidor.getsockname()[1])
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Reutilização de TIME_WAIT específica de sockets Unix")
+def test_porta_em_time_wait_pode_reabrir_apos_encerrar_servidor():
+    with socket.socket() as servidor:
+        servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        servidor.bind(("127.0.0.1", 0))
+        porta = servidor.getsockname()[1]
+        servidor.listen()
+        with socket.create_connection(("127.0.0.1", porta)) as cliente:
+            conexao, _ = servidor.accept()
+            conexao.close()  # o lado servidor encerra primeiro e entra em TIME_WAIT
+            assert cliente.recv(1) == b""
+    assert cli._porta_livre(porta)
+
+
 def test_retomada_nao_encerra_outra_instancia(monkeypatch):
     monkeypatch.setattr(processo, "localizar", lambda porta: {"pid": 456, "respondendo": True})
     with pytest.raises(RuntimeError, match="preservada"):
@@ -95,6 +118,10 @@ def test_ativar_transfere_servidor_e_sobrevive_ao_terminal_original(tmp_path, mo
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         porta = s.getsockname()[1]
+    from orquestra.config import gravar_yaml, ler_yaml
+    configuracao = ler_yaml(cofre / "orquestra.yaml")
+    configuracao["porta"] = porta
+    gravar_yaml(cofre / "orquestra.yaml", configuracao)
     base = f"http://127.0.0.1:{porta}"
     def pedido(rota, dados=None):
         headers = {"Content-Type": "application/json"}
@@ -156,3 +183,5 @@ def test_ativar_transfere_servidor_e_sobrevive_ao_terminal_original(tmp_path, mo
                 if processo.consultar(porta) is None:
                     break
                 time.sleep(.1)
+            subprocess.run([sys.executable, "-m", "orquestra", "autostart", "desativar"], env=ambiente,
+                           capture_output=True, timeout=20)

@@ -113,6 +113,10 @@ def adotar_vault(destino: Path, modulos: list[str], pastas: list[str], com_backu
 
 def _porta_livre(porta: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if os.name != "nt":
+            # Como o servidor asyncio no Unix: aceita TIME_WAIT de conexões
+            # encerradas, mas continua recusando uma porta com listener ativo.
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind(("127.0.0.1", porta))
             return True
