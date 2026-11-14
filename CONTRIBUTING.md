@@ -122,8 +122,9 @@ open source com base apenas na árvore de trabalho local.
 Confira também as jornadas de primeiro uso, criação/edição e recuperação, agenda,
 hábitos e Pomodoro em desktop e celular. Use dados fictícios nos prints, registre
 a data e o viewport e mantenha os exemplos do README compatíveis com a versão
-candidata. Os relatórios em `docs/` são evidências da data indicada; os guias de uso
-devem refletir o comportamento atual. Uma captura antiga não valida uma tela nova.
+candidata. Os guias de uso devem refletir o comportamento atual. Uma captura
+antiga não valida uma tela nova. Registre resultados de revisão no pull request;
+não inclua diários de implementação ou contexto de conversas na documentação.
 
 O verificador de documentação confere destinos locais de links e imagens. Ele não
 acessa a rede nem confirma o conteúdo de links externos ou a aparência dos prints.
