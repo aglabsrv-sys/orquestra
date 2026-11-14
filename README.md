@@ -93,7 +93,8 @@ só abre o painel. O navegador abre em <http://localhost:8420>. Na primeira vez,
 - **Criar um vault novo:** escolha a pasta, um ponto de partida e o tema.
 
 Nas próximas vezes, `uv run --frozen orquestra` abre direto no vault escolhido.
-Para pegar uma versão nova, `uv run --frozen orquestra atualizar`. Para encerrar o
+Para pegar uma versão nova, use o [ícone de atualização no painel](docs/atualizacao.md)
+ou `uv run --frozen orquestra atualizar`. Para encerrar o
 painel de qualquer terminal (mesmo se foi aberto por um agente),
 `uv run --frozen orquestra parar`; `status` e `reiniciar` também existem.
 Se algo não funcionar, rode `uv run --frozen orquestra doctor`: ele confere a

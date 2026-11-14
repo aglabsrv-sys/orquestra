@@ -54,6 +54,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     painel = Painel(vault)
     from orquestra.github_local import LoginGitHub
     github = LoginGitHub()
+    from orquestra.atualizacao import Atualizador
+    atualizador = Atualizador()
     capacidade = hospedeiro.capacidade if hospedeiro else CapabilityLocal()
     vault_id = hashlib.sha256(os.path.normcase(str(painel.vault)).encode("utf-8")).hexdigest()[:24]
 
@@ -211,6 +213,24 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 raise Conflito("Esta aba pertence a outro vault. Reabra o painel antes de excluir.")
             return None
         return exigir_local(request)
+
+    @app.get("/api/atualizacao")
+    async def api_atualizacao(request: Request):
+        estado = await asyncio.to_thread(atualizador.consultar)
+        return {**estado, "instalada": atualizador.revisao_iniciada, "local": canal_local(request), "pid": os.getpid()}
+
+    @app.post("/api/atualizacao")
+    async def api_atualizar(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        await corpo_json(request)
+        if hospedeiro is None or hospedeiro.servidor is None:
+            raise Recusado("Inicie o painel pelo comando orquestra para atualizar por aqui.")
+        try:
+            porta = hospedeiro.servidor.config.port
+            return await asyncio.to_thread(atualizador.iniciar, painel.vault, porta, os.getpid())
+        except (OSError, RuntimeError, subprocess.TimeoutExpired) as erro:
+            raise Recusado(str(erro) if isinstance(erro, RuntimeError) else "Não foi possível iniciar a atualização.") from None
 
     @app.get("/api/local/capacidade")
     async def capacidade_local(request: Request):
@@ -452,12 +472,18 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 contexto["colunas"] = colunas
                 contexto["opcoes"] = opcoes
             else:
-                itens, contexto["paginacao"] = paginar(request, itens)
                 nomes = visao.colunas or ["titulo", *modulo.campos.keys()]
+                if modulo.id == "contatos":
+                    nomes = [n for n in nomes if n == "titulo" or any(
+                        nota.campo(n) not in (None, "", [], False)
+                        and not (n == "tipo" and nota.campo(n) == "pessoa")
+                        for nota in itens
+                    )]
+                itens, contexto["paginacao"] = paginar(request, itens)
                 if modulo.itens_na_raiz:
                     nomes = [n for n in nomes if n == "titulo" or any(nota.campo(n) not in (None, "", []) for nota in itens)]
                 contexto["colunas_tabela"] = [
-                    {"nome": n, "rotulo": "Título" if n == "titulo" else (modulo.campos[n].rotulo if n in modulo.campos else rotulo(n))}
+                    {"nome": n, "rotulo": ("Nome" if modulo.id == "contatos" else "Título") if n == "titulo" else (modulo.campos[n].rotulo if n in modulo.campos else rotulo(n))}
                     for n in nomes
                 ]
                 linhas = []

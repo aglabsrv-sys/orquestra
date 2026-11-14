@@ -232,3 +232,29 @@ def test_ajustes_nao_confundem_arquivos_da_raiz_com_pastas_retiradas(cliente):
     assert resposta.status_code == 200
     assert 'data-religar="Anotação avulsa.md"' not in resposta.text
     assert 'data-religar="orquestra.yaml"' not in resposta.text
+
+
+def test_contatos_formulario_inicial_e_colunas_preenchidas(cliente):
+    painel = cliente.painel
+    painel.adicionar_modulo("contatos")
+    painel.criar_nota("contatos", "Contato sem detalhes")
+    resposta = cliente.get("/m/contatos")
+    assert resposta.status_code == 200
+    assert resposta.context["colunas_tabela"] == [{"nome": "titulo", "rotulo": "Nome"}]
+    modal = resposta.text.split('id="dialogo-novo"', 1)[1].split('</dialog>', 1)[0]
+    assert '<span>Nome</span>' in modal
+    assert 'data-extra-campo="telefone"' not in modal
+    assert 'data-extra-campo="email"' not in modal
+    assert 'data-extra-campo="organizacao" hidden' in modal
+    for campo in ("telefone", "email"):
+        elemento = modal.split(f'name="{campo}"', 1)[1].split('>', 1)[0]
+        assert 'required' not in elemento
+        assert f'<option value="{campo}">' not in modal
+    painel.criar_nota("contatos", "Contato com telefone", {"telefone": "(00) 12345-6789"})
+    resposta = cliente.get("/m/contatos")
+    assert [c["nome"] for c in resposta.context["colunas_tabela"]] == ["titulo", "telefone"]
+    resposta = cliente.get("/m/contatos?q=sem+detalhes")
+    assert [c["nome"] for c in resposta.context["colunas_tabela"]] == ["titulo"]
+    painel.criar_nota("contatos", "Organização favorita", {"tipo": "organizacao", "favorito": True, "email": "contato@example.com"})
+    resposta = cliente.get("/m/contatos")
+    assert [c["nome"] for c in resposta.context["colunas_tabela"]] == ["titulo", "tipo", "telefone", "email", "favorito"]

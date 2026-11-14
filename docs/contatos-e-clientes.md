@@ -48,3 +48,10 @@ lixeira recupera seu identificador e seu vínculo.
 
 O cadastro é local. Esta versão não importa nem sincroniza Google Contatos,
 WhatsApp ou listas externas, nem envia mensagens automaticamente.
+
+Ao criar um contato, Nome, Telefone e E-mail já aparecem no formulário. Telefone
+e e-mail são opcionais; as demais propriedades ficam em **Adicionar campo +**.
+Na lista, a coluna principal chama-se **Nome**. As outras colunas aparecem quando
+há valores preenchidos nos contatos do filtro atual; favoritos desmarcados e o
+tipo padrão Pessoa não abrem uma coluna sozinhos. As colunas respeitam a seleção
+da visualização e permanecem iguais entre páginas do mesmo filtro.

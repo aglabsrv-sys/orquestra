@@ -225,11 +225,11 @@
 <dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" data-modulo="{{ modulo.id }}" data-subpasta="{{ pasta_atual|default('') }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-dialogo-novo">{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
-    <label class="campo"><span>Título</span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" autocomplete="off"></label>
+    <label class="campo"><span>{{ "Nome" if modulo.id == "contatos" and aba != "humano" else "Título" }}</span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" autocomplete="off"></label>
     {% if aba != 'humano' %}
     <div class="grade-campos">
       {% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') %}
-      {% set essencial = campo.obrigatorio and not campo.padrao %}
+      {% set essencial = (campo.obrigatorio and not campo.padrao) or (modulo.id == "contatos" and campo.nome in ("telefone", "email")) %}
       <div{% if not essencial %} data-extra-campo="{{ campo.nome }}" hidden{% endif %}>{{ p.entrada(campo, padroes.get(campo.nome, ''), 'data-novo') }}</div>
       {% endfor %}
       {% if modulo.id == 'clientes' %}<div data-extra-campo="contato_id" hidden>{{ p.seletor_contato(opcoes_contatos, '', 'data-novo') }}</div>{% endif %}
@@ -238,7 +238,7 @@
     <div data-extra-campo="__texto" hidden><label class="campo"><span>Texto</span><textarea name="corpo" id="novo-corpo" rows="3" maxlength="1000000"></textarea></label></div>
     <label class="campo adicionar-campo"><span class="somente-leitor">Adicionar campo</span><select id="novo-adicionar-campo" aria-label="Adicionar campo">
       <option value="">Adicionar campo +</option>
-      {% if aba != 'humano' %}{% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') and not (campo.obrigatorio and not campo.padrao) %}<option value="{{ campo.nome }}">{{ campo.rotulo }}</option>{% endfor %}
+      {% if aba != 'humano' %}{% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') and not (campo.obrigatorio and not campo.padrao) and not (modulo.id == "contatos" and campo.nome in ("telefone", "email")) %}<option value="{{ campo.nome }}">{{ campo.rotulo }}</option>{% endfor %}
       {% if modulo.id == 'clientes' %}<option value="contato_id">Contato vinculado</option>{% endif %}{% endif %}
       <option value="__texto">Texto</option>
     </select></label>

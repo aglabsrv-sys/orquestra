@@ -105,12 +105,14 @@
     <p class="bf-rodape"><span id="bf-estado" role="status" aria-live="polite">Digite para buscar no título e no texto das notas.</span><span class="bf-atalhos"><kbd>↑</kbd> <kbd>↓</kbd> navegar · <kbd>Enter</kbd> abrir · <a id="bf-completa" href="/buscar">Busca completa</a></span></p>
   </dialog>
   {% block dialogos %}{% endblock %}
+  <button id="atualizar-app" class="botao so-icone atualizar-app" type="button" hidden aria-label="Nova atualização disponível" title="Nova atualização disponível">{{ icone("atualizar", 18) }}<i aria-hidden="true"></i></button>
   <div id="avisos" role="region" aria-live="off" aria-label="Notificações"></div>
 
   <script src="/static/js/cenas.js?v={{ marca }}"></script>
   <script src="/static/js/notas-seguras.js?v={{ marca }}"></script>
   <script src="/static/js/interface.js?v={{ marca }}"></script>
   <script src="/static/js/app.js?v={{ marca }}"></script>
+  <script src="/static/js/atualizacao.js?v={{ marca }}"></script>
   <script src="/static/js/refino.js?v={{ marca }}"></script>
   <script src="/static/js/experiencia.js?v={{ marca }}"></script>
   <script src="/static/js/foco-engine.js?v={{ marca }}"></script>

@@ -2,6 +2,14 @@
 
 ## Em desenvolvimento
 
+- Novo contato começa com Nome, Telefone e E-mail; os dois últimos são opcionais.
+  A lista usa Nome como coluna principal e oculta propriedades sem dados relevantes.
+  O seletor de ações em lote tem mais espaço entre o texto e a seta.
+
+- Ícone discreto no canto inferior quando há uma revisão nova do aplicativo.
+  A atualização local pede confirmação, preserva alterações no código e reinicia
+  o painel depois de instalar as dependências.
+
 - Ações em lote compactas junto às configurações, sem deslocar a lista ao selecionar;
   filtros de Contatos com busca flexível e favoritos alinhados.
 - Endereços Tailscale autorizados podem mover notas para a lixeira, inclusive em lote.
