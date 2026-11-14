@@ -941,7 +941,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             ]
             contexto["retirados"] = []
             for pasta in sorted(painel.vault.iterdir(), key=lambda p: p.name.casefold()):
-                if pasta.name in painel.indice.modulos or ignorar(pasta.name) or pasta.name.startswith("_") or eh_link(pasta):
+                if pasta.name in painel.indice.modulos or ignorar(pasta.name) or pasta.name.startswith("_") or eh_link(pasta) or not pasta.is_dir():
                     continue
                 try:
                     arquivo = painel.caminho_seguro(f"{pasta.name}/{ARQUIVO_DESLIGADO}")

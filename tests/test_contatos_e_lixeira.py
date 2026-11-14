@@ -224,3 +224,11 @@ def test_resumos_reutilizados_invalidam_com_edicao_dia_e_schema(painel, monkeypa
     painel.recarregar_config()
     painel.indice.resumo(painel.modulo("tarefas"), hoje + dt.timedelta(days=1))
     assert len(chamadas) == 5
+
+
+def test_ajustes_nao_confundem_arquivos_da_raiz_com_pastas_retiradas(cliente):
+    (cliente.painel.vault / "Anotação avulsa.md").write_text("Nota da pessoa", encoding="utf-8")
+    resposta = cliente.get("/ajustes/areas")
+    assert resposta.status_code == 200
+    assert 'data-religar="Anotação avulsa.md"' not in resposta.text
+    assert 'data-religar="orquestra.yaml"' not in resposta.text
