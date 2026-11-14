@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- Cards de Hábitos exibem o mapa completo de treze semanas diretamente, inclusive
+  na Lista, com datas no hover e navegação por teclado. Marcar e Editar permanecem
+  lado a lado no cabeçalho.
+
 - Hábitos com semana compacta em quadrados, data e realização no hover ou foco;
   Marcar hoje vira um ícone junto de Editar.
 

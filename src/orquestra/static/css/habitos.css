@@ -14,40 +14,25 @@
 .habitos-status-ponto { width:6px; height:6px; border-radius:50%; background:var(--destaque); margin-right:5px; }
 .habitos-grade { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr)); gap:12px; align-items:start; }
 .habito-card { padding:14px; border:1px solid var(--borda); border-radius:calc(12px * var(--cantos,1)); background:color-mix(in srgb,var(--superficie) 88%,transparent); min-width:0; }
-.habito-card-topo { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.habito-card-topo { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px; }
 .habito-nome { display:block; font-size:14px; font-weight:550; letter-spacing:-.15px; overflow-wrap:anywhere; }
 .habito-nome:hover { color:var(--destaque); }
 .habito-card-topo p { margin:5px 0 0; font-size:11px; color:var(--texto-suave); }
 .habito-editar { flex:none; color:var(--texto-suave); border-color:transparent; background:transparent; }
-.habito-progresso { width:100%; height:3px; background:var(--borda); border-radius:3px; overflow:hidden; margin:9px 0; }
-.habito-progresso i { display:block; height:100%; background:var(--destaque); border-radius:3px; transition:width .2s ease; }
-.habito-semana { display:flex; gap:5px; margin:0 0 8px; }
-.habito-semana > span { position:relative; display:block; width:18px; height:18px; border:1px solid var(--borda); border-radius:3px; background:var(--superficie-alta); }
-.habito-semana .hoje { outline:1px solid var(--destaque); outline-offset:2px; }
-.habito-semana .feito { background:var(--destaque); border-color:var(--destaque); }
-.habito-semana .futuro { background:transparent; border-style:dashed; }
-.habito-semana > span:focus-visible { outline:2px solid var(--texto); outline-offset:2px; }
-.habito-semana > span:is(:hover,:focus-visible)::after { content:attr(data-habito-tooltip); position:absolute; bottom:calc(100% + 8px); left:0; z-index:3; width:max-content; max-width:230px; padding:6px 8px; border:1px solid var(--borda); border-radius:5px; background:var(--fundo); color:var(--texto); box-shadow:0 3px 12px #0003; font:normal 10px/1.4 var(--fonte, sans-serif); pointer-events:none; }
-.habito-mapa-wrap { width:100%; max-width:232px; border-top:1px solid var(--borda); padding-top:11px; margin:0 auto 14px; }
-.habito-historico { margin:0 0 4px; font-size:10px; color:var(--texto-suave); }
-.habito-historico > summary { display:flex; align-items:center; gap:6px; list-style:none; padding:6px 0; }
-.habito-historico > summary::before { content:'›'; transition:transform .15s; }
-.habito-historico[open] > summary::before { transform:rotate(90deg); }
-.habito-historico > summary span { margin-left:auto; font-size:9px; }
-.habito-historico .habito-mapa-wrap { margin-block:8px 0; }
-.habito-mapa-meses { display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); margin-bottom:6px; font-size:8px; color:var(--texto-suave); }
+.habito-mapa-wrap { width:100%; margin:14px 0 10px; }
 .habito-mapa { display:grid; grid-template-rows:repeat(7,1fr); grid-template-columns:repeat(13,minmax(0,1fr)); grid-auto-flow:column; gap:4px; }
-.habito-dia { aspect-ratio:1; min-height:9px; border-radius:3px; background:var(--superficie-alta); border:1px solid color-mix(in srgb,var(--borda) 70%,transparent); }
+.habito-dia { display:block; aspect-ratio:1; min-width:0; border-radius:3px; background:var(--superficie-alta); border:1px solid color-mix(in srgb,var(--borda) 70%,transparent); }
 .habito-dia.realizado { background:color-mix(in srgb,var(--destaque) 80%,var(--superficie)); border-color:var(--destaque); }
-.habito-dia.futuro { opacity:.25; }
-.habito-mapa-legenda { display:flex; justify-content:space-between; font-size:8px; color:var(--texto-suave); margin-top:7px; }
-.habito-mapa-legenda > span:last-child { display:flex; align-items:center; gap:4px; }
-.habito-mapa-legenda i { width:8px; height:8px; background:var(--superficie-alta); border:1px solid var(--borda); border-radius:2px; }
-.habito-mapa-legenda i.realizado { background:var(--destaque); border-color:var(--destaque); }
+.habito-dia.hoje { outline:1px solid var(--destaque); outline-offset:1px; }
+.habito-dia.futuro { background:transparent; border-style:dashed; opacity:.4; }
+.habito-dia:is(:hover,:focus-visible) { outline:2px solid var(--texto); outline-offset:1px; }
+.habito-dica { position:fixed; z-index:150; width:max-content; max-width:calc(100vw - 16px); padding:7px 9px; border:1px solid var(--borda); border-radius:6px; background:var(--fundo); color:var(--texto); box-shadow:0 3px 12px #0003; font-size:11px; line-height:1.4; pointer-events:none; }
+.habito-dica[hidden] { display:none; }
 .habito-card-rodape { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .habito-card-rodape > span { font-size:9px; color:var(--texto-suave); }
-.habito-acoes { display:flex; align-items:center; gap:3px; flex:none; }
-.habito-acoes .habito-marcar { width:30px; min-height:30px; padding:0; border-color:transparent; background:transparent; color:var(--texto-suave); }
+.habito-card-topo > .habito-acoes { display:grid; grid-auto-flow:column; grid-template-columns:repeat(2,32px); align-items:center; gap:3px; width:67px; }
+.habito-acoes > .botao.so-icone { width:32px; height:32px; min-height:32px; padding:0; margin:0; }
+.habito-acoes .habito-marcar { width:32px; min-height:32px; padding:0; border-color:transparent; background:transparent; color:var(--texto-suave); }
 .habito-acoes .habito-marcar:hover { border-color:var(--borda); color:var(--texto); }
 .habito-acoes .habito-marcar.feito { color:var(--destaque); background:color-mix(in srgb,var(--destaque) 8%,transparent); }
 .habito-marcar [data-habito-check] { font-size:16px; line-height:1; }
@@ -79,10 +64,10 @@
 .habito-meta-opcoes input:checked + span { color:var(--sobre-destaque); background:var(--destaque); border-color:var(--destaque); }
 .habito-meta-opcoes input:focus-visible + span { outline:2px solid var(--destaque); outline-offset:3px; }
 .habitos-lista { grid-template-columns:1fr; }
-.habitos-lista .habito-card { display:grid; grid-template-columns:minmax(140px,1fr) auto auto; align-items:center; gap:12px; padding:12px 16px; }
-.habitos-lista .habito-progresso { display:none; }
-.habitos-lista .habito-semana { margin:0; }
+.habitos-lista .habito-card { display:grid; grid-template-columns:minmax(0,1fr) minmax(200px,272px); align-items:start; column-gap:24px; padding:14px 16px; }
+.habitos-lista .habito-card-topo { grid-column:1; grid-row:1; }
+.habitos-lista .habito-mapa-wrap { grid-column:2; grid-row:1/3; margin:0; }
+.habitos-lista .habito-card-rodape { grid-column:1; grid-row:2; align-self:end; margin-top:12px; }
 .habitos-lista .habito-estado { grid-column:1/-1; }
-@media(max-width:600px) { .habitos-pagina { padding:25px 16px 16px; } .habitos-cabecalho { gap:10px; } .habitos-cabecalho h1 { font-size:24px; } .habitos-cabecalho .principal { font-size:11px; padding:8px 11px; } .habitos-sobrancelha { font-size:8px; } .habitos-abas > div { gap:19px; } .habitos-abas a { font-size:11px; } .habitos-modelos-grade { grid-template-columns:1fr; } .habitos-modelos-nota { display:none; } .habitos-lista .habito-card { grid-template-columns:1fr; } .habitos-lista .habito-card-rodape { justify-content:space-between; }  .habito-card { padding:19px; } .habitos-rodape { align-items:flex-start; line-height:1.6; } }
-@media(prefers-reduced-motion:reduce) { .habito-progresso i { transition:none; } }
+@media(max-width:600px) { .habitos-pagina { padding:25px 16px 16px; } .habitos-cabecalho { gap:10px; } .habitos-cabecalho h1 { font-size:24px; } .habitos-cabecalho .principal { font-size:11px; padding:8px 11px; } .habitos-sobrancelha { font-size:8px; } .habitos-abas > div { gap:19px; } .habitos-abas a { font-size:11px; } .habitos-modelos-grade { grid-template-columns:1fr; } .habitos-modelos-nota { display:none; } .habitos-lista .habito-card { display:block; } .habitos-lista .habito-card-rodape { justify-content:space-between; }  .habito-card { padding:19px; } .habitos-rodape { align-items:flex-start; line-height:1.6; } }
 @media(max-width:600px) { .habito-card { padding:14px; }  }

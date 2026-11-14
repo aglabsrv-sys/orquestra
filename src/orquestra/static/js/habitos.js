@@ -35,7 +35,6 @@
       var doc=new DOMParser().parseFromString(r.html,'text/html'), card=doc.querySelector('[data-habito]');
       var anterior=Array.from(raiz.querySelectorAll('[data-habito]')).find(function (c) { return c.dataset.habito===r.rel; });
       if (anterior) anterior.replaceWith(card); else $('#habitos-grade').appendChild(card);
-      if ($('#habitos-grade').classList.contains('habitos-lista')) { var mapa=$('.habito-mapa-wrap',card); if (mapa) mapa.remove(); }
       itens.set(r.rel,r.item); atualizarResumo(r.resumo); if ($('#habitos-vazio')) $('#habitos-vazio').remove();
       window.OrquestraInterface.avisar('Hábito salvo.'); $('[data-habito-editar]',card).focus({preventScroll:true});
     } catch (erro) { $('#habito-editor-estado').textContent=erro.message; }
@@ -58,14 +57,34 @@
         marcar.setAttribute('aria-pressed',String(item.marcado)); marcar.classList.toggle('feito',item.marcado); card.classList.toggle('habito-feito',item.marcado);
         marcar.title=item.marcado ? 'Desmarcar hoje' : 'Marcar hoje'; marcar.setAttribute('aria-label',marcar.title+' · '+item.titulo); $('[data-habito-check]',card).textContent=item.marcado ? '✓' : '+';
         $('[data-habito-semana]',card).textContent=item.semana; $('[data-habito-meta-estado]',card).textContent=item.semana>=item.meta ? 'Meta alcançada' : 'No seu ritmo';
-        var progresso=$('.habito-progresso',card); progresso.setAttribute('aria-valuenow',item.semana); progresso.setAttribute('aria-valuemax',Math.max(item.meta,item.semana)); $('i',progresso).style.width=item.percentual+'%';
-        var dia=$('[data-habito-dia="'+r.hoje+'"]',card), dataHoje=r.hoje.slice(8,10)+'/'+r.hoje.slice(5,7)+'/'+r.hoje.slice(0,4), dica=dataHoje+' · '+(item.marcado?'realizado':'sem registro');
-        if (dia) { dia.classList.toggle('feito',item.marcado); dia.dataset.habitoTooltip=dica; dia.setAttribute('aria-label',dica); }
-        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.title=dataHoje+' · '+(item.marcado?'realizado':'sem registro'); }
+        var dataHoje=r.hoje.slice(8,10)+'/'+r.hoje.slice(5,7)+'/'+r.hoje.slice(0,4), dica=dataHoje+' · '+(item.marcado?'realizado':'sem registro');
+        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.dataset.habitoTooltip=dica; ponto.setAttribute('aria-label',dica); }
         var mapa=$('.habito-mapa',card); if (mapa) mapa.setAttribute('aria-label','Histórico das últimas treze semanas de '+item.titulo+'. '+item.total_registros+' dias realizados ao todo.');
       } catch (erro) { estado.textContent=erro.message; }
       finally { marcar.disabled=false; }
     }
   });
+  // Uma dica compartilhada mantém as datas legíveis também nas bordas do mapa.
+  var dicaMapa=document.createElement('div'); dicaMapa.className='habito-dica'; dicaMapa.id='habito-dica'; dicaMapa.role='tooltip'; dicaMapa.hidden=true; document.body.appendChild(dicaMapa);
+  var pontoDica=null;
+  function esconderDica() { if (pontoDica) pontoDica.removeAttribute('aria-describedby'); pontoDica=null; dicaMapa.hidden=true; }
+  function mostrarDica(ponto) {
+    esconderDica(); pontoDica=ponto; dicaMapa.textContent=ponto.dataset.habitoTooltip; dicaMapa.hidden=false; ponto.setAttribute('aria-describedby',dicaMapa.id);
+    var r=ponto.getBoundingClientRect(), d=dicaMapa.getBoundingClientRect();
+    dicaMapa.style.left=Math.max(8,Math.min(innerWidth-d.width-8,r.left+r.width/2-d.width/2))+'px';
+    dicaMapa.style.top=(r.top>d.height+12 ? r.top-d.height-8 : r.bottom+8)+'px';
+  }
+  raiz.addEventListener('pointerover',function (e) { var ponto=e.target.closest('[data-habito-tooltip]'); if (ponto) mostrarDica(ponto); });
+  raiz.addEventListener('pointerout',function (e) { if (e.target.closest('[data-habito-tooltip]')) esconderDica(); });
+  raiz.addEventListener('focusin',function (e) { if (e.target.matches('[data-habito-tooltip]')) mostrarDica(e.target); });
+  raiz.addEventListener('focusout',esconderDica);
+  raiz.addEventListener('keydown',function (e) {
+    var ponto=e.target.closest('[data-mapa-dia]'); if (!ponto) return;
+    if (e.key==='Escape') { esconderDica(); return; }
+    var passo={ArrowLeft:-7,ArrowRight:7,ArrowUp:-1,ArrowDown:1}[e.key]; if (!passo) return;
+    e.preventDefault(); var pontos=Array.from(ponto.parentElement.children), proximo=pontos[pontos.indexOf(ponto)+passo];
+    if (proximo) { ponto.tabIndex=-1; proximo.tabIndex=0; proximo.focus(); }
+  });
+  window.addEventListener('scroll',esconderDica,true); window.addEventListener('resize',esconderDica);
   window.addEventListener('beforeunload',function (e) { if (sujo || ocupado) { e.preventDefault(); e.returnValue=''; } });
 })();

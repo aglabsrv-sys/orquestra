@@ -98,3 +98,16 @@ def test_schema_incompativel_nao_converte_nem_sobrescreve_historico(cliente, vau
         assert resposta.status_code == 400 and 'Personalizar' in resposta.json()['erro']
     assert (vault / novo['rel']).read_bytes() == antes
     assert len(list((vault / 'habitos/itens').glob('*.md'))) == 1
+
+
+def test_mapa_completo_fica_visivel_nas_duas_visoes_e_apos_editar(cliente):
+    novo = cliente.post('/api/habitos', json={'titulo': 'Mapa sempre visível', 'meta_semanal': 3}).json()
+    for aba in ('progresso', 'lista'):
+        pagina = cliente.get('/m/habitos?aba=' + aba).text
+        assert pagina.count('data-mapa-dia=') == 91
+        assert 'class="habito-historico"' not in pagina
+        assert 'class="habito-semana"' not in pagina
+        assert 'class="habito-acoes"' in pagina
+    resposta = cliente.post('/api/habitos', json={'rel': novo['rel'], 'versao': novo['versao'], 'titulo': 'Mapa editado', 'meta_semanal': 4}).json()
+    assert resposta['html'].count('data-mapa-dia=') == 91
+    assert 'class="habito-historico"' not in resposta['html']

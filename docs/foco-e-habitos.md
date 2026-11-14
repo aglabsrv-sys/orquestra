@@ -59,7 +59,8 @@ múltiplas ocorrências por dia continuam fora deste modelo simples.
 
 No celular: [Pomodoro](img/foco-390.png) e [Hábitos](img/habitos-390.png).
 
-A semana de cada hábito aparece em sete quadrados compactos, sem os nomes dos
-dias. Passe o mouse ou navegue com Tab para consultar a data e a realização.
-O ícone + ao lado de Editar marca hoje; quando marcado, vira ✓ e permite
-desmarcar. O histórico de treze semanas continua disponível em Histórico.
+Cada card mostra o mapa completo de treze semanas, sempre visível em Progresso
+e Lista, sem nomes dos dias. Passe o mouse sobre um quadrado para consultar sua
+data e realização. Pelo teclado, Tab entra no mapa no dia atual e as setas
+percorrem os dias; Escape fecha a dica. O ícone + ao lado de Editar marca hoje;
+quando marcado, vira ✓ e permite desmarcar.
