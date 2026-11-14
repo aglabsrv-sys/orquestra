@@ -31,6 +31,16 @@ class Versao(Pedido):
     versao: str = Field(min_length=1, max_length=128)
 
 
+class ItemLote(Versao):
+    rel: str = Field(min_length=1, max_length=1000)
+
+
+class AcaoLote(Pedido):
+    acao: Literal["arquivar", "excluir", "status"]
+    itens: list[ItemLote] = Field(min_length=1, max_length=80)
+    status: str = Field(default="", max_length=100)
+
+
 class CopiaNota(Pedido):
     titulo: str = Field(default="", max_length=500)
     corpo: str = Field(max_length=1_000_000)

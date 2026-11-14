@@ -36,7 +36,7 @@ from orquestra.modulos import ARQUIVO_DESLIGADO, TIPOS_DE_CAMPO, ValorInvalido, 
 from orquestra.notas import Conflito, FrontmatterInvalido, simples
 from orquestra.painel import NaoEncontrado, Painel, Recusado
 from orquestra.recursos import marca_estaticos
-from orquestra.seguranca import CapabilityLocal, Protecao
+from orquestra.seguranca import CapabilityLocal, Protecao, canal_local
 from orquestra.vigia import Vigia
 
 PASTA = Path(__file__).parent
@@ -82,7 +82,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     app = FastAPI(title="Orquestra", lifespan=vida, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.painel = painel
     app.state.vault_id = vault_id
-    hosts_extras = list(painel.config.hosts_permitidos)
+    hosts_extras = lambda: painel.config.hosts_permitidos
     app.add_middleware(Protecao, hosts_extras=hosts_extras)
     app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
 
@@ -334,6 +334,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 k: (", ".join(map(str, v)) if isinstance(v, list) else simples(v)) for k, v in padroes(modulo).items()
             },
         }
+        contexto["opcoes_status"] = modulo.campos[modulo.campo_status].opcoes if modulo.tem_status else []
         if modulo_id == "clientes":
             from orquestra.contatos import contexto as contexto_contatos
             contexto.update(contexto_contatos(painel))
@@ -952,6 +953,10 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                                                    "icone": str(dados.get("icone") or "pasta")})
                 except (OSError, ValueError):
                     contexto["retirados"].append({"id": pasta.name, "nome": pasta.name, "icone": "pasta"})
+            contexto["prontos"] = sorted([
+                *contexto["prontos"],
+                *[{**m, "religar": True, "descricao": ""} for m in contexto["retirados"] if m["id"] != "agenda"],
+            ], key=lambda m: (m["nome"] if isinstance(m, dict) else m.nome).casefold())
         elif secao == "aparencia":
             contexto["cenas"] = temas.CENAS
             contexto["temas"] = [
@@ -988,6 +993,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             contexto.update(catalogo_automacoes=automacoes.catalogo(), automacoes=automacoes.listar(painel), automacoes_legadas=automacoes.legadas(painel))
         elif secao == "acesso":
             contexto["host"] = request.headers.get("host", "")
+            contexto["pode_configurar_acesso"] = canal_local(request)
+            contexto["tailscale_urls"] = ["https://" + h for h in painel.config.hosts_permitidos if h.endswith(".ts.net")]
         elif secao == "vault":
             contexto.update(
                 vault=str(painel.vault), n_notas=len(painel.indice.notas),
@@ -1029,6 +1036,42 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_arquivar(request: Request, rel: str):
         dados = await corpo_json(request, contratos.Versao)
         return {"rel": await asyncio.to_thread(painel.arquivar, rel, versao=dados["versao"])}
+
+    @app.post("/api/lote")
+    async def api_lote(request: Request):
+        dados = await corpo_json(request, contratos.AcaoLote)
+        if dados["acao"] == "excluir" and (erro := exigir_local(request)):
+            return erro
+        def executar():
+            resultados = []
+            vistos = set()
+            for item in dados["itens"]:
+                rel = item["rel"]
+                if rel in vistos:
+                    continue
+                vistos.add(rel)
+                try:
+                    with painel._trava:
+                        modulo = painel.indice.modulo_de(rel)
+                        if not modulo or painel.indice.zona_de(rel) != "itens":
+                            raise Recusado("Selecione somente itens de uma área.")
+                        if dados["acao"] == "arquivar":
+                            painel.arquivar(rel, versao=item["versao"])
+                        elif dados["acao"] == "excluir":
+                            painel.excluir(rel, item["versao"])
+                        else:
+                            if not modulo.tem_status or not dados.get("status"):
+                                raise Recusado("Escolha um status válido para esta área.")
+                            nota = painel.editar_nota(rel, item["versao"], campos={modulo.campo_status: dados["status"]})
+                            resultados.append({"rel": rel, "ok": True, "versao": nota.versao, "concluido": str(nota.campo(modulo.campo_status)) in modulo.concluidos})
+                            continue
+                        resultados.append({"rel": rel, "ok": True})
+                except (NaoEncontrado, Recusado, Conflito, ValorInvalido, armazenamento.ConflitoDeEscrita) as erro:
+                    resultados.append({"rel": rel, "ok": False, "erro": str(erro)})
+                except OSError:
+                    resultados.append({"rel": rel, "ok": False, "erro": "Não foi possível acessar o arquivo. Tente novamente."})
+            return {"resultados": resultados}
+        return await asyncio.to_thread(executar)
 
     @app.post("/api/contatos/cliente/{rel:path}")
     async def api_vincular_cliente(request: Request, rel: str):
@@ -1365,7 +1408,14 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         except (ValueError, RuntimeError, subprocess.TimeoutExpired) as erro:
             raise Recusado(str(erro)) from None
 
+    @app.get("/api/tailscale/hosts")
+    async def api_tailscale_hosts(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        return {"urls": ["https://" + h for h in painel.config.hosts_permitidos if h.endswith(".ts.net")]}
+
     @app.post("/api/tailscale/host")
+    @app.post("/api/tailscale/host/revogar")
     async def api_tailscale_host(request: Request):
         if erro := exigir_local(request):
             return erro
@@ -1386,16 +1436,19 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 raise Recusado("Use o endereço HTTPS padrão do Tailscale Serve.")
         except ValueError:
             raise Recusado("A porta do endereço é inválida.") from None
-        caminho = painel.vault / "orquestra.yaml"
-        cfg = ler_yaml(caminho)
-        nomes = list(cfg.get("hosts_permitidos") or [])
-        if host not in nomes:
-            nomes.append(host)
-        cfg["hosts_permitidos"] = nomes
-        await asyncio.to_thread(gravar_yaml, caminho, cfg)
-        await asyncio.to_thread(painel.recarregar_config)
-        hosts_extras[:] = nomes
-        return {"ok": True, "mensagem": "Endereço permitido. Abra-o no celular conectado à sua rede Tailscale."}
+        revogar = request.url.path.endswith("/revogar")
+        def salvar():
+            with painel._trava:
+                caminho = painel.caminho_seguro("orquestra.yaml")
+                cfg = ler_yaml(caminho)
+                nomes = list(cfg.get("hosts_permitidos") or [])
+                nomes = [h for h in nomes if h.lower() != host] if revogar else list(dict.fromkeys([*nomes, host]))
+                cfg["hosts_permitidos"] = nomes
+                gravar_yaml(caminho, cfg)
+                painel.recarregar_config()
+                painel.eventos.publicar({"tipo": "config"})
+        await asyncio.to_thread(salvar)
+        return {"ok": True, "url": "https://" + host, "mensagem": "Endereço revogado." if revogar else "Endereço permitido."}
 
     @app.post("/api/github/login")
     async def api_github_login(request: Request):

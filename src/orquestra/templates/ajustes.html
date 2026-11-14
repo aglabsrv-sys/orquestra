@@ -62,16 +62,10 @@
     <p class="suave pequeno">Tirar do painel não apaga nada: a pasta continua em <a class="link" href="/pastas">Pastas</a> e pode voltar quando quiser.</p>
   </div>
 
-  {% if retirados %}
-  <h3 class="sub">Áreas retiradas do painel</h3>
-  <div class="grade-prontos prontos-compactos">
-    {% for m in retirados %}<button class="pronto" type="button" data-religar="{{ m.id }}" aria-label="Adicionar {{ m.nome }} novamente">{{ icone(m.icone, 18) }}<b>{{ m.nome }}</b>{{ icone('mais', 14) }}</button>{% endfor %}
-  </div>
-  {% endif %}
   <h3 class="sub">Acrescentar uma área pronta</h3>
   <div class="grade-prontos prontos-compactos">
     {% for m in prontos %}
-    <button class="pronto" type="button" data-pronto="{{ m.id }}" title="{{ m.descricao }}" aria-label="Acrescentar {{ m.nome }}">
+    <button class="pronto" type="button" {% if m.religar|default(false) %}data-religar="{{ m.id }}"{% else %}data-pronto="{{ m.id }}"{% endif %} title="{{ m.descricao }}" aria-label="Acrescentar {{ m.nome }}">
       {{ icone(m.icone, 18) }}<b>{{ m.nome }}</b>{{ icone('mais', 14) }}
     </button>
     {% else %}
@@ -183,10 +177,12 @@
   {% endif %}
   {% if secao == "acesso" %}
   <div class="bloco">
-    <button class="botao" type="button" data-guia="celular">Conecte seu celular</button>
-    <p>Você está acessando por <code>{{ host }}</code>. O painel escuta apenas neste computador (127.0.0.1).</p>
-    <p>Para abrir no celular, use o Tailscale: <code>tailscale serve --bg {{ cfg.porta }}</code>. Nunca use Funnel nem abra a porta no roteador: o painel não tem senha.</p>
+    {% if pode_configurar_acesso %}<button class="botao" type="button" data-guia="celular">Conecte seu celular</button>{% endif %}
+    <div id="tailscale-links" aria-label="Endereços permitidos">{% for url in tailscale_urls %}<div class="tailscale-linha"><a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a><button class="botao pequeno so-icone" type="button" data-ts-acao="copiar" data-url="{{ url }}" aria-label="Copiar endereço" title="Copiar endereço">{{ icone('copiar',16) }}</button>{% if pode_configurar_acesso %}<button class="botao pequeno so-icone discreto" type="button" data-ts-acao="revogar" data-url="{{ url }}" aria-label="Revogar endereço" title="Revogar endereço">{{ icone('x',16) }}</button>{% endif %}</div>{% endfor %}</div>
+    <p id="tailscale-estado" class="campo-ajuda" role="status"></p>
+    <details><summary>Sobre o acesso</summary><p class="campo-ajuda">Use somente Tailscale Serve na sua rede privada. Pessoas autorizadas no Serve podem ler e editar notas. Não use Funnel nem exponha a porta na internet.</p><code>tailscale serve --bg {{ cfg.porta }}</code></details>
   </div>
+  <template id="tailscale-linha-modelo"><div class="tailscale-linha"><a target="_blank" rel="noopener noreferrer"></a><button class="botao pequeno so-icone" type="button" data-ts-acao="copiar" aria-label="Copiar endereço" title="Copiar endereço">{{ icone('copiar',16) }}</button><button class="botao pequeno so-icone discreto" type="button" data-ts-acao="revogar" aria-label="Revogar endereço" title="Revogar endereço">{{ icone('x',16) }}</button></div></template>
 
   {% endif %}
   {% if secao == "vault" %}

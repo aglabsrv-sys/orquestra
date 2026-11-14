@@ -30,6 +30,10 @@ def jornada(page, base, largura, capturas):
     page.goto(base + "/m/contatos")
     page.locator("#abrir-novo").click()
     page.locator("#novo-titulo").fill(f"Maria de exemplo {largura}")
+    expect(page.locator('#novo-corpo')).not_to_be_visible()
+    expect(page.locator('[data-novo][name="telefone"]')).not_to_be_visible()
+    for campo in ("telefone", "email", "grupos", "favorito"):
+        page.locator("#novo-adicionar-campo").select_option(campo)
     page.locator('[data-novo][name="telefone"]').fill("(00) 00000-0000")
     page.locator('[data-novo][name="email"]').fill(f"maria{largura}@example.com")
     page.locator('[data-novo][name="grupos"]').fill("amigos, trabalho")
@@ -94,6 +98,72 @@ def jornada(page, base, largura, capturas):
     page.goto(base + "/")
     expect(page.locator('.dock a[href="/m/agenda"]')).to_have_count(0)
     expect(page.locator('.dock a[href="/agenda"]')).to_have_count(1)
+    assert page.locator('.dock .dock-entrada').count() == 0  # este cofre fictício não instalou Entrada
+
+    # Seleção de vários itens e conferência da operação real nos arquivos.
+    for nome in ('A', 'B'):
+        resposta = page.request.post(base + '/api/notas', data={'modulo':'contatos', 'titulo':f'Lote {nome} {largura}'})
+        assert resposta.ok
+    page.goto(base + '/m/contatos')
+    page.get_by_role('button', name='Ordenar esta página por Título', exact=True).click()
+    page.get_by_role('button', name='Ordenar esta página por Título', exact=True).click()
+    expect(page.locator('[data-lote-item]').first).to_have_attribute('aria-label', f'Selecionar Lote B {largura}')
+    page.locator('[data-lote-item]').first.check()
+    assert page.locator('[data-lote-todos]').evaluate('e=>e.indeterminate')
+    page.locator('[data-lote-todos]').check()
+    expect(page.locator('[data-lote-contagem]')).to_have_text('2 selecionados')
+    page.locator('[data-lote-acao]').select_option('arquivar')
+    page.locator('[data-lote-executar]').click()
+    confirmar(page, 'Arquivar')
+    expect(page.locator('[data-lote-resultado]')).to_have_text('2 notas atualizadas.')
+    expect(page.locator('[data-lote-item]')).to_have_count(0)
+
+    page.goto(base + '/m/clientes/personalizar')
+    expect(page.locator('[role=tabpanel]:visible')).to_have_count(1)
+    descricao = page.locator('#p-descricao').input_value()
+    page.locator('#p-descricao').fill('Rascunho preservado')
+    page.get_by_role('tab', name='Propriedades', exact=True).click()
+    expect(page.locator('#p-identidade')).not_to_be_visible()
+    expect(page.locator('#p-propriedades')).to_be_visible()
+    page.get_by_role('tab', name='Visualizações', exact=True).click()
+    expect(page.locator('#p-propriedades')).not_to_be_visible()
+    expect(page.locator('#p-visoes')).to_be_visible()
+    page.get_by_role('tab', name='Aparência', exact=True).click()
+    expect(page.locator('#p-descricao')).to_have_value('Rascunho preservado')
+    page.locator('#p-descricao').fill(descricao)
+    assert page.locator('#personalizar > header').evaluate("e=>getComputedStyle(e).position") == 'static'
+    conferir(page)
+    if capturas:
+        page.screenshot(path=str(capturas / f'personalizar-{largura}.png'), full_page=True)
+
+    page.goto(base + '/ajustes/acesso')
+    endereco = 'https://pc.exemplo.ts.net'
+    page.evaluate("url=>window.Orquestra.api('POST','/api/tailscale/host',{url})", endereco)
+    page.reload()
+    expect(page.locator('#tailscale-links a')).to_have_text(endereco)
+    page.evaluate("Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async texto=>{window.__linkCopiado=texto}}})")
+    page.get_by_role('button', name='Copiar endereço', exact=True).click()
+    expect(page.locator('#tailscale-estado')).to_have_text('Endereço copiado.')
+    assert page.evaluate('window.__linkCopiado') == endereco
+    if capturas:
+        page.screenshot(path=str(capturas / f'acesso-{largura}.png'), full_page=True)
+    page.get_by_role('button', name='Revogar endereço', exact=True).click()
+    confirmar(page, 'Revogar')
+    expect(page.locator('#tailscale-links a')).to_have_count(0)
+
+    if largura == 1440:
+        page.goto(base + '/')
+        page.evaluate("sessionStorage.setItem('orq-slide','0')")
+        page.reload()
+        inicial = page.locator('.slide.ativo').get_attribute('data-id')
+        trilho = page.locator('.trilho').bounding_box()
+        x, y = trilho['x'] + trilho['width'] * .8, trilho['y'] + trilho['height'] * .5
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x - trilho['width'] * .6, y, steps=15)
+        page.mouse.up()
+        page.wait_for_function("id=>document.querySelector('.slide.ativo').dataset.id!==id", arg=inicial)
+        assert page.url.rstrip('/') == base
 
 
 def main():

@@ -117,7 +117,8 @@ class Protecao:
 
         cabecalhos = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]}
         host = cabecalhos.get("host", "")
-        if not host_permitido(host, self.hosts_extras):
+        extras = self.hosts_extras() if callable(self.hosts_extras) else self.hosts_extras
+        if not host_permitido(host, extras):
             return await _negar(
                 send,
                 403,
@@ -127,7 +128,7 @@ class Protecao:
 
         if scope["method"] not in METODOS_DE_LEITURA:
             origem = cabecalhos.get("origin")
-            esquema = "https" if nome_do_host(host) in self.hosts_extras and nome_do_host(host).endswith(".ts.net") else scope.get("scheme", "http")
+            esquema = "https" if nome_do_host(host) in extras and nome_do_host(host).endswith(".ts.net") else scope.get("scheme", "http")
             if origem and not _origem_permitida(origem, esquema, host):
                 return await _negar(send, 403, "Requisição vinda de outro site foi bloqueada.")
             if cabecalhos.get("sec-fetch-site") in ("cross-site", "same-site"):

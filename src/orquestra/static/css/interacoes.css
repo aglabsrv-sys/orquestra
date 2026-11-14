@@ -1,0 +1,26 @@
+/* Controles compactos e espaço estável para ações. */
+#personalizar > .pagina-topo { position:static; }
+.personalizar-nav button { background:none; border:0; padding:8px 0; color:var(--texto-suave); font:inherit; cursor:pointer; border-bottom:2px solid transparent; }
+.personalizar-nav button[aria-selected=true] { color:var(--texto); border-color:var(--destaque); }
+.personalizar-nav button:focus-visible { outline:2px solid var(--destaque); outline-offset:4px; }
+[role=tabpanel][hidden], [data-extra-campo][hidden] { display:none!important; }
+#dialogo-novo { width:min(480px,calc(100vw - 24px)); }
+#dialogo-novo .grade-campos { grid-template-columns:1fr 1fr; }
+.adicionar-campo { width:max-content; max-width:100%; }
+.adicionar-campo select { background-color:transparent; color:var(--texto-suave); border-style:dashed; font-size:.8rem; }
+.lixeira-linha { display:flex; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--borda); }
+.lixeira-nota { min-width:0; flex:1; display:grid; gap:4px; }
+.lixeira-nota b { font-size:.85rem; font-weight:550; }
+.lixeira-nota small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.7rem; color:var(--texto-suave); }
+.lixeira-acoes { display:flex; gap:4px; flex:none; }
+.lote-barra { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 0; }
+.lote-barra select { width:auto; max-width:100%; font-size:.8rem; }
+.lote-barra[hidden] { display:none; }
+.tabela .col-selecao { width:44px; padding:10px; text-align:center; }
+.tabela tr.selecionada { background:color-mix(in srgb,var(--destaque) 8%,transparent); }
+.lote-resultado { white-space:pre-line; font-size:.8rem; }
+.tailscale-linha { display:flex; gap:8px; align-items:center; border-bottom:1px solid var(--borda); padding:12px 0; }
+.tailscale-linha a { min-width:0; flex:1; overflow-wrap:anywhere; font-size:.8rem; }
+.dock-entrada { margin-left:4px; border-left:1px solid var(--borda); }
+@media(pointer:fine) { .trilho { cursor:grab; } .trilho.arrastando { cursor:grabbing; scroll-snap-type:none; scroll-behavior:auto; user-select:none; } .trilho.arrastando * { cursor:grabbing; } }
+@media(max-width:600px) { #dialogo-novo .grade-campos { grid-template-columns:1fr; } .lote-barra { gap:6px; } .lote-barra select { flex:1; min-width:0; } }

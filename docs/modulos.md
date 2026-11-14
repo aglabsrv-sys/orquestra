@@ -13,9 +13,29 @@ para mexer.
   criar o primeiro registro em suas próprias telas.
 - **Criar em branco.** No mesmo lugar: nome, ícone e se quer quadro. Depois ajuste
   os campos em Personalizar.
-- **Adicionar novamente.** Uma área retirada aparece em **Ajustes → Pastas →
-  Áreas retiradas do painel**, inclusive áreas criadas em branco. O botão religa
+- **Adicionar novamente.** Uma área retirada aparece no mesmo catálogo de
+  **Ajustes → Pastas**, inclusive áreas criadas em branco. O botão religa
   a configuração preservada, com as mesmas notas e personalizações.
+
+## Criar e organizar itens
+
+O botão **Novo** abre título e campos obrigatórios sem valor padrão. Em
+**Adicionar campo +**, escolha propriedades adicionais ou Texto. Campos não
+adicionados conservam os padrões do módulo; não são enviados como valores vazios.
+
+Na lista, marque itens ou selecione todos da página para arquivar, excluir ou
+alterar o status. A seleção é limitada à página atual (até 80 notas). Arquivar
+e excluir pedem confirmação. Se uma nota mudou em outra aba ou no Obsidian,
+ela fica intacta e seu erro aparece no resultado; as demais podem ser atualizadas.
+Excluir mantém a exigência de autorização local. Veja a [lixeira](pastas.md).
+
+Em **Personalizar**, Aparência, Propriedades e Visualizações têm painéis separados.
+Trocar de aba preserva as alterações pendentes; Salvar alterações considera todas
+as abas. O cabeçalho acompanha a rolagem normal da página.
+
+O dock mantém **Entrada**, quando instalada, à direita. No celular, uma área
+principal permanece ao lado dos atalhos fixos; as demais estão em Todas as áreas.
+Na home, arraste os cartões com o mouse ou use as setas. Arrastar não abre o cartão.
 - **Mostrar uma pasta sua.** Em Pastas, "Mostrar no painel": o painel lê os campos
   que as notas já têm e escreve o `_modulo.yaml` por você. Veja
   [vault-existente.md](vault-existente.md).
