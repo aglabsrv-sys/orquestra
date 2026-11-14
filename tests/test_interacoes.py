@@ -103,3 +103,25 @@ def test_catalogo_reutiliza_metadados_sem_compartilhar_mutacoes(tmp_path, monkey
     assert len(chamadas) == 2
     arquivo.unlink()
     assert not preparo.catalogo()
+
+
+def test_tailscale_exclui_sem_conceder_capacidade_local(cliente):
+    host = "computador.exemplo.ts.net"
+    assert cliente.post("/api/tailscale/host", headers=local(cliente), json={"url": "https://" + host}).status_code == 200
+    remoto = {"Host": host, "Origin": "https://" + host}
+    nota = cliente.painel.criar_nota("tarefas", "Excluir pelo celular")
+    rota = "/api/excluir/" + nota.rel
+    assert cliente.post(rota, headers={**remoto, "Origin": "https://outro.example"}, json={"versao": nota.versao}).status_code == 403
+    assert cliente.post(rota, headers={**remoto, "X-Orquestra-Vault": "outro"}, json={"versao": nota.versao}).status_code == 409
+    resposta = cliente.post(rota, headers=remoto, json={"versao": nota.versao})
+    assert resposta.status_code == 200
+    assert not nota.caminho.exists()
+    identificador = resposta.json()["id"]
+    assert cliente.post(f"/api/lixeira/{identificador}/apagar", headers=remoto, json={"versao": nota.versao}).status_code == 403
+    assert cliente.get("/api/local/capacidade", headers=remoto).status_code == 403
+    nota = cliente.painel.criar_nota("tarefas", "Lote pelo celular")
+    itens = [{"rel": nota.rel, "versao": nota.versao}]
+    resposta = cliente.post("/api/lote", headers=remoto, json={"acao": "excluir", "itens": itens})
+    assert resposta.status_code == 200 and resposta.json()["resultados"][0]["ok"]
+    assert cliente.post("/api/tailscale/host/revogar", headers=local(cliente), json={"url": "https://" + host}).status_code == 200
+    assert cliente.post("/api/lote", headers=remoto, json={"acao": "excluir", "itens": itens}).status_code == 403

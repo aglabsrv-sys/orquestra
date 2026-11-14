@@ -93,3 +93,8 @@ ou configuração de backup exigem acesso direto por localhost, sem proxy. Os bo
 de aprovação ficam indisponíveis pelo Tailscale. Cabeçalhos de encaminhamento não
 concedem acesso local. As edições de notas e os coletores previamente aprovados
 continuam disponíveis para quem já tem acesso autorizado à sua rede.
+
+Pelo endereço Tailscale autorizado, também é possível mover notas para a lixeira,
+individualmente ou em lote, com confirmação e conferência de versão. Permitir esse
+endereço concede essa permissão às pessoas que acessam seu Serve. A limpeza
+definitiva da lixeira continua exigindo autorização local.

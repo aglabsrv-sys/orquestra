@@ -13,9 +13,9 @@
 .lixeira-nota b { font-size:.85rem; font-weight:550; }
 .lixeira-nota small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.7rem; color:var(--texto-suave); }
 .lixeira-acoes { display:flex; gap:4px; flex:none; }
-.lote-barra { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 0; }
+.lote-barra { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:0; }
 .lote-barra select { width:auto; max-width:100%; font-size:.8rem; }
-.lote-barra[hidden] { display:none; }
+.lote-barra[hidden] { display:flex; visibility:hidden; pointer-events:none; }
 .tabela .col-selecao { width:44px; padding:10px; text-align:center; }
 .tabela tr.selecionada { background:color-mix(in srgb,var(--destaque) 8%,transparent); }
 .lote-resultado { white-space:pre-line; font-size:.8rem; }
@@ -24,3 +24,29 @@
 .dock-entrada { margin-left:4px; border-left:1px solid var(--borda); }
 @media(pointer:fine) { .trilho { cursor:grab; } .trilho.arrastando { cursor:grabbing; scroll-snap-type:none; scroll-behavior:auto; user-select:none; } .trilho.arrastando * { cursor:grabbing; } }
 @media(max-width:600px) { #dialogo-novo .grade-campos { grid-template-columns:1fr; } .lote-barra { gap:6px; } .lote-barra select { flex:1; min-width:0; } }
+
+/* A seleção ocupa o mesmo espaço antes e depois de marcar uma nota. */
+.abas .lote-barra { flex-wrap:nowrap; gap:6px; font-size:.75rem; }
+.abas .lote-barra select { padding:6px 24px 6px 8px; max-width:140px; min-height:32px; }
+.abas .lote-barra [data-lote-contagem] { white-space:nowrap; }
+.contatos-filtros { display:flex; align-items:end; gap:12px; padding:14px 0; border-bottom:1px solid var(--borda); box-sizing:border-box; width:calc(100% - 2 * var(--margem)); margin:0 var(--margem) 16px; }
+.contatos-filtros .campo { margin:0; }
+.contatos-filtros .campo:first-child { flex:1; min-width:180px; }
+.contatos-filtros .campo:nth-child(2) { width:210px; }
+.contatos-filtros .campo-linha { display:flex; align-items:center; flex-direction:row; gap:7px; min-height:40px; white-space:nowrap; }
+.contatos-filtros input[type=checkbox] { width:16px; height:16px; margin:0; }
+.contatos-filtros .linha-botoes { flex-wrap:nowrap; margin:0; }
+@media(max-width:900px) {
+  .abas:has(.lote-barra) { flex-wrap:wrap; }
+  .abas:has(.lote-barra) .abas-fim { width:100%; }
+  .abas .lote-barra { margin-right:auto; }
+  .contatos-filtros { flex-wrap:wrap; gap:10px; }
+  .contatos-filtros .campo:nth-child(2) { flex:1; min-width:150px; }
+}
+@media(max-width:480px) {
+  .abas .lote-barra { gap:4px; }
+  .abas .lote-barra select { max-width:100px; }
+  .abas .lote-barra [data-lote-contagem] { max-width:70px; white-space:normal; }
+  .abas:has(.lote-barra) .abas-fim > .principal span { display:none; }
+  .contatos-filtros .campo:first-child { flex-basis:100%; }
+}

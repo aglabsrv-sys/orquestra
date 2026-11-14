@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- Ações em lote compactas junto às configurações, sem deslocar a lista ao selecionar;
+  filtros de Contatos com busca flexível e favoritos alinhados.
+- Endereços Tailscale autorizados podem mover notas para a lixeira, inclusive em lote.
+  A exclusão definitiva continua reservada ao acesso local.
+
 - Seleção múltipla nas listas, com alteração de status, arquivamento e exclusão;
   cada nota conserva a conferência de versão e o resultado individual da ação.
 - Personalização com abas independentes e cabeçalho no fluxo da página;

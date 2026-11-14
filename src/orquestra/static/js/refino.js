@@ -46,7 +46,7 @@
     celular: [
       ['Conecte seu celular', 'Instale o Tailscale no computador e no celular. Entre com a mesma conta nos dois dispositivos. O acesso fica restrito à sua rede privada.', 'https://tailscale.com/download'],
       ['Compartilhe o painel', 'Com o Orquestra aberto, execute no computador: tailscale serve --bg 8420. Se você usa outra porta, substitua 8420. Autorize o HTTPS se o Tailscale solicitar.'],
-      ['Abra no celular', 'Cole o endereço HTTPS mostrado pelo Tailscale para permitir somente este nome no painel. Depois abra no celular com o Tailscale conectado. Pessoas com acesso ao seu Serve poderão ler e editar notas. Mantenha o computador ligado. Nunca use Funnel.', null, 'tailscale']
+      ['Abra no celular', 'Cole o endereço HTTPS mostrado pelo Tailscale para permitir somente este nome no painel. Depois abra no celular com o Tailscale conectado. Pessoas com acesso ao seu Serve poderão ler, editar e mover notas para a lixeira. Mantenha o computador ligado. Nunca use Funnel.', null, 'tailscale']
     ],
     github: [
       ['Conectar ao GitHub', 'Instale o GitHub CLI. O login oficial abre seu navegador; o Orquestra não precisa receber sua senha ou token.', 'https://cli.github.com/'],

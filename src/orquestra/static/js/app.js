@@ -1211,12 +1211,12 @@
       var todos = $("[data-lote-todos]", raiz);
       if (!todos || raiz.dataset.loteLigado) return;
       raiz.dataset.loteLigado = "1";
-      var barra = $(".lote-barra", raiz), acao = $("[data-lote-acao]", raiz), status = $("[data-lote-status]", raiz), botao = $("[data-lote-executar]", raiz), resultado = $("[data-lote-resultado]", raiz), ocupado = false;
+      var barra = $("#acoes-lote"), acao = $("[data-lote-acao]", barra), status = $("[data-lote-status]", barra), botao = $("[data-lote-executar]", barra), resultado = $("[data-lote-resultado]", raiz), ocupado = false;
       function caixas() { return $$("[data-lote-item]", raiz); }
       function atualizar() {
         var itens = caixas(), selecionados = itens.filter(function (el) { return el.checked; });
         barra.hidden = !selecionados.length;
-        $("[data-lote-contagem]", raiz).textContent = selecionados.length + " selecionados";
+        $("[data-lote-contagem]", barra).textContent = selecionados.length + (selecionados.length === 1 ? " selecionado" : " selecionados");
         todos.checked = itens.length > 0 && selecionados.length === itens.length;
         todos.indeterminate = selecionados.length > 0 && selecionados.length < itens.length;
         itens.forEach(function (el) { el.closest("tr").classList.toggle("selecionada", el.checked); });
@@ -1230,7 +1230,7 @@
         if (!selecionados.length) return;
         if (operacao !== "status" && !await confirmar({titulo: (operacao === "excluir" ? "Excluir " : "Arquivar ") + selecionados.length + " notas?", texto: operacao === "excluir" ? "As notas irão para a lixeira. Anexos e outras notas serão mantidos." : "As notas irão para arquivo/ desta área.", confirmar: operacao === "excluir" ? "Mover para a lixeira" : "Arquivar"})) return;
         ocupado = true;
-        $$("input,select,button", raiz).forEach(function (el) { el.disabled = true; });
+        $$("input,select,button", raiz).concat($$("select,button", barra)).forEach(function (el) { el.disabled = true; });
         try {
           var resposta = await api("POST", "/api/lote", {acao:operacao, itens:selecionados.map(function (el) { return {rel:el.dataset.rel, versao:el.dataset.versao}; }), status:operacao === "status" ? status.value : ""});
           var falhas = [], salvos = 0;
@@ -1255,7 +1255,7 @@
             if (doc.body.dataset.vaultId === document.body.dataset.vaultId && atual && nova) atual.replaceWith(document.importNode(nova, true));
           }).catch(function () { /* O resultado da gravação já está visível. */ });
         } catch (erro) { mostrarErro(erro); }
-        finally { ocupado = false; $$("input,select,button", raiz).forEach(function (el) { el.disabled = false; }); atualizar(); }
+        finally { ocupado = false; $$("input,select,button", raiz).concat($$("select,button", barra)).forEach(function (el) { el.disabled = false; }); atualizar(); }
       };
     });
     $$(".tabela th[data-ordenar]").forEach(function (th) {

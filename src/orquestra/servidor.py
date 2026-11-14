@@ -36,7 +36,7 @@ from orquestra.modulos import ARQUIVO_DESLIGADO, TIPOS_DE_CAMPO, ValorInvalido, 
 from orquestra.notas import Conflito, FrontmatterInvalido, simples
 from orquestra.painel import NaoEncontrado, Painel, Recusado
 from orquestra.recursos import marca_estaticos
-from orquestra.seguranca import CapabilityLocal, Protecao, canal_local
+from orquestra.seguranca import CapabilityLocal, Protecao, canal_local, nome_do_host
 from orquestra.vigia import Vigia
 
 PASTA = Path(__file__).parent
@@ -201,6 +201,16 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         except ValueError as erro:
             return JSONResponse({"erro": str(erro)}, status_code=403)
         return None
+
+    def exigir_exclusao(request: Request) -> JSONResponse | None:
+        """O Serve autorizado pode mover notas para a lixeira, sem capacidade local."""
+        host = nome_do_host(request.headers.get("host", ""))
+        if host.endswith(".ts.net") and host in painel.config.hosts_permitidos:
+            vinculo = request.headers.get("x-orquestra-vault")
+            if vinculo and vinculo != vault_id:
+                raise Conflito("Esta aba pertence a outro vault. Reabra o painel antes de excluir.")
+            return None
+        return exigir_local(request)
 
     @app.get("/api/local/capacidade")
     async def capacidade_local(request: Request):
@@ -1040,7 +1050,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.post("/api/lote")
     async def api_lote(request: Request):
         dados = await corpo_json(request, contratos.AcaoLote)
-        if dados["acao"] == "excluir" and (erro := exigir_local(request)):
+        if dados["acao"] == "excluir" and (erro := exigir_exclusao(request)):
             return erro
         def executar():
             resultados = []
@@ -1081,7 +1091,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
 
     @app.post("/api/excluir/{rel:path}")
     async def api_excluir(request: Request, rel: str):
-        if erro := exigir_local(request):
+        if erro := exigir_exclusao(request):
             return erro
         dados = await corpo_json(request, contratos.Versao)
         return {"id": await asyncio.to_thread(painel.excluir, rel, dados["versao"])}

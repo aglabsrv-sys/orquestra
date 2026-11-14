@@ -27,7 +27,9 @@ Na lista, marque itens ou selecione todos da página para arquivar, excluir ou
 alterar o status. A seleção é limitada à página atual (até 80 notas). Arquivar
 e excluir pedem confirmação. Se uma nota mudou em outra aba ou no Obsidian,
 ela fica intacta e seu erro aparece no resultado; as demais podem ser atualizadas.
-Excluir mantém a exigência de autorização local. Veja a [lixeira](pastas.md).
+As ações aparecem junto às configurações, sem deslocar a tabela ao selecionar.
+Excluir exige autorização local ou um endereço Tailscale permitido; apagar
+definitivamente continua exigindo acesso local. Veja a [lixeira](pastas.md).
 
 Em **Personalizar**, Aparência, Propriedades e Visualizações têm painéis separados.
 Trocar de aba preserva as alterações pendentes; Salvar alterações considera todas
