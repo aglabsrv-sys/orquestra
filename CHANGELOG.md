@@ -2,6 +2,17 @@
 
 ## Em desenvolvimento
 
+- Seleção múltipla nas listas, com alteração de status, arquivamento e exclusão;
+  cada nota conserva a conferência de versão e o resultado individual da ação.
+- Personalização com abas independentes e cabeçalho no fluxo da página;
+  formulários novos mostram o essencial e oferecem Adicionar campo +.
+- Lixeira em linhas com ações por ícone, Entrada persistente à direita do dock
+  e arraste com mouse no carrossel da home.
+- Áreas retiradas voltam ao mesmo catálogo compacto. Acesso Tailscale permite
+  consultar, copiar e revogar endereços; todas as rotas consultam a permissão atual.
+- Catálogo distribuído reutiliza seus metadados enquanto os arquivos não mudam,
+  evitando leituras YAML repetidas ao criar cofres e acrescentar módulos.
+
 - Contatos pessoais e profissionais com grupos, favoritos e busca; vínculo
   permanente com Clientes sem duplicar telefone, e-mail ou histórico comercial.
 - Agenda nativa como acesso único aos compromissos, preservando a pasta de notas.

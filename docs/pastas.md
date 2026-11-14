@@ -8,6 +8,7 @@ Anexos e notas relacionadas não são excluídos junto. Instruções de agentes,
 configurações e arquivos de `maquina/` são protegidos contra exclusão pelo painel.
 
 Abra **Pastas → Lixeira** para restaurar ou excluir definitivamente cada item.
+A lista mostra uma linha por nota, com os ícones Restaurar e Excluir definitivamente.
 A restauração exige o caminho original livre e nunca substitui outra nota.
 A limpeza definitiva pede outra confirmação e confere a versão do arquivo.
 Não existe limpeza automática. As notas ficam em `.trash/orquestra/` do vault;

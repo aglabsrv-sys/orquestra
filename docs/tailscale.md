@@ -37,6 +37,14 @@ rede privada entre os seus aparelhos. Confira o plano e os limites atuais para s
    Não use curingas. Não permita domínios de terceiros.
 6. No celular, use "Adicionar à tela de início" para ter o painel como um aplicativo.
 
+Em **Ajustes → Celular**, os endereços permitidos ficam disponíveis para abrir e
+copiar. Pelo localhost do computador também é possível revogar cada endereço.
+A permissão fica em `hosts_permitidos` do cofre e permanece após reiniciar o
+Orquestra. As rotas do painel e das boas-vindas usam a configuração atual,
+inclusive após uma releitura, sem exigir uma nova autorização para o mesmo cofre.
+Revogar bloqueia novas requisições por esse nome; não altera a configuração do
+Tailscale Serve nem a política de acesso da rede. Outro cofre tem sua própria lista.
+
 Se você mudou a porta do Orquestra, substitua `8420` pela porta mostrada no terminal.
 O `--bg` deixa o encaminhamento ligado mesmo depois de fechar o terminal e de
 reiniciar o computador. O painel precisa estar rodando para o endereço responder

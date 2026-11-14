@@ -182,17 +182,25 @@
 
 {# ---------------------------------------------------------------- Lista #}
 {% else %}
-<section class="tabela-envolta">
+<section class="tabela-envolta" data-lote data-campo-status="{{ modulo.campo_status }}">
   {% if linhas %}
+  <div class="lote-barra" hidden>
+    <span data-lote-contagem aria-live="polite"></span>
+    <select data-lote-acao aria-label="Ação para selecionados"><option value="arquivar">Arquivar</option><option value="excluir">Excluir</option>{% if opcoes_status %}<option value="status">Alterar status</option>{% endif %}</select>
+    {% if opcoes_status %}<select data-lote-status aria-label="Novo status" hidden>{% for opcao in opcoes_status %}<option value="{{ opcao }}">{{ rotulo(opcao) }}</option>{% endfor %}</select>{% endif %}
+    <button class="botao pequeno" type="button" data-lote-executar>Aplicar</button>
+  </div>
+  <p class="lote-resultado" role="status" data-lote-resultado hidden></p>
   <table class="tabela">
     <caption class="somente-leitor">Notas de {{ modulo.nome }}. Os botões no cabeçalho ordenam os itens desta página.</caption>
-    <thead><tr>{% for col in colunas_tabela %}<th scope="col" data-ordenar aria-sort="none"><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ col.rotulo }}<span aria-hidden="true"> ↕</span></button></th>{% endfor %}</tr></thead>
+    <thead><tr><th class="col-selecao" scope="col"><input type="checkbox" data-lote-todos aria-label="Selecionar todos desta página"></th>{% for col in colunas_tabela %}<th scope="col" data-ordenar aria-sort="none"><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ col.rotulo }}<span aria-hidden="true"> ↕</span></button></th>{% endfor %}</tr></thead>
     <tbody>
       {% for l in linhas %}
       <tr{% if l.cartao.concluido %} class="concluido"{% endif %}>
+        <td class="col-selecao"><input type="checkbox" data-lote-item data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" aria-label="Selecionar {{ l.cartao.titulo }}"></td>
         {% for c in l.celulas %}
         {% if c.tipo == "titulo" %}<td class="cel-titulo"><a href="{{ l.cartao.url }}">{{ c.texto }}</a></td>
-        {% elif c.tipo == "escolha" %}<td><span class="et {{ c.classe }}">{{ c.texto }}</span></td>
+        {% elif c.tipo == "escolha" %}<td data-coluna="{{ colunas_tabela[loop.index0].nome }}"><span class="et {{ c.classe }}">{{ c.texto }}</span></td>
         {% elif c.tipo == "data" %}<td data-ordem="{{ c.ordem }}">{{ c.texto }}</td>
         {% elif c.tipo == "link" %}<td><a class="link" href="{{ c.texto }}" target="_blank" rel="noopener noreferrer" aria-label="Abrir link de {{ l.cartao.titulo }} em nova aba">abrir {{ icone('externo', 12) }}</a></td>
         {% else %}<td>{{ c.texto }}</td>{% endif %}
@@ -212,20 +220,26 @@
 
 {% block dialogos %}
 <div id="modulo-dialogos">
-<dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" aria-describedby="novo-ajuda" data-modulo="{{ modulo.id }}" data-subpasta="{{ pasta_atual|default('') }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
+<dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" data-modulo="{{ modulo.id }}" data-subpasta="{{ pasta_atual|default('') }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-dialogo-novo">{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
-    <p class="suave" id="novo-ajuda">Crie uma nota no vault. Você pode editar o texto e as propriedades depois.</p>
-    <label class="campo"><span>Título <span class="obrigatorio">Obrigatório</span></span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" placeholder="Dê um nome fácil de encontrar" autocomplete="off"></label>
+    <label class="campo"><span>Título</span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" autocomplete="off"></label>
     {% if aba != 'humano' %}
     <div class="grade-campos">
-      {% if modulo.id == 'clientes' %}{{ p.seletor_contato(opcoes_contatos, '', 'data-novo') }}{% endif %}
       {% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') %}
-      {{ p.entrada(campo, padroes.get(campo.nome, ''), 'data-novo') }}
+      {% set essencial = campo.obrigatorio and not campo.padrao %}
+      <div{% if not essencial %} data-extra-campo="{{ campo.nome }}" hidden{% endif %}>{{ p.entrada(campo, padroes.get(campo.nome, ''), 'data-novo') }}</div>
       {% endfor %}
+      {% if modulo.id == 'clientes' %}<div data-extra-campo="contato_id" hidden>{{ p.seletor_contato(opcoes_contatos, '', 'data-novo') }}</div>{% endif %}
     </div>
     {% endif %}
-    <label class="campo"><span>Texto <span class="campo-opcional">Opcional</span></span><textarea name="corpo" id="novo-corpo" rows="4" maxlength="1000000" placeholder="Acrescente contexto, ideias ou próximos passos"></textarea></label>
+    <div data-extra-campo="__texto" hidden><label class="campo"><span>Texto</span><textarea name="corpo" id="novo-corpo" rows="3" maxlength="1000000"></textarea></label></div>
+    <label class="campo adicionar-campo"><span class="somente-leitor">Adicionar campo</span><select id="novo-adicionar-campo" aria-label="Adicionar campo">
+      <option value="">Adicionar campo +</option>
+      {% if aba != 'humano' %}{% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') and not (campo.obrigatorio and not campo.padrao) %}<option value="{{ campo.nome }}">{{ campo.rotulo }}</option>{% endfor %}
+      {% if modulo.id == 'clientes' %}<option value="contato_id">Contato vinculado</option>{% endif %}{% endif %}
+      <option value="__texto">Texto</option>
+    </select></label>
     <div class="dialogo-acoes">
       <button type="button" class="botao" data-fechar>Cancelar</button>
       <button type="submit" class="botao principal" id="novo-salvar">Criar nota</button>

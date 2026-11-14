@@ -18,7 +18,8 @@ import json
 import os
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -96,10 +97,23 @@ class Relatorio:
 
 def catalogo() -> dict[str, ModuloPronto]:
     """Módulos prontos que vêm com o Orquestra, na ordem em que aparecem no painel."""
-    prontos = []
+    assinaturas = []
     for pasta in sorted(CATALOGO.iterdir()):
-        if not (pasta / ARQUIVO_MODULO).is_file():
-            continue
+        arquivo = pasta / ARQUIVO_MODULO
+        if arquivo.is_file():
+            info = arquivo.stat()
+            assinaturas.append((pasta.name, info.st_mtime_ns, info.st_ctime_ns, info.st_size))
+    # Só metadados do catálogo distribuído. Configurações e notas dos cofres
+    # continuam sendo relidas por seus próprios mecanismos de versão.
+    prontos = _catalogo_distribuido(str(CATALOGO.resolve()), tuple(assinaturas))
+    return {m.id: replace(m) for m in prontos}
+
+
+@lru_cache(maxsize=4)
+def _catalogo_distribuido(raiz: str, assinaturas: tuple) -> tuple[ModuloPronto, ...]:
+    prontos = []
+    for nome, *_ in assinaturas:
+        pasta = Path(raiz) / nome
         bruto = ler_yaml(pasta / ARQUIVO_MODULO)
         prontos.append(
             ModuloPronto(
@@ -111,7 +125,7 @@ def catalogo() -> dict[str, ModuloPronto]:
             )
         )
     prontos.sort(key=lambda m: (m.ordem, m.nome.lower()))
-    return {m.id: m for m in prontos}
+    return tuple(prontos)
 
 
 def perfis() -> dict[str, Perfil]:

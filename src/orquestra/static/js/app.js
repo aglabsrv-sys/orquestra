@@ -115,6 +115,30 @@
     }
 
     trilho.addEventListener("scroll", function () { cancelAnimationFrame(quadro); quadro = requestAnimationFrame(medir); }, { passive: true });
+    var arrasto = null, bloquearCliqueAte = 0;
+    trilho.addEventListener("dragstart", function (e) { e.preventDefault(); });
+    trilho.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "mouse" || e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      arrasto = {id:e.pointerId, x:e.clientX, scroll:trilho.scrollLeft, moveu:false};
+    });
+    trilho.addEventListener("pointermove", function (e) {
+      if (!arrasto || e.pointerId !== arrasto.id) return;
+      var distancia = e.clientX - arrasto.x;
+      if (!arrasto.moveu && Math.abs(distancia) < 8) return;
+      if (!arrasto.moveu) { arrasto.moveu = true; trilho.classList.add("arrastando"); trilho.setPointerCapture(e.pointerId); }
+      e.preventDefault(); trilho.scrollLeft = arrasto.scroll - distancia;
+    });
+    function terminarArrasto(e) {
+      if (!arrasto || e.pointerId !== arrasto.id) return;
+      var moveu = arrasto.moveu; arrasto = null;
+      if (trilho.hasPointerCapture(e.pointerId)) trilho.releasePointerCapture(e.pointerId);
+      trilho.classList.remove("arrastando");
+      if (moveu) { bloquearCliqueAte = Date.now() + 300; medir(); ir(atual); }
+    }
+    trilho.addEventListener("pointerup", terminarArrasto);
+    trilho.addEventListener("pointercancel", terminarArrasto);
+    window.addEventListener("pointerup", terminarArrasto);
+    trilho.addEventListener("click", function (e) { if (Date.now() < bloquearCliqueAte) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
     setaEsq.onclick = function () { ir(atual - 1); };
     setaDir.onclick = function () { ir(atual + 1); };
     pontos.forEach(function (p, k) { p.onclick = function () { ir(k); }; });
@@ -188,14 +212,24 @@
     var dialogo = $("#dialogo-novo"), abrir = $("#abrir-novo");
     if (!dialogo || !abrir) return;
     var form = $("form", dialogo), titulo = $("#novo-titulo"), salvar = $("#novo-salvar");
+    var adicionais = $("#novo-adicionar-campo", dialogo);
+    $$("[data-extra-campo]", dialogo).forEach(function (grupo) { $$("input,select,textarea", grupo).forEach(function (el) { el.disabled = grupo.hidden; }); });
+    if (adicionais) adicionais.onchange = function () {
+      var grupo = $$("[data-extra-campo]", dialogo).find(function (g) { return g.dataset.extraCampo === adicionais.value; });
+      if (!grupo) return;
+      grupo.hidden = false;
+      $$("input,select,textarea", grupo).forEach(function (el) { el.disabled = false; });
+      adicionais.selectedOptions[0].disabled = true; adicionais.value = "";
+      var campo = $("input,select,textarea", grupo); if (campo) campo.focus();
+    };
     abrir.onclick = function () { dialogo.showModal(); titulo.focus(); };
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       if (salvar.disabled) return;
       var campos = {};
-      $$("[data-novo]", form).forEach(function (el) { campos[el.name] = el.type === "checkbox" ? el.checked : el.value; });
+      $$("[data-novo]", form).filter(function (el) { return !el.disabled; }).forEach(function (el) { campos[el.name] = el.type === "checkbox" ? el.checked : el.value; });
       var concluir = window.OrquestraInterface.ocupado(salvar, "Criando…");
-      api("POST", "/api/notas", { modulo: dialogo.dataset.modulo, subpasta: dialogo.dataset.subpasta || '', zona: dialogo.dataset.zona, titulo: titulo.value, campos: campos, corpo: $("#novo-corpo").value })
+      api("POST", "/api/notas", { modulo: dialogo.dataset.modulo, subpasta: dialogo.dataset.subpasta || '', zona: dialogo.dataset.zona, titulo: titulo.value, campos: campos, corpo: $("#novo-corpo").disabled ? "" : $("#novo-corpo").value })
         .then(function () { location.reload(); })
         .catch(mostrarErro).finally(concluir);
     });
@@ -753,6 +787,18 @@
   function personalizar() {
     var raiz = $("#personalizar");
     if (!raiz) return;
+    var abas = $$('[role=tab]', raiz), paineis = $$('[role=tabpanel]', raiz);
+    function mostrarAba(id, foco) {
+      abas.forEach(function (aba) { var ativa = aba.getAttribute('aria-controls') === id; aba.setAttribute('aria-selected', String(ativa)); aba.tabIndex = ativa ? 0 : -1; if (ativa && foco) aba.focus(); });
+      paineis.forEach(function (painel) { painel.hidden = painel.id !== id; });
+    }
+    abas.forEach(function (aba, i) {
+      aba.onclick = function () { mostrarAba(aba.getAttribute('aria-controls')); };
+      aba.onkeydown = function (e) {
+        var indice = e.key === 'Home' ? 0 : e.key === 'End' ? abas.length - 1 : e.key === 'ArrowRight' ? (i + 1) % abas.length : e.key === 'ArrowLeft' ? (i + abas.length - 1) % abas.length : -1;
+        if (indice >= 0) { e.preventDefault(); mostrarAba(abas[indice].getAttribute('aria-controls'), true); }
+      };
+    });
     var lista = $("#p-campos"), modelo = $("#p-modelo-campo");
     function retrato() {
       return JSON.stringify($$("input, select, textarea", raiz).map(function (el) {
@@ -793,7 +839,7 @@
         var linha = campo.closest(".campo-editor"), remover = linha && $("[data-remover]", linha);
         return !campo.disabled && !(remover && remover.checked) && !campo.checkValidity();
       })[0];
-      if (invalido) { invalido.reportValidity(); invalido.focus(); return; }
+      if (invalido) { var painelCampo = invalido.closest('[role=tabpanel]'); if (painelCampo) mostrarAba(painelCampo.id); invalido.reportValidity(); invalido.focus(); return; }
       var campos = [], remover = [];
       $$(".campo-editor", lista).forEach(function (linha) {
         var nome = $("[data-nome]", linha).value.trim(), marcado = $("[data-remover]", linha);
@@ -1113,7 +1159,59 @@
   }
 
   function tabela() {
-    $$(".tabela th[data-ordenar]").forEach(function (th, coluna) {
+    $$("[data-lote]").forEach(function (raiz) {
+      var todos = $("[data-lote-todos]", raiz);
+      if (!todos || raiz.dataset.loteLigado) return;
+      raiz.dataset.loteLigado = "1";
+      var barra = $(".lote-barra", raiz), acao = $("[data-lote-acao]", raiz), status = $("[data-lote-status]", raiz), botao = $("[data-lote-executar]", raiz), resultado = $("[data-lote-resultado]", raiz), ocupado = false;
+      function caixas() { return $$("[data-lote-item]", raiz); }
+      function atualizar() {
+        var itens = caixas(), selecionados = itens.filter(function (el) { return el.checked; });
+        barra.hidden = !selecionados.length;
+        $("[data-lote-contagem]", raiz).textContent = selecionados.length + " selecionados";
+        todos.checked = itens.length > 0 && selecionados.length === itens.length;
+        todos.indeterminate = selecionados.length > 0 && selecionados.length < itens.length;
+        itens.forEach(function (el) { el.closest("tr").classList.toggle("selecionada", el.checked); });
+      }
+      todos.onchange = function () { caixas().forEach(function (el) { el.checked = todos.checked; }); atualizar(); };
+      caixas().forEach(function (el) { el.onchange = atualizar; });
+      acao.onchange = function () { if (status) status.hidden = acao.value !== "status"; };
+      botao.onclick = async function () {
+        if (ocupado) return;
+        var selecionados = caixas().filter(function (el) { return el.checked; }), operacao = acao.value;
+        if (!selecionados.length) return;
+        if (operacao !== "status" && !await confirmar({titulo: (operacao === "excluir" ? "Excluir " : "Arquivar ") + selecionados.length + " notas?", texto: operacao === "excluir" ? "As notas irão para a lixeira. Anexos e outras notas serão mantidos." : "As notas irão para arquivo/ desta área.", confirmar: operacao === "excluir" ? "Mover para a lixeira" : "Arquivar"})) return;
+        ocupado = true;
+        $$("input,select,button", raiz).forEach(function (el) { el.disabled = true; });
+        try {
+          var resposta = await api("POST", "/api/lote", {acao:operacao, itens:selecionados.map(function (el) { return {rel:el.dataset.rel, versao:el.dataset.versao}; }), status:operacao === "status" ? status.value : ""});
+          var falhas = [], salvos = 0;
+          resposta.resultados.forEach(function (r) {
+            var el = selecionados.find(function (c) { return c.dataset.rel === r.rel; });
+            if (!el) return;
+            if (!r.ok) { falhas.push(el.getAttribute("aria-label").replace(/^Selecionar /, "") + ": " + r.erro); return; }
+            salvos++; el.checked = false;
+            if (r.versao) {
+              minhas[r.versao] = true; el.dataset.versao = r.versao;
+              el.closest("tr").classList.toggle("concluido", !!r.concluido);
+              var celula = $$("[data-coluna]", el.closest("tr")).find(function (c) { return c.dataset.coluna === raiz.dataset.campoStatus; });
+              if (celula) { celula.textContent = status.selectedOptions[0].textContent; }
+            } else {
+              minhasRemovidas[r.rel] = Date.now() + 2000; el.closest("tr").remove();
+            }
+          });
+          resultado.hidden = false; resultado.textContent = salvos + " notas atualizadas." + (falhas.length ? "\n" + falhas.join("\n") : "");
+          if (salvos) fetch(location.href, {cache:"no-store", credentials:"same-origin"}).then(function (r) { if (!r.ok) return; return r.text(); }).then(function (html) {
+            if (!html) return;
+            var doc = new DOMParser().parseFromString(html, "text/html"), atual = $(".cab-numeros"), nova = $(".cab-numeros", doc);
+            if (doc.body.dataset.vaultId === document.body.dataset.vaultId && atual && nova) atual.replaceWith(document.importNode(nova, true));
+          }).catch(function () { /* O resultado da gravação já está visível. */ });
+        } catch (erro) { mostrarErro(erro); }
+        finally { ocupado = false; $$("input,select,button", raiz).forEach(function (el) { el.disabled = false; }); atualizar(); }
+      };
+    });
+    $$(".tabela th[data-ordenar]").forEach(function (th) {
+      var coluna = th.cellIndex;
       var crescente = true;
       var botao = $("button", th);
       if (!botao) return;
@@ -1169,7 +1267,7 @@
     if (!resumoJaSolicitado) atualizarSelos();
     clearTimeout(temporizador);
     temporizador = setTimeout(function () {
-      if (reconexao && !ocupado()) { location.reload(); return; }
+        if (reconexao && !ocupado() && !$('[data-lote-item]:checked')) { location.reload(); return; }
       if (personalizacaoPendente() && $("#p-novidades")) { $("#p-novidades").hidden = false; return; }
       // Atualização explícita preserva foco, rolagem e formulários.
       // A pessoa está no meio de algo: não tiramos a tela debaixo dela.

@@ -6,9 +6,9 @@
   <header class="pagina-topo"><h1>Lixeira</h1></header>
   <details class="nota-outros"><summary>Sobre a exclusão</summary><p class="campo-ajuda">Não há limpeza automática. A exclusão definitiva remove a cópia da lixeira; backups e versões anteriores de recuperação são independentes.</p></details>
   {% for item in excluidas %}
-  <article class="bloco" data-lixeira-id="{{ item.id }}" data-versao="{{ item.versao }}">
-    <h2 class="sub">{{ item.titulo }}</h2><p class="campo-ajuda">{{ item.rel }} · {{ item.excluido_em }}</p>
-    <div class="linha-botoes"><button class="botao" type="button" data-lixeira-acao="restaurar">Restaurar</button><button class="botao discreto" type="button" data-lixeira-acao="apagar">Excluir definitivamente</button></div>
+  <article class="lixeira-linha" data-lixeira-id="{{ item.id }}" data-versao="{{ item.versao }}">
+    <div class="lixeira-nota"><b>{{ item.titulo }}</b><small title="{{ item.rel }}">{{ item.rel }}</small></div>
+    <div class="lixeira-acoes"><button class="botao pequeno so-icone" type="button" data-lixeira-acao="restaurar" aria-label="Restaurar" title="Restaurar">{{ icone('restaurar', 16) }}</button><button class="botao pequeno so-icone discreto" type="button" data-lixeira-acao="apagar" aria-label="Excluir definitivamente" title="Excluir definitivamente">{{ icone('lixeira', 16) }}</button></div>
   </article>
   {% else %}<p class="bloco">A lixeira está vazia.</p>{% endfor %}
 </section>

@@ -27,6 +27,9 @@ MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "
 # Ícones de traço, desenhados para uma grade de 24x24. Para usar um ícone num
 # módulo, coloque o nome dele em `icone:` no _modulo.yaml.
 ICONES = {
+    "lixeira": '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>',
+    "restaurar": '<path d="M3 10h10a6 6 0 0 1 0 12M3 10l5-5M3 10l5 5"/>',
+    "copiar": '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4"/>',
     "link": '<path d="m10 13 4-4"/><path d="M8 16H6a4 4 0 0 1 0-8h4M14 8h4a4 4 0 0 1 0 8h-4"/>',
     "inicio": '<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>',
     "check": '<path d="m4 6 1.5 1.5L8 5"/><path d="m4 12 1.5 1.5L8 11"/><path d="m4 18 1.5 1.5L8 17"/><path d="M11 6h9M11 12h9M11 18h9"/>',
@@ -377,22 +380,25 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
 
     # Com poucas áreas, tudo cabe. Com muitas, o dock mostra as fixadas (ou as primeiras),
     # mais a área em que a pessoa está, e o resto fica a um clique, no botão "Áreas".
-    barra, sistema_barra, gaveta = modulos, sistema, []
+    entrada = next((m for m in modulos if m["id"] == "entrada"), None)
+    areas = [m for m in modulos if m is not entrada]
+    barra, sistema_barra, gaveta = areas, sistema, []
     if len(modulos) + len(sistema) > DOCK_SEM_GAVETA:
-        fixas = [m for nome in painel.config.dock for m in modulos if m["id"] == nome][:DOCK_AREAS]
-        barra = fixas or modulos[:DOCK_AREAS]
-        atual = next((m for m in modulos if m["ativo"]), None)
+        fixas = [m for nome in painel.config.dock for m in areas if m["id"] == nome][:DOCK_AREAS]
+        barra = fixas or areas[:DOCK_AREAS]
+        atual = next((m for m in areas if m["ativo"]), None)
         if atual and atual not in barra:
             barra = [*barra, atual]
         sistema_barra = [s for s in sistema if s["id"] in {"decidir", "calendario"}]
-        gaveta = [*modulos, *[s for s in sistema if s["id"] not in {"decidir", "calendario"}]]
+        gaveta = [*areas, *[s for s in sistema if s["id"] not in {"decidir", "calendario"}]]
     escondidos = [i for i in gaveta if i not in barra]
     # A largura do navegador não chega ao servidor. O CSS alterna a mesma barra
     # para dois atalhos no celular, mantendo a área atual e todas as demais na gaveta.
-    mobile = barra[:2]
+    limite_mobile = 1 if entrada else 2
+    mobile = barra[:limite_mobile]
     atual = next((m for m in barra if m["ativo"]), None)
     if atual and atual not in mobile:
-        mobile = [*mobile[:1], atual]
+        mobile = [*mobile[:limite_mobile - 1], atual]
     for item in barra:
         item["no_mobile"] = item in mobile
     return {
@@ -400,13 +406,14 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
         "sistema": sistema,
         "barra": barra,
         "sistema_barra": sistema_barra,
-        "gaveta": [*modulos, *[s for s in sistema if s["id"] != "decidir"]],
+        "gaveta": [*areas, *[s for s in sistema if s["id"] != "decidir"]],
         "gaveta_desktop": bool(gaveta),
         "gaveta_ativa": any(i["ativo"] for i in escondidos),
         "gaveta_mobile_ativa": any(s["ativo"] for s in sistema if s["id"] != "decidir"),
         "gaveta_selo": sum(int(i["selo"] or 0) for i in escondidos),
         "decidir": total_decidir,
         "inicio_ativo": ativo == "inicio",
+        "entrada": entrada,
     }
 
 

@@ -47,8 +47,9 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
         hospedeiro.capacidade = CapabilityLocal()
     app = FastAPI(title="Orquestra", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.capacidade = hospedeiro.capacidade
-    painel_app = getattr(hospedeiro, "painel_app", None)
-    extras = painel_app.state.painel.config.hosts_permitidos if painel_app else []
+    def extras():
+        painel_app = getattr(hospedeiro, "painel_app", None)
+        return painel_app.state.painel.config.hosts_permitidos if painel_app else []
     app.add_middleware(Protecao, hosts_extras=extras)
     app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
     modelos = Jinja2Templates(directory=PASTA / "templates")

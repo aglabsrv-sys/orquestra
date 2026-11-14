@@ -259,6 +259,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         page.locator("#abrir-novo").click()
         titulo = f"Teste de jornada {largura}"
         page.locator("#novo-titulo").fill(titulo)
+        page.locator("#novo-adicionar-campo").select_option("__texto")
         page.locator("#novo-corpo").fill("Texto original da demonstração.")
         with page.expect_response(lambda r: r.url.endswith("/api/notas") and r.request.method == "POST") as envio:
             page.locator("#novo-salvar").click()

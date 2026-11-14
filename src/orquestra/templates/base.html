@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/static/css/busca.css?v={{ marca }}">
   {% block estilos %}{% endblock %}
   <link rel="stylesheet" href="/static/css/tipografia.css?v={{ marca }}">
+  <link rel="stylesheet" href="/static/css/interacoes.css?v={{ marca }}">
   <style>{{ estilo|safe }}</style>
 {% if request.query_params.get('explorador') == '1' %}<link rel="stylesheet" href="/static/css/leitor.css?v={{ marca }}">{% endif %}
 </head>
@@ -59,6 +60,7 @@
       {{ icone(s.icone, 20) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ "99+" if s.selo > 99 else s.selo }}</b>
     </a>
     {% endfor %}
+    {% if dock.entrada %}<a class="dock-item dock-entrada{% if dock.entrada.ativo %} ativo{% endif %}" href="{{ dock.entrada.url }}" aria-label="{{ dock.entrada.nome }}" data-dica="{{ dock.entrada.nome }}" data-selo-de="entrada"{% if dock.entrada.ativo %} aria-current="page"{% endif %}>{{ icone(dock.entrada.icone, 20) }}<b class="selo"{% if not dock.entrada.selo %} hidden{% endif %}>{{ dock.entrada.selo }}</b></a>{% endif %}
   </nav>
 
   {% if dock.gaveta %}

@@ -12,6 +12,36 @@
     if (!r.ok) { if (r.status === 403) capacidadeLocal = null; throw new Error(resultado.erro || 'Não foi possível concluir.'); }
     return resultado;
   }
+
+  var linksTailscale = $('#tailscale-links');
+  if (linksTailscale) {
+    var estadoTailscale = $('#tailscale-estado'), modeloTailscale = $('#tailscale-linha-modelo');
+    async function atualizarTailscale() {
+      var dados = await local('/api/tailscale/hosts');
+      linksTailscale.replaceChildren();
+      dados.urls.forEach(function (url) {
+        var linha = modeloTailscale.content.firstElementChild.cloneNode(true), link = $('a', linha);
+        link.href = url; link.textContent = url;
+        linha.querySelectorAll('[data-ts-acao]').forEach(function (b) { b.dataset.url = url; });
+        linksTailscale.appendChild(linha);
+      });
+    }
+    document.addEventListener('orquestra:tailscale-salvo', function () { atualizarTailscale().catch(function (e) { estadoTailscale.textContent = e.message; }); });
+    linksTailscale.addEventListener('click', async function (e) {
+      var b = e.target.closest('[data-ts-acao]'); if (!b || b.disabled) return;
+      if (b.dataset.tsAcao === 'copiar') {
+        try { await navigator.clipboard.writeText(b.dataset.url); estadoTailscale.textContent = 'Endereço copiado.'; }
+        catch (_) { estadoTailscale.textContent = 'Não consegui copiar. Selecione o endereço acima.'; }
+        return;
+      }
+      if (!await window.OrquestraInterface.confirmar({titulo:'Revogar este endereço?', texto:b.dataset.url, confirmar:'Revogar'})) return;
+      b.disabled = true;
+      try {
+        document.dispatchEvent(new Event('orquestra:config-salva'));
+        await local('/api/tailscale/host/revogar', {url:b.dataset.url}); await atualizarTailscale(); estadoTailscale.textContent = 'Endereço revogado.';
+      } catch (erro) { b.disabled = false; estadoTailscale.textContent = erro.message; }
+    });
+  }
   var guias = {
     celular: [
       ['Conecte seu celular', 'Instale o Tailscale no computador e no celular. Entre com a mesma conta nos dois dispositivos. O acesso fica restrito à sua rede privada.', 'https://tailscale.com/download'],
@@ -47,7 +77,7 @@
       if (passos[pos][3]) {
         if (!campo.value || !campo.reportValidity()) return;
         proximo.disabled = true;
-        try { var resultado = await local(passos[pos][3] === 'agenda' ? '/api/agenda/conectar' : '/api/tailscale/host', {url: campo.value}); campo.value = ''; aviso.textContent = resultado.mensagem || 'Link salvo. Em Tarefas → Máquina → Compromissos da agenda, revise e aprove a configuração; depois use Rodar agora ou ligue o automático.'; }
+        try { var resultado = await local(passos[pos][3] === 'agenda' ? '/api/agenda/conectar' : '/api/tailscale/host', {url: campo.value}); campo.value = ''; aviso.textContent = resultado.mensagem || 'Link salvo. Em Tarefas → Máquina → Compromissos da agenda, revise e aprove a configuração; depois use Rodar agora ou ligue o automático.'; if (passos[pos][3] === 'tailscale') document.dispatchEvent(new Event('orquestra:tailscale-salvo')); }
         catch (erro) { aviso.textContent = erro.message; }
         finally { proximo.disabled = false; }
         return;
