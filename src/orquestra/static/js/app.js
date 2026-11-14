@@ -576,6 +576,22 @@
       }
     } catch (e) { rascunhos = null; }
 
+    ["excluir-nota", "vincular-cliente"].forEach(function (id) {
+      var botao = $("#" + id);
+      if (!botao) return;
+      botao.onclick = async function () {
+        if (notaSuja || estadoFila.pendentes) { avisar("Salve ou preserve seu rascunho antes de continuar.", "erro"); return; }
+        var excluir = id === "excluir-nota";
+        if (!await confirmar({ titulo: excluir ? "Excluir esta nota?" : "Acompanhar em Clientes?", texto: excluir ? "A nota vai para a lixeira e poderá ser restaurada em Pastas → Lixeira. Anexos e outras notas não serão excluídos." : "Cria um acompanhamento comercial ligado a este cadastro. Os dados de contato continuam em Contatos.", confirmar: excluir ? "Mover para a lixeira" : "Acompanhar em Clientes" })) return;
+        if (notaSuja || estadoFila.pendentes) { avisar("Salve ou preserve seu rascunho antes de continuar.", "erro"); return; }
+        botao.disabled = true;
+        try {
+          var resposta = await api("POST", (excluir ? "/api/excluir/" : "/api/contatos/cliente/") + caminho(rel), {versao: versao});
+          location.href = resposta.url || "/lixeira";
+        } catch (erro) { botao.disabled = false; mostrarErro(erro); }
+      };
+    });
+
     var bArquivar = $("#arquivar");
     if (bArquivar) bArquivar.onclick = async function () {
       if (notaSuja || estadoFila.pendentes) { avisar("Salve ou preserve seu rascunho antes de arquivar.", "erro"); return; }
@@ -1023,7 +1039,7 @@
     function ligarRetirada(b) {
       b.onclick = async function () {
         var linha = b.closest(".area-linha");
-        if (!await confirmar({ titulo: "Retirar esta área do painel?", texto: "“" + $("b", linha).textContent + "” deixará de aparecer na navegação. A pasta e as notas continuam no vault; você pode adicionar a área novamente em Pastas.", confirmar: "Retirar do painel" })) return;
+        if (!await confirmar({ titulo: "Retirar esta área do painel?", texto: "“" + $("b", linha).textContent + "” deixará de aparecer na navegação. A pasta e as notas continuam no vault; você pode adicioná-la novamente aqui em Ajustes → Pastas.", confirmar: "Retirar do painel" })) return;
         b.disabled = true;
         api("POST", "/api/modulos/" + encodeURIComponent(linha.dataset.modulo) + "/desligar", {})
           .then(function () { location.reload(); })
@@ -1059,15 +1075,18 @@
         avisar('A área foi adicionada. Não foi possível atualizar a navegação; recarregue a página quando terminar seus ajustes.', 'erro');
       }
     }
-    $$("[data-pronto]").forEach(function (b) {
+    $$("[data-pronto], [data-religar]").forEach(function (b) {
       b.onclick = async function () {
         b.disabled = true;
         configPropriaAte = Date.now() + 10000;
         try {
-          var r = await api("POST", "/api/modulos", { pronto: b.dataset.pronto, exemplos: $("#pronto-exemplos").checked });
+          var r = b.dataset.religar
+            ? await api("POST", "/api/pastas/adotar", { pasta: b.dataset.religar })
+            : await api("POST", "/api/modulos", { pronto: b.dataset.pronto, exemplos: $("#pronto-exemplos").checked });
           b.setAttribute('aria-label', 'Área adicionada');
           b.title = 'Área já adicionada ao painel';
           await atualizarAreas(r);
+          if (b.dataset.religar) b.remove();
         } catch (erro) { b.disabled = false; mostrarErro(erro); }
       };
     });

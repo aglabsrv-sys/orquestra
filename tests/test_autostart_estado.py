@@ -112,3 +112,15 @@ def test_referencia_youtube_e_olho_nao_criam_segredo(cliente, vault):
     assert "developers.google.com/youtube/data/guides/authentication" in pagina.text
     assert segredos.nomes(vault) == []
     assert (caminho.read_bytes() if caminho.exists() else None) == antes
+
+
+def test_windows_oferece_reparar_lancador_antigo_utf8(tmp_path, monkeypatch):
+    arquivo = tmp_path / "Orquestra.vbs"
+    vault = tmp_path / "Cofre com ação"
+    monkeypatch.setattr(autostart, "sys", SimpleNamespace(platform="win32", executable=sys.executable))
+    monkeypatch.setattr(autostart, "_arquivo", lambda: arquivo)
+    arquivo.write_text(autostart._conteudo(vault), encoding="utf-8")
+    assert autostart.resumo(vault)["estado"] == "revisar"
+    autostart.executar("ativar", vault)
+    assert arquivo.read_bytes().startswith(b"\xff\xfe")
+    assert autostart.resumo(vault)["ativo"]

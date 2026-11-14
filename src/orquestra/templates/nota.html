@@ -46,9 +46,22 @@
       {% if modulo and zona in ("itens", "humano") %}
       <button class="botao pequeno discreto so-icone" aria-label="Arquivar nota" type="button" id="arquivar" title="Move para a pasta arquivo/ do módulo. Nada é apagado.">{{ icone('caixa', 15) }}</button>
       {% endif %}
+      {% if pode_excluir %}<button class="botao pequeno discreto" type="button" id="excluir-nota" title="Mover para a lixeira">Excluir</button>{% endif %}
     </div>
 
     </header>
+    {% if modulo and zona == 'itens' and modulo.id == 'contatos' %}
+    <div class="bloco">
+      {% for cliente in clientes_vinculados %}<a class="botao pequeno" href="{{ url_nota(cliente.rel) }}">Abrir em Clientes: {{ cliente.titulo }}</a>{% else %}
+      {% if not nota.erro %}<button class="botao pequeno" type="button" id="vincular-cliente">Acompanhar em Clientes</button>{% endif %}
+      {% endfor %}
+    </div>
+    {% elif modulo and zona == 'itens' and modulo.id == 'clientes' %}
+    <div class="bloco">
+      {{ p.seletor_contato(opcoes_contatos, nota.campo('contato_id') or '') }}
+      {% if contato_vinculado %}<a class="link" href="{{ url_nota(contato_vinculado.rel) }}">Abrir cadastro: {{ contato_vinculado.titulo }}</a><p class="campo-ajuda">{{ contato_vinculado.telefone }}{% if contato_vinculado.telefone and contato_vinculado.email %} · {% endif %}{{ contato_vinculado.email }}</p>{% endif %}
+    </div>
+    {% endif %}
     <details class="nota-propriedades" id="nota-propriedades">
       <summary>{{ icone('ajustes', 15) }} Propriedades e detalhes</summary>
       <div class="nota-detalhes">

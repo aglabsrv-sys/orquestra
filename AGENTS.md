@@ -29,7 +29,8 @@ Jornadas no navegador: `scripts/verificar_interface.py` (veja `CONTRIBUTING.md`)
 
 ## Cuidados
 
-- O vault é da pessoa: o app não apaga notas, não reescreve texto humano e não
+- O vault é da pessoa: o app só exclui notas por ação explícita, com lixeira e
+  confirmação antes da limpeza definitiva; não reescreve texto humano e não
   sobrescreve `AGENTS.md`, `CLAUDE.md` ou temas que ela editou.
 - Ao mudar um tema distribuído, acrescente o sha256 da versão anterior em
   `TEMAS_ORIGINAIS_ANTIGOS` (`temas.py`), para cópias intactas nos vaults atualizarem.

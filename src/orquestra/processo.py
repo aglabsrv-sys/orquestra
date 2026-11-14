@@ -36,12 +36,29 @@ _retomada: tuple[tuple[str, int, int], int] | None = None
 
 
 def em_segundo_plano() -> bool:
-    if os.environ.get("ORQUESTRA_EM_SEGUNDO_PLANO") == "1":
-        return True
     if sys.platform == "win32":
         import ctypes
         return not bool(ctypes.windll.kernel32.GetConsoleWindow())
+    if os.environ.get("ORQUESTRA_EM_SEGUNDO_PLANO") == "1":
+        return True
     return os.getsid(0) == os.getpid() and (sys.stdin is None or not sys.stdin.isatty())
+
+
+def preparar_saida(vault: Path | None) -> None:
+    """pythonw não fornece stdout/stderr; o servidor precisa deles para o log."""
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    casa = pasta_app().resolve()
+    log = casa / "painel.log"
+    if eh_link(log) or (vault and (casa == vault.resolve() or casa.is_relative_to(vault.resolve()))):
+        raise RuntimeError("Os registros do painel precisam ficar fora do cofre e sem links.")
+    casa.mkdir(parents=True, exist_ok=True)
+    descritor = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    saida = os.fdopen(descritor, "a", encoding="utf-8", buffering=1)
+    if sys.stdout is None:
+        sys.stdout = saida
+    if sys.stderr is None:
+        sys.stderr = saida
 
 
 def destacar(vault: Path, porta: int, pid: int) -> int:
@@ -55,13 +72,21 @@ def destacar(vault: Path, porta: int, pid: int) -> int:
         log = casa / "painel.log"
         if casa == vault.resolve() or casa.is_relative_to(vault.resolve()) or eh_link(log):
             raise RuntimeError("Os registros do painel em segundo plano precisam ficar fora do cofre e sem links.")
-        opcoes = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_BREAKAWAY_FROM_JOB} if sys.platform == "win32" else {"start_new_session": True}
+        # O redirector python.exe dos ambientes virtuais pode criar outro console
+        # mesmo com DETACHED_PROCESS. pythonw + CREATE_NO_WINDOW cobre os dois
+        # processos; o estado é confirmado pelo console real, não pelo ambiente.
+        executavel = sys.executable
+        if sys.platform == "win32":
+            sem_console = Path(executavel).with_name("pythonw.exe")
+            if sem_console.is_file():
+                executavel = str(sem_console)
+        opcoes = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_BREAKAWAY_FROM_JOB} if sys.platform == "win32" else {"start_new_session": True}
         ambiente = {**os.environ, "ORQUESTRA_EM_SEGUNDO_PLANO": "1"}
         try:
             casa.mkdir(parents=True, exist_ok=True)
             descritor = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0), 0o600)
             with os.fdopen(descritor, "ab") as saida:
-                novo = subprocess.Popen([sys.executable, "-m", "orquestra.segundo_plano", str(vault.resolve()), str(porta), str(pid)],
+                novo = subprocess.Popen([executavel, "-m", "orquestra.segundo_plano", str(vault.resolve()), str(porta), str(pid)],
                                         stdin=subprocess.DEVNULL, stdout=saida, stderr=saida, close_fds=True,
                                         env=ambiente, **opcoes)
         except OSError as erro:

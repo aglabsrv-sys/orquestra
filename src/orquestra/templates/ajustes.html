@@ -62,6 +62,12 @@
     <p class="suave pequeno">Tirar do painel não apaga nada: a pasta continua em <a class="link" href="/pastas">Pastas</a> e pode voltar quando quiser.</p>
   </div>
 
+  {% if retirados %}
+  <h3 class="sub">Áreas retiradas do painel</h3>
+  <div class="grade-prontos prontos-compactos">
+    {% for m in retirados %}<button class="pronto" type="button" data-religar="{{ m.id }}" aria-label="Adicionar {{ m.nome }} novamente">{{ icone(m.icone, 18) }}<b>{{ m.nome }}</b>{{ icone('mais', 14) }}</button>{% endfor %}
+  </div>
+  {% endif %}
   <h3 class="sub">Acrescentar uma área pronta</h3>
   <div class="grade-prontos prontos-compactos">
     {% for m in prontos %}

@@ -96,7 +96,7 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
                 "temas": [{**t, "previa": temas.previa(t)} for t in lista_temas],
                 "capa": temas.previa(tema),
                 "perfis": [p for p in preparo.perfis().values() if p.id in ("essencial", "criador", "negocio")],
-                "catalogo": list(preparo.catalogo().values()),
+                "catalogo": [m for m in preparo.catalogo().values() if m.id != "agenda"],
                 "cofres": await asyncio.to_thread(preparo.cofres_obsidian) if local else [],
                 "vault_atual": str(hospedeiro.vault) if hospedeiro.painel_app else "",
                 "pasta_nova": str(Path.home() / "Orquestra"),

@@ -125,6 +125,7 @@ def _porta_livre(porta: int) -> bool:
 
 
 def iniciar(args: argparse.Namespace) -> None:
+    from orquestra import processo
     import uvicorn
 
     from orquestra.hospedeiro import Hospedeiro
@@ -134,6 +135,7 @@ def iniciar(args: argparse.Namespace) -> None:
     except ConfigInvalida:
         print("A configuração local está inválida. Corrija config.yaml na pasta do Orquestra; abrindo as boas-vindas.")
         vault = None
+    processo.preparar_saida(vault)
     if vault is not None and not vault.is_dir():
         if getattr(args, "vault", None):
             sys.exit(f"A pasta do vault não existe: {vault}\nCrie com `orquestra criar` ou aponte outra com --vault.")

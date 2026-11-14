@@ -65,10 +65,27 @@ def test_destacar_nao_herda_terminal_e_nao_duplica_pedido(tmp_path, monkeypatch)
     assert opcoes["close_fds"] and opcoes["stdin"] == subprocess.DEVNULL
     assert opcoes["env"]["ORQUESTRA_EM_SEGUNDO_PLANO"] == "1"
     if sys.platform == "win32":
-        assert opcoes["creationflags"] & subprocess.DETACHED_PROCESS
+        assert opcoes["creationflags"] & subprocess.CREATE_NO_WINDOW
+        assert not opcoes["creationflags"] & subprocess.DETACHED_PROCESS
+        if Path(sys.executable).with_name("pythonw.exe").is_file():
+            assert Path(chamadas[0][0][0]).name == "pythonw.exe"
         assert opcoes["creationflags"] & subprocess.CREATE_BREAKAWAY_FROM_JOB
     else:
         assert opcoes["start_new_session"]
+
+
+def test_pythonw_prepara_saida_antes_do_servidor(tmp_path, monkeypatch):
+    fluxos = SimpleNamespace(stdout=None, stderr=None)
+    monkeypatch.setattr(processo, "sys", fluxos)
+    processo.preparar_saida(tmp_path / "cofre")
+    try:
+        assert fluxos.stdout is fluxos.stderr
+        fluxos.stdout.write("Registro de teste.\n")
+        assert not fluxos.stdout.isatty()
+        from orquestra.config import pasta_app
+        assert (pasta_app() / "painel.log").read_text(encoding="utf-8") == "Registro de teste.\n"
+    finally:
+        fluxos.stdout.close()
 
 
 def test_inicio_automatico_ja_ativo_tambem_libera_nova_abertura(tmp_path, monkeypatch):
@@ -109,7 +126,7 @@ def test_ativar_transfere_servidor_e_sobrevive_ao_terminal_original(tmp_path, mo
         pytest.skip("uv indisponível para a jornada real de terminal")
     home = tmp_path / "home"
     monkeypatch.setenv("ORQUESTRA_HOME", str(home))
-    cofre = preparo.preparar(tmp_path / "Cofre de teste", [], exemplos=False, com_backup=False).vault
+    cofre = preparo.preparar(tmp_path / "Cofre de teste com ação", [], exemplos=False, com_backup=False).vault
     ambiente = {**os.environ, "ORQUESTRA_HOME": str(home), "APPDATA": str(tmp_path / "appdata")}
     if sys.platform != "win32":
         ambiente["HOME"] = str(tmp_path / "perfil")
@@ -171,6 +188,28 @@ def test_ativar_transfere_servidor_e_sobrevive_ao_terminal_original(tmp_path, mo
             assert pedido("/api/local/painel")["pid"] == novo["pid"]
             assert pedido("/api/autostart")["segundo_plano"]
             assert pedido("/api/autostart")["ativo"]
+            if sys.platform == "win32":
+                # Simula o lançador executado pelo Windows ao entrar na conta,
+                # usando apenas APPDATA e vault descartáveis deste teste.
+                pedido("/api/local/encerrar", {})
+                for _ in range(100):
+                    if not processo.vivo(novo["pid"]):
+                        break
+                    time.sleep(.1)
+                assert not processo.vivo(novo["pid"])
+                lancador = tmp_path / "appdata/Microsoft/Windows/Start Menu/Programs/Startup/Orquestra.vbs"
+                wscript = Path(os.environ["SystemRoot"]) / "System32/wscript.exe"
+                subprocess.run([str(wscript), "//B", str(lancador)], env=ambiente, timeout=10, check=True,
+                               creationflags=subprocess.CREATE_NO_WINDOW)
+                reiniciado = None
+                for _ in range(150):
+                    try:
+                        reiniciado = pedido("/api/local/painel")
+                        break
+                    except OSError:
+                        time.sleep(.1)
+                assert reiniciado and reiniciado["segundo_plano"]
+                assert Path(reiniciado["vault"]) == cofre
         finally:
             try:
                 pedido("/api/local/encerrar", {})

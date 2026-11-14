@@ -34,6 +34,16 @@
 {% endmacro %}
 
 {# Campo de formulário gerado a partir do schema do módulo. #}
+{% macro seletor_contato(opcoes, atual='', marca='data-campo') %}
+<label class="campo"><span>Contato vinculado</span>
+  <select name="contato_id" {{ marca }}>
+    <option value="">Sem vínculo</option>
+    {% for c in opcoes %}<option value="{{ c.id }}"{% if c.id == atual %} selected{% endif %}>{{ c.titulo }}{% if c.email %} · {{ c.email }}{% endif %}</option>{% endfor %}
+    {% if atual and atual not in opcoes|map(attribute='id')|list %}<option value="{{ atual }}" selected>Contato indisponível — revisar vínculo</option>{% endif %}
+  </select>
+</label>
+{% endmacro %}
+
 {% macro entrada(campo, valor="", marca="data-campo") %}
 {% set id = (marca ~ '-' ~ campo.nome)|urlencode %}
 {% set dica = {'lista': 'Separe os itens por vírgulas. Exemplo: trabalho, pessoal.', 'link': 'Informe um endereço completo, começando por https:// ou http://.', 'imagem': 'Use o caminho da imagem no vault ou um endereço completo na web.'}.get(campo.tipo, '') %}

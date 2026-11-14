@@ -63,7 +63,7 @@
   function preparar(evento) {
     atual = evento; sujo = false; estado.textContent = ''; formulario.reset();
     $('#cal-editor-titulo').textContent = evento ? 'Editar evento' : 'Novo evento';
-    $('#cal-editor-ajuda').textContent = evento ? 'Salvo na nota de ' + evento.pasta + '. Alterações aqui são locais ao vault.' : 'Salvo como nota na pasta Agenda pessoal. A pasta é criada no primeiro evento.';
+    $('#cal-editor-ajuda').textContent = evento ? 'Salvo na nota de ' + evento.pasta + '. Alterações aqui são locais ao vault.' : 'Salvo como nota de compromisso no vault. A pasta é criada no primeiro evento.';
     $('#cal-titulo').value = evento ? evento.titulo : '';
     $('#cal-categoria').value = evento ? evento.categoria : 'Compromisso';
     $('#cal-tags').value = evento ? evento.tags.join(', ') : '';

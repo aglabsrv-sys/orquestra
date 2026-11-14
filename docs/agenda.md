@@ -25,7 +25,10 @@ marcar Incluir concluídos. Para preservar o desempenho, uma resposta mostra at�
 Novo evento abre um formulário compacto com título, início, término, dia inteiro,
 categoria, cor, descrição e tags. Clicar em um horário preenche esse horário. Os
 novos compromissos são notas em `agenda/itens/`; o módulo Agenda pessoal é criado
-no primeiro evento. Nenhuma pasta ou nota existente é movida.
+no primeiro evento. Nenhuma pasta ou nota existente é movida. Essa pasta serve
+de armazenamento: o acesso principal é a Agenda nativa, sem um segundo atalho
+Agenda pessoal no menu ou nos cartões iniciais. Os arquivos continuam acessíveis
+em Pastas; o catálogo oferece Contatos como área independente.
 
 Se já houver uma pasta `agenda` com outro formato, o painel não a sobrescreve.
 Use Pastas para entender/adaptar a estrutura antes de criar os novos compromissos.
