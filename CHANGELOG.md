@@ -7,7 +7,8 @@
 - Personalização com abas independentes e cabeçalho no fluxo da página;
   formulários novos mostram o essencial e oferecem Adicionar campo +.
 - Lixeira em linhas com ações por ícone, Entrada persistente à direita do dock
-  e arraste com mouse no carrossel da home.
+  e arraste com mouse no carrossel da home. Ao soltar no meio do movimento, o
+  carrossel desliza suavemente até o cartão, seguindo o embalo do gesto.
 - Áreas retiradas voltam ao mesmo catálogo compacto. Acesso Tailscale permite
   consultar, copiar e revogar endereços; todas as rotas consultam a permissão atual.
 - Catálogo distribuído reutiliza seus metadados enquanto os arquivos não mudam,

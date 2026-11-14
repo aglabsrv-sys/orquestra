@@ -103,6 +103,7 @@
     function posicao(i) { return slides[i].offsetLeft - (trilho.clientWidth - slides[i].offsetWidth) / 2; }
     function ir(i, suave) {
       i = Math.max(0, Math.min(slides.length - 1, i));
+      pararAssentamento();
       trilho.scrollTo({ left: posicao(i), behavior: suave === false ? "auto" : "smooth" });
     }
     function medir() {
@@ -115,11 +116,47 @@
     }
 
     trilho.addEventListener("scroll", function () { cancelAnimationFrame(quadro); quadro = requestAnimationFrame(medir); }, { passive: true });
-    var arrasto = null, bloquearCliqueAte = 0;
+    var arrasto = null, bloquearCliqueAte = 0, assentar = 0;
+    var poucoMovimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+    // Ao soltar, o trilho desliza com o embalo do gesto até o cartão de destino.
+    // O snap do CSS fica desligado durante a animação para não dar um tranco.
+    function pararAssentamento() {
+      if (!assentar) return;
+      cancelAnimationFrame(assentar); assentar = 0;
+      trilho.classList.remove("arrastando");
+    }
+    function deslizarPara(i) {
+      i = Math.max(0, Math.min(slides.length - 1, i));
+      var inicio = trilho.scrollLeft, fim = posicao(i), delta = fim - inicio;
+      if (Math.abs(delta) < 1 || (poucoMovimento && poucoMovimento.matches)) {
+        trilho.scrollLeft = fim; trilho.classList.remove("arrastando"); return;
+      }
+      var duracao = Math.min(560, Math.max(260, Math.abs(delta) * 0.6)), t0 = performance.now();
+      trilho.classList.add("arrastando");
+      (function passo(agora) {
+        var p = Math.min(1, (agora - t0) / duracao), suave = 1 - Math.pow(1 - p, 3);
+        trilho.scrollLeft = inicio + delta * suave;
+        if (p < 1) { assentar = requestAnimationFrame(passo); return; }
+        assentar = 0; trilho.scrollLeft = fim; trilho.classList.remove("arrastando");
+      })(t0);
+    }
+    function destinoDoGesto(velocidade) {
+      // Projeta onde o trilho pararia com o embalo e escolhe o cartão mais próximo dali.
+      var projetado = trilho.scrollLeft + velocidade * 180, melhor = atual, menor = Infinity;
+      slides.forEach(function (s, k) {
+        var d = Math.abs(posicao(k) - projetado);
+        if (d < menor) { menor = d; melhor = k; }
+      });
+      // Um gesto rápido sempre avança pelo menos um cartão no sentido do movimento.
+      if (Math.abs(velocidade) > 0.35 && melhor === arrasto.inicial) melhor += velocidade > 0 ? 1 : -1;
+      return melhor;
+    }
     trilho.addEventListener("dragstart", function (e) { e.preventDefault(); });
+    trilho.addEventListener("wheel", pararAssentamento, { passive: true });
     trilho.addEventListener("pointerdown", function (e) {
       if (e.pointerType !== "mouse" || e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      arrasto = {id:e.pointerId, x:e.clientX, scroll:trilho.scrollLeft, moveu:false};
+      pararAssentamento();
+      arrasto = {id:e.pointerId, x:e.clientX, scroll:trilho.scrollLeft, moveu:false, inicial:atual, amostras:[]};
     });
     trilho.addEventListener("pointermove", function (e) {
       if (!arrasto || e.pointerId !== arrasto.id) return;
@@ -127,13 +164,24 @@
       if (!arrasto.moveu && Math.abs(distancia) < 8) return;
       if (!arrasto.moveu) { arrasto.moveu = true; trilho.classList.add("arrastando"); trilho.setPointerCapture(e.pointerId); }
       e.preventDefault(); trilho.scrollLeft = arrasto.scroll - distancia;
+      var agora = performance.now();
+      arrasto.amostras.push({t:agora, s:trilho.scrollLeft});
+      while (arrasto.amostras.length > 2 && agora - arrasto.amostras[0].t > 100) arrasto.amostras.shift();
     });
+    function velocidadeDoGesto() {
+      // px/ms nos últimos ~100 ms; parar antes de soltar zera o embalo.
+      var a = arrasto.amostras, agora = performance.now();
+      if (a.length < 2 || agora - a[a.length - 1].t > 80) return 0;
+      var dt = a[a.length - 1].t - a[0].t;
+      return dt > 0 ? (a[a.length - 1].s - a[0].s) / dt : 0;
+    }
     function terminarArrasto(e) {
       if (!arrasto || e.pointerId !== arrasto.id) return;
-      var moveu = arrasto.moveu; arrasto = null;
       if (trilho.hasPointerCapture(e.pointerId)) trilho.releasePointerCapture(e.pointerId);
-      trilho.classList.remove("arrastando");
-      if (moveu) { bloquearCliqueAte = Date.now() + 300; medir(); ir(atual); }
+      if (!arrasto.moveu) { arrasto = null; return; }
+      var destino = destinoDoGesto(velocidadeDoGesto());
+      arrasto = null; bloquearCliqueAte = Date.now() + 300;
+      deslizarPara(destino);
     }
     trilho.addEventListener("pointerup", terminarArrasto);
     trilho.addEventListener("pointercancel", terminarArrasto);
