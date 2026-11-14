@@ -1263,12 +1263,21 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         except ValueError as erro:
             raise Recusado(str(erro)) from None
 
+    def estado_autostart():
+        from orquestra import autostart, processo
+        estado = autostart.resumo(painel.vault)
+        if hospedeiro is not None and hospedeiro.servidor is not None:
+            independente = processo.em_segundo_plano()
+            estado.update(segundo_plano=independente, precisa_aplicar=estado["ativo"] and not independente)
+            if estado["ativo"]:
+                estado["descricao"] = "Ativado. O painel está em segundo plano; você pode fechar o terminal." if independente else "Configurado para iniciar com o computador. Aplique agora para poder fechar o terminal."
+        return estado
+
     @app.get("/api/autostart")
     async def api_estado_autostart(request: Request):
         if erro := exigir_local(request):
             return erro
-        from orquestra import autostart
-        return await asyncio.to_thread(autostart.resumo, painel.vault)
+        return await asyncio.to_thread(estado_autostart)
 
     @app.post("/api/autostart")
     async def api_autostart(request: Request):
@@ -1281,7 +1290,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             raise Recusado("Escolha ativar, desativar ou status.")
         try:
             await asyncio.to_thread(autostart.executar, acao, painel.vault if acao in {"ativar", "status"} else None)
-            estado = await asyncio.to_thread(autostart.resumo, painel.vault)
+            estado = await asyncio.to_thread(estado_autostart)
+            if acao == "ativar" and estado.get("precisa_aplicar"):
+                from orquestra import processo
+                porta = hospedeiro.servidor.config.port
+                await asyncio.to_thread(processo.destacar, painel.vault, porta, os.getpid())
+                return {**estado, "reiniciando": True, "mensagem": "Aplicando em segundo plano…"}
             return {**estado, "mensagem": "Pronto"}
         except (ValueError, RuntimeError, subprocess.TimeoutExpired) as erro:
             raise Recusado(str(erro)) from None

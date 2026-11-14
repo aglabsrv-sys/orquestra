@@ -46,6 +46,17 @@ remoto e dados fictícios. Não acessa credenciais nem remotos do usuário.
 
 ## Evidências e limites
 
+O ajuste adicional de início automático retoma o servidor em processo independente
+do terminal/uv, preservando cofre e porta. A tela oferece Aplicar agora quando
+a entrada de login já existe e confirma o resultado depois de obter uma capacidade
+nova do servidor reiniciado. O teste real abre uv em um terminal descartável
+(console oculto no Windows), ativa pela API e confirma que o novo processo continua
+respondendo após o terminal original terminar. Arquivos de inicialização e logs
+desse teste ficam somente em diretórios temporários.
+
+- Inicialização, comandos, processo e APIs locais: **64 testes aprovados**,
+  incluindo a jornada de transferência real e a recusa de encerrar outra instância.
+
 - Suíte de armazenamento, backup e fronteiras de segurança: **190 passaram,
   1 ignorado** no Windows/Python 3.12.
 - Regressões finais de histórico, envio, troca de referência e restauração:

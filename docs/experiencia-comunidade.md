@@ -109,9 +109,17 @@ As variáveis não são exportadas globalmente para o sistema nem entregues a to
 os agentes. Coletores recebem somente as chaves declaradas em `requer`. Reinicie
 outras ferramentas que leem suas próprias configurações; o Orquestra não as altera.
 
-O terminal precisa ficar aberto. O início automático usa a sessão do usuário, não
-um serviço de sistema executado antes do login. O botão em Ajustes → Vault e o
-comando `autostart ativar` fazem a mesma configuração reversível.
+Sem início automático, o terminal mantém o painel aberto. Ao ativar em
+**Ajustes → Painel**, o Orquestra retoma o mesmo cofre e porta em um processo
+independente. Aguarde a confirmação de funcionamento em segundo plano antes de
+fechar o terminal. Se a configuração já estava ativa, use **Aplicar agora**.
+Novas aberturas pelo terminal também respeitam a configuração ativa. Desativar
+remove o início no próximo login; para encerrar a instância atual, use `orquestra parar`.
+
+O início automático usa a sessão do usuário, não um serviço de sistema executado
+antes do login. O comando `autostart ativar` também configura essa entrada
+reversível. Os registros do processo independente ficam em
+`~/.orquestra/painel.log`, fora do vault.
 
 `desinstalar`/`uninstall` orienta a remoção e, com `--confirmar`, desliga o início
 automático. Não apaga o programa enquanto ele está rodando, nem o vault, secrets

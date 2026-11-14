@@ -41,7 +41,7 @@
   <div class="bloco aplicativo-info">
     <div class="aplicativo-linha"><div><b>Iniciar com o computador</b><p class="campo-ajuda">Abra o Orquestra ao entrar na sua conta.</p></div><div class="linha-botoes sem-topo"><button class="botao pequeno" type="button" data-autostart="ativar" disabled>Ativar</button><button class="botao pequeno discreto" type="button" data-autostart="desativar" disabled>Desativar</button></div></div>
     <p id="autostart-estado" class="campo-ajuda" role="status" aria-live="polite">Conferindo inicialização…</p>
-    <details><summary>Informações do aplicativo</summary><p>Orquestra {{ versao }} · {{ n_notas }} notas</p><code>{{ vault }}</code><p class="campo-ajuda">O terminal mantém o painel e as automações funcionando. Para abrir novamente: <code>uv run --frozen orquestra</code>.</p></details>
+    <details><summary>Informações do aplicativo</summary><p>Orquestra {{ versao }} · {{ n_notas }} notas</p><code>{{ vault }}</code><p class="campo-ajuda">Ative o início automático para aplicar o funcionamento em segundo plano. Aguarde a confirmação antes de fechar o terminal. Para abrir novamente: <code>uv run --frozen orquestra</code>.</p></details>
   </div>
 
   {% endif %}

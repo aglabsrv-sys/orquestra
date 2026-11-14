@@ -68,8 +68,12 @@ Os caminhos entre aspas são exemplos. Os apelidos `init`, `diagnostico`, `stop`
 
 ## Encerrar e remover
 
-`Ctrl+C` no terminal em que o painel foi aberto o encerra. De qualquer outro
-terminal, use `uv run --frozen orquestra parar`. Para trocar de vault com o painel
+`Ctrl+C` encerra uma instância ligada ao terminal. Quando o início automático
+está ativo, o painel funciona em segundo plano; ao ativá-lo pela tela, aguarde
+a confirmação antes de fechar o terminal. Uma configuração antiga oferece
+**Aplicar agora**, sem precisar reiniciar o computador.
+Para encerrar a instância independente, use `uv run --frozen orquestra parar`.
+Para trocar de vault com o painel
 aberto: **Ajustes → Cofres → Abrir pasta como cofre**.
 
 Para remover: `uv run --frozen orquestra desinstalar --confirmar`, depois

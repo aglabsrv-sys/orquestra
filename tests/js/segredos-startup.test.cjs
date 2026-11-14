@@ -34,7 +34,7 @@ function ambiente(fonte,mapa={},responder=async()=>({})) {
     return {ok:dados?.ok!==false,json:async()=>dados};
   };
   if(mapa.botoes)document.querySelectorAll=s=>s==='[data-autostart]'?mapa.botoes:[];
-  runInNewContext(fonte,{document,window,fetch,console,Event,Set,Map,URL,location:{href:'http://localhost:8420/'}});
+  runInNewContext(fonte,{document,window,fetch,console,Event,Set,Map,URL,setTimeout:fn=>setImmediate(fn),location:{href:'http://localhost:8420/'}});
   return {pedidos,avisos,document,window};
 }
 
@@ -114,12 +114,12 @@ test('excluir o valor do YouTube mantém a referência nativa disponível',async
   const post=p.pedidos.find(e=>e.opcoes.method==='POST');assert.equal(JSON.parse(post.opcoes.body).valor,null);
 });
 
-function paginaStartup(inicial,responder) {
+function paginaStartup(inicial,responder,consultar) {
   const ativar=elemento('BUTTON'),desativar=elemento('BUTTON'),estado=elemento();
   ativar.dataset.autostart='ativar';desativar.dataset.autostart='desativar';ativar.disabled=desativar.disabled=true;
   let atual=inicial;
   const p=ambiente(refino,{'#autostart-estado':estado,botoes:[ativar,desativar]},async(url,opcoes)=>{
-    if(opcoes.method==='GET')return atual;
+    if(opcoes.method==='GET')return consultar ? consultar(atual) : atual;
     const resultado=await responder(JSON.parse(opcoes.body));if(resultado.ok!==false)atual=resultado;return resultado;
   });
   return {...p,ativar,desativar,estado};
@@ -139,4 +139,29 @@ test('falha ao alterar início automático relê estado e não anuncia sucesso',
   assert.equal(p.ativar.disabled,false);assert.equal(p.desativar.disabled,true);
   assert.equal(p.pedidos.filter(e=>e.url==='/api/autostart'&&e.opcoes.method==='GET').length,2);
   assert.deepEqual(p.avisos,[{texto:'Sem permissão.',tipo:'erro'}]);
+});
+
+test('início já configurado permite aplicar agora sem esperar outro login',async()=>{
+  const p=paginaStartup({ativo:true,presente:true,estado:'ativo',precisa_aplicar:true,descricao:'Aplique agora.'},async()=>({}));
+  await tick();
+  assert.equal(p.ativar.disabled,false);assert.equal(p.ativar.textContent,'Aplicar agora');
+});
+
+test('só confirma Pronto após reconectar ao processo independente com nova capacidade',async()=>{
+  const p=paginaStartup({ativo:false,presente:false,estado:'desligado',descricao:'Desativado.'},
+    async()=>({ativo:true,presente:true,estado:'ativo',reiniciando:true,precisa_aplicar:true}),
+    atual=>atual.reiniciando ? {ativo:true,presente:true,estado:'ativo',segundo_plano:true,descricao:'Pode fechar o terminal.'} : atual);
+  await tick();await p.ativar.onclick();
+  assert.deepEqual(p.avisos,[{texto:'Pronto',tipo:undefined}]);
+  assert.equal(p.estado.textContent,'Pode fechar o terminal.');
+  assert.ok(p.pedidos.filter(e=>e.url==='/api/local/capacidade').length>=2);
+});
+
+test('retomada não confirmada mantém Aplicar agora e não libera fechar o terminal',async()=>{
+  const p=paginaStartup({ativo:false,presente:false,estado:'desligado',descricao:'Desativado.'},
+    async()=>({ativo:true,presente:true,estado:'ativo',reiniciando:true,precisa_aplicar:true,descricao:'Aplique agora.'}));
+  await tick();await p.ativar.onclick();
+  assert.equal(p.avisos.length,1);assert.equal(p.avisos[0].tipo,'erro');
+  assert.match(p.avisos[0].texto,/Mantenha o terminal aberto/);
+  assert.equal(p.ativar.disabled,false);assert.equal(p.ativar.textContent,'Aplicar agora');
 });
