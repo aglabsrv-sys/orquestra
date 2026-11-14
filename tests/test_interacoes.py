@@ -78,3 +78,28 @@ def test_tailscale_sincroniza_painel_bootstrap_releitura_e_reinicio(vault):
         assert cliente.get("/boas-vindas", headers=headers_remotos).status_code == 403
         assert cliente.get("/api/tailscale/hosts", headers=headers).json()["urls"] == []
         assert cliente.get("/").status_code == 200
+
+
+def test_catalogo_reutiliza_metadados_sem_compartilhar_mutacoes(tmp_path, monkeypatch):
+    from orquestra import preparo
+    pasta = tmp_path / "catalogo" / "exemplo"
+    pasta.mkdir(parents=True)
+    arquivo = pasta / "_modulo.yaml"
+    arquivo.write_text("nome: Exemplo\nicone: pasta\n", encoding="utf-8")
+    monkeypatch.setattr(preparo, "CATALOGO", pasta.parent)
+    chamadas = []
+    ler = preparo.ler_yaml
+    def contar(caminho):
+        chamadas.append(caminho)
+        return ler(caminho)
+    monkeypatch.setattr(preparo, "ler_yaml", contar)
+    primeiro = preparo.catalogo()
+    primeiro["exemplo"].nome = "Mudança do chamador"
+    primeiro.clear()
+    assert preparo.catalogo()["exemplo"].nome == "Exemplo"
+    assert len(chamadas) == 1
+    arquivo.write_text("nome: Outro exemplo\nicone: pessoas\n", encoding="utf-8")
+    assert preparo.catalogo()["exemplo"].nome == "Outro exemplo"
+    assert len(chamadas) == 2
+    arquivo.unlink()
+    assert not preparo.catalogo()

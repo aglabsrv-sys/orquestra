@@ -10,6 +10,8 @@
   e arraste com mouse no carrossel da home.
 - Áreas retiradas voltam ao mesmo catálogo compacto. Acesso Tailscale permite
   consultar, copiar e revogar endereços; todas as rotas consultam a permissão atual.
+- Catálogo distribuído reutiliza seus metadados enquanto os arquivos não mudam,
+  evitando leituras YAML repetidas ao criar cofres e acrescentar módulos.
 
 - Contatos pessoais e profissionais com grupos, favoritos e busca; vínculo
   permanente com Clientes sem duplicar telefone, e-mail ou histórico comercial.
