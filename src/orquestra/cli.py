@@ -113,6 +113,10 @@ def adotar_vault(destino: Path, modulos: list[str], pastas: list[str], com_backu
 
 def _porta_livre(porta: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if os.name != "nt":
+            # Como o servidor asyncio no Unix: aceita TIME_WAIT de conexões
+            # encerradas, mas continua recusando uma porta com listener ativo.
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind(("127.0.0.1", porta))
             return True
@@ -160,6 +164,11 @@ def iniciar(args: argparse.Namespace) -> None:
             f"A porta {porta} está em uso por outro programa.\n"
             f"Mude 'porta' no orquestra.yaml ou use: orquestra iniciar --porta {porta + 1 if porta < 65535 else 8420}"
         )
+    from orquestra import autostart, processo
+    if vault and autostart.resumo(vault)["ativo"] and not processo.em_segundo_plano():
+        processo.destacar(vault, porta, 0)
+        print(f"Abrindo o painel em segundo plano em http://localhost:{porta}. Você pode fechar este terminal.")
+        return
     app = Hospedeiro(vault)
     url = f"http://localhost:{porta}"
     print(f"Orquestra {__version__}")

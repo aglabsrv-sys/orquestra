@@ -125,7 +125,8 @@ def criar_boas_vindas(hospedeiro: Any) -> FastAPI:
             hospedeiro.capacidade.exigir(request)
         except ValueError as erro:
             raise Recusa(str(erro), 403) from None
-        return JSONResponse({"app": "orquestra", "versao": __version__, "pid": os.getpid(),
+        from orquestra import processo
+        return JSONResponse({"app": "orquestra", "versao": __version__, "pid": os.getpid(), "segundo_plano": processo.em_segundo_plano(),
                              "vault": str(hospedeiro.vault or "")}, headers={"Cache-Control": "no-store"})
 
     @app.post("/api/local/encerrar")

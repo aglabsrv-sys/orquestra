@@ -20,6 +20,7 @@ import signal
 import subprocess
 import sys
 import time
+import threading
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -27,8 +28,46 @@ from typing import Any
 
 from orquestra import __version__
 from orquestra.config import pasta_app
+from orquestra.caminhos import eh_link
 
 ESPERA_ENCERRAR = 10.0
+_trava_destacar = threading.Lock()
+_retomada: tuple[tuple[str, int, int], int] | None = None
+
+
+def em_segundo_plano() -> bool:
+    if os.environ.get("ORQUESTRA_EM_SEGUNDO_PLANO") == "1":
+        return True
+    if sys.platform == "win32":
+        import ctypes
+        return not bool(ctypes.windll.kernel32.GetConsoleWindow())
+    return os.getsid(0) == os.getpid() and (sys.stdin is None or not sys.stdin.isatty())
+
+
+def destacar(vault: Path, porta: int, pid: int) -> int:
+    """Prepara a retomada independente; não encerra o painel nesta requisição."""
+    global _retomada
+    chave = (str(vault.resolve()), porta, pid)
+    with _trava_destacar:
+        if _retomada and _retomada[0] == chave and vivo(_retomada[1]):
+            return _retomada[1]
+        casa = pasta_app().resolve()
+        log = casa / "painel.log"
+        if casa == vault.resolve() or casa.is_relative_to(vault.resolve()) or eh_link(log):
+            raise RuntimeError("Os registros do painel em segundo plano precisam ficar fora do cofre e sem links.")
+        opcoes = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_BREAKAWAY_FROM_JOB} if sys.platform == "win32" else {"start_new_session": True}
+        ambiente = {**os.environ, "ORQUESTRA_EM_SEGUNDO_PLANO": "1"}
+        try:
+            casa.mkdir(parents=True, exist_ok=True)
+            descritor = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            with os.fdopen(descritor, "ab") as saida:
+                novo = subprocess.Popen([sys.executable, "-m", "orquestra.segundo_plano", str(vault.resolve()), str(porta), str(pid)],
+                                        stdin=subprocess.DEVNULL, stdout=saida, stderr=saida, close_fds=True,
+                                        env=ambiente, **opcoes)
+        except OSError as erro:
+            raise RuntimeError("A inicialização foi configurada, mas não consegui liberar o terminal agora. Mantenha-o aberto e tente Aplicar agora novamente.") from erro
+        _retomada = (chave, novo.pid)
+        return novo.pid
 
 
 def arquivo() -> Path:
@@ -185,7 +224,7 @@ def _forcar(pid: int) -> None:
         pass
 
 
-def parar(porta: int | None = None, forcar: bool = False) -> dict[str, Any] | None:
+def parar(porta: int | None = None, forcar: bool = False, *, pid_esperado: int | None = None) -> dict[str, Any] | None:
     """Encerra o painel em execução e devolve o que se sabia dele (vault e porta), ou None.
 
     Lança RuntimeError com uma explicação quando não consegue parar.
@@ -194,6 +233,8 @@ def parar(porta: int | None = None, forcar: bool = False) -> dict[str, Any] | No
     if info is None:
         return None
     pid = int(info.get("pid") or 0)
+    if pid_esperado is not None and pid != pid_esperado:
+        raise RuntimeError("O painel mudou durante a retomada; a outra instância foi preservada.")
     if info["respondendo"]:
         try:
             _pedir(info["porta"], "/api/local/encerrar", "POST", _token(info["porta"]))

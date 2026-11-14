@@ -401,6 +401,32 @@ def _conferir_sensiveis(vault: Path, ambiente: dict[str, str] | None = None) -> 
         raise ErroBackup("Há arquivos de segredo rastreados pelo Git. Remova-os do índice e revise o histórico antes de enviar: " + ", ".join(nomes[:4]))
 
 
+def _conferir_historico(vault: Path, revisao: str) -> None:
+    """Recusa nomes sensíveis em qualquer ancestral, inclusive ramos de merges.
+
+    O formato raw sem renomes separa metadados e caminhos por NUL. Assim não
+    perdemos nomes com espaços/quebras de linha nem arquivos já removidos.
+    A revisão deve ser o hash imutável que será herdado ou enviado.
+    """
+    resultado = _ok(git(vault, "log", "--format=", "--raw", "-z", "--no-abbrev", "--no-renames",
+                        "--full-history", "--root", "-m", "--no-ext-diff", "--no-textconv",
+                        "--no-show-signature", revisao, "--", texto=False), "conferir o histórico do backup")
+    registros = resultado.stdout.split(b"\0")
+    if registros[-1] != b"" or (len(registros) - 1) % 2:
+        raise ErroBackup("Não foi possível verificar todo o histórico do backup; o envio foi bloqueado.")
+    sensiveis = set()
+    for i in range(0, len(registros) - 1, 2):
+        if not re.fullmatch(rb":[0-7]{6} [0-7]{6} [a-f0-9]{40,64} [a-f0-9]{40,64} [A-Z]", registros[i]):
+            raise ErroBackup("O histórico do backup tem um formato inesperado; o envio foi bloqueado.")
+        nome = registros[i + 1].decode("utf-8", errors="replace")
+        if _sensivel(nome):
+            sensiveis.add(nome)
+    if sensiveis:
+        raise ErroBackup("O histórico do backup contém arquivos de segredo, mesmo que já removidos. "
+                         "O snapshot e o envio foram bloqueados; revise o histórico e rotacione segredos expostos. "
+                         "Nenhuma versão antiga foi apagada: " + ", ".join(sorted(sensiveis)[:4]))
+
+
 def _capturar_indice(vault: Path, ambiente: dict[str, str], pasta: Path) -> None:
     """Hash em lote de cópias imutáveis; nunca executa clean filters do vault."""
     resultado = _ok(git(vault, "ls-files", "--cached", "--others", "--exclude-standard", "-z", ambiente=ambiente),
@@ -494,6 +520,8 @@ def commit(vault: Path, mensagem: str | None = None) -> str:
         with trava(vault / ".git" / "orquestra-snapshots"):
             _conferir_sensiveis(vault)
             anterior = _referencia(vault, REF_BACKUP)
+            if anterior:
+                _conferir_historico(vault, anterior)
             base = anterior or _referencia(vault, "HEAD")
             pasta = pasta_local() / "indices-git"
             pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -537,13 +565,17 @@ def push(vault: Path) -> str:
         return "sem_remoto"
     try:
         _exigir_confianca(vault)
-        if not _referencia(vault, REF_BACKUP):
+        revisao = _referencia(vault, REF_BACKUP)
+        if not revisao:
             return "erro: Ainda não há snapshot local para enviar."
+        _conferir_historico(vault, revisao)
         remotos = _ok(git(vault, "remote"), "ler os remotos").stdout.splitlines()
         if not remotos:
             return "sem_remoto"
         remoto = "origin" if "origin" in remotos else remotos[0]
-        _ok(git(vault, "push", remoto, f"{REF_BACKUP}:refs/heads/{BRANCH_REMOTO}", tempo=180), "enviar o snapshot")
+        # A expressão não pode ser um nome de branch: até uma branch chamada
+        # com os mesmos 40/64 caracteres do hash não deve substituir o commit.
+        _ok(git(vault, "push", remoto, f"{revisao}^{{commit}}:refs/heads/{BRANCH_REMOTO}", tempo=180), "enviar o snapshot")
         return "feito"
     except (OSError, ValueError, subprocess.TimeoutExpired) as erro:
         return "erro: " + (str(erro) if isinstance(erro, ErroBackup) else "Não foi possível enviar o snapshot. Confira conexão e credenciais e tente novamente.")

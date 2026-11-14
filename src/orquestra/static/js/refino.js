@@ -95,7 +95,8 @@
       estadoAutostart = estado;
       $('#autostart-estado').textContent = estado.descricao;
       botoesAutostart.forEach(function (b) {
-        b.disabled = mudandoAutostart || estado.estado === 'indisponivel' || (b.dataset.autostart === 'ativar' ? estado.ativo : !estado.presente);
+        b.disabled = mudandoAutostart || estado.estado === 'indisponivel' || (b.dataset.autostart === 'ativar' ? estado.ativo && !estado.precisa_aplicar : !estado.presente);
+        if (b.dataset.autostart === 'ativar') b.textContent = estado.precisa_aplicar ? 'Aplicar agora' : 'Ativar';
         b.setAttribute('aria-pressed',String(b.dataset.autostart === 'ativar' ? estado.ativo : !estado.presente));
       });
     }
@@ -104,7 +105,23 @@
       b.onclick = async function () {
         if (mudandoAutostart || b.disabled) return;
         mudandoAutostart = true; botoesAutostart.forEach(function (alvo) { alvo.disabled = true; });
-        try { var resultado = await local('/api/autostart', {acao:b.dataset.autostart}); estadoAutostart = resultado; window.OrquestraInterface.avisar('Pronto'); }
+        try {
+          var resultado = await local('/api/autostart', {acao:b.dataset.autostart});
+          if (resultado.reiniciando) {
+            $('#autostart-estado').textContent = 'Aplicando em segundo plano… aguarde a confirmação antes de fechar o terminal.';
+            var confirmado = false;
+            for (var tentativa = 0; tentativa < 40; tentativa++) {
+              await new Promise(function (resolver) { setTimeout(resolver, 500); });
+              capacidadeLocal = null;
+              try {
+                resultado = await local('/api/autostart');
+                if (resultado.segundo_plano) { confirmado = true; break; }
+              } catch (_) { /* O servidor está trocando de processo. */ }
+            }
+            if (!confirmado) throw new Error('Não consegui confirmar o painel em segundo plano. Mantenha o terminal aberto e tente Aplicar agora novamente.');
+          }
+          estadoAutostart = resultado; window.OrquestraInterface.avisar('Pronto');
+        }
         catch (e) {
           window.OrquestraInterface.avisar(e.message,'erro');
           try { estadoAutostart = await local('/api/autostart'); }

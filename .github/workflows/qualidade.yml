@@ -36,6 +36,8 @@ jobs:
         with:
           node-version: '24'
       - run: uv sync --locked
+      - name: Retomada independente do terminal
+        run: uv run --frozen python -m pytest tests/test_segundo_plano.py -q
       - run: uv run --frozen ruff check src tests scripts .github/scripts
       - name: Links e imagens da documentação
         run: uv run --frozen python .github/scripts/verificar_docs.py

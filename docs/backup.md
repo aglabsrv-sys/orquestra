@@ -118,6 +118,21 @@ mescla regras de ignore com as existentes, exclui nomes comuns de segredos
 e recusa arquivos sensíveis já rastreados. Esse filtro não reconhece todo segredo
 possível dentro de uma nota ou anexo. Confira o que há no vault antes de enviar.
 
+Antes de continuar um histórico de snapshots e antes de enviá-lo, o Orquestra
+também confere todos os commits ancestrais, incluindo ramos incorporados por
+merge. Um `.env`, uma chave privada com extensão reconhecida ou outro nome
+sensível bloqueia a operação mesmo quando o arquivo já foi removido da versão
+mais recente. O envio usa o hash conferido, não uma referência que possa mudar
+entre a verificação e o envio. Falha ou resposta incompleta na conferência
+também bloqueia o envio.
+
+Se esse bloqueio aparecer, não basta acrescentar uma regra ao `.gitignore`.
+Preserve as cópias existentes, revise o histórico e rotacione credenciais que
+possam ter sido expostas. O Orquestra não apaga nem reescreve os snapshots
+antigos automaticamente. Arquivos `.env.example`, `.env.sample` e `.env.template`
+continuam permitidos como modelos sem valores reais; segredos colados em notas
+ou arquivos com outros nomes não são identificados por essa conferência.
+
 ## Conectar ao GitHub pelo painel
 
 Em **Ajustes > Backup**, o botão **Login no GitHub** inicia a autorização oficial
