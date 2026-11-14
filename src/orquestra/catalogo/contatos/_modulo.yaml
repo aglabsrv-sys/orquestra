@@ -1,0 +1,32 @@
+nome: Contatos
+descricao: Pessoas e organizações da sua vida pessoal e profissional.
+icone: pessoas
+ordem: 3
+campos:
+  tipo:
+    tipo: escolha
+    opcoes: [pessoa, organizacao]
+    padrao: pessoa
+  telefone:
+    tipo: texto
+  email:
+    tipo: texto
+    rotulo: E-mail
+  organizacao:
+    tipo: texto
+    rotulo: Organização
+  grupos:
+    tipo: lista
+    rotulo: Grupos
+  favorito:
+    tipo: booleano
+  origem:
+    tipo: escolha
+    opcoes: [humano, agente, coletor]
+    padrao: humano
+  tags:
+    tipo: lista
+visoes:
+  - tipo: tabela
+    nome: Lista
+    colunas: [titulo, tipo, telefone, email, organizacao, grupos, favorito]

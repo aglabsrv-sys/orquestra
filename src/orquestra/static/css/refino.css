@@ -14,8 +14,9 @@ select option, select optgroup { color: var(--texto); background: var(--superfic
 .campo input.upload-discreto { font-size:11px; max-width:100%; border:0; height:26px; min-height:26px; padding:0; background:transparent; color:transparent; }
 .upload-discreto::file-selector-button { border:1px solid var(--borda); border-radius:6px; color:var(--texto-suave); background:var(--superficie); padding:4px 8px; margin-right:6px; cursor:pointer; }
 .dialogo .campo:has(.campo-ajuda) { position: relative; }
+/* Dicas repetidas não mudam com o foco: isso deslocava o diálogo entre
+   mousedown e mouseup e fazia o primeiro clique no próximo controle se perder. */
 .dialogo .campo > .campo-ajuda { display: none; }
-.dialogo .campo:focus-within > .campo-ajuda,
 .dialogo .campo > .campo-ajuda[role=status] { display: block; }
 .topo .trilha { flex:1; }
 .topo .marca { min-width:0; max-width:32ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

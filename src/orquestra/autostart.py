@@ -109,7 +109,8 @@ def resumo(vault: Path) -> dict:
         resultado["presente"] = True
         if arquivo.stat().st_size > 64 * 1024:
             return {**resultado, "estado": "revisar", "descricao": "A configuração de inicialização precisa ser atualizada."}
-        argumentos = _argumentos_configurados(arquivo.read_text(encoding="utf-8-sig"))
+        bruto = arquivo.read_bytes()
+        argumentos = _argumentos_configurados(bruto.decode("utf-16" if bruto.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8-sig"))
         if not argumentos:
             return {**resultado, "estado": "revisar", "descricao": "A configuração de inicialização precisa ser atualizada."}
         if not Path(argumentos[0]).is_file():
@@ -118,6 +119,8 @@ def resumo(vault: Path) -> dict:
         resultado["neste_cofre"] = neste_cofre
         if not neste_cofre:
             return {**resultado, "estado": "outro_cofre", "descricao": "Ativado para outro cofre neste computador."}
+        if sys.platform == "win32" and not bruto.startswith((b"\xff\xfe", b"\xfe\xff")):
+            return {**resultado, "estado": "revisar", "descricao": "Atualize a inicialização para preservar caminhos acentuados e iniciar sem console."}
         if sys.platform == "darwin":
             r = subprocess.run(["launchctl", "list", ROTULO], capture_output=True, timeout=15)
             if r.returncode != 0:
@@ -143,7 +146,8 @@ def executar(acao: str, vault: Path | None = None) -> str:
             raise ValueError("Escolha um vault com --vault antes de ativar o início automático.")
         if resumo(vault)["ativo"]:
             return "O início automático já está ligado para este cofre."
-        conteudo = _conteudo(vault).encode("utf-8")
+        # WScript lê Unicode com BOM; UTF-8 sem BOM corrompe caminhos acentuados.
+        conteudo = _conteudo(vault).encode("utf-16" if sys.platform == "win32" else "utf-8")
         if sys.platform == "darwin" and arquivo.exists():
             carregado = subprocess.run(["launchctl", "list", ROTULO], capture_output=True, timeout=15)
             if carregado.returncode == 0:

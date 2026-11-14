@@ -1,5 +1,22 @@
 # Pastas e grafo
 
+## Arquivar e excluir notas
+
+**Arquivar** conserva a nota em `arquivo/` da sua área, para consulta futura.
+**Excluir**, no cabeçalho da nota, move o arquivo para a lixeira após confirmação.
+Anexos e notas relacionadas não são excluídos junto. Instruções de agentes,
+configurações e arquivos de `maquina/` são protegidos contra exclusão pelo painel.
+
+Abra **Pastas → Lixeira** para restaurar ou excluir definitivamente cada item.
+A restauração exige o caminho original livre e nunca substitui outra nota.
+A limpeza definitiva pede outra confirmação e confere a versão do arquivo.
+Não existe limpeza automática. As notas ficam em `.trash/orquestra/` do vault;
+essa pasta não aparece na busca, nas listas ou na agenda.
+
+Excluir definitivamente remove somente a cópia da lixeira. Backups e versões
+locais anteriores de recuperação são independentes e não são apagados por essa
+ação. A lixeira é um recurso do painel; não há ferramenta MCP de exclusão.
+
 O explorador apresenta os arquivos do vault em uma árvore lateral persistente.
 A primeira visualização é o grafo. Cada pasta lembra sua escolha explícita entre
 Notas e Grafo neste navegador. No grafo, cada ponto representa uma

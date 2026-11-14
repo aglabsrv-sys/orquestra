@@ -73,6 +73,10 @@ está ativo, o painel funciona em segundo plano; ao ativá-lo pela tela, aguarde
 a confirmação antes de fechar o terminal. Uma configuração antiga oferece
 **Aplicar agora**, sem precisar reiniciar o computador.
 Para encerrar a instância independente, use `uv run --frozen orquestra parar`.
+No Windows, a retomada usa `pythonw.exe` quando disponível e não abre outro
+console. O painel só confirma o segundo plano após verificar a ausência real
+de console. O início automático acontece ao entrar na conta do Windows, sem
+abrir o navegador; caminhos acentuados são preservados no lançador.
 Para trocar de vault com o painel
 aberto: **Ajustes → Cofres → Abrir pasta como cofre**.
 

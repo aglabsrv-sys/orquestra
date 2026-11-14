@@ -20,7 +20,7 @@ para:
 negocio:
   nome: Negócio ou freelancer
   descricao: Clientes, projetos, finanças e as tarefas do dia.
-  modulos: [tarefas, clientes, projetos, financas, entrada]
+  modulos: [tarefas, contatos, clientes, projetos, financas, entrada]
 
 estudos:
   nome: Estudos

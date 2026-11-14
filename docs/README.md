@@ -12,6 +12,7 @@ apresentam os recursos e as opções de configuração do painel.
 | Explorar notas, imagens, HTML e ligações | [Pastas e grafo](pastas.md) |
 | Encontrar links quebrados e anexos ausentes | [Links do cofre](vinculos.md) |
 | Criar ou ajustar uma pasta do painel | [Módulos](modulos.md) |
+| Organizar pessoas e acompanhar relações comerciais | [Contatos e clientes](contatos-e-clientes.md) |
 | Organizar compromissos e conectar um calendário | [Agenda](agenda.md) |
 | Usar o timer e acompanhar metas semanais | [Pomodoro e hábitos](foco-e-habitos.md) |
 | Escolher cores, fonte, cenas ou minha própria capa | [Temas e aparência](temas.md) |

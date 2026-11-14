@@ -7,12 +7,15 @@ para mexer.
 ## Três jeitos de ter um módulo, sem escrever YAML
 
 - **Acrescentar um pronto.** Em Ajustes > Pastas, escolha no catálogo:
-  Tarefas, Notas, Projetos, Áreas, Recursos, Arquivos, Clientes, Finanças, Estudos,
-  Conteúdo, Radar, Números, Entrada, Agenda e Hábitos e metas. Com ou sem notas de
-  exemplo, conforme o módulo. Agenda e Hábitos também preparam suas pastas ao
+  Tarefas, Notas, Projetos, Áreas, Recursos, Arquivos, Contatos, Clientes, Finanças,
+  Estudos, Conteúdo, Radar, Números, Entrada e Hábitos e metas. Com ou sem notas de
+  exemplo, conforme o módulo. Agenda e Hábitos preparam suas pastas ao
   criar o primeiro registro em suas próprias telas.
 - **Criar em branco.** No mesmo lugar: nome, ícone e se quer quadro. Depois ajuste
   os campos em Personalizar.
+- **Adicionar novamente.** Uma área retirada aparece em **Ajustes → Pastas →
+  Áreas retiradas do painel**, inclusive áreas criadas em branco. O botão religa
+  a configuração preservada, com as mesmas notas e personalizações.
 - **Mostrar uma pasta sua.** Em Pastas, "Mostrar no painel": o painel lê os campos
   que as notas já têm e escreve o `_modulo.yaml` por você. Veja
   [vault-existente.md](vault-existente.md).

@@ -8,7 +8,7 @@ que algo mudou. Se for apagado, basta reconstruir.
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from orquestra.caminhos import CaminhoInseguro, arquivos_do_vault, caminho_no_vault, ignorar
@@ -50,6 +50,8 @@ class Indice:
         self.arquivos: set[str] = set()  # existência de anexos, inclusive sem prévia
         self._textos_busca: dict[str, tuple[str, str]] = {}
         self.revisao = 0
+        self._resumos: dict[tuple, Resumo] = {}
+        self._estado_resumos = None
         self._assinaturas: dict[str, tuple[int, int, int]] = {}
         self._links: dict[str, set[str]] = {}
         self._zonas: dict[tuple[str, str], dict[str, Nota]] = {}
@@ -97,6 +99,7 @@ class Indice:
         self.modulos = dict(sorted(self.modulos.items(), key=lambda par: posicoes.get(par[0], len(ordem))))
 
     def _reindexar(self) -> None:
+        self._resumos.clear()
         self._links = {}
         self._zonas = {}
         self._textos_busca = {}
@@ -295,7 +298,7 @@ class Indice:
     def itens(self, modulo_id: str) -> list[Nota]:
         """Registros do módulo (pasta itens/), ordenados por data e depois por título."""
         modulo = self.modulos.get(modulo_id)
-        notas = self.notas_em(modulo_id, "itens")
+        notas = self.notas_em(modulo_id, "itens", ordenar=not (modulo and modulo.campo_data))
         if modulo and modulo.campo_data:
             notas.sort(key=lambda n: (data_de(n, modulo) or dt.date.max, n.titulo.lower()))
         return notas
@@ -311,6 +314,18 @@ class Indice:
 
     def resumo(self, modulo: Modulo, hoje: dt.date | None = None) -> Resumo:
         hoje = hoje or dt.date.today()
+        estado = (self.revisao, hoje)
+        if estado != self._estado_resumos:
+            self._resumos.clear()
+            self._estado_resumos = estado
+        chave = (modulo.id, modulo.campo_status, modulo.campo_data, tuple(modulo.concluidos), tuple(modulo.decidir), modulo.tem_status)
+        if chave in self._resumos:
+            return replace(self._resumos[chave])
+        resultado = self._calcular_resumo(modulo, hoje)
+        self._resumos[chave] = resultado
+        return replace(resultado)
+
+    def _calcular_resumo(self, modulo: Modulo, hoje: dt.date) -> Resumo:
         r = Resumo()
         if not modulo.tem_status:
             # Sem status não há "em aberto" nem "para hoje": é só uma coleção de notas.

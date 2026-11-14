@@ -25,6 +25,7 @@ uv run --frozen --group browser playwright install chromium
 uv run --frozen --group browser python scripts/verificar_interface.py
 uv run --frozen --group browser python scripts/verificar_grafo.py
 uv run --frozen --group browser python scripts/verificar_editor.py
+uv run --frozen --group browser python scripts/verificar_contatos.py
 ```
 
 Em Linux sem as bibliotecas necessárias, use `playwright install --with-deps chromium`

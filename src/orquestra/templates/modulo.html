@@ -47,6 +47,14 @@
 </nav>
 
 <div id="modulo-painel" tabindex="-1">
+{% if modulo.id == 'contatos' and aba not in ('humano', 'maquina') %}
+<form class="grade-campos bloco" method="get" action="/m/contatos">
+  <label class="campo"><span>Buscar contato</span><input type="search" name="q" value="{{ busca_contato }}" placeholder="Nome, telefone, e-mail ou organização"></label>
+  <label class="campo"><span>Grupo</span><select name="grupo"><option value="">Todos os grupos</option>{% for g in grupos_contatos %}<option value="{{ g }}"{% if g == grupo_contato %} selected{% endif %}>{{ g }}</option>{% endfor %}</select></label>
+  <label class="campo campo-linha"><span>Somente favoritos</span><input type="checkbox" name="favoritos" value="1"{% if favoritos_contato %} checked{% endif %}></label>
+  <div class="linha-botoes"><button class="botao" type="submit">Filtrar</button><a class="botao discreto" href="/m/contatos">Limpar</a></div>
+</form>
+{% endif %}
 {% if subpastas is defined and (subpastas or pasta_atual) %}
 <div class="modulo-pastas">
 {% if pasta_atual %}<div class="modulo-navegacao"><a class="botao pequeno discreto modulo-voltar" href="/m/{{ modulo.id|urlencode }}?aba={{ aba }}{% if trilha_pastas|length > 1 %}&amp;pasta={{ trilha_pastas[-2].caminho|urlencode }}{% endif %}" aria-label="Voltar à pasta anterior">{{ icone('seta_esq', 15) }} Voltar</a><span class="modulo-pasta-atual">{{ trilha_pastas[-1].nome }}</span></div>{% endif %}
@@ -211,6 +219,7 @@
     <label class="campo"><span>Título <span class="obrigatorio">Obrigatório</span></span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" placeholder="Dê um nome fácil de encontrar" autocomplete="off"></label>
     {% if aba != 'humano' %}
     <div class="grade-campos">
+      {% if modulo.id == 'clientes' %}{{ p.seletor_contato(opcoes_contatos, '', 'data-novo') }}{% endif %}
       {% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') %}
       {{ p.entrada(campo, padroes.get(campo.nome, ''), 'data-novo') }}
       {% endfor %}

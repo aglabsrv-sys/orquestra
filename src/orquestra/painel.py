@@ -16,6 +16,7 @@ from copy import deepcopy
 from functools import wraps
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from ruamel.yaml.comments import CommentedMap
 
@@ -266,6 +267,11 @@ class Painel:
                     meta.pop(nome, None)
                 else:
                     meta[nome] = convertido
+            if modulo_id == "contatos":
+                meta["contato_id"] = str(uuid4())
+            elif modulo_id == "clientes" and (campos or {}).get("contato_id"):
+                from orquestra.contatos import validar_vinculo
+                meta["contato_id"] = validar_vinculo(self, campos["contato_id"])
         if origem != "humano" or "origem" in modulo.campos or zona == "humano":
             meta["origem"] = origem
         meta["criado_em"] = dt.date.today()
@@ -313,6 +319,8 @@ class Painel:
         # Dentro de um módulo montado sobre a pasta, a nota nova já nasce com os campos dele.
         if modulo and self.indice.zona_de(pasta + "/x.md") == "itens":
             meta.update(padroes(modulo))
+            if modulo.id == "contatos":
+                meta["contato_id"] = str(uuid4())
         if origem != "humano" or (modulo and "origem" in modulo.campos):
             meta["origem"] = origem
         corpo = (corpo or "").replace("\r\n", "\n").strip()
@@ -360,6 +368,16 @@ class Painel:
         if titulo is not None and titulo.strip() and titulo.strip() != nota.titulo:
             nota.meta["titulo"] = titulo.strip()
         for nome, valor in (campos or {}).items():
+            if nome == "contato_id" and modulo and modulo.id == "contatos":
+                if valor != nota.campo("contato_id"):
+                    raise Recusado("O identificador do contato é permanente.")
+                continue
+            if nome == "contato_id" and modulo and modulo.id == "clientes":
+                from orquestra.contatos import validar_vinculo
+                # Permite salvar notas antigas cujo contato foi excluído, sem
+                # trocar silenciosamente o vínculo nem impedir a edição do texto.
+                if valor != nota.campo(nome):
+                    valor = validar_vinculo(self, valor)
             campo = modulo.campos.get(nome) if modulo else None
             if campo is not None:
                 convertido = converter(campo, valor)
@@ -377,6 +395,48 @@ class Painel:
         gravar_nota(nota, versao_esperada=nota.versao)
         self.apos_escrita(caminho, autor)
         return self.indice.notas.get(rel, nota)
+
+    @_sincronizado
+    def vincular_cliente(self, rel: str, versao: str) -> Nota:
+        """Cria o acompanhamento comercial sem copiar os dados da pessoa."""
+        from orquestra.contatos import validar_vinculo
+        nota = self.nota(rel)
+        if not self.indice.modulo_de(rel) or self.indice.modulo_de(rel).id != "contatos" or self.indice.zona_de(rel) != "itens":
+            raise Recusado("Escolha uma nota de Contatos.")
+        atual = ler_nota(self.caminho_seguro(rel), self.vault)
+        if atual.versao != versao:
+            raise Conflito("O contato mudou. Reabra antes de vincular.")
+        if atual.erro:
+            raise Recusado("Corrija o contato antes de vincular.")
+        if not atual.campo("contato_id"):
+            # Contatos criados pelo Obsidian também podem receber um vínculo.
+            atual.meta["contato_id"] = str(uuid4())
+            gravar_nota(atual, versao_esperada=versao)
+            self.apos_escrita(atual.caminho, "painel")
+        identificador = validar_vinculo(self, atual.campo("contato_id"))
+        for cliente in self.indice.itens("clientes"):
+            if cliente.campo("contato_id") == identificador:
+                return cliente
+        if "clientes" not in self.indice.modulos:
+            self.adicionar_modulo("clientes")
+        return self.criar_nota("clientes", nota.titulo, {"contato_id": identificador})
+
+    @_sincronizado
+    def excluir(self, rel: str, versao: str) -> str:
+        from orquestra import lixeira
+        nota = self.nota(rel)
+        if not lixeira.pode_excluir(self, rel):
+            raise Recusado("Somente notas pessoais, itens e notas arquivadas podem ser excluídos. Instruções e configurações são protegidas.")
+        identificador = lixeira.excluir(self.vault, rel, versao, nota.titulo)
+        self.apos_escrita(nota.caminho, "painel")
+        return identificador
+
+    @_sincronizado
+    def restaurar_excluida(self, identificador: str, versao: str) -> str:
+        from orquestra import lixeira
+        rel = lixeira.restaurar(self.vault, identificador, versao)
+        self.apos_escrita(self.caminho_seguro(rel), "painel")
+        return rel
 
     @_sincronizado
     def arquivar(self, rel: str, autor: str = "painel", versao: str | None = None) -> str:
@@ -432,6 +492,8 @@ class Painel:
                 meta[nome] = convertido
         titulo = titulo.strip() or original.titulo + " - rascunho"
         meta["titulo"] = titulo
+        if modulo and modulo.id == "contatos":
+            meta["contato_id"] = str(uuid4())
         destino = caminho_no_vault(self.vault, caminho_livre(original.caminho.parent, titulo))
         nota = Nota(destino, destino.relative_to(self.vault).as_posix(), meta=meta, corpo=corpo, vault=self.vault)
         gravar_nota(nota, criar=True)
@@ -449,6 +511,12 @@ class Painel:
             raise NaoEncontrado("Essa versão de recuperação não está disponível.") from None
         destino = caminho_no_vault(self.vault, caminho_livre(caminho.parent, titulo.strip() or caminho.stem + " - recuperada"))
         armazenamento.gravar_bytes(destino, bruto, criar=True, validar=lambda: caminho_no_vault(self.vault, destino))
+        modulo = self.indice.modulo_de(rel)
+        if modulo and modulo.id == "contatos":
+            copia = ler_nota(destino, self.vault)
+            if not copia.erro:
+                copia.meta["contato_id"] = str(uuid4())
+                gravar_nota(copia, versao_esperada=copia.versao)
         self.apos_escrita(destino, "painel")
         return ler_nota(destino, self.vault)
 

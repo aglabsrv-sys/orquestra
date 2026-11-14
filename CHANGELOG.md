@@ -2,6 +2,19 @@
 
 ## Em desenvolvimento
 
+- Contatos pessoais e profissionais com grupos, favoritos e busca; vínculo
+  permanente com Clientes sem duplicar telefone, e-mail ou histórico comercial.
+- Agenda nativa como acesso único aos compromissos, preservando a pasta de notas.
+- Inicialização no Windows sem console adicional, confirmação real de segundo
+  plano e suporte a caminhos acentuados no lançador automático.
+- Exclusão explícita de notas com lixeira, restauração sem sobrescrita e limpeza
+  definitiva por item, mantendo arquivos de instrução e configuração protegidos.
+- Áreas retiradas disponíveis para adicionar novamente nos ajustes, preservando
+  notas e personalizações. Contagens reutilizadas até uma alteração ou troca de
+  dia e listas com data sem ordenação duplicada.
+- Ajuda dos formulários sem deslocar os controles ao mudar o foco, preservando
+  o primeiro clique em caixas de seleção e botões.
+
 - Ativar o início automático aplica o funcionamento em segundo plano imediatamente, com reconexão e confirmação antes de liberar o fechamento do terminal; uma configuração já ativa oferece Aplicar agora.
 
 - Backup confere nomes sensíveis em todo o histórico dos snapshots, incluindo arquivos removidos e outros pais de merges; bloqueia a criação e o envio de uma cadeia contaminada e envia apenas o hash validado.

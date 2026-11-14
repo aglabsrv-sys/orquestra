@@ -337,6 +337,11 @@ def texto_selo(resumo, modulo: Modulo) -> str:
     return "tudo em dia" if resumo.total else "vazio"
 
 
+def agenda_nativa(modulo) -> bool:
+    """A pasta de eventos é acessada pelo calendário; pastas próprias continuam visíveis."""
+    return modulo.id == "agenda" and modulo.campo_data == "data" and {"hora", "data_fim", "hora_fim", "categoria", "cor"}.issubset(modulo.campos)
+
+
 def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
     """Itens do dock: início, módulos e as telas do sistema, com contadores."""
     modulos = []
@@ -344,6 +349,8 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
     for modulo in painel.indice.modulos.values():
         resumo = painel.indice.resumo(modulo, hoje)
         total_decidir += resumo.decidir
+        if agenda_nativa(modulo):
+            continue
         modulos.append(
             {
                 "id": modulo.id,

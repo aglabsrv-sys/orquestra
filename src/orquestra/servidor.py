@@ -29,7 +29,7 @@ from fastapi.templating import Jinja2Templates
 
 from orquestra import __version__, adocao, agenda, aparencia, armazenamento, automacoes, backup, coletores, confianca, contratos, diario, graficos, preparo, temas, segredos, vinculos
 from orquestra.caminhos import CaminhoInseguro, eh_link, ignorar
-from orquestra.config import ConfigInvalida
+from orquestra.config import ConfigInvalida, ler_yaml
 from orquestra import apresentacao as ap
 from orquestra.indice import EXT_MIDIA, data_de, deve_ignorar, espera_decisao
 from orquestra.modulos import ARQUIVO_DESLIGADO, TIPOS_DE_CAMPO, ValorInvalido, padroes, rotulo, validar
@@ -249,6 +249,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         for modulo in painel.indice.modulos.values():
             resumo = painel.indice.resumo(modulo, hoje)
             total_decidir += resumo.decidir
+            if ap.agenda_nativa(modulo):
+                continue
             slides.append(
                 {
                     "id": modulo.id,
@@ -305,6 +307,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.get("/m/{modulo_id}", response_class=HTMLResponse)
     @leitura
     def ver_modulo(request: Request, modulo_id: str, aba: str = "", pasta: str = ""):
+        if modulo_id == "agenda" and ap.agenda_nativa(painel.modulo(modulo_id)) and not aba and not pasta:
+            return RedirectResponse("/agenda", status_code=303)
         preferencia = "orq-visao-" + hashlib.sha256(f"{vault_id}:{modulo_id}".encode()).hexdigest()[:20]
         escolha_explicita = aba
         aba = aba or request.cookies.get(preferencia, "")
@@ -330,6 +334,9 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 k: (", ".join(map(str, v)) if isinstance(v, list) else simples(v)) for k, v in padroes(modulo).items()
             },
         }
+        if modulo_id == "clientes":
+            from orquestra.contatos import contexto as contexto_contatos
+            contexto.update(contexto_contatos(painel))
 
         if aba == "humano":
             notas, contexto["paginacao"] = paginar(request, painel.indice.notas_em(modulo.id, "humano"))
@@ -357,6 +364,10 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             contexto["arquivadas"] = len(painel.indice.notas_em(modulo.id, "arquivo"))
         else:
             itens = painel.indice.itens(modulo.id)
+            if modulo_id == "contatos":
+                from orquestra.contatos import filtrar
+                itens, filtros = filtrar(painel, itens, request.query_params)
+                contexto.update(filtros)
             # Pastas existentes conservam a hierarquia: abrir uma pasta mostra
             # suas notas diretas e seus filhos, em vez de achatar o vault.
             if modulo.itens_na_raiz:
@@ -470,6 +481,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.get("/n/{rel:path}", response_class=HTMLResponse)
     @leitura
     def ver_nota(request: Request, rel: str):
+        from orquestra import contatos, lixeira
         nota = painel.nota(rel)
         modulo = painel.indice.modulo_de(rel)
         zona = painel.indice.zona_de(rel) if modulo else ""
@@ -504,7 +516,15 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             imagem=imagem,
             campo_imagem=next((c.nome for c in modulo.campos.values() if c.tipo == "imagem"), "") if modulo else "",
             link_obsidian="obsidian://open?path=" + quote(str(nota.caminho), safe=""),
+            pode_excluir=lixeira.pode_excluir(painel, rel),
+            **(contatos.contexto(painel, nota) if modulo and modulo.id in ("contatos", "clientes") else {}),
         )
+
+    @app.get("/lixeira", response_class=HTMLResponse)
+    @leitura
+    def ver_lixeira(request: Request):
+        from orquestra import lixeira
+        return pagina(request, "lixeira.html", "pastas", excluidas=lixeira.listar(painel.vault))
 
     @app.get("/decidir", response_class=HTMLResponse)
     @leitura
@@ -917,8 +937,21 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 for m in painel.indice.modulos.values()
             ]
             contexto["prontos"] = [
-                m for m in preparo.catalogo().values() if m.id not in painel.indice.modulos and not (painel.vault / m.id).exists()
+                m for m in preparo.catalogo().values() if m.id != "agenda" and m.id not in painel.indice.modulos and not (painel.vault / m.id).exists()
             ]
+            contexto["retirados"] = []
+            for pasta in sorted(painel.vault.iterdir(), key=lambda p: p.name.casefold()):
+                if pasta.name in painel.indice.modulos or ignorar(pasta.name) or pasta.name.startswith("_") or eh_link(pasta) or not pasta.is_dir():
+                    continue
+                try:
+                    arquivo = painel.caminho_seguro(f"{pasta.name}/{ARQUIVO_DESLIGADO}")
+                    if not arquivo.is_file():
+                        continue
+                    dados = ler_yaml(arquivo)
+                    contexto["retirados"].append({"id": pasta.name, "nome": str(dados.get("nome") or pasta.name),
+                                                   "icone": str(dados.get("icone") or "pasta")})
+                except (OSError, ValueError):
+                    contexto["retirados"].append({"id": pasta.name, "nome": pasta.name, "icone": "pasta"})
         elif secao == "aparencia":
             contexto["cenas"] = temas.CENAS
             contexto["temas"] = [
@@ -996,6 +1029,38 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_arquivar(request: Request, rel: str):
         dados = await corpo_json(request, contratos.Versao)
         return {"rel": await asyncio.to_thread(painel.arquivar, rel, versao=dados["versao"])}
+
+    @app.post("/api/contatos/cliente/{rel:path}")
+    async def api_vincular_cliente(request: Request, rel: str):
+        dados = await corpo_json(request, contratos.Versao)
+        nota = await asyncio.to_thread(painel.vincular_cliente, rel, dados["versao"])
+        return {"rel": nota.rel, "url": ap.url_nota(nota.rel)}
+
+    @app.post("/api/excluir/{rel:path}")
+    async def api_excluir(request: Request, rel: str):
+        if erro := exigir_local(request):
+            return erro
+        dados = await corpo_json(request, contratos.Versao)
+        return {"id": await asyncio.to_thread(painel.excluir, rel, dados["versao"])}
+
+    @app.post("/api/lixeira/{identificador}/{acao}")
+    async def api_lixeira(request: Request, identificador: str, acao: str):
+        if erro := exigir_local(request):
+            return erro
+        from orquestra import lixeira
+        dados = await corpo_json(request, contratos.Versao)
+        try:
+            if acao == "restaurar":
+                rel = await asyncio.to_thread(painel.restaurar_excluida, identificador, dados["versao"])
+                return {"url": ap.url_nota(rel)}
+            if acao == "apagar":
+                await asyncio.to_thread(lixeira.apagar, painel.vault, identificador, dados["versao"])
+                return {"ok": True}
+        except FileNotFoundError:
+            raise NaoEncontrado("Este item não está mais na lixeira.") from None
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
+        raise Recusado("Escolha restaurar ou apagar.")
 
     @app.post("/api/notas/copia/{rel:path}")
     async def api_copia(request: Request, rel: str):
