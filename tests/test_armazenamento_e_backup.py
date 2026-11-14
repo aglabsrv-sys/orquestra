@@ -416,6 +416,126 @@ def test_git_push_real_para_bare_exige_novo_aceite_e_nao_altera_upstream(repo, t
     assert backup.git(repo, "config", "branch.main.remote").returncode == 1
 
 
+def _historico_com_segredo(repo, nome=".env"):
+    caminho = repo / nome
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    caminho.write_bytes(b"TOKEN=valor-sintetico-sem-acesso-externo\n")
+    assert backup.git(repo, "add", "-f", "--", nome).returncode == 0
+    assert backup.git(repo, "commit", "-m", "Segredo fictício antigo").returncode == 0
+    assert backup.git(repo, "rm", "--", nome).returncode == 0
+    assert backup.git(repo, "commit", "-m", "Remove segredo fictício").returncode == 0
+    return backup.git(repo, "rev-parse", "HEAD").stdout.strip()
+
+
+@pytest.mark.parametrize("nome", [".env", "sub/.env.production", ".ENV.local", "chave.pem", "segredos/secrets.json"])
+def test_historico_backup_contaminado_bloqueia_snapshot_e_envio(repo, tmp_path, nome):
+    revisao = _historico_com_segredo(repo, nome)
+    assert backup.git(repo, "update-ref", backup.REF_BACKUP, revisao).returncode == 0
+    remoto = tmp_path / "remoto.git"
+    assert subprocess.run(["git", "init", "--bare", str(remoto)], capture_output=True).returncode == 0
+    assert backup.git(repo, "remote", "add", "origin", str(remoto)).returncode == 0
+    aprovar(repo)
+    assert "histórico do backup contém arquivos de segredo" in backup.commit(repo)
+    assert "histórico do backup contém arquivos de segredo" in backup.push(repo)
+    assert backup.git(repo, "rev-parse", backup.REF_BACKUP).stdout.strip() == revisao
+    assert subprocess.run(["git", f"--git-dir={remoto}", "show-ref"], capture_output=True).returncode == 1
+
+
+def test_historico_do_usuario_nao_e_herdado_no_primeiro_snapshot(repo):
+    _historico_com_segredo(repo)
+    (repo / "nota.md").write_bytes(b"nota sem segredo")
+    aprovar(repo)
+    assert backup.commit(repo) == "feito"
+    assert len(backup.git(repo, "rev-list", backup.REF_BACKUP).stdout.splitlines()) == 1
+    backup._conferir_historico(repo, backup.git(repo, "rev-parse", backup.REF_BACKUP).stdout.strip())
+
+
+def test_historico_confere_tambem_o_segundo_pai_de_merge(repo):
+    (repo / "nota.md").write_bytes(b"raiz")
+    assert backup.git(repo, "add", ".").returncode == 0
+    assert backup.git(repo, "commit", "-m", "Raiz limpa").returncode == 0
+    raiz = backup.git(repo, "rev-parse", "HEAD").stdout.strip()
+    assert backup.git(repo, "checkout", "-b", "ramo-com-segredo").returncode == 0
+    outro = _historico_com_segredo(repo)
+    arvore = backup.git(repo, "rev-parse", raiz + "^{tree}").stdout.strip()
+    merge = backup.git(repo, "commit-tree", arvore, "-p", raiz, "-p", outro, "-m", "Merge com árvore limpa").stdout.strip()
+    assert backup.git(repo, "update-ref", backup.REF_BACKUP, merge).returncode == 0
+    aprovar(repo)
+    assert "histórico do backup contém arquivos de segredo" in backup.commit(repo)
+
+
+def test_envio_fixa_hash_validado_mesmo_se_referencia_mudar(repo, tmp_path, monkeypatch):
+    (repo / "nota.md").write_bytes(b"snapshot seguro")
+    aprovar(repo)
+    assert backup.commit(repo) == "feito"
+    seguro = backup.git(repo, "rev-parse", backup.REF_BACKUP).stdout.strip()
+    contaminado = _historico_com_segredo(repo)
+    remoto = tmp_path / "remoto.git"
+    assert subprocess.run(["git", "init", "--bare", str(remoto)], capture_output=True).returncode == 0
+    assert backup.git(repo, "remote", "add", "origin", str(remoto)).returncode == 0
+    aprovar(repo)
+    real = backup.git
+
+    def trocar_antes_de_enviar(vault, *args, **kwargs):
+        if args[0] == "push":
+            assert real(repo, "update-ref", backup.REF_BACKUP, contaminado).returncode == 0
+            assert real(repo, "update-ref", "refs/heads/" + seguro, contaminado).returncode == 0
+        return real(vault, *args, **kwargs)
+
+    monkeypatch.setattr(backup, "git", trocar_antes_de_enviar)
+    assert backup.push(repo) == "feito"
+    enviado = subprocess.run(["git", f"--git-dir={remoto}", "rev-parse", backup.BRANCH_REMOTO], capture_output=True)
+    assert enviado.returncode == 0 and enviado.stdout.strip().decode() == seguro
+
+
+@pytest.mark.parametrize("falha", ["git", "saida_incompleta"])
+def test_envio_nao_prossegue_se_historico_nao_puder_ser_verificado(repo, monkeypatch, falha):
+    (repo / "nota.md").write_bytes(b"snapshot seguro")
+    aprovar(repo)
+    assert backup.commit(repo) == "feito"
+    real = backup.git
+
+    def falhar(vault, *args, **kwargs):
+        assert args[0] != "push", "não deve iniciar envio depois de uma verificação incompleta"
+        if args[0] == "log":
+            return subprocess.CompletedProcess(args, 1 if falha == "git" else 0, stdout=b"incompleto", stderr=b"")
+        return real(vault, *args, **kwargs)
+
+    monkeypatch.setattr(backup, "git", falhar)
+    assert backup.push(repo).startswith("erro:")
+
+
+def test_envio_e_restauracao_em_clone_descartavel_preservam_bytes_sem_env(repo, tmp_path):
+    from orquestra import segredos
+
+    original = "\ufeffNota sintética com acentuação.\r\n".encode("utf-8")
+    (repo / "nota.md").write_bytes(original)
+    (repo / ".env").write_bytes(b"TOKEN=segredo-ficticio-do-vault\n")
+    (repo / ".env.example").write_bytes(b"TOKEN=\n")
+    segredos.salvar(repo, "CHAVE_SINTETICA", "segredo-ficticio-local")
+    aprovar(repo)
+    assert backup.commit(repo) == "feito"
+    primeira = backup.git(repo, "rev-parse", backup.REF_BACKUP).stdout.strip()
+    (repo / "nota.md").write_bytes(b"versao posterior")
+    assert backup.commit(repo) == "feito"
+    remoto = tmp_path / "remoto.git"
+    assert subprocess.run(["git", "init", "--bare", str(remoto)], capture_output=True).returncode == 0
+    assert backup.git(repo, "remote", "add", "origin", str(remoto)).returncode == 0
+    aprovar(repo)
+    assert backup.push(repo) == "feito"
+    clone = tmp_path / "restauracao"
+    assert subprocess.run(["git", "clone", "--branch", backup.BRANCH_REMOTO, str(remoto), str(clone)], capture_output=True).returncode == 0
+    assert (clone / "nota.md").read_bytes() == b"versao posterior"
+    assert not (clone / ".env").exists()
+    assert not (clone / ".env.local").exists()
+    assert (clone / ".env.example").read_bytes() == b"TOKEN=\n"
+    backup._conferir_historico(clone, "HEAD")
+    aprovar(clone)
+    copia = backup.restaurar_arquivo(clone, "nota.md", revisao=primeira, esperado=None, destino="recuperada.md")
+    assert copia.read_bytes() == original
+    assert (clone / "nota.md").read_bytes() == b"versao posterior"
+
+
 def _vincular_metadado(origem: Path, externo: Path) -> None:
     origem.parent.mkdir(parents=True, exist_ok=True)
     if origem.is_file():

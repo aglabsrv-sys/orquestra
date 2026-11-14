@@ -2,6 +2,8 @@
 
 ## Em desenvolvimento
 
+- Backup confere nomes sensíveis em todo o histórico dos snapshots, incluindo arquivos removidos e outros pais de merges; bloqueia a criação e o envio de uma cadeia contaminada e envia apenas o hash validado.
+
 - Grafo libera o nó após o arrasto para que as forças reajustem a posição; notas e leitor usam mais largura, inclusive para tabelas.
 - Ajuda dos segredos permanece ao lado do nome; adicionar áreas prontas ou em branco nos Ajustes atualiza a lista e o dock sem sair da página nem perder escolhas.
 - Removidas quatro capturas antigas de formulário, confirmação, erro e Decidir.
