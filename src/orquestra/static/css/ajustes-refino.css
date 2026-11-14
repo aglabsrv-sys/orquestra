@@ -115,8 +115,8 @@
 @media (max-width:360px) { .tema-mini-previa { width:104px; height:68px; } }
 
 /* Segredos: referência nativa e revelação somente do valor em digitação. */
-.segredo-identidade { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
-.segredo-identidade code { overflow-wrap:anywhere; }
+.segredos-lista li > div.segredo-identidade { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:nowrap; }
+.segredos-lista .segredo-identidade code { width:auto; min-width:0; flex:0 1 auto; overflow-wrap:anywhere; }
 .segredo-situacao { color:var(--texto-suave); font-size:.66rem; }
 .segredo-ajuda { position:relative; flex:none; font-size:.72rem; }
 .segredo-ajuda > summary { display:grid; place-items:center; width:23px; height:23px; border:1px solid var(--borda); border-radius:50%; cursor:pointer; list-style:none; color:var(--texto-suave); font-size:.68rem; line-height:1; }
@@ -131,4 +131,4 @@
 .segredo-olho-risco { display:none; }
 .segredo-olho[aria-pressed=true] .segredo-olho-risco { display:block; }
 #variaveis-form .campo > label { font-size:.76rem; color:var(--texto-suave); }
-@media(max-width:520px) { .segredo-dica { left:auto; right:-80px; } }
+@media(max-width:520px) { .segredos-lista li > div.segredo-identidade { position:relative; } .segredo-ajuda { position:static; } .segredo-dica { left:0; right:auto; } }

@@ -167,12 +167,21 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             page.keyboard.press("0")
             assert abs(no_visivel(page)["raio"] - raio_inicial) < .1
 
-            # Arrastar reposiciona a nota; apenas o clique abre o leitor.
+            # O nó fica preso ao ponteiro e volta às forças quando é solto.
+            page.emulate_media(reduced_motion="no-preference")
+            page.wait_for_timeout(1500)
+            # Escolher o primeiro nó conectado, sem confundir halo com o ponto.
             ponto = no_visivel(page)
             page.mouse.move(ponto["x"], ponto["y"])
             page.mouse.down()
             page.mouse.move(ponto["x"] + 45, ponto["y"] + 20, steps=5)
+            durante = page.locator("#grafo-canvas").evaluate("e=>e.__nosDesenhados[0]")
             page.mouse.up()
+            page.wait_for_timeout(450)
+            depois = page.locator("#grafo-canvas").evaluate("e=>e.__nosDesenhados[0]")
+            assert abs(depois["x"] - durante["x"]) + abs(depois["y"] - durante["y"]) > 1, "Nó continuou fixo após soltar"
+            page.wait_for_timeout(1700)
+            page.emulate_media(reduced_motion="reduce")
             expect(page.locator("#pasta-leitor")).to_be_hidden()
             page.locator("#grafo-centralizar").click()
             abrir_no(page)

@@ -2,6 +2,12 @@
 
 ## Em desenvolvimento
 
+- Grafo libera o nó após o arrasto para que as forças reajustem a posição; notas e leitor usam mais largura, inclusive para tabelas.
+- Ajuda dos segredos permanece ao lado do nome; adicionar áreas prontas ou em branco nos Ajustes atualiza a lista e o dock sem sair da página nem perder escolhas.
+- Removidas quatro capturas antigas de formulário, confirmação, erro e Decidir.
+
+- Busca prepara o texto no índice e limita os resultados sem perder a contagem; a janela cancela consultas ao trocar o termo ou fechar, descarta respostas antigas e permite tentar novamente após falhas.
+
 - Comandos `status`, `parar`, `reiniciar` e `atualizar`: encontram o painel mesmo quando ele foi aberto por outro terminal, por um agente ou pelo início automático, e o encerram com calma pelo endpoint local.
 - Busca flutuante por cima da página (botão de busca, Ctrl+K ou /), com resultados enquanto você digita, termo destacado e navegação pelo teclado; a página de busca completa continua disponível.
 - Grafo de pastas com forças ajustáveis como no Obsidian (centrípeta, repulsão, força e distância dos links), guardadas no navegador; o realce ao passar o mouse agora transiciona suavemente, e arrastar uma nota puxa as vizinhas.

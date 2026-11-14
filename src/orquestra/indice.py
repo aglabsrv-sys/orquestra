@@ -48,6 +48,7 @@ class Indice:
         self.notas: dict[str, Nota] = {}
         self.midias: dict[str, str] = {}  # nome do arquivo em minúsculas -> caminho relativo
         self.arquivos: set[str] = set()  # existência de anexos, inclusive sem prévia
+        self._textos_busca: dict[str, tuple[str, str]] = {}
         self.revisao = 0
         self._assinaturas: dict[str, tuple[int, int, int]] = {}
         self._links: dict[str, set[str]] = {}
@@ -98,16 +99,19 @@ class Indice:
     def _reindexar(self) -> None:
         self._links = {}
         self._zonas = {}
+        self._textos_busca = {}
         for rel, nota in self.notas.items():
             self._adicionar_consultas(rel, nota)
 
     def _adicionar_consultas(self, rel: str, nota: Nota) -> None:
+        self._textos_busca[rel] = (nota.titulo.lower(), nota.corpo.lower())
         for chave in {rel.lower().removesuffix(".md"), nota.caminho.stem.lower()}:
             self._links.setdefault(chave, set()).add(rel)
         chave_zona = (rel.split("/", 1)[0], self.zona_de(rel))
         self._zonas.setdefault(chave_zona, {})[rel] = nota
 
     def _remover_consultas(self, rel: str, nota: Nota) -> None:
+        self._textos_busca.pop(rel, None)
         for chave in {rel.lower().removesuffix(".md"), nota.caminho.stem.lower()}:
             encontrados = self._links.get(chave)
             if encontrados:
@@ -328,16 +332,29 @@ class Indice:
         return r
 
     def buscar(self, termo: str, limite: int | None = 60) -> list[Nota]:
+        return self.buscar_com_total(termo, limite)[0]
+
+    def buscar_com_total(self, termo: str, limite: int | None = 60) -> tuple[list[Nota], int]:
+        """Busca literal em memória; só guarda até o limite, preservando o total.
+
+        Títulos vêm antes do corpo. O texto em minúsculas é preparado na carga
+        e atualizado apenas para a nota alterada, sem I/O durante a consulta.
+        """
         termo = termo.lower().strip()
         if not termo:
-            return []
-        no_titulo, no_corpo = [], []
-        for nota in self.notas.values():
-            if termo in nota.titulo.lower():
-                no_titulo.append(nota)
-            elif termo in nota.corpo.lower():
-                no_corpo.append(nota)
-        return (no_titulo + no_corpo)[:limite]
+            return [], 0
+        no_titulo: list[Nota] = []
+        no_corpo: list[Nota] = []
+        total = 0
+        for rel, (titulo, corpo) in self._textos_busca.items():
+            no_titulo_encontrado = termo in titulo
+            if not no_titulo_encontrado and termo not in corpo:
+                continue
+            total += 1
+            grupo = no_titulo if no_titulo_encontrado else no_corpo
+            if limite is None or len(grupo) < max(0, limite):
+                grupo.append(self.notas[rel])
+        return (no_titulo + no_corpo)[:limite], total
 
     def referencias_de(self, rel: str):
         from orquestra.vinculos import referencias_da_nota

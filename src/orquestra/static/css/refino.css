@@ -117,7 +117,7 @@ body.bv { isolation:isolate; }
 .bv-rodape { padding-bottom:24px; }
 
 /* Documento central, com propriedades recolhidas em vez de uma coluna fixa. */
-.nota { display:block; max-width:1100px; }
+.nota { display:block; max-width:1400px; }
 .nota-cabecalho { display:flex; align-items:center; gap:20px; margin-bottom:16px; }
 .nota-cabecalho .nota-titulo { flex:1; min-width:0; width:100%; margin:0; font-size:clamp(23px,2.6vw,34px); padding:8px 0; }
 .nota-cabecalho .nota-acoes { flex:none; gap:5px; margin:0; }
@@ -134,7 +134,8 @@ body.bv { isolation:isolate; }
 .nota-propriedades > button { margin-top:10px; }
 .nota-anexo { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
 .nota-anexo .campo-ajuda { font-size:.7rem; }
-.nota .texto { min-height:240px; padding:8px 0; max-width:78ch; }
+.nota .texto { min-height:240px; padding:8px 0; max-width:none; min-width:0; }
+.nota .texto th, .nota .texto td { min-width:8rem; overflow-wrap:break-word; }
 .nota .editor { width:100%; min-height:50vh; }
 .nota-imagem { object-fit:contain; background:var(--superficie); max-height:440px; }
 .versoes-nota { max-width:1040px; margin-inline:auto; }

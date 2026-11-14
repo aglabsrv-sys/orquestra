@@ -177,6 +177,9 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     expect(page.locator('#grafo-estado')).to_contain_text('notas')
 
     page.goto(base + "/ajustes/variaveis", wait_until="domcontentloaded")
+    identidade = page.locator('[data-segredo="YOUTUBE_API_KEY"] .segredo-identidade')
+    expect(identidade.locator('code')).to_be_visible()
+    assert identidade.evaluate("e=>{const a=e.querySelector('code').getBoundingClientRect(),b=e.querySelector('summary').getBoundingClientRect();return Math.abs((a.top+a.height/2)-(b.top+b.height/2))<3;}")
     page.locator('#variavel-adicionar').click()
     page.locator('#variavel-nome').fill('DEMONSTRACAO_API_KEY')
     page.locator('#variavel-valor').fill('valor-ficticio-sem-acesso-externo')
@@ -185,6 +188,33 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     assert 'valor-ficticio-sem-acesso-externo' not in page.content()
 
     page.goto(base + "/ajustes/areas", wait_until="domcontentloaded")
+    page.locator('label:has(#pronto-exemplos)').click()
+    page.evaluate("window.__paginaAjustesPreservada = true")
+    page.locator('#abrir-area-branco').click()
+    page.locator('#area-nome').fill('Área de revisão')
+    page.locator('#area-salvar').click()
+    expect(page.locator('.area-linha').filter(has_text='Área de revisão')).to_be_visible()
+    expect(page.locator('#estado-config')).to_contain_text('Área adicionada')
+    assert page.url.endswith('/ajustes/areas')
+    assert page.evaluate('window.__paginaAjustesPreservada === true')
+    expect(page.locator('#pronto-exemplos')).to_be_checked()
+    id_novo = page.locator('.area-linha').filter(has_text='Área de revisão').get_attribute('data-modulo')
+    assert page.locator(f'.dock a[href="/m/{id_novo}"], #gaveta a[href="/m/{id_novo}"]').count() >= 1
+    # A ordenação por teclado também funciona para a linha recém-acrescentada.
+    nova = page.locator('.area-linha').filter(has_text='Área de revisão')
+    expect(nova.locator('[data-mover="1"]')).to_be_disabled()
+    pronto = page.locator('[data-pronto]').first
+    id_pronto = pronto.get_attribute('data-pronto')
+    pronto.click()
+    expect(page.locator(f'.area-linha[data-modulo="{id_pronto}"]')).to_be_visible()
+    expect(pronto).to_be_disabled()
+    assert page.url.endswith('/ajustes/areas')
+    assert page.evaluate('window.__paginaAjustesPreservada === true')
+    expect(page.locator('#pronto-exemplos')).to_be_checked()
+    assert (vault / id_pronto / '_modulo.yaml').is_file()
+    if capturas:
+        page.locator('#area-nome').evaluate('e=>e.blur()')
+        page.screenshot(path=str(capturas / 'pastas-sem-redirecionar.png'), full_page=True)
     primeira = page.locator('.area-linha').first.get_attribute('data-modulo')
     with page.expect_response(lambda r: r.url.endswith('/api/config') and r.request.method == 'POST') as reordenacao:
         page.locator('.area-linha').first.locator('[data-mover="1"]').click()
@@ -204,6 +234,17 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
             resposta = page.goto(base + rota, wait_until="domcontentloaded")
             assert resposta.status == 200, rota
             conferir_layout(page)
+            if rota == "/ajustes/variaveis":
+                ajuda = page.locator('[data-segredo="YOUTUBE_API_KEY"] summary')
+                expect(ajuda).to_be_visible()
+                ajuda.click()
+                dica = page.locator('.segredo-dica')
+                expect(dica).to_be_visible()
+                assert dica.evaluate('e=>{const b=e.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth;}'), "Ajuda sai da tela"
+                conferir_layout(page)
+                if capturas:
+                    page.screenshot(path=str(capturas / f'segredos-ajuda-{largura}.png'), full_page=True)
+                ajuda.click()
             nomes_captura = {"/": "inicio", "/m/tarefas": "tarefas", "/m/conteudo": "conteudo", "/ajustes": "ajustes", "/pastas": "pastas", "/m/tarefas/personalizar": "personalizar", "/decidir": "decidir", "/diario": "diario", "/ajustes/variaveis": "segredos", "/ajustes/aparencia": "aparencia", "/personalizar/diario": "personalizar-diario"}
             if capturas and largura != 320 and rota in nomes_captura:
                 page.wait_for_timeout(220)

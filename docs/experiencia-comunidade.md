@@ -124,3 +124,31 @@ fazendo requisições HTML, com transição curta onde o navegador suporta. Muda
 externas mostram aviso para atualizar; não recarregam a página automaticamente.
 Fonte, cantos, modo e destaque são aplicados sem recarregar. Salvar o nome ou o
 destino de captura preserva o formulário; a navegação seguinte reflete o novo estado.
+
+
+### Busca de notas
+
+Abra a busca pelo botão, por Ctrl+K ou por `/` fora de um campo de texto.
+A consulta procura um trecho literal no título e no corpo, sem distinguir
+maiúsculas e minúsculas, e prioriza os títulos. A janela mostra até 12 notas;
+a busca completa permite navegar por todos os resultados.
+
+O texto pesquisável fica em memória e acompanha as alterações das notas.
+Ao trocar o termo ou fechar a janela, a consulta anterior é cancelada.
+Se houver falha ou a resposta demorar mais de dez segundos, tente novamente
+ou use o link da busca completa.
+
+
+### Ajustes e leitura
+
+Em Ajustes > Pastas, acrescentar uma área pronta ou criar uma em branco mantém
+você na mesma página, com as escolhas abertas. A lista e o dock recebem a nova
+área; você pode abri-la quando terminar de configurar.
+
+No grafo de Pastas, o nó acompanha o ponteiro enquanto é arrastado. Ao soltar,
+as forças voltam a acomodar o nó e suas ligações; ele não fica preso na posição.
+A preferência de movimento reduzido continua respeitada.
+
+As notas aproveitam até 1.400 pixels de largura no desktop. No leitor dentro
+de Pastas, o texto ocupa a largura disponível; tabelas largas continuam com
+rolagem horizontal dentro da própria tabela em telas pequenas.

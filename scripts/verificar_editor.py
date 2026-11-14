@@ -29,9 +29,9 @@ Segundo parágrafo para editar.
 - [ ] Tarefa aberta
 - [x] Tarefa realizada
 
-| Coluna | Valor |
-| --- | --- |
-| A | 42 |
+| Coluna | Valor | Responsável | Prazo | Situação | Observações |
+| --- | --- | --- | --- | --- | --- |
+| A | 42 | Equipe de exemplo | Próxima semana | Em andamento | Texto para verificar a largura da leitura |
 
 ```js
 const literal = "[[não é link]]";
@@ -63,6 +63,10 @@ def jornadas(browser, base: str, vault: Path, capturas: Path | None) -> dict:
             page.locator("#arvore-pastas .arvore-nota").filter(has_text=nome).click()
             leitor = page.frame_locator("#leitor-frame")
             expect(leitor.locator("#ver table")).to_be_visible()
+            assert leitor.locator('#ver').evaluate("e=>e.clientWidth>document.documentElement.clientWidth*.85"), "Leitura não aproveita a largura"
+            assert leitor.locator('body').evaluate("()=>document.documentElement.scrollWidth<=innerWidth"), "Tabela cria rolagem fora da nota"
+            if largura < 600:
+                assert leitor.locator('#ver table').evaluate('e=>e.scrollWidth>e.clientWidth'), "Tabela estreita comprime o texto em vez de rolar"
             antigo = leitor.locator("#ver > p").filter(has_text="Segundo parágrafo")
             dimensoes = antigo.bounding_box()
             fonte = antigo.evaluate("e=>getComputedStyle(e).fontSize")

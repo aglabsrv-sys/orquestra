@@ -110,6 +110,7 @@
       catch (e) { antes.forEach(function (l) { lista.appendChild(l); }); erro(e); }
       finally { salvando=false; botoes(); }
     }
+    document.addEventListener("orquestra:areas-atualizadas", botoes);
     var antesArraste;
     lista.addEventListener('dragstart',function (e) { if (salvando || e.target.closest('a,button,input')) { e.preventDefault(); return; } movida=e.target.closest('.area-linha'); if (!movida) return; antesArraste=linhas(); movida.classList.add('arrastando'); e.dataTransfer.setData('text/plain',movida.dataset.modulo); e.dataTransfer.effectAllowed='move'; });
     lista.addEventListener('dragover',function (e) { if (!movida) return; e.preventDefault(); var l=e.target.closest('.area-linha'); if (!l || l===movida) return; var b=l.getBoundingClientRect(); lista.insertBefore(movida,e.clientY<b.top+b.height/2 ? l : l.nextSibling); });
