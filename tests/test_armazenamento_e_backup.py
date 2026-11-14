@@ -528,7 +528,7 @@ def test_envio_e_restauracao_em_clone_descartavel_preservam_bytes_sem_env(repo, 
     assert (clone / "nota.md").read_bytes() == b"versao posterior"
     assert not (clone / ".env").exists()
     assert not (clone / ".env.local").exists()
-    assert (clone / ".env.example").read_bytes() == b"TOKEN=\n"
+    assert (clone / ".env.example").read_text(encoding="utf-8") == "TOKEN=\n"
     backup._conferir_historico(clone, "HEAD")
     aprovar(clone)
     copia = backup.restaurar_arquivo(clone, "nota.md", revisao=primeira, esperado=None, destino="recuperada.md")
