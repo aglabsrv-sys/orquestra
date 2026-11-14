@@ -37,4 +37,4 @@ Jornadas no navegador: `scripts/verificar_interface.py` (veja `CONTRIBUTING.md`)
   demonstração com notas fictícias.
 - O painel escuta só em `127.0.0.1` e ações locais exigem a capacidade de
   `seguranca.py`. Não afrouxe isso para facilitar um teste.
-- Relatórios de revisão datados vão para `docs/historico/`, não para a raiz de `docs/`.
+- Não versione relatórios de auditoria, diários de implementação, registros de refinos ou contexto de conversas. A documentação do repositório deve descrever o produto; comunique resultados de revisões no chat e no PR.

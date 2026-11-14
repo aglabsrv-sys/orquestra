@@ -23,5 +23,3 @@ apresentam os recursos e as opções de configuração do painel.
 
 Para contribuir, veja [CONTRIBUTING](../CONTRIBUTING.md), [arquitetura](arquitetura.md)
 e a [política de segurança](../SECURITY.md). As mudanças ficam no [changelog](../CHANGELOG.md).
-
-Registros de revisões e testes de cada etapa ficam no [histórico técnico](historico/README.md).

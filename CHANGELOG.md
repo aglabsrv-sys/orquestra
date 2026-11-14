@@ -8,7 +8,6 @@
 
 - Grafo libera o nó após o arrasto para que as forças reajustem a posição; notas e leitor usam mais largura, inclusive para tabelas.
 - Ajuda dos segredos permanece ao lado do nome; adicionar áreas prontas ou em branco nos Ajustes atualiza a lista e o dock sem sair da página nem perder escolhas.
-- Removidas quatro capturas antigas de formulário, confirmação, erro e Decidir.
 
 - Busca prepara o texto no índice e limita os resultados sem perder a contagem; a janela cancela consultas ao trocar o termo ou fechar, descarta respostas antigas e permite tentar novamente após falhas.
 
@@ -25,7 +24,6 @@
 - Grafite com capas em tons pastel; Luz ganha modo escuro em preto absoluto; Brasa volta a ter a janela de poente como capa de assinatura.
 - Cópias intactas de versões antigas dos temas no vault passam a receber a versão nova; temas editados continuam com prioridade.
 - Cor de destaque ajustada ao modo mantendo o tom (sem ficar acinzentada), e amostras de Ajustes mostram a cor que de fato será usada.
-- README reescrito, guia de comandos separado, relatórios de revisão em `docs/historico/` e capturas renovadas, com uma por tema.
 - Explorador abre no grafo, mantém a árvore durante a leitura e oferece um canvas mais amplo com centralização pelas posições reais das notas.
 - Imagens relativas à nota e anexos soltos no vault são reconhecidos; templates HTML têm prévia isolada com estilos inline e imagens locais ou HTTPS.
 - Personalização compacta com salvar no topo, cena selecionada identificada e prévia imediata de cenas, imagens e vídeos.
@@ -34,7 +32,7 @@
 - Escolha de capas com prévias fiéis ao que será salvo, cenas do tema primeiro, nomes acentuados e miniaturas sem serrilhado; a prévia de cada tema mostra a sua cena de assinatura.
 - Coleção de imagens com uma ilustração por tema e um vídeo em loop.
 - Configuração inicial com miniaturas animadas e controles compactos de aparência; abertura mais alta, centralizada e sem sobrepor os formulários.
-- Sombra do carrossel mais sutil; documentação de uso reorganizada e capturas renovadas.
+- Sombra do carrossel mais sutil.
 
 - Agenda com visões de mês, semana, dia e lista, filtros e edição de eventos em notas Markdown.
 - Hábitos e metas semanais com marcação diária, histórico e preservação dos registros ao editar.
@@ -55,9 +53,3 @@
 - Política de segurança bloqueia JavaScript inline; scripts do painel continuam servidos localmente.
 - CSS e JavaScript usam hash de conteúdo na URL para renovar o cache mesmo em wheels com datas normalizadas.
 - Carrossel com controles de toque maiores e slides inativos fora do foco; rótulos ARIA, links no texto e contraste do tema claro revisados com axe-core.
-- Roteiro Chromium, benchmark sintético, capturas atualizadas e guia de lançamento.
-- CI sem execução duplicada entre branch e PR; scanner de segredos com a leitura de commits do PR declarada no próprio job.
-
-Evidências e limites em [Sincronização e revisão da comunidade](docs/historico/sincronizacao-comunidade-2026-11-12.md)
-e [Revisão de lançamento anterior](docs/historico/revisao-lancamento-2026-11-12.md).
-A versão publicada continua sendo a indicada pelo aplicativo; esta seção não representa um lançamento já feito.
