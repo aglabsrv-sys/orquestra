@@ -7,7 +7,7 @@
   if (!dialogo || typeof dialogo.showModal !== 'function') return;
   var campo = document.getElementById('bf-campo'), lista = document.getElementById('bf-lista');
   var estado = document.getElementById('bf-estado'), completa = document.getElementById('bf-completa');
-  var escolhido = -1, resultados = [], espera = 0, pedido = null, ultimo = null;
+  var escolhido = -1, resultados = [], espera = 0, pedido = null, ultimo = null, versao = 0;
 
   function digitando(e) {
     var alvo = e.target;
@@ -22,7 +22,7 @@
   }
   function fechar() { if (dialogo.open) dialogo.close(); }
   dialogo.addEventListener('close', function () {
-    if (pedido) pedido.abort();
+    cancelar();
     if (ultimo && ultimo.isConnected && typeof ultimo.focus === 'function') ultimo.focus({ preventScroll: true });
   });
   // Clicar fora da caixa fecha, como no Claude.
@@ -74,19 +74,33 @@
     completa.href = '/buscar?q=' + encodeURIComponent(termo);
     escolhido = -1; if (resultados.length) selecionar(0);
   }
+  function cancelar() {
+    versao += 1;
+    clearTimeout(espera);
+    if (pedido) pedido.abort();
+    pedido = null;
+  }
   function buscar() {
     var termo = campo.value.trim();
-    clearTimeout(espera);
-    if (!termo) { mostrarDica(); return; }
+    cancelar();
+    var atual = versao;
+    mostrarDica();
+    if (!termo || !dialogo.open) return;
+    completa.href = '/buscar?q=' + encodeURIComponent(termo);
+    estado.textContent = 'Buscando…';
     espera = setTimeout(function () {
-      if (pedido) pedido.abort();
-      pedido = new AbortController();
-      estado.textContent = 'Buscando…';
-      fetch('/api/buscar?q=' + encodeURIComponent(termo), { signal: pedido.signal, cache: 'no-store' })
+      if (atual !== versao || !dialogo.open) return;
+      var controlador = new AbortController();
+      pedido = controlador;
+      var prazo = setTimeout(function () { controlador.abort(); }, 10000);
+      fetch('/api/buscar?q=' + encodeURIComponent(termo), { signal: controlador.signal, cache: 'no-store' })
         .then(function (r) { if (!r.ok) throw new Error('A busca não respondeu.'); return r.json(); })
-        .then(function (dados) { if (campo.value.trim() === termo) desenhar(termo, dados); })
-        .catch(function (e) { if (e.name !== 'AbortError') estado.textContent = e.message; });
-    }, 120);
+        .then(function (dados) { if (atual === versao && dialogo.open) desenhar(termo, dados); })
+        .catch(function () {
+          if (atual === versao && dialogo.open) estado.textContent = 'Não foi possível buscar. Tente novamente ou abra a busca completa.';
+        })
+        .finally(function () { clearTimeout(prazo); if (pedido === controlador) pedido = null; });
+    }, 200);
   }
   campo.addEventListener('input', buscar);
   campo.addEventListener('keydown', function (e) {

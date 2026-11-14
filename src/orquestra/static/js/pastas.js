@@ -136,7 +136,7 @@
       // Notas sem links formam um grupo próximo, sem empurrar o miolo do grafo.
       var xs=conectados.map(function(n){return n.x;}),ys=conectados.map(function(n){return n.y;});
       var r=12*Math.sqrt(avulsos.length),cx=conectados.length?Math.max.apply(null,xs)+44+r:0,cy=conectados.length?(Math.min.apply(null,ys)+Math.max.apply(null,ys))/2:0;
-      avulsos.forEach(function(n,i){if(n.fixo)return;var a=i*2.399963,d=12*Math.sqrt(i+.5);n.x=cx+Math.cos(a)*d;n.y=cy+Math.sin(a)*d;n.vx=n.vy=0;});
+      avulsos.forEach(function(n,i){if(gesto&&gesto.no===n)return;var a=i*2.399963,d=12*Math.sqrt(i+.5);n.x=cx+Math.cos(a)*d;n.y=cy+Math.sin(a)*d;n.vx=n.vy=0;});
     }
     function simular(){
       // A repulsão só envolve notas conectadas, com amostra distribuída em cofres grandes.
@@ -146,7 +146,7 @@
         n.vx-=n.x*forcas.centro*.004;n.vy-=n.y*forcas.centro*.004;
       });
       linhas.forEach(function(l){var x=l[1].x-l[0].x,y=l[1].y-l[0].y,d=Math.sqrt(x*x+y*y)||1,f=(d-forcas.distancia)*.035*forcas.links;l[0].vx+=x/d*f;l[0].vy+=y/d*f;l[1].vx-=x/d*f;l[1].vy-=y/d*f;});
-      conectados.forEach(function(n){if(n.fixo||gesto&&gesto.no===n){n.vx=n.vy=0;return;}n.vx*=.68;n.vy*=.68;n.x+=Math.max(-5,Math.min(5,n.vx));n.y+=Math.max(-5,Math.min(5,n.vy));});iteracao++;
+      conectados.forEach(function(n){if(gesto&&gesto.no===n){n.vx=n.vy=0;return;}n.vx*=.68;n.vy*=.68;n.x+=Math.max(-5,Math.min(5,n.vx));n.y+=Math.max(-5,Math.min(5,n.vy));});iteracao++;
     }
     function passo(){quadro=0;if(encerrado||document.hidden||!canvas.isConnected||$('#pasta-grafo').hidden)return;simular();pintar();if(iteracao<200)quadro=requestAnimationFrame(passo);}
     function animar(){if(!quadro&&!reduz.matches&&iteracao<200&&!document.hidden)quadro=requestAnimationFrame(passo);}
@@ -171,7 +171,7 @@
       if(gesto&&ponteiros.size===2){var ps=Array.from(ponteiros.values()),dist=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y),cx=(ps[0].x+ps[1].x)/2,cy=(ps[0].y+ps[1].y)/2,b=canvas.getBoundingClientRect();if(gesto.dist)aproximar(dist/gesto.dist,cx-b.left,cy-b.top);dx+=cx-gesto.x;dy+=cy-gesto.y;gesto={dist:dist,x:cx,y:cy};arrastou=true;}
       else if(gesto){
         if(Math.hypot(e.clientX-gesto.inicioX,e.clientY-gesto.inicioY)>4)arrastou=true;
-        if(arrastou&&gesto.no){var p=ponto(e);gesto.no.x=p.x;gesto.no.y=p.y;gesto.no.vx=gesto.no.vy=0;gesto.no.fixo=true;sobre=gesto.no;aquecer(60);}
+        if(arrastou&&gesto.no){var p=ponto(e);gesto.no.x=p.x;gesto.no.y=p.y;gesto.no.vx=gesto.no.vy=0;sobre=gesto.no;aquecer(60);}
         else if(arrastou){dx+=e.clientX-gesto.x;dy+=e.clientY-gesto.y;}
         gesto.x=e.clientX;gesto.y=e.clientY;
       }else sobre=atingir(ponto(e));
@@ -180,7 +180,9 @@
     function soltar(e){
       var no=gesto&&gesto.no;ponteiros.delete(e.pointerId);
       if(e.type==='pointerup'&&!arrastou&&no)abrirArquivo(no.url,no.titulo);
-      gesto=null;arrastou=ponteiros.size>0;canvas.style.cursor='grab';pintar();
+      var reposicionado=!!no&&arrastou;
+      gesto=null;arrastou=ponteiros.size>0;canvas.style.cursor='grab';
+      if(reposicionado)aquecer(120);else pintar();
     }
     canvas.onpointerup=soltar;canvas.onpointercancel=soltar;canvas.onpointerleave=function(){if(!gesto){sobre=null;pintar();}};
     canvas.onwheel=function(e){e.preventDefault();var b=canvas.getBoundingClientRect();aproximar(Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.002),e.clientX-b.left,e.clientY-b.top);};
@@ -211,7 +213,7 @@
     function visibilidade(){if(document.hidden){cancelAnimationFrame(quadro);quadro=0;}else animar();}
     function movimento(){if(reduz.matches){cancelAnimationFrame(quadro);quadro=0;for(var i=iteracao;i<200;i++)simular();pintar();}else animar();}
     document.addEventListener('visibilitychange',visibilidade);reduz.addEventListener('change',movimento);
-    pararGrafo=function(){estadosGrafo.set(canvas,{zoom:zoom,dx:dx,dy:dy,iteracao:iteracao,posicoes:new Map(nos.map(function(n){return[n.id,{x:n.x,y:n.y,fixo:!!n.fixo}];}))});encerrado=true;cancelAnimationFrame(quadro);cancelAnimationFrame(hoverQuadro);observar.disconnect();document.removeEventListener('visibilitychange',visibilidade);reduz.removeEventListener('change',movimento);};
+    pararGrafo=function(){estadosGrafo.set(canvas,{zoom:zoom,dx:dx,dy:dy,iteracao:iteracao,posicoes:new Map(nos.map(function(n){return[n.id,{x:n.x,y:n.y}];}))});encerrado=true;cancelAnimationFrame(quadro);cancelAnimationFrame(hoverQuadro);observar.disconnect();document.removeEventListener('visibilitychange',visibilidade);reduz.removeEventListener('change',movimento);};
   }
   function abrirArquivo(url,titulo){
     pararGrafo();raiz.classList.add('lendo-nota');

@@ -646,7 +646,9 @@
 
   // ---------------------------------------------------------------- gaveta de áreas (dock compacto)
 
+  var desligarGaveta = function () {};
   function gaveta() {
+    desligarGaveta();
     var botao = $("#abrir-gaveta"), caixa = $("#gaveta");
     if (!botao || !caixa) return;
     function abrir(sim) {
@@ -655,11 +657,14 @@
       if (sim) { var primeiro = $(".gaveta-item.ativo", caixa) || $(".gaveta-item", caixa); if (primeiro) primeiro.focus(); }
     }
     botao.onclick = function (e) { e.stopPropagation(); abrir(caixa.hidden); };
-    document.addEventListener("click", function (e) { if (!caixa.hidden && !caixa.contains(e.target)) abrir(false); });
-    document.addEventListener("keydown", function (e) {
+    function clicarFora(e) { if (!caixa.hidden && !caixa.contains(e.target)) abrir(false); }
+    function teclaGaveta(e) {
       if (e.key === "Escape" && !caixa.hidden) { abrir(false); botao.focus(); }
       else if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey && !e.altKey && !digitando(e) && !$("dialog[open]") && botao.getClientRects().length) { e.preventDefault(); abrir(caixa.hidden); }
-    });
+    }
+    document.addEventListener("click", clicarFora);
+    document.addEventListener("keydown", teclaGaveta);
+    desligarGaveta = function () { document.removeEventListener("click", clicarFora); document.removeEventListener("keydown", teclaGaveta); };
   }
 
   // ---------------------------------------------------------------- pastas
@@ -1015,15 +1020,7 @@
     };
 
     // Áreas: acrescentar uma pronta, criar em branco, tirar do painel.
-    $$("[data-pronto]").forEach(function (b) {
-      b.onclick = function () {
-        b.disabled = true;
-        api("POST", "/api/modulos", { pronto: b.dataset.pronto, exemplos: $("#pronto-exemplos").checked })
-          .then(function (r) { location.href = r.url; })
-          .catch(function (erro) { b.disabled = false; mostrarErro(erro); });
-      };
-    });
-    $$("[data-desligar]").forEach(function (b) {
+    function ligarRetirada(b) {
       b.onclick = async function () {
         var linha = b.closest(".area-linha");
         if (!await confirmar({ titulo: "Retirar esta área do painel?", texto: "“" + $("b", linha).textContent + "” deixará de aparecer na navegação. A pasta e as notas continuam no vault; você pode adicionar a área novamente em Pastas.", confirmar: "Retirar do painel" })) return;
@@ -1032,7 +1029,49 @@
           .then(function () { location.reload(); })
           .catch(function (erro) { b.disabled = false; mostrarErro(erro); });
       };
+    }
+    async function atualizarAreas(r) {
+      // Atualiza só a área criada e a navegação, preservando campos e posição.
+      try {
+        var resposta = await fetch('/ajustes/areas', { cache: 'no-store', credentials: 'same-origin' });
+        if (!resposta.ok) throw new Error('Falha ao atualizar a lista de pastas.');
+        var doc = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+        if (doc.body.dataset.vaultId !== document.body.dataset.vaultId) throw new Error('O cofre mudou.');
+        var nova = $$('.area-linha', doc).find(function (l) { return l.dataset.modulo === r.id; });
+        var lista = $('#areas-ordem');
+        if (!nova || !lista || !$('.dock', doc)) throw new Error('Lista indisponível.');
+        if (!$$('.area-linha', lista).some(function (l) { return l.dataset.modulo === r.id; })) {
+          if (!$('.area-linha', lista)) { var vazio = $('p.suave', lista); if (vazio) vazio.remove(); }
+          var linha = document.importNode(nova, true);
+          lista.insertBefore(linha, lista.lastElementChild);
+          ligarRetirada($('[data-desligar]', linha));
+        }
+        $$('.dock, #gaveta').forEach(function (atual) {
+          var novo = $(atual.id ? '#' + atual.id : '.dock', doc);
+          if (novo) atual.replaceWith(document.importNode(novo, true)); else atual.remove();
+        });
+        if ($('#gaveta', doc) && !$('#gaveta')) $('.dock').after(document.importNode($('#gaveta', doc), true));
+        gaveta();
+        document.dispatchEvent(new CustomEvent('orquestra:areas-atualizadas'));
+        $('#estado-config').textContent = 'Área adicionada. Continue seus ajustes ou abra pelo dock.';
+        avisar('Área adicionada ao painel.');
+      } catch (erro) {
+        avisar('A área foi adicionada. Não foi possível atualizar a navegação; recarregue a página quando terminar seus ajustes.', 'erro');
+      }
+    }
+    $$("[data-pronto]").forEach(function (b) {
+      b.onclick = async function () {
+        b.disabled = true;
+        configPropriaAte = Date.now() + 10000;
+        try {
+          var r = await api("POST", "/api/modulos", { pronto: b.dataset.pronto, exemplos: $("#pronto-exemplos").checked });
+          b.setAttribute('aria-label', 'Área adicionada');
+          b.title = 'Área já adicionada ao painel';
+          await atualizarAreas(r);
+        } catch (erro) { b.disabled = false; mostrarErro(erro); }
+      };
     });
+    $$("[data-desligar]").forEach(ligarRetirada);
     var dArea = $("#dialogo-area"), abrirArea = $("#abrir-area-branco");
     if (dArea && abrirArea) {
       abrirArea.onclick = function () { dArea.showModal(); $("#area-nome").focus(); };
@@ -1040,8 +1079,15 @@
         e.preventDefault();
         var salvar = $("#area-salvar");
         salvar.disabled = true;
+        configPropriaAte = Date.now() + 10000;
         api("POST", "/api/modulos", { nome: $("#area-nome").value, icone: $("#area-icone").value, quadro: $("#area-quadro").checked })
-          .then(function (r) { location.href = r.url + "/personalizar"; })
+          .then(async function (r) {
+            dArea.close();
+            $("form", dArea).reset();
+            salvar.disabled = false;
+            await atualizarAreas(r);
+            abrirArea.focus({ preventScroll: true });
+          })
           .catch(function (erro) { salvar.disabled = false; mostrarErro(erro); });
       });
     }
