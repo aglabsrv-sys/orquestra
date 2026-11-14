@@ -88,6 +88,9 @@ def test_ativar_transfere_servidor_e_sobrevive_ao_terminal_original(tmp_path, mo
     monkeypatch.setenv("ORQUESTRA_HOME", str(home))
     cofre = preparo.preparar(tmp_path / "Cofre de teste", [], exemplos=False, com_backup=False).vault
     ambiente = {**os.environ, "ORQUESTRA_HOME": str(home), "APPDATA": str(tmp_path / "appdata")}
+    if sys.platform != "win32":
+        ambiente["HOME"] = str(tmp_path / "perfil")
+        (tmp_path / "perfil").mkdir()
     ambiente.pop("ORQUESTRA_EM_SEGUNDO_PLANO", None)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -131,7 +134,12 @@ def test_ativar_transfere_servidor_e_sobrevive_ao_terminal_original(tmp_path, mo
                 except OSError:
                     pass
                 time.sleep(.1)
-            assert novo, "O painel não retomou em segundo plano"
+            if not novo:
+                diagnostico = []
+                for arquivo in (home / "painel.log", tmp_path / "terminal.log"):
+                    if arquivo.exists():
+                        diagnostico.append(arquivo.name + ":\n" + arquivo.read_text(encoding="utf-8", errors="replace")[-6000:])
+                pytest.fail("O painel não retomou em segundo plano\n" + "\n".join(diagnostico))
             terminal.wait(timeout=10)
             assert pedido("/api/local/painel")["pid"] == novo["pid"]
             assert pedido("/api/autostart")["segundo_plano"]
