@@ -2,6 +2,17 @@
 
 ## Em desenvolvimento
 
+- Ajustes reaproveita cálculos de contraste e a interpretação de configurações
+  idênticas, mantendo a leitura dos arquivos e a detecção de alterações externas.
+  As prévias dos temas calculam apenas as paletas que serão exibidas.
+- Progresso em Hábitos substitui a preferência Lista ao clicar na aba, inclusive
+  ao voltar de Humano e Máquina.
+- Lista de Tarefas usa um círculo para concluir e reabrir, com visto e título
+  riscado. O quadro mostra concluídas de hoje por padrão e oferece Semana e Todas,
+  preservando notas e histórico. A data de conclusão acompanha a mudança de status.
+- Quadros atualizam a aparência de conclusão e os contadores após mover cartões.
+  Subpastas conservam a visão escolhida e as listas mantêm as colunas entre páginas.
+
 - Navegação em Pastas mantém o modo Notas ao entrar em subpastas, subir um nível
   e percorrer o histórico. Nomes de pastas na árvore abrem o conteúdo nesse modo;
   notas abrem no leitor e voltam à lista. A navegação do Grafo permanece igual.

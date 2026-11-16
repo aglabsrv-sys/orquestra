@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from typing import Any
 
 MODOS = ["escuro", "claro", "auto"]
@@ -181,9 +182,17 @@ def claras_a_partir_de(escuras: dict[str, str]) -> dict[str, str]:
 
 def cores(tema: dict[str, Any], aparencia: Aparencia, claro: bool) -> dict[str, str]:
     """As cores finais de um modo: as do tema, com o destaque escolhido pela pessoa por cima."""
-    base = dict(tema.get("cores_claras") or claras_a_partir_de(tema["cores"])) if claro else dict(tema["cores"])
-    if aparencia.destaque:
-        base["destaque"] = legivel_sobre(aparencia.destaque, base["fundo"])
+    return dict(_cores_calculadas(tuple(sorted(tema["cores"].items())),
+                                 tuple(sorted((tema.get("cores_claras") or {}).items())), aparencia.destaque, claro))
+
+
+@lru_cache(maxsize=256)
+def _cores_calculadas(escuras: tuple, claras: tuple, destaque: str, claro: bool) -> tuple:
+    # Chave pelo conteúdo: temas próprios e cores recém editadas não ficam antigos.
+    # A saída imutável impede uma prévia de contaminar outras páginas ou cofres.
+    base = (dict(claras) or claras_a_partir_de(dict(escuras))) if claro else dict(escuras)
+    if destaque:
+        base["destaque"] = legivel_sobre(destaque, base["fundo"])
     superficies = [base[chave] for chave in ("fundo", "superficie", "superficie_alta")]
     # As mesmas cores aparecem em links, ajuda, alertas e etiquetas. A paleta
     # precisa funcionar também nas superfícies elevadas e nos fundos tingidos,
@@ -200,7 +209,12 @@ def cores(tema: dict[str, Any], aparencia: Aparencia, claro: bool) -> dict[str, 
                 break
         base[chave] = ajustada
     base["sobre_destaque"] = texto_sobre(base["destaque"])
-    return base
+    return tuple(base.items())
+
+
+def paletas_do_tema(tema: dict[str, Any], aparencia: Aparencia) -> dict[str, dict[str, str]]:
+    sem = replace(aparencia, destaque="")
+    return {"escuro": cores(tema, sem, False), "claro": cores(tema, sem, True)}
 
 
 def _variaveis(paleta: dict[str, str], claro: bool) -> str:
@@ -240,10 +254,10 @@ def amostras(tema: dict[str, Any], aparencia: Aparencia) -> dict[str, Any]:
         com = replace(aparencia, destaque=cor)
         return {"escuro": cores(tema, com, False)["destaque"], "claro": cores(tema, com, True)["destaque"]}
 
-    sem = replace(aparencia, destaque="")
+    paletas = paletas_do_tema(tema, aparencia)
     return {
-        "tema": {"escuro": cores(tema, sem, False), "claro": cores(tema, sem, True)},
-        "do_tema": {"escuro": cores(tema, sem, False)["destaque"], "claro": cores(tema, sem, True)["destaque"]},
+        "tema": paletas,
+        "do_tema": {modo: paleta["destaque"] for modo, paleta in paletas.items()},
         "sugestoes": [{"valor": cor, **par(cor)} for cor in SUGESTOES],
         "atual": par(aparencia.destaque) if aparencia.destaque else None,
     }

@@ -275,6 +275,9 @@ class Painel:
         if origem != "humano" or "origem" in modulo.campos or zona == "humano":
             meta["origem"] = origem
         meta["criado_em"] = dt.date.today()
+        if zona == "itens":
+            from orquestra.tarefas import registrar_conclusao
+            registrar_conclusao(modulo, meta)
 
         corpo = (corpo or "").replace("\r\n", "\n").strip()
         pasta = caminho_no_vault(self.vault, modulo.pasta_itens if zona == "itens" else modulo.pasta / zona)
@@ -365,6 +368,7 @@ class Painel:
         modulo = self.indice.modulo_de(rel)
         if modulo:
             modulo = self._modulo_para_escrita(modulo)
+        status_anterior = nota.campo(modulo.campo_status) if modulo else None
         if titulo is not None and titulo.strip() and titulo.strip() != nota.titulo:
             nota.meta["titulo"] = titulo.strip()
         for nome, valor in (campos or {}).items():
@@ -391,6 +395,10 @@ class Painel:
                 nota.meta[nome] = convertido
         if corpo is not None:
             nota.corpo = corpo.replace("\r\n", "\n")
+
+        if modulo and self.indice.zona_de(rel) == "itens":
+            from orquestra.tarefas import registrar_conclusao
+            registrar_conclusao(modulo, nota.meta, status_anterior)
 
         gravar_nota(nota, versao_esperada=nota.versao)
         self.apos_escrita(caminho, autor)

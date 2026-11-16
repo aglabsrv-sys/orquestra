@@ -18,6 +18,17 @@ def test_home_limpa_e_foco_proprio(cliente):
     assert '<select' not in foco.text
 
 
+def test_progresso_substitui_preferencia_lista_e_funciona_apos_humano(cliente):
+    cliente.post('/api/habitos', json={'titulo': 'Hábito fictício', 'meta_semanal': 3})
+    lista = cliente.get('/m/habitos?aba=lista')
+    assert lista.context['aba'] == 'lista'
+    assert cliente.get('/m/habitos').context['aba'] == 'lista'
+    assert 'href="/m/habitos?aba=progresso"' in lista.text
+    assert 'href="/m/habitos?aba=progresso"' in cliente.get('/m/habitos?aba=humano').text
+    assert cliente.get('/m/habitos?aba=progresso').context['aba'] == 'progresso'
+    assert cliente.get('/m/habitos').context['aba'] == 'progresso'
+
+
 def test_habitos_e_modulo_com_pasta_e_marcacoes_vazias(cliente,vault):
     assert cliente.get('/habitos',follow_redirects=False).headers['location']=='/m/habitos'
     assert cliente.get('/m/habitos').status_code==200

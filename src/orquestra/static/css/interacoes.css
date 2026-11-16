@@ -18,6 +18,22 @@
 .lote-barra[hidden] { display:flex; visibility:hidden; pointer-events:none; }
 .tabela .col-selecao { width:44px; padding:10px; text-align:center; }
 .tabela tr.selecionada { background:color-mix(in srgb,var(--destaque) 8%,transparent); }
+.tarefa-conclusao { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; padding:0; border:0; background:transparent; color:var(--texto-suave); cursor:pointer; position:relative; }
+.tarefa-conclusao::before { content:""; position:absolute; width:22px; height:22px; border:2px solid currentColor; border-radius:50%; }
+.tarefa-conclusao .icone { visibility:hidden; position:relative; }
+.tarefa-conclusao[aria-pressed=true] { color:var(--sobre-destaque); }
+.tarefa-conclusao[aria-pressed=true]::before { background:var(--destaque); border-color:var(--destaque); }
+.tarefa-conclusao[aria-pressed=true] .icone { visibility:visible; }
+.tarefa-conclusao:focus-visible { outline:2px solid var(--destaque); outline-offset:2px; border-radius:50%; }
+.tarefa-conclusao:disabled { cursor:wait; }
+.tabela tr.concluido:has(.tarefa-conclusao) td { opacity:1; }
+.tabela tr.concluido:has(.tarefa-conclusao) .cel-titulo a { color:var(--texto-suave); text-decoration:line-through; }
+.tarefas-recorte { margin:14px var(--margem); }
+.tarefas-periodos { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:.8rem; }
+.tarefas-periodos > span { color:var(--texto-suave); margin-right:8px; }
+.tarefas-periodos a { padding:7px 12px; border-radius:calc(8px * var(--cantos,1)); }
+.tarefas-periodos a[aria-current] { color:var(--destaque); background:color-mix(in srgb,var(--destaque) 12%,transparent); }
+.tarefas-recorte .campo-ajuda { margin:8px 0 0; }
 .lote-resultado { white-space:pre-line; font-size:.8rem; }
 .tailscale-linha { display:flex; gap:8px; align-items:center; border-bottom:1px solid var(--borda); padding:12px 0; }
 .tailscale-linha a { min-width:0; flex:1; overflow-wrap:anywhere; font-size:.8rem; }

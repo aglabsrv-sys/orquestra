@@ -75,6 +75,67 @@ def jornadas(browser, base, vault, capturas):
         expect(page.locator('.habito-descricao').last).not_to_be_visible()
         page.goto(base + '/m/habitos?aba=lista')
         expect(page.locator('.habito-descricao').last).to_be_visible()
+        page.get_by_role('link', name='Progresso', exact=True).click()
+        expect(page.locator('.habitos-grade')).not_to_have_class('habitos-grade habitos-lista')
+        expect(page.get_by_role('link', name='Progresso', exact=True)).to_have_attribute('aria-current', 'page')
+        page.goto(base + '/m/habitos')
+        expect(page.get_by_role('link', name='Progresso', exact=True)).to_have_attribute('aria-current', 'page')
+
+        # Concluir/reabrir percorre navegador, API, nota e contadores, sem selecionar lote.
+        page.goto(base + '/m/tarefas?aba=v1')
+        expect(page.locator('[data-lote-item]')).to_have_count(0)
+        tarefa = page.get_by_role('button', name='Concluir Teste tarefas ' + str(largura), exact=True)
+        rel = tarefa.get_attribute('data-rel')
+        abertos_antes = int(page.locator('.cab-numeros b').first.inner_text())
+        tarefa.focus()
+        with page.expect_response(lambda r: '/api/notas/' in r.url and r.request.method == 'PUT') as envio:
+            page.keyboard.press('Space')
+        assert envio.value.status == 200
+        reabrir = page.get_by_role('button', name='Reabrir Teste tarefas ' + str(largura), exact=True)
+        expect(reabrir).to_have_attribute('aria-pressed', 'true')
+        expect(page.locator('.cab-numeros b').first).to_have_text(str(abertos_antes - 1))
+        from orquestra.notas import ler_nota
+        assert ler_nota(vault / rel, vault).campo('concluido_em')
+        if capturas:
+            page.screenshot(path=str(capturas / f'tarefas-conclusao-{largura}.png'))
+        reabrir.click()
+        expect(page.get_by_role('button', name='Concluir Teste tarefas ' + str(largura), exact=True)).to_have_attribute('aria-pressed', 'false')
+        expect(page.locator('.cab-numeros b').first).to_have_text(str(abertos_antes))
+        assert not ler_nota(vault / rel, vault).campo('concluido_em')
+
+        # Uma resposta de conflito não preenche o círculo nem altera a linha.
+        versao = envio.value.json()['versao']
+        atual = ler_nota(vault / rel, vault)
+        assert atual.versao != versao
+        resposta = page.request.put(base + '/api/notas/' + rel, data={'versao': atual.versao, 'corpo': 'Texto atualizado em outra aba.'})
+        assert resposta.ok
+        page.get_by_role('button', name='Concluir Teste tarefas ' + str(largura), exact=True).click()
+        expect(page.locator('.aviso.erro')).to_be_visible()
+        expect(page.get_by_role('button', name='Concluir Teste tarefas ' + str(largura), exact=True)).to_have_attribute('aria-pressed', 'false')
+        assert not ler_nota(vault / rel, vault).campo('concluido_em')
+        page.reload()
+
+        # Quadro: concluir acompanha a aparência; recortes mantêm a mesma capa.
+        page.locator('.abas .aba[href="?aba=v0"]').click()
+        page.evaluate("window.__capaTarefas=document.querySelector('.cab-modulo canvas')")
+        cartao = page.locator('.cartao').filter(has=page.get_by_role('link', name='Teste tarefas ' + str(largura), exact=True))
+        cartao.locator('.mudar-status').select_option('feito')
+        expect(cartao).to_have_class('cartao concluido')
+        expect(page.locator('.coluna.concluida .cartao').filter(has=page.get_by_role('link', name='Teste tarefas ' + str(largura), exact=True))).to_be_visible()
+        concluida = ler_nota(vault / rel, vault)
+        resposta = page.request.put(base + '/api/notas/' + rel, data={'versao': concluida.versao, 'campos': {'concluido_em': '2020-01-01'}})
+        assert resposta.ok
+        page.reload()
+        expect(page.locator('.cartao').filter(has=page.get_by_role('link', name='Teste tarefas ' + str(largura), exact=True))).to_have_count(0)
+        page.evaluate("window.__capaTarefas=document.querySelector('.cab-modulo canvas')")
+        page.get_by_role('link', name='Todas', exact=True).first.click()
+        expect(page.locator('.tarefas-periodos a[aria-current]')).to_have_text('Todas')
+        expect(page.locator('.cartao').filter(has=page.get_by_role('link', name='Teste tarefas ' + str(largura), exact=True))).to_be_visible()
+        assert page.evaluate("window.__capaTarefas===document.querySelector('.cab-modulo canvas')")
+        page.go_back()
+        expect(page.locator('.tarefas-periodos a[aria-current]')).to_have_text('Hoje')
+        if capturas:
+            page.screenshot(path=str(capturas / f'tarefas-recorte-{largura}.png'))
 
         page.goto(base + '/m/tarefas/personalizar')
         page.locator('#p-nome').fill('Tarefas pessoais ' + str(largura))
@@ -121,7 +182,7 @@ def jornadas(browser, base, vault, capturas):
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         contexto.close()
     assert not erros, erros
-    return {"larguras": [1440, 390], "erros_javascript": erros, "jornadas": ["atalhos e dock", "descrições", "recorrência semanal", "capa imediata e rascunhos", "ícones", "lixeira em lote", "assinatura iCal sem tarefas"]}
+    return {"larguras": [1440, 390], "erros_javascript": erros, "jornadas": ["atalhos e dock", "descrições", "recorrência semanal", "hábitos lista e progresso", "concluir e reabrir tarefa", "conflito de tarefa", "histórico e recortes do quadro", "capa imediata e rascunhos", "ícones", "lixeira em lote", "assinatura iCal sem tarefas"]}
 
 
 def main():

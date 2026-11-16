@@ -322,7 +322,11 @@
       $(".cartoes", coluna).prepend(cartao);
       contar(q, origem, coluna);
       mudarCampo(cartao, campo, coluna.dataset.valor)
-        .then(function () { if (seletor) seletor.value = coluna.dataset.valor; })
+        .then(function () {
+          if (seletor) seletor.value = coluna.dataset.valor;
+          if (campo === q.dataset.campoStatus) cartao.classList.toggle("concluido", coluna.classList.contains("concluida"));
+          atualizarCabecalhoModulo();
+        })
         .catch(function (erro) { // não deu: volta o cartão para onde estava
           $(".cartoes", origem).prepend(cartao);
           if (seletor) seletor.value = origem.dataset.valor;
@@ -1249,7 +1253,42 @@
     }
   }
 
+  var pedidoCabecalho = 0;
+  function atualizarCabecalhoModulo() {
+    var cabecalho = $(".cab-numeros"), url = location.href, numero = ++pedidoCabecalho;
+    if (!cabecalho) return;
+    fetch(url, {cache:"no-store", credentials:"same-origin"}).then(function (r) { if (r.ok) return r.text(); }).then(function (html) {
+      if (!html || numero !== pedidoCabecalho || url !== location.href || !cabecalho.isConnected) return;
+      var doc = new DOMParser().parseFromString(html, "text/html"), novo = $(".cab-numeros", doc);
+      if (novo && doc.body.dataset.vaultId === document.body.dataset.vaultId) cabecalho.replaceWith(document.importNode(novo, true));
+    }).catch(function () { /* A gravação já terminou; preserve os contadores se a leitura falhar. */ });
+  }
+
+  function atualizarCelulaStatus(linha, campo, valor, rotulo) {
+    var celula = $$("[data-coluna]", linha).find(function (c) { return c.dataset.coluna === campo; });
+    if (!celula) return;
+    var etiqueta = document.createElement("span");
+    etiqueta.className = "et et-" + campo + " v-" + valor; etiqueta.textContent = rotulo;
+    celula.replaceChildren(etiqueta);
+  }
+
   function tabela() {
+    $$("[data-tarefa-conclusao]").forEach(function (botao) {
+      botao.onclick = function () {
+        if (botao.disabled) return;
+        var concluir = botao.getAttribute("aria-pressed") !== "true";
+        botao.disabled = true; botao.setAttribute("aria-busy", "true");
+        mudarCampo(botao, botao.dataset.campo, concluir ? botao.dataset.concluir : botao.dataset.reabrir).then(function () {
+          botao.setAttribute("aria-pressed", String(concluir));
+          botao.setAttribute("aria-label", (concluir ? "Reabrir " : "Concluir ") + botao.dataset.titulo);
+          botao.title = concluir ? "Reabrir tarefa" : "Concluir tarefa";
+          var linha = botao.closest("tr"); linha.classList.toggle("concluido", concluir);
+          atualizarCelulaStatus(linha, botao.dataset.campo, concluir ? botao.dataset.concluir : botao.dataset.reabrir,
+                               concluir ? botao.dataset.rotuloConcluir : botao.dataset.rotuloReabrir);
+          atualizarCabecalhoModulo();
+        }).catch(mostrarErro).finally(function () { botao.disabled = false; botao.removeAttribute("aria-busy"); });
+      };
+    });
     $$("[data-lote]").forEach(function (raiz) {
       var todos = $("[data-lote-todos]", raiz);
       if (!todos || raiz.dataset.loteLigado) return;
@@ -1285,18 +1324,13 @@
             if (r.versao) {
               minhas[r.versao] = true; el.dataset.versao = r.versao;
               el.closest("tr").classList.toggle("concluido", !!r.concluido);
-              var celula = $$("[data-coluna]", el.closest("tr")).find(function (c) { return c.dataset.coluna === raiz.dataset.campoStatus; });
-              if (celula) { celula.textContent = status.selectedOptions[0].textContent; }
+              atualizarCelulaStatus(el.closest("tr"), raiz.dataset.campoStatus, status.value, status.selectedOptions[0].textContent);
             } else {
               minhasRemovidas[r.rel] = Date.now() + 2000; el.closest("tr").remove();
             }
           });
           resultado.hidden = false; resultado.textContent = salvos + " notas atualizadas." + (falhas.length ? "\n" + falhas.join("\n") : "");
-          if (salvos) fetch(location.href, {cache:"no-store", credentials:"same-origin"}).then(function (r) { if (!r.ok) return; return r.text(); }).then(function (html) {
-            if (!html) return;
-            var doc = new DOMParser().parseFromString(html, "text/html"), atual = $(".cab-numeros"), nova = $(".cab-numeros", doc);
-            if (doc.body.dataset.vaultId === document.body.dataset.vaultId && atual && nova) atual.replaceWith(document.importNode(nova, true));
-          }).catch(function () { /* O resultado da gravação já está visível. */ });
+          if (salvos) atualizarCabecalhoModulo();
         } catch (erro) { mostrarErro(erro); }
         finally { ocupado = false; $$("input,select,button", raiz).concat($$("select,button", barra)).forEach(function (el) { el.disabled = false; }); atualizar(); }
       };

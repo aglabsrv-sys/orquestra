@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import io
 import os
+from copy import deepcopy
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +51,22 @@ def ler_yaml(caminho: Path) -> CommentedMap:
         bruto = caminho.read_bytes()
     except FileNotFoundError:
         bruto = None
+    # A leitura continua acontecendo em cada acesso: o cache depende dos bytes,
+    # não do horário/tamanho do arquivo. Cada chamador recebe sua própria cópia,
+    # inclusive comentários e estado usado pela conferência antes de gravar.
+    interpretar = _interpretar_yaml if bruto is None or len(bruto) <= 256 * 1024 else _interpretar_yaml.__wrapped__
+    modelo = interpretar(bruto, caminho.name)
+    mapa = deepcopy(modelo)
+    # CommentedMap copia seus comentários, mas não atributos próprios do app.
+    mapa._orq_original = bruto
+    mapa._orq_serializado = modelo._orq_serializado
+    mapa._orq_prefixo = modelo._orq_prefixo
+    mapa._orq_caminho = str(caminho.resolve())
+    return mapa
+
+
+@lru_cache(maxsize=64)
+def _interpretar_yaml(bruto: bytes | None, nome: str) -> CommentedMap:
     try:
         texto = bruto.decode("utf-8-sig") if bruto is not None else ""
         from orquestra.notas import simples, validar_aliases
@@ -58,18 +76,17 @@ def ler_yaml(caminho: Path) -> CommentedMap:
         if dados is not None:
             simples(dados)
     except (UnicodeError, ValueError, TypeError) as erro:
-        raise ConfigInvalida(f"Não consegui ler {caminho.name}: UTF-8 ou YAML inválido.") from erro
+        raise ConfigInvalida(f"Não consegui ler {nome}: UTF-8 ou YAML inválido.") from erro
     except Exception as erro:
         from ruamel.yaml.error import YAMLError
 
         if isinstance(erro, YAMLError):
-            raise ConfigInvalida(f"Não consegui ler {caminho.name}: YAML inválido.") from erro
+            raise ConfigInvalida(f"Não consegui ler {nome}: YAML inválido.") from erro
         raise
     if dados is not None and not isinstance(dados, CommentedMap):
-        raise ConfigInvalida(f"{caminho.name} precisa conter campos no formato chave: valor.")
+        raise ConfigInvalida(f"{nome} precisa conter campos no formato chave: valor.")
     mapa = dados if isinstance(dados, CommentedMap) else CommentedMap()
     mapa._orq_original = bruto
-    mapa._orq_caminho = str(caminho.resolve())
     mapa._orq_serializado = _serializar_yaml(mapa)
     mapa._orq_prefixo = texto if dados is None else ""
     return mapa

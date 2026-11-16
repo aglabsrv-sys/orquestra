@@ -75,7 +75,7 @@
     finally { if (numero === pedido && $('#modulo-painel')) $('#modulo-painel').removeAttribute('aria-busy'); }
   }
   document.addEventListener('click', function (e) {
-    var a = e.target.closest('.abas .aba');
+    var a = e.target.closest('.abas .aba, .tarefas-periodos a, .tarefas-recorte .link');
     if (!a || !$('#modulo-painel') || e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     var url = new URL(a.href,location.href);
     if (url.pathname !== location.pathname || url.origin !== location.origin) return;

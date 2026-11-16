@@ -368,6 +368,15 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             },
         }
         contexto["opcoes_status"] = modulo.campos[modulo.campo_status].opcoes if modulo.tem_status else []
+        contexto["conclusao_tarefa"] = modulo.id == "tarefas" and modulo.tem_status and bool(modulo.concluidos) and any(
+            o not in modulo.concluidos for o in contexto["opcoes_status"]
+        ) and any(o in modulo.concluidos for o in contexto["opcoes_status"])
+        if contexto["conclusao_tarefa"]:
+            contexto["status_concluir"] = next(o for o in contexto["opcoes_status"] if o in modulo.concluidos)
+            padrao_status = modulo.campos[modulo.campo_status].padrao
+            contexto["status_reabrir"] = padrao_status if padrao_status in contexto["opcoes_status"] and padrao_status not in modulo.concluidos else next(
+                o for o in contexto["opcoes_status"] if o not in modulo.concluidos
+            )
         if modulo_id == "clientes":
             from orquestra.contatos import contexto as contexto_contatos
             contexto.update(contexto_contatos(painel))
@@ -449,6 +458,15 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     for n in modulo.campos_numericos
                 ]
             elif visao.tipo == "kanban":
+                if modulo.id == "tarefas" and visao.agrupar_por == modulo.campo_status:
+                    from orquestra.tarefas import recortar_quadro
+                    periodo = request.query_params.get("concluidas", "hoje")
+                    if periodo not in {"hoje", "semana", "todas"}:
+                        periodo = "hoje"
+                    itens, ocultas = recortar_quadro(itens, modulo, hoje, periodo)
+                    contexto.update(periodo_concluidas=periodo, concluidas_ocultas=ocultas,
+                                    periodos_concluidas=[{"id": id, "nome": nome, "url": str(request.url.include_query_params(aba=contexto["aba"], concluidas=id, pagina=1))}
+                                                        for id, nome in (("hoje", "Hoje"), ("semana", "Semana"), ("todas", "Todas"))])
                 campo = modulo.campos.get(visao.agrupar_por)
                 opcoes = campo.opcoes if campo else []
                 grupos: dict[str, list] = {o: [] for o in opcoes}
@@ -462,7 +480,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                         "rotulo": rotulo(o),
                         "total": len(grupos[o]),
                         "cartoes": [ap.cartao(n, modulo, hoje, omitir=visao.agrupar_por) for n in grupos[o][:LIMITE_POR_COLUNA]],
-                        "concluida": o in modulo.concluidos,
+                        "concluida": visao.agrupar_por == modulo.campo_status and o in modulo.concluidos,
                     }
                     for o in opcoes
                 ]
@@ -482,9 +500,9 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                         and not (n == "tipo" and nota.campo(n) == "pessoa")
                         for nota in itens
                     )]
-                itens, contexto["paginacao"] = paginar(request, itens)
                 if modulo.itens_na_raiz:
                     nomes = [n for n in nomes if n == "titulo" or any(nota.campo(n) not in (None, "", []) for nota in itens)]
+                itens, contexto["paginacao"] = paginar(request, itens)
                 contexto["colunas_tabela"] = [
                     {"nome": n, "rotulo": ("Nome" if modulo.id == "contatos" else "Título") if n == "titulo" else (modulo.campos[n].rotulo if n in modulo.campos else rotulo(n))}
                     for n in nomes
@@ -1000,7 +1018,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             contexto["cenas"] = temas.CENAS
             contexto["temas"] = [
                 {**tema, "previa": temas.previa(tema), "atual": tema["id"] == painel.tema["id"],
-                 "efetivas": aparencia.amostras(tema, painel.config.aparencia)["tema"]}
+                 "efetivas": aparencia.paletas_do_tema(tema, painel.config.aparencia)}
                 for tema in temas.listar(painel.vault)
             ]
             contexto["visual"] = {

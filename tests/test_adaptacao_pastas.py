@@ -29,12 +29,30 @@ def test_pasta_adotada_navega_sem_achatar_subpastas(cliente):
     assert raiz.status_code == 200
     assert [p["nome"] for p in raiz.context["subpastas"]] == ["Clientes", "Estudos"]
     assert [l["cartao"]["titulo"] for l in raiz.context["linhas"]] == ["Visão geral"]
+    assert f'href="?aba={raiz.context["aba"]}&amp;pasta=Clientes"' in raiz.text
     filha = cliente.get("/m/Biblioteca?pasta=Clientes")
     assert filha.status_code == 200
     assert [p["nome"] for p in filha.context["subpastas"]] == ["Projeto"]
     assert [l["cartao"]["titulo"] for l in filha.context["linhas"]] == ["Briefing"]
     assert 'data-subpasta="Clientes"' in filha.text
     assert cliente.get("/m/Biblioteca?pasta=../tarefas").status_code == 400
+
+
+def test_colunas_da_pasta_nao_desaparecem_ao_paginar(cliente, vault):
+    pasta = vault / "Referências fictícias"
+    pasta.mkdir()
+    (pasta / "_modulo.yaml").write_text(
+        'nome: Referências\nitens: .\ncampos:\n  assunto: {tipo: texto}\n'
+        'visoes:\n  - {tipo: tabela, nome: Lista, colunas: [titulo, assunto]}\n', encoding="utf-8",
+    )
+    for numero in range(81):
+        texto = "---\nassunto: Mapas\n---\n" if numero == 80 else "Nota fictícia.\n"
+        (pasta / f"Nota {numero:03}.md").write_text(texto, encoding="utf-8")
+    cliente.painel.recarregar_tudo()
+    for numero in (1, 2):
+        pagina = cliente.get(f"/m/Referências fictícias?aba=v0&pagina={numero}")
+        assert pagina.status_code == 200
+        assert [c["nome"] for c in pagina.context["colunas_tabela"]] == ["titulo", "assunto"]
 
 
 def test_explorador_mostra_subpastas_vazias_e_so_com_anexos(cliente, vault):

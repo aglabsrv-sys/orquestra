@@ -89,9 +89,11 @@ def test_criar_sem_titulo_e_recusado(cliente):
 
 def test_editar_um_campo_nao_mexe_no_resto_do_arquivo(cliente, vault):
     antes = (vault / TAREFA).read_text(encoding="utf-8")
-    r = cliente.put(url(TAREFA), json={"versao": versao_de(cliente, TAREFA), "campos": {"status": "feito"}})
+    # Uma mudança intermediária altera só o campo pedido. Concluir também
+    # registra a data, comportamento coberto pelas jornadas de Tarefas.
+    r = cliente.put(url(TAREFA), json={"versao": versao_de(cliente, TAREFA), "campos": {"status": "fazendo"}})
     assert r.status_code == 200, r.text
-    assert (vault / TAREFA).read_text(encoding="utf-8") == antes.replace("status: a_fazer", "status: feito")
+    assert (vault / TAREFA).read_text(encoding="utf-8") == antes.replace("status: a_fazer", "status: fazendo")
 
 
 def test_editar_com_versao_antiga_da_conflito(cliente, vault):

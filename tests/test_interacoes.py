@@ -37,7 +37,7 @@ def test_lote_status_e_exclusao_exigem_contratos_e_capacidade(cliente):
 
 def test_telas_compactas_e_entrada_persistente(cliente):
     lista = cliente.get("/m/tarefas?aba=v1").text
-    assert 'data-lote-todos' in lista and 'data-lote-item' in lista
+    assert 'data-tarefa-conclusao' in lista and 'data-lote-item' not in lista
     assert 'id="novo-adicionar-campo"' in lista
     assert 'data-extra-campo="tags" hidden' in lista
     pagina = cliente.get("/m/tarefas/personalizar").text

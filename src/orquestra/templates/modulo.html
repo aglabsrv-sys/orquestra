@@ -26,7 +26,7 @@
 
 <nav class="abas" aria-label="Visões do módulo">
   <div class="abas-visoes">
-  {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos">Progresso</a>{% endif %}
+  {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos?aba=progresso">Progresso</a>{% endif %}
   {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir?modulo=conteudo">Aprovação de criativos</a>{% endif %}
   {% for v in modulo.visoes %}
   <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}{% if pasta_atual|default('') %}&amp;pasta={{ pasta_atual|urlencode }}{% endif %}"{% if aba == 'v' ~ loop.index0 %} aria-current="page"{% endif %}>{{ v.nome }}</a>
@@ -37,7 +37,7 @@
   <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina"{% if aba == 'maquina' %} aria-current="page"{% endif %}>{{ icone('chip', 15) }} Máquina</a>
   </div>
   <span class="abas-fim">
-{% if linhas|default([]) and aba not in ("humano", "maquina") and visao.tipo not in ("kanban", "grafico") %}
+{% if linhas|default([]) and not conclusao_tarefa and aba not in ("humano", "maquina") and visao.tipo not in ("kanban", "grafico") %}
   <span class="lote-barra" id="acoes-lote" hidden>
     <span data-lote-contagem aria-live="polite"></span>
     <select data-lote-acao aria-label="Ação para selecionados"><option value="arquivar">Arquivar</option><option value="excluir">Excluir</option>{% if opcoes_status %}<option value="status">Alterar status</option>{% endif %}</select>
@@ -66,7 +66,7 @@
 {% if subpastas is defined and (subpastas or pasta_atual) %}
 <div class="modulo-pastas">
 {% if pasta_atual %}<div class="modulo-navegacao"><a class="botao pequeno discreto modulo-voltar" href="/m/{{ modulo.id|urlencode }}?aba={{ aba }}{% if trilha_pastas|length > 1 %}&amp;pasta={{ trilha_pastas[-2].caminho|urlencode }}{% endif %}" aria-label="Voltar à pasta anterior">{{ icone('seta_esq', 15) }} Voltar</a><span class="modulo-pasta-atual">{{ trilha_pastas[-1].nome }}</span></div>{% endif %}
-{% if subpastas %}<nav class="modulo-subpastas" aria-label="Subpastas">{% for p in subpastas %}<a href="?pasta={{ p.caminho|urlencode }}">{{ icone('pasta', 17) }}<span>{{ p.nome }}</span><small>{{ p.total }}</small>{{ icone('chevron_dir', 14) }}</a>{% endfor %}</nav>{% endif %}
+{% if subpastas %}<nav class="modulo-subpastas" aria-label="Subpastas">{% for p in subpastas %}<a href="?aba={{ aba }}&amp;pasta={{ p.caminho|urlencode }}">{{ icone('pasta', 17) }}<span>{{ p.nome }}</span><small>{{ p.total }}</small>{{ icone('chevron_dir', 14) }}</a>{% endfor %}</nav>{% endif %}
 </div>
 {% endif %}
 {% if modulo.avisos %}
@@ -176,7 +176,13 @@
 
 {# ---------------------------------------------------------------- Quadro #}
 {% elif visao.tipo == "kanban" %}
-<section class="quadro" data-campo="{{ visao.agrupar_por }}">
+{% if periodo_concluidas is defined %}
+<div class="tarefas-recorte">
+  <nav class="tarefas-periodos" aria-label="Período das tarefas concluídas"><span>Concluídas</span>{% for periodo in periodos_concluidas %}<a href="{{ periodo.url }}"{% if periodo.id == periodo_concluidas %} aria-current="page"{% endif %}>{{ periodo.nome }}</a>{% endfor %}</nav>
+  <p class="campo-ajuda">{% if periodo_concluidas == 'hoje' %}Conclusões de hoje.{% elif periodo_concluidas == 'semana' %}Conclusões desde segunda-feira.{% else %}Histórico completo, com as conclusões recentes primeiro.{% endif %} As tarefas abertas continuam no quadro.{% if concluidas_ocultas %} {{ concluidas_ocultas }} concluída{{ 's' if concluidas_ocultas != 1 else '' }} de outros dias ou sem data em <a class="link" href="{{ periodos_concluidas[-1].url }}">Todas</a>.{% endif %}</p>
+</div>
+{% endif %}
+<section class="quadro" data-campo="{{ visao.agrupar_por }}" data-campo-status="{{ modulo.campo_status }}">
   {% for col in colunas %}
   <div class="coluna{% if col.concluida %} concluida{% endif %}" data-valor="{{ col.valor }}" data-total="{{ col.total }}">
     <header><h3>{{ col.rotulo }}</h3><span class="conta">{{ col.total }}</span></header>
@@ -190,16 +196,19 @@
 
 {# ---------------------------------------------------------------- Lista #}
 {% else %}
-<section class="tabela-envolta" data-lote data-campo-status="{{ modulo.campo_status }}">
+<section class="tabela-envolta"{% if not conclusao_tarefa %} data-lote{% endif %} data-campo-status="{{ modulo.campo_status }}">
   {% if linhas %}
   <p class="lote-resultado" role="status" data-lote-resultado hidden></p>
   <table class="tabela">
     <caption class="somente-leitor">Notas de {{ modulo.nome }}. Os botões no cabeçalho ordenam os itens desta página.</caption>
-    <thead><tr><th class="col-selecao" scope="col"><input type="checkbox" data-lote-todos aria-label="Selecionar todos desta página"></th>{% for col in colunas_tabela %}<th scope="col" data-ordenar aria-sort="none"><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ col.rotulo }}<span aria-hidden="true"> ↕</span></button></th>{% endfor %}</tr></thead>
+    <thead><tr><th class="col-selecao" scope="col">{% if conclusao_tarefa %}<span class="somente-leitor">Conclusão</span>{% else %}<input type="checkbox" data-lote-todos aria-label="Selecionar todos desta página">{% endif %}</th>{% for col in colunas_tabela %}<th scope="col" data-ordenar aria-sort="none"><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ col.rotulo }}<span aria-hidden="true"> ↕</span></button></th>{% endfor %}</tr></thead>
     <tbody>
       {% for l in linhas %}
       <tr{% if l.cartao.concluido %} class="concluido"{% endif %}>
-        <td class="col-selecao"><input type="checkbox" data-lote-item data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" aria-label="Selecionar {{ l.cartao.titulo }}"></td>
+        <td class="col-selecao">{% if conclusao_tarefa %}
+          {% set reabrir = l.cartao.status if not l.cartao.concluido and l.cartao.status in opcoes_status else status_reabrir %}
+          <button type="button" class="tarefa-conclusao" data-tarefa-conclusao data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" data-campo="{{ modulo.campo_status }}" data-concluir="{{ status_concluir }}" data-reabrir="{{ reabrir }}" data-rotulo-concluir="{{ rotulo(status_concluir) }}" data-rotulo-reabrir="{{ rotulo(reabrir) }}" data-titulo="{{ l.cartao.titulo }}" aria-pressed="{{ 'true' if l.cartao.concluido else 'false' }}" aria-label="{{ 'Reabrir' if l.cartao.concluido else 'Concluir' }} {{ l.cartao.titulo }}" title="{{ 'Reabrir tarefa' if l.cartao.concluido else 'Concluir tarefa' }}">{{ icone('visto', 14) }}</button>
+        {% else %}<input type="checkbox" data-lote-item data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" aria-label="Selecionar {{ l.cartao.titulo }}">{% endif %}</td>
         {% for c in l.celulas %}
         {% if c.tipo == "titulo" %}<td class="cel-titulo"><a href="{{ l.cartao.url }}">{{ c.texto }}</a></td>
         {% elif c.tipo == "escolha" %}<td data-coluna="{{ colunas_tabela[loop.index0].nome }}"><span class="et {{ c.classe }}">{{ c.texto }}</span></td>

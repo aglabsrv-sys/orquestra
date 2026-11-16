@@ -24,7 +24,25 @@ Projetos, a descrição opcional também aparece: é o texto da nota. Em
 **Adicionar campo +**, escolha propriedades adicionais ou Texto. Campos não
 adicionados conservam os padrões do módulo; não são enviados como valores vazios.
 
-Na lista, marque itens ou selecione todos da página para arquivar, excluir ou
+Na lista de **Tarefas**, o círculo ao lado do título conclui a tarefa. Ele fica
+preenchido com um visto e o título riscado; clicar novamente reabre. O controle
+funciona por teclado e só muda depois da confirmação do servidor. Os estados
+intermediários continuam disponíveis nas propriedades da nota e no quadro.
+
+No quadro de Tarefas, **Concluídas → Hoje** é o padrão. **Semana** mostra desde
+segunda-feira e **Todas** abre o histórico, inclusive tarefas antigas sem data de
+conclusão. As tarefas abertas permanecem visíveis em qualquer recorte. Concluir
+registra `concluido_em` na nota; reabrir remove essa data e uma nova conclusão a
+renova. Editar o texto de uma tarefa concluída conserva sua data. O prazo da tarefa
+e o horário de modificação do arquivo não são usados como data de conclusão.
+Notas antigas sem essa informação não recebem uma data estimada.
+
+A Lista conserva todo o histórico, com até 80 notas por página. O quadro mostra
+até 80 cartões por coluna e indica o restante na Lista. Nenhuma nota é apagada ou
+arquivada automaticamente por sair do recorte diário. Projetos e outras áreas
+conservam seu histórico no quadro, conforme o significado dos próprios status.
+
+Nas listas das outras áreas, marque itens ou selecione todos da página para arquivar, excluir ou
 alterar o status. A seleção é limitada à página atual (até 80 notas). Arquivar
 e excluir pedem confirmação. Se uma nota mudou em outra aba ou no Obsidian,
 ela fica intacta e seu erro aparece no resultado; as demais podem ser atualizadas.

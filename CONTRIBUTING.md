@@ -39,12 +39,15 @@ Para medir o servidor sem o custo do navegador:
 
 ```bash
 uv run --frozen python scripts/medir_desempenho.py --notas 10000 --amostras 7
+uv run --frozen python scripts/medir_desempenho.py --notas 1000 --amostras 7 --todas-areas
 ```
 
 O benchmark gera notas sintéticas em uma pasta temporária e imprime JSON com
 ambiente, tamanho das notas, carga inicial, mediana, máximo e bytes por resposta.
 Compare no mesmo ambiente e com os mesmos argumentos; os resultados variam com
 cache do sistema, disco e carga concorrente.
+O roteiro também mede cada seção de Ajustes; `--todas-areas` inclui as automações
+do catálogo para comparar a navegação com todas as áreas instaladas.
 
 Os testes usam diretórios temporários e `ORQUESTRA_HOME` isolado. Nunca aponte
 testes automatizados para seu vault real. Para trabalho manual, crie um vault de
