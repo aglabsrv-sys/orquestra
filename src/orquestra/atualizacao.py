@@ -38,7 +38,7 @@ def conferir_limpa() -> None:
 class Atualizador:
     def __init__(self):
         self.trava = threading.Lock()
-        self.verificado = 0.0
+        self.verificado: float | None = None
         self.cache = {"disponivel": False}
         self.processo = None
         try:
@@ -52,9 +52,9 @@ class Atualizador:
                 codigo = self.processo.poll()
                 if codigo is not None:
                     self.processo = None
-                    self.verificado = 0.0
+                    self.verificado = None
                 return {**self.cache, "estado": "atualizando" if codigo is None else "falhou", "mensagem": "A atualização não terminou. Confira a instalação e tente novamente." if codigo is not None else "Atualizando o aplicativo…"}
-            if time.monotonic() - self.verificado < 1800:
+            if self.verificado is not None and time.monotonic() - self.verificado < 1800:
                 return dict(self.cache)
             try:
                 atual = conferir_instalacao()

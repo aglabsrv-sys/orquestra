@@ -31,8 +31,12 @@ def jornada(page, base, largura, capturas):
     page.locator("#abrir-novo").click()
     page.locator("#novo-titulo").fill(f"Maria de exemplo {largura}")
     expect(page.locator('#novo-corpo')).not_to_be_visible()
-    expect(page.locator('[data-novo][name="telefone"]')).not_to_be_visible()
-    for campo in ("telefone", "email", "grupos", "favorito"):
+    expect(page.locator('#novo-titulo')).to_have_accessible_name('Nome')
+    for campo in ("telefone", "email"):
+        expect(page.locator(f'[data-novo][name="{campo}"]')).to_be_visible()
+        expect(page.locator(f'[data-novo][name="{campo}"]')).to_be_enabled()
+    for campo in ("grupos", "favorito"):
+        expect(page.locator(f'[data-novo][name="{campo}"]')).not_to_be_visible()
         page.locator("#novo-adicionar-campo").select_option(campo)
     page.locator('[data-novo][name="telefone"]').fill("(00) 00000-0000")
     page.locator('[data-novo][name="email"]').fill(f"maria{largura}@example.com")
@@ -105,8 +109,8 @@ def jornada(page, base, largura, capturas):
         resposta = page.request.post(base + '/api/notas', data={'modulo':'contatos', 'titulo':f'Lote {nome} {largura}'})
         assert resposta.ok
     page.goto(base + '/m/contatos')
-    page.get_by_role('button', name='Ordenar esta página por Título', exact=True).click()
-    page.get_by_role('button', name='Ordenar esta página por Título', exact=True).click()
+    page.get_by_role('button', name='Ordenar esta página por Nome', exact=True).click()
+    page.get_by_role('button', name='Ordenar esta página por Nome', exact=True).click()
     expect(page.locator('[data-lote-item]').first).to_have_attribute('aria-label', f'Selecionar Lote B {largura}')
     page.locator('[data-lote-item]').first.check()
     assert page.locator('[data-lote-todos]').evaluate('e=>e.indeterminate')
@@ -153,8 +157,9 @@ def jornada(page, base, largura, capturas):
 
     if largura == 1440:
         page.goto(base + '/')
-        page.evaluate("sessionStorage.setItem('orq-slide','0')")
-        page.reload()
+        page.keyboard.press('1')
+        primeiro = page.locator('.slide').first.get_attribute('data-id')
+        expect(page.locator('.slide.ativo')).to_have_attribute('data-id', primeiro)
         inicial = page.locator('.slide.ativo').get_attribute('data-id')
         trilho = page.locator('.trilho').bounding_box()
         x, y = trilho['x'] + trilho['width'] * .8, trilho['y'] + trilho['height'] * .5

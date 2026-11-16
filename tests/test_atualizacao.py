@@ -20,8 +20,11 @@ def preparar(monkeypatch):
     return comando
 
 
-def test_consulta_cache_e_revisao_sem_mudar_numero_de_versao(monkeypatch):
+@pytest.mark.parametrize("tempo_ligado", [0.0, 1.0, 1799.0, 3600.0])
+def test_consulta_cache_e_revisao_sem_mudar_numero_de_versao(monkeypatch, tempo_ligado):
     comando = preparar(monkeypatch)
+    relogio = Mock(return_value=tempo_ligado)
+    monkeypatch.setattr(a.time, "monotonic", relogio)
     atualizador = a.Atualizador()
     estado = atualizador.consultar()
     assert estado["disponivel"] and estado["revisao"] == "b" * 40
@@ -29,10 +32,14 @@ def test_consulta_cache_e_revisao_sem_mudar_numero_de_versao(monkeypatch):
     chamadas = comando.call_count
     assert atualizador.consultar() == estado
     assert comando.call_count == chamadas
+    relogio.return_value += 1800
+    assert atualizador.consultar() == estado
+    assert comando.call_count > chamadas
 
 
 def test_consulta_falha_sem_expor_saida_do_provedor(monkeypatch):
     preparar(monkeypatch)
+    monkeypatch.setattr(a.time, "monotonic", lambda: 1.0)
     atualizador = a.Atualizador()
     monkeypatch.setattr(a, "executar", Mock(side_effect=RuntimeError("credencial secreta")))
     estado = atualizador.consultar()

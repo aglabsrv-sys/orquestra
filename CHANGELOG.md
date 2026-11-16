@@ -2,6 +2,9 @@
 
 ## Em desenvolvimento
 
+- A verificação de atualizações consulta a publicação já no primeiro acesso,
+  inclusive em computadores recém ligados; o cache só é usado depois da leitura.
+
 - Atalhos 1–9 selecionam os cards em ordem e 0 abre o menu. Início retorna à capa
   da última área acessada, inclusive pelo dock; outro clique vai ao primeiro card.
 - Tarefas recorrentes usam um único exemplo e seleção de dias da semana ou do mês,
