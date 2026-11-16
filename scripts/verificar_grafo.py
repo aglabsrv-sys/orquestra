@@ -285,10 +285,47 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             expect(page.locator("[data-pasta-visao=notas]")).to_have_attribute(
                 "aria-pressed", "true"
             )
-            # Navegar explicitamente para outra pasta usa o grafo como padrão.
-            page.goto(base + "/pastas/Segunda", wait_until="domcontentloaded")
-            aguardar_grafo(page)
+            # Navegar pela lista ou pelo nome da árvore conserva o modo Notas,
+            # inclusive se o destino já foi aberto antes em Grafo.
+            page.locator(".explorador-voltar").click()
+            expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "")
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            expect(page.locator("#pasta-grafo")).to_be_hidden()
+            page.locator('#pasta-notas .pasta-link').filter(has_text="Segunda").click()
             expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Segunda")
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            page.locator('#pasta-notas .pasta-link').filter(has_text="Interna").click()
+            expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Segunda/Interna")
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            page.go_back()
+            expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Segunda")
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            page.go_forward()
+            expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Segunda/Interna")
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            page.locator('#pasta-notas .pasta-link').filter(has_text="Neta").click()
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            page.locator('#pasta-notas .linha-nota').filter(has_text="Referência").click()
+            expect(page.locator("#pasta-leitor")).to_be_visible()
+            expect(page.frame_locator("#leitor-frame").locator("#ver")).to_contain_text("Referência")
+            expect(page.locator("#pasta-grafo")).to_be_hidden()
+            page.get_by_role("button", name="Voltar às notas", exact=True).click()
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            expect(page.locator("#pasta-grafo")).to_be_hidden()
+            page.locator('#arvore-pastas a[data-pasta="Grafo QA"]').click()
+            expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Grafo QA")
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            page.locator('#arvore-pastas .arvore-nota').filter(has_text="Alpha").click()
+            expect(page.locator("#pasta-leitor")).to_be_visible()
+            expect(page.frame_locator("#leitor-frame").locator("#ver")).to_contain_text("Alpha")
+            page.get_by_role("button", name="Voltar às notas", exact=True).click()
+            expect(page.locator("#pasta-notas")).to_be_visible()
+            if capturas:
+                page.screenshot(path=str(capturas / f"pastas-notas-{largura}{'-curto' if altura<700 else ''}.png"), full_page=True)
+            # Navegar explicitamente para outra pasta usa o grafo como padrão.
+            page.goto(base + "/pastas/Conjunto", wait_until="domcontentloaded")
+            aguardar_grafo(page)
+            expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Conjunto")
             assert page.locator(".explorador-trilha").count() == 0
             page.locator(".explorador-voltar").click()
             expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "")
@@ -338,6 +375,7 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
         "jornadas": ["busca", "notas isoladas", "filtros ao voltar do leitor",
                      "zoom pelo teclado e centralização", "arrastar e abrir notas",
                      "visualização memorizada por pasta e após recarregar",
+                     "modo Notas preservado em subpastas, histórico e leitor",
                      "nome da pasta só expande sem alterar grafo", "centralização com muitos avulsos",
                      "35 notas sem links legíveis após animação e forças extremas",
                      "rede com hubs e conexões visíveis", "painéis dentro do viewport"],

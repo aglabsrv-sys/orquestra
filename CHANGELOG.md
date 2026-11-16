@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- Navegação em Pastas mantém o modo Notas ao entrar em subpastas, subir um nível
+  e percorrer o histórico. Nomes de pastas na árvore abrem o conteúdo nesse modo;
+  notas abrem no leitor e voltam à lista. A navegação do Grafo permanece igual.
+
 - Grafo mantém notas legíveis ao afastar e acompanha a acomodação das forças no
   enquadramento inicial. Conexões ganham contraste e notas sem links ficam
   identificadas, com orientação quando não há ligações no recorte.

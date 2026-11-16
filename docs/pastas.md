@@ -32,8 +32,12 @@ atual, em formato `[[wikilink]]` ou link Markdown.
 
 ## Navegação
 
-- Expanda ou recolha pastas pela seta ou pelo nome. A árvore mantém o grafo, o enquadramento e a pasta atual; clicar em uma nota abre a leitura.
-- Use **Notas** para ver a lista de subpastas, notas e anexos.
+- Em **Grafo**, expanda ou recolha pastas pela seta ou pelo nome. A árvore mantém
+  o grafo, o enquadramento e a pasta atual; clicar em uma nota abre a leitura.
+- Use **Notas** para ver a lista de subpastas, notas e anexos. Clicar numa pasta
+  da lista ou no seu nome na árvore mostra o conteúdo mantendo o modo Notas;
+  a seta da árvore apenas expande ou recolhe. Subir um nível e voltar ou avançar
+  pelo navegador também mantêm a visualização atual.
 - Clique em uma nota da árvore, da lista ou do grafo para ler sem fechar o explorador.
 - A seta de voltar no leitor retorna à visualização escolhida. Nas pastas abertas pela lista, a seta ao lado do título sobe um nível.
 - Arraste uma nota para reposicioná-la ou o fundo para mover a vista. Use a roda do mouse ou `+` e `-` para aproximar.
