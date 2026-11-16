@@ -39,6 +39,12 @@ atual, em formato `[[wikilink]]` ou link Markdown.
 - Arraste uma nota para reposicioná-la ou o fundo para mover a vista. Use a roda do mouse ou `+` e `-` para aproximar.
 - **Centralizar** ajusta o conjunto de notas ao espaço disponível. O explorador ocupa a altura da janela; listas longas e documentos rolam dentro dos seus painéis.
 - Notas sem ligações ficam próximas do conjunto conectado, sem reduzir o miolo do grafo a um ponto distante.
+- O enquadramento acompanha a acomodação inicial e os ajustes das forças. Ao
+  aproximar ou arrastar, a vista passa ao seu controle; **Centralizar** retoma o
+  enquadramento. Os pontos conservam um tamanho legível mesmo ao afastar, e seu
+  tamanho varia com a quantidade de conexões. Notas sem links usam a cor de destaque.
+- Quando não há ligações no recorte, **Notas do grafo** explica como conectar notas.
+  Compartilhar uma pasta não cria uma linha: ela representa uma referência real.
 - Nas opções do grafo, busque pelo nome ou oculte notas sem ligações e rótulos.
 - Em **Forças**, ajuste o grafo como no Obsidian: **centrípeta** puxa tudo para o
   centro, **repulsão** afasta as notas entre si, **força dos links** aperta as

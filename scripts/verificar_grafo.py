@@ -30,8 +30,11 @@ OBSERVAR_NOS = """(() => {
   const arc = CanvasRenderingContext2D.prototype.arc;
   const fill = CanvasRenderingContext2D.prototype.fill;
   const fillText = CanvasRenderingContext2D.prototype.fillText;
+  const beginPath = CanvasRenderingContext2D.prototype.beginPath;
+  const lineTo = CanvasRenderingContext2D.prototype.lineTo;
+  const stroke = CanvasRenderingContext2D.prototype.stroke;
   CanvasRenderingContext2D.prototype.clearRect = function(...args) {
-    if (this.canvas.id === 'grafo-canvas') { this.canvas.__nosDesenhados = []; this.canvas.__rotulosDesenhados = []; }
+    if (this.canvas.id === 'grafo-canvas') { this.canvas.__nosDesenhados = []; this.canvas.__rotulosDesenhados = []; this.canvas.__ligacoesDesenhadas = []; }
     return clear.apply(this, args);
   };
   CanvasRenderingContext2D.prototype.arc = function(x, y, r, ...args) {
@@ -58,9 +61,23 @@ OBSERVAR_NOS = """(() => {
   };
   CanvasRenderingContext2D.prototype.fill = function(...args) {
     if (this.canvas.id === 'grafo-canvas' && this.__ultimoNo) {
-      (this.canvas.__nosDesenhados ||= []).push(this.__ultimoNo);
+      (this.canvas.__nosDesenhados ||= []).push({...this.__ultimoNo, cor:this.fillStyle, opacidade:this.globalAlpha});
     }
     return fill.apply(this, args);
+  };
+  CanvasRenderingContext2D.prototype.beginPath = function(...args) {
+    this.__temLinha = false;
+    return beginPath.apply(this, args);
+  };
+  CanvasRenderingContext2D.prototype.lineTo = function(...args) {
+    this.__temLinha = true;
+    return lineTo.apply(this, args);
+  };
+  CanvasRenderingContext2D.prototype.stroke = function(...args) {
+    if (this.canvas.id === 'grafo-canvas' && this.__temLinha) {
+      this.canvas.__ligacoesDesenhadas.push({opacidade:this.globalAlpha});
+    }
+    return stroke.apply(this, args);
   };
 })()"""
 
@@ -96,6 +113,18 @@ def conferir_viewport(page) -> None:
     assert page.locator(".explorador").evaluate("e=>e.getBoundingClientRect().bottom<=innerHeight"), "Painel fora da janela"
     if page.locator("#pasta-grafo").is_visible():
         assert page.locator("#grafo-canvas").evaluate("e=>{const b=e.getBoundingClientRect();return b.height>100&&b.bottom<=innerHeight-65;}"), "Canvas fora da área útil"
+
+
+def conferir_legibilidade(page, quantidade: int) -> None:
+    dados = page.locator("#grafo-canvas").evaluate("""e => {
+      const b=e.getBoundingClientRect(), nos=e.__nosDesenhados;
+      return {quantidade:nos.length, legiveis:nos.every(n=>n.raio>=2.8 && n.opacidade>.95),
+        enquadrados:nos.every(n=>n.x-n.raio>0 && n.x+n.raio<b.width &&
+          n.y-n.raio>30 && n.y+n.raio<b.height)};
+    }""")
+    assert dados["quantidade"] == quantidade, dados
+    assert dados["legiveis"], "Zoom reduziu as notas a pontos quase invisíveis"
+    assert dados["enquadrados"], f"A acomodação deixou notas fora do enquadramento: {dados}"
 
 
 def jornadas(browser, base: str, capturas: Path | None) -> dict:
@@ -134,6 +163,41 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             ramo.locator(":scope > summary > a").click()
             expect(ramo).not_to_have_attribute("open", "")
             conferir_viewport(page)
+            # Regressão da captura real: 35 notas sem nenhuma ligação.
+            # A animação precisa terminar enquadrada sem clicar em Centralizar.
+            page.emulate_media(reduced_motion="no-preference")
+            page.goto(base + "/pastas/Sem links", wait_until="domcontentloaded")
+            aguardar_grafo(page)
+            page.wait_for_timeout(1800)
+            conferir_legibilidade(page, 35)
+            expect(page.locator("#grafo-sem-ligacoes")).to_have_js_property("hidden", False)
+            page.emulate_media(reduced_motion="reduce")
+            page.locator(".grafo-opcoes summary").click()
+            page.locator("#grafo-centro").fill("0")
+            page.locator("#grafo-centro").dispatch_event("input")
+            page.locator("#grafo-repulsao").fill("20")
+            page.locator("#grafo-repulsao").dispatch_event("input")
+            conferir_legibilidade(page, 35)
+            page.locator("#grafo-forcas-padrao").click()
+            page.locator(".grafo-opcoes summary").click()
+            if capturas:
+                page.screenshot(path=str(capturas / f"grafo-sem-links-{largura}{'-curto' if altura<700 else ''}.png"), full_page=True)
+            # Conjunto próximo à referência: hubs, muitas linhas e poucos avulsos.
+            page.goto(base + "/pastas/Rede", wait_until="domcontentloaded")
+            aguardar_grafo(page)
+            conferir_legibilidade(page, 100)
+            expect(page.locator("#grafo-sem-ligacoes")).to_have_js_property("hidden", True)
+            assert page.locator("#grafo-canvas").evaluate("""e =>
+              e.__ligacoesDesenhadas.length>=450 &&
+              e.__ligacoesDesenhadas.every(l=>l.opacidade>=.29) &&
+              new Set(e.__nosDesenhados.map(n=>n.cor)).size>1 &&
+              Math.max(...e.__nosDesenhados.map(n=>n.raio))>Math.min(...e.__nosDesenhados.map(n=>n.raio))*1.5
+            """), "Conexões, hubs ou notas avulsas não estão distinguíveis"
+            if capturas:
+                page.screenshot(path=str(capturas / f"grafo-rede-{largura}{'-curto' if altura<700 else ''}.png"), full_page=True)
+            conferir_viewport(page)
+            page.goto(url, wait_until="domcontentloaded")
+            aguardar_grafo(page)
             assert page.locator("#grafo-canvas").evaluate("""e=>e.__rotulosDesenhados.every(r=>
               r.x>=0 && r.x+r.w<=e.getBoundingClientRect().width && r.y>=0 && r.y<=e.getBoundingClientRect().height)"""), "Rótulos fora do canvas"
 
@@ -274,7 +338,9 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
         "jornadas": ["busca", "notas isoladas", "filtros ao voltar do leitor",
                      "zoom pelo teclado e centralização", "arrastar e abrir notas",
                      "visualização memorizada por pasta e após recarregar",
-                     "nome da pasta só expande sem alterar grafo", "centralização com muitos avulsos", "painéis dentro do viewport"],
+                     "nome da pasta só expande sem alterar grafo", "centralização com muitos avulsos",
+                     "35 notas sem links legíveis após animação e forças extremas",
+                     "rede com hubs e conexões visíveis", "painéis dentro do viewport"],
     }
 
 
@@ -311,6 +377,17 @@ def main() -> None:
             (conjunto / f"Centro {i:02}.md").write_text(f"# Centro {i:02}\n\n[[Centro {(i+1)%8:02}]]", encoding="utf-8")
         for i in range(96):
             (conjunto / f"Solta {i:02}.md").write_text(f"# Solta {i:02}\n\nArquivo sem ligações.", encoding="utf-8")
+        sem_links = vault / "Sem links"
+        sem_links.mkdir()
+        for i in range(35):
+            (sem_links / f"Nota {i:02}.md").write_text(f"# Nota {i:02}\n\nSem referências.", encoding="utf-8")
+        rede = vault / "Rede"
+        rede.mkdir()
+        for i in range(100):
+            links = [f"[[Rede {(i+salto)%90:02}]]" for salto in (1, 3, 7, 13, 19)] if i < 90 else []
+            if 0 < i < 90:
+                links.append("[[Rede 00]]")
+            (rede / f"Rede {i:02}.md").write_text(f"# Rede {i:02}\n\n" + "\n".join(links), encoding="utf-8")
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             porta = s.getsockname()[1]

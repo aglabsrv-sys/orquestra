@@ -83,7 +83,7 @@
         </div>
       </div>
       <canvas id="grafo-canvas" tabindex="0" aria-label="Ligações entre notas. Use as setas para escolher uma nota, Enter para abrir, mais e menos para zoom e zero para centralizar." aria-describedby="grafo-estado"></canvas>
-      <details class="grafo-lista"><summary>Notas do grafo</summary><ul id="grafo-notas"></ul></details>
+      <details class="grafo-lista"><summary>Notas do grafo</summary><p id="grafo-sem-ligacoes" class="campo-ajuda" hidden>Estas notas ainda não têm ligações entre si. Conecte-as com <code>[[Nome da nota]]</code> ou links Markdown.</p><ul id="grafo-notas"></ul></details>
     </section>
     <section id="pasta-leitor" hidden aria-label="Arquivo aberto"><div class="leitor-barra"><button class="botao pequeno so-icone" type="button" id="leitor-fechar" aria-label="Voltar ao grafo" title="Voltar ao grafo">{{ icone('seta_esq', 17) }}</button><span id="leitor-titulo"></span></div><iframe id="leitor-frame" title="Nota do cofre"></iframe></section>
   </div>

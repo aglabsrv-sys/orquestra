@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- Grafo mantém notas legíveis ao afastar e acompanha a acomodação das forças no
+  enquadramento inicial. Conexões ganham contraste e notas sem links ficam
+  identificadas, com orientação quando não há ligações no recorte.
+
 - A verificação de atualizações consulta a publicação já no primeiro acesso,
   inclusive em computadores recém ligados; o cache só é usado depois da leitura.
 
