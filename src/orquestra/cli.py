@@ -243,7 +243,8 @@ def reiniciar(args: argparse.Namespace) -> None:
 
 def _git(*partes: str, pasta: Path) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *partes], cwd=pasta, capture_output=True, text=True, encoding="utf-8",
-                          errors="replace", timeout=120)
+                          errors="replace", timeout=120,
+                          **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
 
 
 def atualizar(args: argparse.Namespace) -> None:

@@ -62,7 +62,7 @@ def apresentar(nota, hoje: dt.date) -> dict:
     dias_semana = [segunda + dt.timedelta(days=i) for i in range(7)]
     semana = sum(d.isoformat() in registros for d in dias_semana if d <= hoje)
     tags = nota.campo("tags") or []
-    return {"rel": nota.rel, "versao": nota.versao, "titulo": nota.titulo, "url": ap.url_nota(nota.rel),
+    return {"rel": nota.rel, "versao": nota.versao, "titulo": nota.titulo, "url": ap.url_nota(nota.rel), "descricao": nota.corpo,
             "meta": meta, "semana": semana, "percentual": min(100, round(semana / meta * 100)),
             "marcado": hoje.isoformat() in registros, "registros": sorted(registros),
             "dias": [{"iso": d.isoformat(), "nome": "STQQSSD"[d.weekday()], "rotulo": ("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")[d.weekday()], "feito": d.isoformat() in registros, "futuro": d > hoje, "hoje": d == hoje} for d in dias_semana],
@@ -118,7 +118,7 @@ def _nota(painel, rel: str):
 
 
 def salvar(painel, dados: dict, hoje: dt.date | None = None) -> dict:
-    """Cria ou edita só título/meta/tags; os registros existentes são preservados."""
+    """Edita o hábito sem substituir registros ou propriedades desconhecidas."""
     hoje = hoje or dt.date.today()
     titulo = str(dados.get("titulo") or "").strip()
     if not titulo or len(titulo) > 120:
@@ -128,16 +128,19 @@ def salvar(painel, dados: dict, hoje: dt.date | None = None) -> dict:
     if not isinstance(tags, list) or len(tags) > 12 or any(not isinstance(t, str) or len(t) > 60 for t in tags):
         raise Recusado("Use até 12 tags com até 60 caracteres cada.")
     tags = list(dict.fromkeys(t.strip() for t in tags if t.strip()))
+    descricao = dados.get("descricao")
+    if descricao is not None and (not isinstance(descricao, str) or len(descricao) > 1000000):
+        raise Recusado("Use uma descrição de até um milhão de caracteres.")
     with painel._trava:
         rel = str(dados.get("rel") or "")
         if rel:
             _nota(painel, rel)
-            nota = painel.editar_nota(rel, str(dados.get("versao") or ""), titulo=titulo, campos={"meta_semanal": meta, "tags": tags})
+            nota = painel.editar_nota(rel, str(dados.get("versao") or ""), titulo=titulo, corpo=descricao, campos={"meta_semanal": meta, "tags": tags})
         else:
             if "habitos" not in painel.indice.modulos:
                 painel.adicionar_modulo("habitos", exemplos=False)
             _modulo_compativel(painel)
-            nota = painel.criar_nota("habitos", titulo, {"meta_semanal": meta, "registros": [], "tags": tags})
+            nota = painel.criar_nota("habitos", titulo, {"meta_semanal": meta, "registros": [], "tags": tags}, corpo=descricao or "")
         itens = [apresentar(n, hoje) for n in painel.indice.itens("habitos")]
         item = apresentar(nota, hoje)
         return {"rel": nota.rel, "versao": nota.versao, "item": item, "resumo": resumo(itens), "hoje": hoje.isoformat()}

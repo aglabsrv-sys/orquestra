@@ -139,6 +139,14 @@
   };
   var filtrosOriginais = [];
   document.addEventListener('click', function (e) {
+    var externo=e.target.closest('[data-cal-externo]'),desconectar=e.target.closest('[data-cal-desconectar]');
+    if(externo){
+      var item=JSON.parse($('#cal-eventos',raiz).textContent).find(function(i){return i.rel===externo.dataset.calExterno;});if(!item)return;
+      var d=document.createElement('dialog'),corpo=document.createElement('div');d.className='dialogo';corpo.className='dialogo-corpo';d.setAttribute('aria-label','Compromisso da agenda externa');
+      [item.titulo,'Agenda externa · somente leitura',item.data+(item.hora?' · '+item.hora+'–'+item.hora_fim:' · Dia inteiro'),item.local,item.corpo,'Edite este compromisso no aplicativo da agenda de origem.'].filter(Boolean).forEach(function(t,i){var el=document.createElement(i===0?'h2':'p');el.textContent=t;el.style.whiteSpace='pre-wrap';corpo.append(el);});
+      var fechar=document.createElement('button');fechar.type='button';fechar.className='botao';fechar.textContent='Fechar';fechar.onclick=function(){d.close();};corpo.append(fechar);d.append(corpo);document.body.append(d);d.onclose=function(){d.remove();externo.focus();};d.showModal();return;
+    }
+    if(desconectar){(async function(){if(!await window.OrquestraInterface.confirmar({titulo:'Desconectar agenda externa?',texto:'Os eventos deixarão de aparecer aqui. A agenda original será preservada.',confirmar:'Desconectar'}))return;try{await window.Orquestra.api('POST','/api/agenda/desconectar',{});await navegar(location.href,false);}catch(erro){avisar(erro.message,'erro');}})();return;}
     var fecharBotao = e.target.closest('[data-cal-fechar]');
     if (fecharBotao) {
       var dialogo = fecharBotao.closest('dialog');

@@ -34,7 +34,7 @@ function paginaApp({dialogo=null,carrossel=false}={}) {
   document.querySelectorAll=s=>s==='dialog'&&dialogo?[dialogo]:s==='[data-fechar]'&&dialogo?[botaoFechar]:[];
   botaoFechar.closest=()=>dialogo;
   window.Orquestra={ambiente(){}};window.OrquestraInterface={avisar(){}};
-  runInNewContext(app,{window,document,Event,console,setTimeout,clearTimeout,sessionStorage:{getItem(){return null;},setItem(){}}});
+  runInNewContext(app,{window,document,Event,URL,location:{href:'http://localhost/'},console,setTimeout,clearTimeout,sessionStorage:{getItem(){return null;},setItem(){}}});
   document.emitir('DOMContentLoaded');
   return {document,botaoFechar,get aberturas(){return aberturas;},get movimentos(){return movimentos;}};
 }

@@ -98,7 +98,7 @@
       setaEsq.disabled = i === 0;
       setaDir.disabled = i === slides.length - 1;
       window.Orquestra.ambiente($(".capa", slides[i]));
-      try { sessionStorage.setItem("orq-slide", String(i)); } catch (e) { /* modo privado */ }
+      try { sessionStorage.setItem("orq-card:" + document.body.dataset.vaultId, slides[i].dataset.id); } catch (e) { /* modo privado */ }
     }
     function posicao(i) { return slides[i].offsetLeft - (trilho.clientWidth - slides[i].offsetWidth) / 2; }
     function ir(i, suave) {
@@ -202,9 +202,12 @@
       else if (e.key === "Enter" && atual >= 0) { e.preventDefault(); slides[atual].click(); }
     });
 
-    var inicial = 0;
-    try { inicial = Number(sessionStorage.getItem("orq-slide")) || 0; } catch (e) { /* modo privado */ }
-    inicial = Math.min(inicial, slides.length - 1);
+    document.addEventListener('orquestra:card', function (e) { var i = slides.findIndex(function (s) { return s.dataset.id === e.detail; }); if (i >= 0) ir(i); });
+    var inicial = 0, destino = new URL(location.href).searchParams.get('card');
+    try { destino = destino || sessionStorage.getItem("orq-card:" + document.body.dataset.vaultId); } catch (e) { /* modo privado */ }
+    var achado = slides.findIndex(function (s) { return s.dataset.id === destino; });
+    if (achado >= 0) inicial = achado;
+    if (new URL(location.href).searchParams.has('card')) { var limpa = new URL(location.href); limpa.searchParams.delete('card'); history.replaceState(history.state, '', limpa); }
     ir(inicial, false);
     ativar(inicial);
     window.addEventListener("resize", function () { ir(atual, false); });
@@ -270,6 +273,10 @@
       adicionais.selectedOptions[0].disabled = true; adicionais.value = "";
       var campo = $("input,select,textarea", grupo); if (campo) campo.focus();
     };
+    if (adicionais) $$('option', adicionais).forEach(function (opcao) {
+      var grupo = $$('[data-extra-campo]', dialogo).find(function (g) { return g.dataset.extraCampo === opcao.value; });
+      if (grupo && !grupo.hidden) opcao.disabled = true;
+    });
     abrir.onclick = function () { dialogo.showModal(); titulo.focus(); };
     form.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -856,13 +863,49 @@
     var original = retrato(), estado = $("#p-estado");
     personalizacaoPendente = function () { return retrato() !== original; };
     function atualizarPendencia() {
-      if (estado) estado.textContent = personalizacaoPendente() ? "Há alterações para salvar." : "As mudanças só entram em vigor ao salvar.";
+      if (estado) estado.textContent = personalizacaoPendente() ? "Há alterações para salvar." : "A capa é salva ao escolher. Os demais ajustes usam Salvar alterações.";
     }
     raiz.addEventListener("input", atualizarPendencia);
     raiz.addEventListener("change", atualizarPendencia);
     window.addEventListener("beforeunload", function (e) {
       if (personalizacaoPendente()) { e.preventDefault(); e.returnValue = ""; }
     });
+
+    $$('[data-icone]', raiz).forEach(function (botao) {
+      botao.onclick = function () {
+        $('#p-icone').value = botao.dataset.icone;
+        $('#p-icone-previa').replaceChildren($('svg', botao).cloneNode(true));
+        $$('[data-icone]', raiz).forEach(function (b) { b.setAttribute('aria-pressed', String(b === botao)); });
+        botao.closest('details').open = false;
+        botao.closest('details').querySelector('summary').setAttribute('aria-label', 'Ícone: ' + botao.getAttribute('aria-label'));
+        botao.closest('details').querySelector('summary').focus();
+        atualizarPendencia();
+      };
+    });
+    var menuIcones = $('.icone-seletor', raiz);
+    document.addEventListener('click', function (e) { if (menuIcones && menuIcones.open && !menuIcones.contains(e.target)) menuIcones.open = false; });
+    if (menuIcones) menuIcones.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault();menuIcones.open = false;$('summary', menuIcones).focus();return; }
+      var botoes = $$('[data-icone]', menuIcones), atual = botoes.indexOf(e.target);
+      if (atual < 0) return;
+      var proximo = e.key === 'Home' ? 0 : e.key === 'End' ? botoes.length-1 : e.key === 'ArrowRight' ? atual+1 : e.key === 'ArrowLeft' ? atual-1 : e.key === 'ArrowDown' ? atual+5 : e.key === 'ArrowUp' ? atual-5 : -1;
+      if (proximo >= 0) { e.preventDefault();botoes[Math.min(proximo,botoes.length-1)].focus(); }
+    });
+    raiz.salvarCapa = async function () {
+      var botao = $('#p-salvar'), controles = $$('#cenas-dialogo button').concat([$('#escolher-cena'), $('#p-enviar-capa'), botao]);
+      var anteriores = controles.map(function (b) { return b.disabled; });
+      controles.forEach(function (b) { b.disabled = true; });
+      var cena = $('#p-cena').value, capa = $('#p-capa').value;
+      $('#p-capa-estado').textContent = 'Salvando capa…';configPropriaAte = Date.now() + 3000;
+      try {
+        var r = await api('PUT', '/api/modulos/' + encodeURIComponent(raiz.dataset.modulo), {versao:raiz.dataset.versao,cena:cena,capa:capa || null});
+        raiz.dataset.versao = r.versao;
+        var valores = JSON.parse(original);
+        $$('input, select, textarea', raiz).forEach(function (el, i) { if (el.id === 'p-cena') valores[i] = cena; if (el.id === 'p-capa') valores[i] = capa; });
+        original = JSON.stringify(valores);atualizarPendencia();$('#p-capa-estado').textContent = 'Capa salva.';
+      } catch (erro) { $('#p-capa-estado').textContent = 'Capa não salva. '+erro.message;mostrarErro(erro); }
+      finally { controles.forEach(function (b, i) { b.disabled = anteriores[i]; }); }
+    };
 
     function ligar(linha) {
       var tipo = $("[data-tipo]", linha), opcoes = $("[data-opcoes]", linha), tirar = $("[data-tirar]", linha);

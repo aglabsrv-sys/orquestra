@@ -19,7 +19,8 @@ para mexer.
 
 ## Criar e organizar itens
 
-O botão **Novo** abre título e campos obrigatórios sem valor padrão. Em
+O botão **Novo** abre título e campos obrigatórios sem valor padrão. Em Tarefas e
+Projetos, a descrição opcional também aparece: é o texto da nota. Em
 **Adicionar campo +**, escolha propriedades adicionais ou Texto. Campos não
 adicionados conservam os padrões do módulo; não são enviados como valores vazios.
 
@@ -33,10 +34,17 @@ definitivamente continua exigindo acesso local. Veja a [lixeira](pastas.md).
 
 Em **Personalizar**, Aparência, Propriedades e Visualizações têm painéis separados.
 Trocar de aba preserva as alterações pendentes; Salvar alterações considera todas
-as abas. O cabeçalho acompanha a rolagem normal da página.
+as abas. A capa é a exceção: clicar numa cena ou imagem, ou enviar uma capa, já
+salva essa escolha. Outros ajustes ainda pendentes continuam no formulário.
+O seletor de ícone mostra os desenhos, com o nome acessível no foco ou hover.
+O cabeçalho acompanha a rolagem normal da página.
 
 O dock mantém **Entrada**, quando instalada, à direita. No celular, uma área
 principal permanece ao lado dos atalhos fixos; as demais estão em Todas as áreas.
+As teclas **1 a 9** levam aos cards pela ordem da home; **0** abre o menu de áreas.
+Os atalhos ficam suspensos ao digitar ou com um diálogo aberto. **Início** volta
+à capa da última área acessada, inclusive pelo dock. Na home, outro clique em
+Início seleciona o primeiro card. A memória é separada por vault e por aba.
 Na home, arraste os cartões com o mouse ou use as setas. Arrastar não abre o cartão.
 - **Mostrar uma pasta sua.** Em Pastas, "Mostrar no painel": o painel lê os campos
   que as notas já têm e escreve o `_modulo.yaml` por você. Veja

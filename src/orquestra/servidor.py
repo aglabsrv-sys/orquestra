@@ -92,6 +92,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     modelos.env.globals.update(icone=ap.icone, rotulo=rotulo, nome_cena=temas.nome_cena, url_nota=ap.url_nota, url_pasta=ap.url_pasta)
     # Muda sempre que um arquivo de static/ muda, para o navegador não usar CSS/JS antigo.
     marca = marca_estaticos(PASTA / "static")
+    from orquestra.agenda_externa import Assinatura
+    assinatura_agenda = Assinatura(vault)
 
     def pagina(request: Request, nome: str, ativo: str, status: int = 200, **extra: Any) -> HTMLResponse:
         hoje = dt.date.today()
@@ -107,6 +109,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             "hoje": hoje,
             "hoje_longo": ap.data_longa(hoje),
             "dock": ap.montar_dock(painel, ativo, hoje),
+            "cards_ids": [m.id for m in painel.indice.modulos.values() if not ap.agenda_nativa(m)] + (["pastas"] if painel.indice.fora_dos_modulos() else []) + ["decidir", "diario"],
             "ativo": ativo,
             "modulo_captura": painel.indice.modulos.get(painel.config.captura),
             **extra,
@@ -624,7 +627,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         from orquestra import calendario
         try:
             alvo = dt.date.fromisoformat(data) if data else dt.date.today()
-            agenda_visual = calendario.montar(painel, alvo, visao, q[:200], pasta, categoria, cor, tag, concluidos == "1")
+            agenda_visual = calendario.montar(painel, alvo, visao, q[:200], pasta, categoria, cor, tag, concluidos == "1", assinatura=assinatura_agenda)
         except ValueError as erro:
             raise Recusado(str(erro)) from None
         return pagina(request, "agenda.html", "calendario", cal=agenda_visual)
@@ -1334,40 +1337,18 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         if erro := exigir_local(request):
             return erro
         dados = await corpo_json(request)
-        from urllib.parse import urlsplit
-        endereco = str(dados.get("url") or "").replace("webcal://", "https://", 1)
         try:
-            url = urlsplit(endereco)
-        except ValueError:
-            raise Recusado("Endereço iCal inválido.") from None
-        if url.scheme != "https" or not url.hostname or url.username or url.password or url.fragment:
-            raise Recusado("Use um endereço iCal HTTPS, sem usuário ou senha na URL.")
-        modulo, coletor = painel.coletor("tarefas", "agenda_ics.py")
-        script = confianca.caminho_script(painel.vault, modulo, coletor)
-        novo = (PASTA / "catalogo/tarefas/maquina/coletores/agenda_ics.py").read_bytes().replace(b"\r\n", b"\n")
-        anterior = novo.replace(b"import os\n", b"").replace(b'        if isinstance(agenda, dict) and agenda.get("variavel"):\n            endereco = os.environ.get(str(agenda["variavel"]), "")\n', b"")
-        atual = script.read_bytes().replace(b"\r\n", b"\n")
-        if atual not in (novo.replace(b"\r\n", b"\n"), anterior.replace(b"\r\n", b"\n")):
-            raise Recusado("Este coletor foi personalizado. Adapte a leitura da variável AGENDA_ICAL_URL no script antes de conectar.")
-        if atual != novo.replace(b"\r\n", b"\n"):
-            def atualizar_script(antes: bytes) -> bytes:
-                if antes.replace(b"\r\n", b"\n") != atual:
-                    raise Conflito("O coletor mudou durante a configuração. Confira a nova versão antes de continuar.")
-                return novo
-            await asyncio.to_thread(armazenamento.atualizar_bytes, script, atualizar_script)
-        # Não substitui código alterado pelo usuário. O novo contrato pede revisão.
-        from orquestra.config import ler_yaml, gravar_yaml
-        caminho = painel.caminho_seguro(str(modulo.pasta / "_modulo.yaml"))
-        conf = ler_yaml(caminho)
-        await asyncio.to_thread(segredos.salvar, painel.vault, "AGENDA_ICAL_URL", endereco)
-        for definicao in conf.get("coletores") or []:
-            if definicao.get("script") == coletor.script:
-                definicao["config"] = {"agendas": [{"nome": "Pessoal", "variavel": "AGENDA_ICAL_URL"}], "dias_a_frente": 14}
-                definicao["requer"] = ["AGENDA_ICAL_URL"]
-                definicao["ativo"] = False
-        await asyncio.to_thread(gravar_yaml, caminho, conf)
-        await asyncio.to_thread(painel.recarregar_tudo)
-        return {"ok": True, "revisar": True}
+            await asyncio.to_thread(assinatura_agenda.conectar, str(dados.get("url") or ""))
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
+        return {"ok": True, "mensagem": "Agenda conectada para leitura. Nenhuma tarefa foi criada. Abra a Agenda para ver os eventos."}
+
+    @app.post("/api/agenda/desconectar")
+    async def api_desconectar_agenda(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        await asyncio.to_thread(assinatura_agenda.desconectar)
+        return {"ok": True}
 
     @app.post("/api/capas")
     async def api_enviar_capa(request: Request):

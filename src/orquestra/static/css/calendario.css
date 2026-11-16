@@ -136,3 +136,4 @@
 }
 @media(hover:none) { .cal-adicionar { opacity:1; } }
 @media(prefers-reduced-motion:reduce) { .calendario * { scroll-behavior:auto; } }
+.cal-assinatura { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:16px; }

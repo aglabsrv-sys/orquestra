@@ -527,7 +527,8 @@ def escolher_pasta_no_sistema() -> str | None:
     import subprocess
 
     try:
-        r = subprocess.run([sys.executable, "-c", _JANELA], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+        r = subprocess.run([sys.executable, "-c", _JANELA], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300,
+                           **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
     except (OSError, subprocess.TimeoutExpired):
         return None
     if r.returncode != 0:

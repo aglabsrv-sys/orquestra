@@ -57,7 +57,8 @@
   function chaveForcas(){return 'orq-grafo-forcas:'+document.body.dataset.vaultId;}
   function lerForcas(){
     var f=Object.assign({},FORCAS_PADRAO);
-    try{var salvo=JSON.parse(localStorage.getItem(chaveForcas())||'{}');Object.keys(f).forEach(function(k){var v=Number(salvo[k]);if(isFinite(v))f[k]=v;});}catch(e){/* Armazenamento opcional. */}
+    var limites={centro:[0,1],repulsao:[0,20],links:[0,1],distancia:[30,500]};
+    try{var salvo=JSON.parse(localStorage.getItem(chaveForcas())||'{}');Object.keys(f).forEach(function(k){if(salvo[k]==null)return;var v=Number(salvo[k]);if(isFinite(v))f[k]=Math.max(limites[k][0],Math.min(limites[k][1],v));});}catch(e){/* Armazenamento opcional. */}
     return f;
   }
   function ligarForcas(f,aoMudar){
@@ -139,14 +140,15 @@
       avulsos.forEach(function(n,i){if(gesto&&gesto.no===n)return;var a=i*2.399963,d=12*Math.sqrt(i+.5);n.x=cx+Math.cos(a)*d;n.y=cy+Math.sin(a)*d;n.vx=n.vy=0;});
     }
     function simular(){
-      // A repulsão só envolve notas conectadas, com amostra distribuída em cofres grandes.
-      var total=conectados.length,amostra=Math.min(40,total-1),passoAmostra=Math.max(1,Math.floor((total-1)/Math.max(1,amostra)));
-      conectados.forEach(function(n,i){
-        for(var j=1;j<=amostra;j++){var outro=conectados[(i+j*passoAmostra+iteracao)%total];if(outro===n)continue;var x=n.x-outro.x,y=n.y-outro.y,d=x*x+y*y+24;n.vx+=x*forcas.repulsao/d;n.vy+=y*forcas.repulsao/d;}
+      // Todas as notas respondem às forças, inclusive pastas sem nenhum link.
+      // A amostra distribuída limita o custo nos cofres grandes.
+      var total=nos.length,amostra=Math.min(40,total-1),passoAmostra=Math.max(1,Math.floor((total-1)/Math.max(1,amostra)));
+      nos.forEach(function(n,i){
+        for(var j=1;j<=amostra;j++){var outro=nos[(i+j*passoAmostra+iteracao)%total];if(outro===n)continue;var x=n.x-outro.x,y=n.y-outro.y,d=x*x+y*y+24;n.vx+=x*forcas.repulsao*12/d;n.vy+=y*forcas.repulsao*12/d;}
         n.vx-=n.x*forcas.centro*.004;n.vy-=n.y*forcas.centro*.004;
       });
       linhas.forEach(function(l){var x=l[1].x-l[0].x,y=l[1].y-l[0].y,d=Math.sqrt(x*x+y*y)||1,f=(d-forcas.distancia)*.035*forcas.links;l[0].vx+=x/d*f;l[0].vy+=y/d*f;l[1].vx-=x/d*f;l[1].vy-=y/d*f;});
-      conectados.forEach(function(n){if(gesto&&gesto.no===n){n.vx=n.vy=0;return;}n.vx*=.68;n.vy*=.68;n.x+=Math.max(-5,Math.min(5,n.vx));n.y+=Math.max(-5,Math.min(5,n.vy));});iteracao++;
+      nos.forEach(function(n){if(gesto&&gesto.no===n){n.vx=n.vy=0;return;}n.vx*=.68;n.vy*=.68;n.x+=Math.max(-5,Math.min(5,n.vx));n.y+=Math.max(-5,Math.min(5,n.vy));});iteracao++;
     }
     function passo(){quadro=0;if(encerrado||document.hidden||!canvas.isConnected||$('#pasta-grafo').hidden)return;simular();pintar();if(iteracao<200)quadro=requestAnimationFrame(passo);}
     function animar(){if(!quadro&&!reduz.matches&&iteracao<200&&!document.hidden)quadro=requestAnimationFrame(passo);}

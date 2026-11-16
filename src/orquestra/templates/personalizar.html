@@ -20,12 +20,13 @@
     <div class="personalizar-previa">{{ p.capa(capa) }}<span>{{ modulo.nome }}</span></div>
     <div class="grade-campos">
       <label class="campo"><span>Nome no painel</span><input type="text" id="p-nome" value="{{ modulo.nome }}" maxlength="60" required autocomplete="off"></label>
-      <label class="campo"><span>Ícone</span>
-        <select id="p-icone">
+      <div class="campo"><span id="p-icone-rotulo">Ícone</span>
+        <details class="icone-seletor"><summary class="botao" aria-label="Ícone: {{ rotulo(modulo.icone) }}"><span id="p-icone-previa">{{ icone(modulo.icone,20) }}</span>{{ icone('chevron_dir',14) }}</summary><div class="icone-opcoes" aria-label="Escolher ícone">{% for i in icones %}<button type="button" data-icone="{{ i }}" aria-label="{{ rotulo(i) }}" title="{{ rotulo(i) }}" aria-pressed="{{ 'true' if i == modulo.icone else 'false' }}">{{ icone(i,22) }}</button>{% endfor %}</div></details>
+        <select id="p-icone" hidden aria-label="Ícone escolhido">
           {% if modulo.icone not in icones %}<option value="{{ modulo.icone }}" selected>{{ rotulo(modulo.icone) }}</option>{% endif %}
           {% for i in icones %}<option value="{{ i }}"{% if i == modulo.icone %} selected{% endif %}>{{ rotulo(i) }}</option>{% endfor %}
         </select>
-      </label>
+      </div>
       <label class="campo"><span>Cena da capa</span>
         <button class="botao" type="button" id="escolher-cena" aria-label="Escolher cena da capa">{{ nome_cena(cena_atual) if cena_atual else "Capa própria" }} · Alterar</button>
         <select id="p-cena" hidden aria-label="Cena escolhida">
@@ -80,7 +81,7 @@
   </div>
 
   </section>
-  <p class="campo-ajuda" id="p-estado" role="status" aria-live="polite">As mudanças só entram em vigor ao salvar.</p>
+  <p class="campo-ajuda" id="p-estado" role="status" aria-live="polite">A capa é salva ao escolher. Os demais ajustes usam Salvar alterações.</p>
 </section>
 
 <dialog id="cenas-dialogo" class="dialogo" aria-label="Escolher cena da capa"><div class="dialogo-corpo">

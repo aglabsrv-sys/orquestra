@@ -216,6 +216,7 @@ class Habito(Pedido):
     rel: str = Field(default="", max_length=2000)
     versao: str = Field(default="", max_length=128)
     titulo: str = Field(min_length=1, max_length=120)
+    descricao: str | None = Field(default=None, max_length=1_000_000)
     meta_semanal: int = Field(default=3, ge=1, le=7)
     tags: list[str] = Field(default_factory=list, max_length=12)
 

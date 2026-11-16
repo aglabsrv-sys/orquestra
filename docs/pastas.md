@@ -9,6 +9,10 @@ configurações e arquivos de `maquina/` são protegidos contra exclusão pelo p
 
 Abra **Pastas → Lixeira** para restaurar ou excluir definitivamente cada item.
 A lista mostra uma linha por nota, com os ícones Restaurar e Excluir definitivamente.
+A seleção permite marcar várias notas ou todas e escolher uma ação no menu.
+Restaurar processa cada nota sem sobrescrever caminhos ocupados; falhas ficam
+selecionadas e aparecem no resultado. Excluir definitivamente em lote pede uma
+confirmação com a quantidade antes de iniciar.
 A restauração exige o caminho original livre e nunca substitui outra nota.
 A limpeza definitiva pede outra confirmação e confere a versão do arquivo.
 Não existe limpeza automática. As notas ficam em `.trash/orquestra/` do vault;
@@ -40,7 +44,9 @@ atual, em formato `[[wikilink]]` ou link Markdown.
   centro, **repulsão** afasta as notas entre si, **força dos links** aperta as
   ligações e **distância dos links** define o comprimento delas. Os padrões são
   0,52 · 10 · 1 · 174; **Restaurar padrão** volta a eles. A escolha fica guardada
-  neste navegador, por cofre. Arrastar uma nota puxa as vizinhas junto.
+  neste navegador, por cofre. Centro e repulsão também atuam em notas sem links;
+  força e distância dos links atuam nas conexões existentes. Arrastar uma nota
+  puxa as vizinhas junto.
 - Passe sobre uma nota para destacar suas conexões. Pelo teclado, use as setas para escolher uma nota, Enter para abrir e `0` para centralizar.
 - Em uma pasta adotada no painel, as subpastas continuam navegáveis. O painel sugere Lista quando um quadro não teria uma distribuição útil de status e memoriza a visualização escolhida para cada área e cofre.
 

@@ -44,6 +44,19 @@
 .habitos-modelos p { margin:0; font-size:11px; }
 .habitos-modelos-nota { color:var(--texto-suave); font-size:9px; }
 .habitos-modelos-grade { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.habito-descricao { display:none; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--texto-suave); font-size:.8rem; margin:8px 0; }
+.habitos-lista .habito-descricao { display:block; grid-column:1; grid-row:2; }
+.habitos-lista .habito-card:has(.habito-descricao) .habito-card-rodape { grid-row:3; }
+.habitos-lista .habito-card:has(.habito-descricao) .habito-mapa-wrap { grid-row:1/4; }
+#habito-editor { max-width:460px; }
+#habito-form { padding:22px; gap:12px; }
+#habito-form > p.suave { display:none; }
+#habito-form .campo { margin:0; gap:5px; }
+#habito-form .habito-meta-opcoes { margin:0; }
+#habito-form .dialogo-acoes { margin-top:0; padding-top:12px; }
+.habito-extras summary { color:var(--texto-suave); font-size:.8rem; }
+#habito-form .habito-extras[open] .campo { margin-top:10px; }
+#habito-editor-estado:empty { display:none; }
 .habito-modelo { display:flex; align-items:center; gap:12px; padding:14px; border:1px dashed var(--borda); border-radius:12px; color:var(--texto-suave); background:transparent; font:inherit; cursor:pointer; text-align:left; }
 .habito-modelo > .icone { flex:none; color:var(--destaque); }
 .habito-modelo b { display:block; color:var(--texto); font-size:12px; font-weight:550; }

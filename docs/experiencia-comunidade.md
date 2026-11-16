@@ -21,10 +21,10 @@ sexta-feira para revisar a semana, dia 5 para conferir contas. A identificação
 duplicar a rotina na mesma data. Só roda automaticamente se você ligar a chave e
 mantiver o processo aberto.
 
-“Compromissos da agenda” lê um endereço iCal e cria tarefas dos próximos 14 dias.
-O botão Conectar agenda guarda `AGENDA_ICAL_URL` no `.env` local e declara a variável
-em `requer`. A URL não aparece na configuração compartilhável. A configuração nova
-fica manual até sua revisão; o botão Rodar agora faz a primeira coleta.
+**Conectar agenda** assina o iCal para leitura na Agenda, sem criar tarefas.
+O endereço fica nas variáveis locais, separado por vault, e a conexão é testada
+antes de ser salva. A automação **Importar cópias da agenda (legado)** conserva o
+comportamento antigo de gravar notas; você pode pausá-la em Automações.
 
 Coletores exatamente iguais aos distribuídos com a instalação — código, auxiliares,
 configuração e chaves declaradas — podem rodar sem um aceite adicional. Alterar
@@ -40,11 +40,11 @@ O assistente ensina como obter o link no Google Agenda/Android ou iCloud/iPhone.
 Trate o link como senha; uma agenda pública do iCloud pode ser lida por quem
 conhecer o endereço. O Orquestra não solicita a senha Apple/Google.
 
-Este é um importador de leitura, não uma integração CalDAV/OAuth bidirecional.
-O coletor atual não expande regras RRULE, não reconcilia exclusões e não garante
-atualização de todos os eventos já importados. Eventos recorrentes podem aparecer
-apenas na primeira ocorrência do arquivo; confira a agenda de origem. Não anuncie
-sincronização completa de calendário com esta versão.
+A assinatura trata recorrências, exceções e cancelamentos presentes no iCal.
+Ao consultar a Agenda, uma nova leitura é feita se o cache tiver cinco minutos.
+Não há edição da agenda de origem: use o aplicativo Google/Apple para alterar
+compromissos. O importador legado continua sem reconciliar mudanças e exclusões
+nas cópias já gravadas. Consulte os [limites da assinatura](agenda.md).
 
 Referência: [Google — sincronizar por iCal](https://support.google.com/calendar/answer/37648).
 

@@ -58,10 +58,27 @@ Isso não altera o arquivo enquanto você não editar/reagendar o item. Compromi
 do antigo coletor iCal com hora no título são reconhecidos quando a origem do
 coletor está identificada na nota.
 
-Conectar agenda mantém o assistente iCal e as limitações documentadas em
-[Experiência da comunidade](experiencia-comunidade.md). Alterar um compromisso
-importado aqui modifica o Markdown local; não altera o Google Agenda ou iCloud.
-RRULE e sincronização bidirecional não foram adicionados nesta etapa.
+**Conectar agenda** assina um endereço iCal em modo de leitura. Os eventos aparecem
+na Agenda, sem criar tarefas ou notas. O link fica nas variáveis locais fora do
+vault, separado por cofre; não é devolvido ao navegador. A conexão é testada antes
+de substituir uma assinatura existente. Uma assinatura por vault é suportada.
+
+A leitura trata recorrências, exceções, cancelamentos, fusos e datas de dia inteiro.
+Ao consultar a Agenda, o cache em memória é atualizado a cada cinco minutos. Se a
+fonte falhar, aparece um aviso e a última leitura disponível continua visível.
+O limite é de 2 MB por calendário e até 500 eventos por período. Os horários são
+convertidos para o fuso do computador que executa o painel, como as demais datas.
+Clique no evento para consultar detalhes e edite no aplicativo de origem.
+**Desconectar** remove o link local; a agenda original é preservada.
+
+No assistente, Google Agenda e iCloud têm passos separados. O link iCal dá acesso
+de leitura e deve ser tratado como senha. A opção de calendário público do iCloud
+torna os eventos acessíveis a quem conhecer o link; use uma agenda apropriada.
+
+A antiga automação **Importar cópias da agenda (legado)** continua disponível para
+quem deseja criar notas. Suas cópias existentes são preservadas e não acompanham
+remarcações ou cancelamentos. Pause essa importação em Automações ao usar a assinatura
+se não quiser novas tarefas. Não há sincronização bidirecional.
 
 ## Implementação e referência
 

@@ -3,6 +3,29 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.from((r || document).querySelectorAll(s)); };
+  // O último acesso inclui navegação pelo dock e links, com memória por vault.
+  var ordemCards = $('#cards-ordem') ? JSON.parse($('#cards-ordem').textContent) : [];
+  var paginaAtual = (document.body.dataset.pagina || '').replace(/^m:/, '');
+  var chaveCard = 'orq-card:' + document.body.dataset.vaultId;
+  if (paginaAtual !== 'inicio' && ordemCards.includes(paginaAtual)) {
+    try { sessionStorage.setItem(chaveCard, paginaAtual); } catch (_) { /* Memória opcional. */ }
+  }
+  function irAoCard(id) {
+    if ($('#carrossel')) document.dispatchEvent(new CustomEvent('orquestra:card', {detail:id}));
+    else location.assign('/?card=' + encodeURIComponent(id));
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing || $('dialog[open]') || (e.target && (e.target.isContentEditable || e.target.closest('input,textarea,select,[contenteditable=true]')))) return;
+    if (/^[1-9]$/.test(e.key) && ordemCards[Number(e.key)-1]) { e.preventDefault(); irAoCard(ordemCards[Number(e.key)-1]); }
+    else if (e.key === '0' && $('#abrir-gaveta')) { e.preventDefault(); $('#abrir-gaveta').click(); }
+  });
+  var inicioDock = $('.dock a[href="/"]');
+  if (inicioDock) inicioDock.addEventListener('click', function (e) {
+    if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if ($('#carrossel')) { if (ordemCards.length) irAoCard(ordemCards[0]); }
+    else { var ultimo = ''; try { ultimo = sessionStorage.getItem(chaveCard); } catch (_) { /* Memória opcional. */ } irAoCard(ordemCards.includes(ultimo) ? ultimo : ordemCards[0]); }
+  });
   var secoes=$('.navega-ajustes'),secaoAtiva=$('.navega-ajustes [aria-current=page]');
   if(secoes&&secaoAtiva&&secoes.scrollWidth>secoes.clientWidth){secoes.scrollLeft=secaoAtiva.offsetLeft-secoes.offsetLeft-(secoes.clientWidth-secaoAtiva.offsetWidth)/2;}
   function erro(e) { window.OrquestraInterface.avisar(e.message || 'Não foi possível concluir.', 'erro'); }

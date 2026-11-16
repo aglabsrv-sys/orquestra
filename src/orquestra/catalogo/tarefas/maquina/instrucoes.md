@@ -24,5 +24,8 @@ Leia antes `tarefas/_modulo.yaml` e `tarefas/humano/`.
 ## Tarefas criadas por coletores
 
 Itens com `origem: coletor` vêm de scripts: rotinas (`tags: recorrente`) e compromissos
-da agenda (`tags: agenda`). Não apague nem duplique: se a rotina mudou, a regra fica em
-`tarefas/_modulo.yaml`, e mudar a regra é decisão da pessoa.
+da importação legada da agenda (`tags: agenda`). Não apague nem duplique. Para mudar
+a rotina, use a configuração da automação autorizada pela pessoa; ela pode estar em
+`tarefas/_modulo.yaml` ou nas automações independentes. A assinatura de leitura em
+**Agenda → Conectar agenda** não cria tarefas. Não transforme cada compromisso em
+uma tarefa por conta própria.

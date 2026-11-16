@@ -30,6 +30,8 @@ dependencies = [
     "markdown-it-py>=3.0",
     # Protocolo MCP: o vault como conector para agentes (comando `orquestra mcp`)
     "mcp>=1.30,<3",
+    "icalendar>=6,<8",
+    "recurring-ical-events>=3,<4",
 ]
 
 [project.urls]

@@ -209,6 +209,7 @@ def git(vault: Path, *args: str, tempo: int = 120, ambiente: dict[str, str] | No
          "-c", f"core.attributesFile={os.devnull}", *credenciais, *args], cwd=raiz,
         capture_output=True, text=texto, encoding="utf-8" if texto else None,
         errors="replace" if texto else None, timeout=tempo, env=env, input=entrada,
+        **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}),
     )
 
 

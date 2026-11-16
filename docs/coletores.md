@@ -148,7 +148,20 @@ tarefas:
 Rodando uma vez por dia, o coletor cria "Revisar a semana - 14 nov" toda sexta. Se
 o painel ficou fechado num dia, a tarefa daquele dia não é criada depois.
 
-### Sua agenda como tarefas
+No formulário, o modelo começa com uma única tarefa. Em **Repetir tarefa**, escolha
+os dias da semana, todos os dias ou um dia do mês. **Verificar regras** controla
+quando o Orquestra consulta essas regras; mantenha a verificação diária mesmo
+para uma tarefa semanal. A regra é validada antes de salvar. Cada tarefa é criada
+uma vez por data; alterar seu título muda a identificação das próximas ocorrências.
+
+### Assinar uma agenda sem criar tarefas
+
+Use **Agenda → Conectar agenda**. O assistente separa os passos de Google Agenda
+e iCloud, testa o link e guarda o endereço fora do vault, nas variáveis locais
+específicas deste cofre. A assinatura é de leitura: não cria notas ou tarefas.
+Consulte [Agenda](agenda.md) para atualização, desconexão e limites.
+
+### Importação legada de agenda como tarefas
 
 Toda agenda tem um endereço iCal (termina em `.ics`) que pode ser lido sem login:
 
@@ -163,8 +176,9 @@ agendas:
 dias_a_frente: 14
 ```
 
-Esse endereço dá acesso de leitura à agenda inteira: **trate como senha**. Ele fica
-no `_modulo.yaml`, dentro do vault; mantenha o backup do vault em repositório privado.
+Esse endereço dá acesso de leitura à agenda inteira: **trate como senha**. Prefira
+`variavel: AGENDA_ICAL_URL`, com o valor cadastrado em Segredos, em vez de `url:` no
+`_modulo.yaml`. Essa importação preserva as cópias antigas, não sincroniza mudanças.
 Compromissos que se repetem entram só na primeira data; para rotinas, use o
 `recorrentes.py`. Se você remarcar um compromisso, a tarefa antiga continua lá.
 

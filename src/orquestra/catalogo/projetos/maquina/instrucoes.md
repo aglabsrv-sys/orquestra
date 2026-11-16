@@ -7,7 +7,7 @@ da nota é o plano: contexto, próximos passos, decisões.
 
 ## O que você pode fazer
 
-- Quebrar um projeto em próximos passos, numa seção `## Próximos passos` com caixas `- [ ]`.
+- Propor próximos passos numa seção nova `## Notas do agente`, com caixas `- [ ]`, preservando o plano escrito pela pessoa. Em notas suas, pode organizar `## Próximos passos`.
 - Se existir o módulo `tarefas`, criar as tarefas do projeto lá, com um link `[[Nome do projeto]]`.
 - Registrar decisões e andamento numa seção `## Notas do agente`, com a data.
 

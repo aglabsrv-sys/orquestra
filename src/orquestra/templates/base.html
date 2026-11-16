@@ -16,7 +16,7 @@
   <style>{{ estilo|safe }}</style>
 {% if request.query_params.get('explorador') == '1' %}<link rel="stylesheet" href="/static/css/leitor.css?v={{ marca }}">{% endif %}
 </head>
-<body data-vault-id="{{ vault_id }}" data-observa="{% block observa %}{% endblock %}">
+<body data-vault-id="{{ vault_id }}" data-pagina="{{ ativo }}" data-observa="{% block observa %}{% endblock %}">
   <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
   <canvas id="ambiente" width="48" height="27" aria-hidden="true"></canvas>
 
@@ -108,6 +108,7 @@
   <button id="atualizar-app" class="botao so-icone atualizar-app" type="button" hidden aria-label="Nova atualização disponível" title="Nova atualização disponível">{{ icone("atualizar", 18) }}<i aria-hidden="true"></i></button>
   <div id="avisos" role="region" aria-live="off" aria-label="Notificações"></div>
 
+  <script id="cards-ordem" type="application/json">{{ cards_ids|default([])|tojson }}</script>
   <script src="/static/js/cenas.js?v={{ marca }}"></script>
   <script src="/static/js/notas-seguras.js?v={{ marca }}"></script>
   <script src="/static/js/interface.js?v={{ marca }}"></script>

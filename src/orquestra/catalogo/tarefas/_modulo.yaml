@@ -62,11 +62,9 @@ coletores:
         - titulo: Revisar a semana
           quando: sexta
           prioridade: media
-        - titulo: Conferir as contas do mês
-          quando: dia 5
 
   - script: agenda_ics.py
-    nome: Compromissos da agenda
+    nome: Importar cópias da agenda (legado)
     ativo: false
     a_cada: 6h
     config:

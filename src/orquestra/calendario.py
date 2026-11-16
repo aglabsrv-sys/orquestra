@@ -141,7 +141,7 @@ def blocos(dia: dict) -> list[dict]:
     return resultado
 
 
-def montar(painel, alvo: dt.date, visao="mes", q="", pasta="", categoria="", cor="", tag="", concluidos=False) -> dict:
+def montar(painel, alvo: dt.date, visao="mes", q="", pasta="", categoria="", cor="", tag="", concluidos=False, assinatura=None) -> dict:
     if visao not in VISOES:
         raise ValueError("Escolha Mês, Semana, Dia ou Lista.")
     # Margem para navegação de mês e grade antes/depois da data selecionada.
@@ -168,6 +168,16 @@ def montar(painel, alvo: dt.date, visao="mes", q="", pasta="", categoria="", cor
             if (pasta and e["modulo"] != pasta) or (categoria and e["categoria"] != categoria) or (cor and e["cor"] != cor) or (tag and tag not in e["tags"]):
                 continue
             if q and texto_busca(q) not in texto_busca(" ".join([e["titulo"], e["categoria"], e["pasta"], *e["tags"], nota.corpo])):
+                continue
+            todos.append(e)
+    externa = assinatura.consultar(de, ate) if assinatura else {"conectada": False, "eventos": [], "aviso": "", "limitado": False}
+    if externa["conectada"]:
+        opcoes_pastas.append({"id": "@ical", "nome": "Agenda externa · leitura"})
+        categorias.add("Agenda externa")
+        for e in externa["eventos"]:
+            if (pasta and pasta != e["modulo"]) or (categoria and categoria != e["categoria"]) or (cor and cor != e["cor"]) or tag:
+                continue
+            if q and texto_busca(q) not in texto_busca(" ".join([e["titulo"], e["corpo"], e["local"], e["pasta"]])):
                 continue
             todos.append(e)
     todos.sort(key=lambda e: (e["data"], e["hora"], e["titulo"].casefold(), e["rel"]))
@@ -202,7 +212,7 @@ def montar(painel, alvo: dt.date, visao="mes", q="", pasta="", categoria="", cor
             titulo = f"{de.day}–{ate.day} de {MESES[ate.month - 1]} {ate.year}"
     else:
         titulo = f"{alvo.day} de {MESES[alvo.month - 1]} {alvo.year}"
-    return {"visao": visao, "data": alvo.isoformat(), "titulo": titulo, "dias": dias, "eventos": eventos, "total": total, "limitado": total > 500,
+    return {"visao": visao, "data": alvo.isoformat(), "titulo": titulo, "dias": dias, "eventos": eventos, "total": total, "limitado": total > 500 or externa["limitado"], "externa": externa,
             "anterior": url(deslocar(alvo, visao, -1)), "proximo": url(deslocar(alvo, visao, 1)), "url_hoje": url(hoje),
             "visoes": [{"id": v, "nome": n, "url": url(v=v)} for v, n in zip(VISOES, ("Mês", "Semana", "Dia", "Lista"))],
             "filtros": filtros, "pastas": opcoes_pastas, "categorias": sorted(categorias), "tags": sorted(tags), "cores": CORES,

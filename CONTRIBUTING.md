@@ -24,6 +24,7 @@ uv sync --locked --group browser
 uv run --frozen --group browser playwright install chromium
 uv run --frozen --group browser python scripts/verificar_interface.py
 uv run --frozen --group browser python scripts/verificar_grafo.py
+uv run --frozen --group browser python scripts/verificar_refinos.py
 uv run --frozen --group browser python scripts/verificar_editor.py
 uv run --frozen --group browser python scripts/verificar_contatos.py
 ```

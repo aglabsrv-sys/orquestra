@@ -17,6 +17,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import unicodedata
 import sys
 import threading
 import tomllib
@@ -69,7 +70,7 @@ _AJUDAS = {
     "youtube_api.py": "Descobre vídeos por palavras ou assuntos, mesmo de canais que você não acompanha. Personalize os termos, país e idioma. Usa a chave da API do YouTube.",
     "google_trends.py": "Guarda os assuntos em alta no Google. Você pode escolher o país e a quantidade de assuntos; os temas vêm das tendências do momento.",
     "recorrentes.py": "Cria tarefas nas datas das suas regras, como todo dia, sexta ou dia 5. Cada tarefa é criada uma vez por data.",
-    "agenda_ics.py": "Lê uma agenda iCal e guarda os próximos compromissos. Escolha a agenda e quantos dias consultar. Alterações e cancelamentos ainda não são sincronizados.",
+    "agenda_ics.py": "Importação legada: cria cópias em notas, sem acompanhar alterações e cancelamentos. Para consultar a agenda sem criar tarefas, use Agenda → Conectar agenda. Cópias existentes são preservadas.",
     "youtube_canal.py": "Registra inscritos e visualizações de um canal na nota do dia. Escolha o canal e os campos que quer acompanhar. Usa a chave da API do YouTube.",
     "cotacoes.py": "Registra cotações na nota do dia. Escolha os pares de moedas, como USD-BRL, e o nome de cada indicador.",
     "github_repo.py": "Registra estrelas e forks de repositórios públicos na nota do dia. Escolha os repositórios e o nome de cada indicador.",
@@ -207,6 +208,14 @@ def _config(definicao: str, config: dict | None) -> dict:
     for chave in ("tarefas", "repositorios"):
         if chave in resultado and any(not isinstance(v, dict) for v in resultado[chave]):
             raise ErroAutomacao(f"Cada item de {chave} precisa ser um registro de configuração.")
+    if definicao.endswith("recorrentes.py"):
+        for tarefa in resultado.get("tarefas", []):
+            if not isinstance(tarefa.get("titulo"), str) or not tarefa["titulo"].strip():
+                raise ErroAutomacao("Dê um título a cada tarefa que se repete.")
+            regra = "".join(c for c in unicodedata.normalize("NFKD", str(tarefa.get("quando") or "")) if not unicodedata.combining(c)).lower().strip()
+            dias = [d.strip().removesuffix("-feira") for d in regra.replace(" e ", ",").split(",") if d.strip()]
+            if not (regra in {"todo dia", "todos os dias", "diario", "diaria", "dia util", "dias uteis", "fim de semana", "fins de semana"} or re.fullmatch(r"dia ([1-9]|[12][0-9]|3[01])", regra) or dias and all(d in {"segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"} for d in dias)):
+                raise ErroAutomacao("Escolha os dias da semana, todos os dias ou um dia do mês de 1 a 31 para repetir a tarefa.")
     if "agendas" in resultado and any(not isinstance(v, (str, dict)) for v in resultado["agendas"]):
         raise ErroAutomacao("Cada agenda precisa ser um endereço ou um registro de configuração.")
     if "moedas" in resultado and any(not isinstance(v, str) for v in resultado["moedas"].values()):

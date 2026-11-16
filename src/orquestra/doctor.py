@@ -34,7 +34,8 @@ class Item:
 
 def _rodar(*comando: str, tempo: int = 8) -> tuple[int, str]:
     try:
-        r = subprocess.run(comando, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=tempo)
+        r = subprocess.run(comando, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=tempo,
+                           **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
         return r.returncode, (r.stdout or r.stderr).strip()
     except (OSError, subprocess.TimeoutExpired):
         return 1, ""

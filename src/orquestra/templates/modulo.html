@@ -235,7 +235,7 @@
       {% if modulo.id == 'clientes' %}<div data-extra-campo="contato_id" hidden>{{ p.seletor_contato(opcoes_contatos, '', 'data-novo') }}</div>{% endif %}
     </div>
     {% endif %}
-    <div data-extra-campo="__texto" hidden><label class="campo"><span>Texto</span><textarea name="corpo" id="novo-corpo" rows="3" maxlength="1000000"></textarea></label></div>
+    <div data-extra-campo="__texto"{% if modulo.id not in ('tarefas', 'projetos') or aba == 'humano' %} hidden{% endif %}><label class="campo"><span>{{ 'Descrição' if modulo.id in ('tarefas', 'projetos') and aba != 'humano' else 'Texto' }} <small class="campo-opcional">Opcional</small></span><textarea name="corpo" id="novo-corpo" rows="3" maxlength="1000000"></textarea></label></div>
     <label class="campo adicionar-campo"><span class="somente-leitor">Adicionar campo</span><select id="novo-adicionar-campo" aria-label="Adicionar campo">
       <option value="">Adicionar campo +</option>
       {% if aba != 'humano' %}{% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') and not (campo.obrigatorio and not campo.padrao) and not (modulo.id == "contatos" and campo.nome in ("telefone", "email")) %}<option value="{{ campo.nome }}">{{ campo.rotulo }}</option>{% endfor %}

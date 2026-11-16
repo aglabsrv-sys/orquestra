@@ -197,7 +197,7 @@ def _pid_na_porta(porta: int) -> int | None:
     """O processo que escuta em 127.0.0.1:porta (para painéis antigos, sem registro)."""
     try:
         if sys.platform == "win32":
-            saida = subprocess.run(["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True, timeout=15).stdout
+            saida = subprocess.run(["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True, timeout=15, creationflags=subprocess.CREATE_NO_WINDOW).stdout
             for linha in saida.splitlines():
                 partes = linha.split()
                 if len(partes) >= 5 and partes[1].endswith(f":{porta}") and partes[3].upper() == "LISTENING":
@@ -236,7 +236,8 @@ def localizar(porta: int | None = None) -> dict[str, Any] | None:
 
 def _forcar(pid: int) -> None:
     if sys.platform == "win32":
-        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, timeout=20)
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, timeout=20,
+                       **({"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}))
         return
     try:
         os.kill(pid, signal.SIGTERM)

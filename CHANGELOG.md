@@ -2,6 +2,18 @@
 
 ## Em desenvolvimento
 
+- Atalhos 1–9 selecionam os cards em ordem e 0 abre o menu. Início retorna à capa
+  da última área acessada, inclusive pelo dock; outro clique vai ao primeiro card.
+- Tarefas recorrentes usam um único exemplo e seleção de dias da semana ou do mês,
+  com validação da regra e explicação da verificação diária.
+- Conectar agenda assina um iCal somente para leitura, com recorrências e atualizações,
+  sem criar tarefas. A importação antiga permanece identificada como legada.
+- Novo em Tarefas e Projetos mostra descrição opcional. Hábitos tem editor compacto
+  e descrição no corpo da nota, visível na Lista ou ao abrir o nome.
+- Guias de agenda e Tailscale com passos separados; seletor visual de ícones,
+  capa salva ao escolher, seleção com ações na lixeira e forças para notas sem links.
+- Git de backup e diagnósticos executam sem abrir consoles auxiliares no Windows.
+
 - Cards de Hábitos exibem o mapa completo de treze semanas diretamente, inclusive
   na Lista, com datas no hover e navegação por teclado. Marcar e Editar permanecem
   lado a lado no cabeçalho.

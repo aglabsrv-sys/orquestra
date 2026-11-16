@@ -44,9 +44,9 @@
   }
   var guias = {
     celular: [
-      ['Conecte seu celular', 'Instale o Tailscale no computador e no celular. Entre com a mesma conta nos dois dispositivos. O acesso fica restrito à sua rede privada.', 'https://tailscale.com/download'],
-      ['Compartilhe o painel', 'Com o Orquestra aberto, execute no computador: tailscale serve --bg 8420. Se você usa outra porta, substitua 8420. Autorize o HTTPS se o Tailscale solicitar.'],
-      ['Abra no celular', 'Cole o endereço HTTPS mostrado pelo Tailscale para permitir somente este nome no painel. Depois abra no celular com o Tailscale conectado. Pessoas com acesso ao seu Serve poderão ler, editar e mover notas para a lixeira. Mantenha o computador ligado. Nunca use Funnel.', null, 'tailscale']
+      ['Conecte seu celular', 'No computador\nInstale o Tailscale e entre com sua conta.\nMantenha o Orquestra aberto.\n\nNo iPhone ou Android\nInstale o aplicativo Tailscale.\nEntre com a mesma conta e ative a conexão.', 'https://tailscale.com/download'],
+      ['Compartilhe o painel', 'No terminal do computador\nExecute: tailscale serve --bg '+(window.location && window.location.port || '8420')+'.\nAutorize o HTTPS se o Tailscale solicitar.\nCopie o endereço HTTPS terminado em .ts.net mostrado pelo comando.\n\nAcesso privado\nUse Serve. Nunca use Funnel, que publica o painel na internet.'],
+      ['Abra no celular', 'Permitir o endereço\nCole o endereço HTTPS do Tailscale Serve abaixo.\nClique em Permitir este endereço.\n\nNo celular\nMantenha o Tailscale conectado e abra o endereço no navegador.\nO computador precisa continuar ligado.\n\nQuem tiver acesso ao seu Serve poderá ler, editar e mover notas para a lixeira.', null, 'tailscale']
     ],
     github: [
       ['Conectar ao GitHub', 'Instale o GitHub CLI. O login oficial abre seu navegador; o Orquestra não precisa receber sua senha ou token.', 'https://cli.github.com/'],
@@ -55,18 +55,19 @@
       ['Revise e envie', 'Volte a Ajustes → Backup, prepare o histórico e autorize a configuração revisada. “Guardar e enviar” usa a branch orquestra-backup. Não envie notas privadas para um repositório público.']
     ],
     agenda: [
-      ['Conecte sua agenda', 'O endereço iCal importa compromissos para as tarefas. É uma leitura periódica: editar uma tarefa aqui não altera a agenda original.'],
-      ['Encontre o link', 'Google Agenda (Android): configurações da agenda → Integrar agenda → endereço secreto iCal. iPhone/iCloud: Calendário → Calendários → informações → compartilhar calendário público → copiar link. Um link público pode ser lido por quem o conhecer.'],
-      ['Aplicar endereço', 'Cole o link HTTPS ou webcal. Ele será guardado no .env local, fora do vault. A automação importa os próximos 14 dias. Recorrências complexas, exclusões e mudanças de eventos ainda precisam de conferência.', null, 'agenda']
+      ['Conecte sua agenda', 'Somente leitura\nOs compromissos aparecem na Agenda, sem criar tarefas ou notas.\nEdite e cancele os eventos no aplicativo de origem.\n\nPrivacidade\nO link fica nas variáveis locais deste computador, fora do vault.\nTrate o endereço iCal como uma senha.'],
+      ['Encontre o link', 'Android · Google Agenda\nAbra o Google Agenda pelo navegador do computador.\nVá a Configurações e selecione a agenda desejada.\nEm Integrar agenda, copie o Endereço secreto no formato iCal.\n\niPhone · iCloud\nNo Calendário, toque em Calendários e no botão de informações da agenda do iCloud.\nAtive Calendário público e copie o link de compartilhamento.\nIsso torna a agenda acessível a quem conhecer o link; use uma agenda separada para informações que possa compartilhar.\n\nO serviço da conta define o link: uma conta Google no iPhone usa o caminho do Google Agenda.'],
+      ['Aplicar endereço', 'Conectar para leitura\nCole o link HTTPS ou webcal abaixo.\nA conexão será testada antes de ser salva.\nUma nova conexão substitui a assinatura anterior deste vault.\n\nAtualização\nAo consultar a Agenda, o Orquestra busca mudanças a cada 5 minutos.\nCópias criadas pela automação antiga continuam no vault; pause essa importação em Automações se ainda estiver ativa.', null, 'agenda']
     ]
   };
   function abrirGuia(nome) {
     var passos = guias[nome];
     if (!passos) return;
-    var pos = 0, d = document.createElement('dialog');
+    var pos = 0, conectada = false, d = document.createElement('dialog');
     d.className = 'dialogo'; d.setAttribute('aria-label', passos[0][0]);
     var corpo = document.createElement('div'); corpo.className = 'dialogo-corpo';
-    var titulo = document.createElement('h2'), texto = document.createElement('p'), link = document.createElement('a'), campo = document.createElement('input'), aviso = document.createElement('p'), acoes = document.createElement('div');
+    var titulo = document.createElement('h2'), texto = document.createElement('div'), link = document.createElement('a'), campo = document.createElement('input'), aviso = document.createElement('p'), acoes = document.createElement('div');
+    texto.className='guia-passos'; campo.className='guia-endereco';
     campo.type = 'url'; campo.placeholder = 'https://…/basic.ics'; campo.setAttribute('aria-label', 'Endereço iCal da agenda');
     acoes.className = 'dialogo-acoes'; link.className = 'link'; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Abrir site oficial'; aviso.setAttribute('role', 'status');
     function botao(texto, fazer) { var b = document.createElement('button'); b.type = 'button'; b.className = 'botao'; b.textContent = texto; b.onclick = fazer; acoes.appendChild(b); return b; }
@@ -74,10 +75,11 @@
     var fechar = botao('Fechar', function () { d.close(); });
     var anterior = botao('Anterior', function () { pos--; pintar(); });
     var proximo = botao('Continuar', async function () {
+      if(conectada){location.assign('/agenda');return;}
       if (passos[pos][3]) {
         if (!campo.value || !campo.reportValidity()) return;
         proximo.disabled = true;
-        try { var resultado = await local(passos[pos][3] === 'agenda' ? '/api/agenda/conectar' : '/api/tailscale/host', {url: campo.value}); campo.value = ''; aviso.textContent = resultado.mensagem || 'Link salvo. Em Tarefas → Máquina → Compromissos da agenda, revise e aprove a configuração; depois use Rodar agora ou ligue o automático.'; if (passos[pos][3] === 'tailscale') document.dispatchEvent(new Event('orquestra:tailscale-salvo')); }
+        try { var resultado = await local(passos[pos][3] === 'agenda' ? '/api/agenda/conectar' : '/api/tailscale/host', {url: campo.value}); campo.value = ''; aviso.textContent = resultado.mensagem || 'Endereço permitido.'; if (passos[pos][3] === 'tailscale') document.dispatchEvent(new Event('orquestra:tailscale-salvo')); else {conectada=true;proximo.textContent='Abrir Agenda';campo.hidden=true;anterior.hidden=true;} }
         catch (erro) { aviso.textContent = erro.message; }
         finally { proximo.disabled = false; }
         return;
@@ -86,7 +88,7 @@
     });
     function pintar() {
       titulo.textContent = passos[pos][0] + ' · ' + (pos + 1) + '/' + passos.length;
-      texto.textContent = passos[pos][1]; link.hidden = !passos[pos][2]; if (passos[pos][2]) link.href = passos[pos][2];
+      texto.replaceChildren();passos[pos][1].split('\n\n').forEach(function(bloco){var linhas=bloco.split('\n'),secao=document.createElement('section');if(linhas.length===1){var p=document.createElement('p');p.textContent=bloco;secao.appendChild(p);}else{var h=document.createElement('h3'),lista=document.createElement('ol');h.textContent=linhas.shift();linhas.forEach(function(linha){var li=document.createElement('li');li.textContent=linha;lista.appendChild(li);});secao.append(h,lista);}texto.appendChild(secao);}); link.hidden = !passos[pos][2]; if (passos[pos][2]) link.href = passos[pos][2];
       campo.hidden = !passos[pos][3]; campo.setAttribute('aria-label', passos[pos][3] === 'tailscale' ? 'Endereço HTTPS do Tailscale Serve' : 'Endereço iCal da agenda'); anterior.hidden = pos === 0; aviso.textContent = '';
       proximo.textContent = passos[pos][3] === 'agenda' ? 'Conectar agenda' : passos[pos][3] === 'tailscale' ? 'Permitir este endereço' : pos === passos.length - 1 ? 'Concluir' : 'Continuar';
     }
@@ -227,15 +229,15 @@
   }
   if (escolherCena) escolherCena.onclick = function () { $('#cenas-dialogo').showModal(); window.Orquestra.iniciarCenas($('#cenas-dialogo')); };
   document.querySelectorAll('[data-escolher-cena]').forEach(function (b) {
-    b.onclick = function () { $('#p-cena').value = b.dataset.escolherCena; $('#p-capa').value = ''; $('#p-capa-arquivo').value = ''; previaCena(b.dataset.escolherCena, b.querySelector('canvas')); $('#p-cena').dispatchEvent(new Event('change',{bubbles:true})); $('#p-capa-estado').textContent = 'Cena escolhida. Salve para aplicar.'; $('#cenas-dialogo').close(); };
+    b.onclick = async function () { $('#p-cena').value = b.dataset.escolherCena; $('#p-capa').value = ''; $('#p-capa-arquivo').value = ''; previaCena(b.dataset.escolherCena, b.querySelector('canvas')); $('#p-cena').dispatchEvent(new Event('change',{bubbles:true})); $('#cenas-dialogo').close(); await $('#personalizar').salvarCapa(); };
   });
   function previaMidia(url,tipo){
     var anterior=$('.personalizar-previa .capa'),midia=document.createElement(tipo==='video'?'video':'img');midia.className='capa midia';midia.src=url;
     if(tipo==='video'){midia.loop=true;midia.muted=true;midia.playsInline=true;if(!matchMedia('(prefers-reduced-motion: reduce)').matches)midia.play().catch(function(){});}
     anterior.replaceWith(midia);escolherCena.textContent='Capa própria · Alterar';
   }
-  document.querySelectorAll('[data-capa-catalogo]').forEach(function(b){b.onclick=function(){
-    $('#p-capa').value=b.dataset.capaCatalogo;$('#p-cena').value='';$('#p-capa-arquivo').value='';previaMidia(b.dataset.capaCatalogo,b.dataset.tipo);document.querySelectorAll('[data-escolher-cena],[data-capa-catalogo]').forEach(function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});$('#p-capa').dispatchEvent(new Event('change',{bubbles:true}));$('#p-capa-estado').textContent='Capa escolhida. Salve para aplicar.';$('#cenas-dialogo').close();
+  document.querySelectorAll('[data-capa-catalogo]').forEach(function(b){b.onclick=async function(){
+    $('#p-capa').value=b.dataset.capaCatalogo;$('#p-cena').value='';$('#p-capa-arquivo').value='';previaMidia(b.dataset.capaCatalogo,b.dataset.tipo);document.querySelectorAll('[data-escolher-cena],[data-capa-catalogo]').forEach(function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});$('#p-capa').dispatchEvent(new Event('change',{bubbles:true}));$('#cenas-dialogo').close();await $('#personalizar').salvarCapa();
   };});
   if ($('#p-enviar-capa')) $('#p-enviar-capa').onclick=function() { arquivoCapa.click(); };
   if (arquivoCapa) arquivoCapa.onchange = async function () {
@@ -249,7 +251,7 @@
       var headers = headersExtras('application/octet-stream'); headers['X-Orquestra-Local'] = token.token;
       r = await fetch('/api/capas', {method:'POST', headers:headers, body:arquivo});
       var dados = await r.json(); if (!r.ok) throw new Error(dados.erro || 'Falha no envio.');
-      $('#p-capa').value = dados.caminho; $('#p-cena').value = ''; previaMidia('/arquivo/'+dados.caminho.split('/').map(encodeURIComponent).join('/'),arquivo.type.startsWith('video/')?'video':'imagem'); $('#p-capa').dispatchEvent(new Event('change',{bubbles:true})); estadoCapa.textContent = 'Capa enviada. Salve para aplicar.';
+      $('#p-capa').value = dados.caminho; $('#p-cena').value = ''; previaMidia('/arquivo/'+dados.caminho.split('/').map(encodeURIComponent).join('/'),arquivo.type.startsWith('video/')?'video':'imagem'); $('#p-capa').dispatchEvent(new Event('change',{bubbles:true})); arquivoCapa.value=''; salvar.disabled=false; await $('#personalizar').salvarCapa();
     } catch (erro) { estadoCapa.textContent = erro.message; }
     finally { salvar.disabled = false; }
   };

@@ -110,16 +110,16 @@ def test_fonte_validada_e_persistente(cliente):
         aparencia.validar({'tamanho':'18px; color:red'})
 
 
-def test_agenda_guarda_link_fora_do_vault_e_pede_revisao(cliente, vault):
+def test_agenda_guarda_link_fora_do_vault_sem_criar_tarefas(cliente, vault, monkeypatch):
+    from orquestra import agenda_externa
+    monkeypatch.setattr(agenda_externa, 'baixar', lambda _: b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n')
     assert cliente.post('/api/modulos', json={'pronto':'tarefas'}).status_code in (200, 400)
+    antes = {p.relative_to(vault): p.read_bytes() for p in vault.rglob('*') if p.is_file()}
     url = 'https://calendar.example.test/privado/basic.ics'
     r = cliente.post('/api/agenda/conectar', headers=local(cliente), json={'url':url})
-    assert r.status_code == 200 and r.json()['revisar']
-    assert carregar_env()['AGENDA_ICAL_URL'] == url
-    assert url not in (vault / 'tarefas/_modulo.yaml').read_text(encoding='utf-8')
-    modulo, c = cliente.painel.coletor('tarefas','agenda_ics.py')
-    assert not c.ativo and c.requer == ['AGENDA_ICAL_URL']
-    assert not confianca.resumo(vault, modulo, c)['confiavel']
+    assert r.status_code == 200 and 'Nenhuma tarefa' in r.json()['mensagem']
+    assert carregar_env()[agenda_externa.Assinatura(vault).chave] == url
+    assert antes == {p.relative_to(vault): p.read_bytes() for p in vault.rglob('*') if p.is_file()}
 
 
 def test_github_nao_inicia_login_sem_capacidade(cliente, monkeypatch):
@@ -165,23 +165,14 @@ def test_tailscale_permite_host_exato_e_mantem_limite_local(cliente):
     assert cliente.get('/', headers={'Host':'outro.rede.ts.net'}).status_code == 403
 
 
-def test_agenda_nao_sobrescreve_script_modificado_durante_upgrade(cliente, monkeypatch):
-    from orquestra import armazenamento
+def test_agenda_nao_sobrescreve_coletor_personalizado(cliente, monkeypatch):
+    from orquestra import agenda_externa
+    monkeypatch.setattr(agenda_externa, 'baixar', lambda _: b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n')
     modulo, _ = cliente.painel.coletor('tarefas','agenda_ics.py')
     script = modulo.pasta / 'maquina/coletores/agenda_ics.py'
-    novo = script.read_bytes().replace(b'\r\n', b'\n')
-    antigo = novo.replace(b'import os\n', b'').replace(b'        if isinstance(agenda, dict) and agenda.get("variavel"):\n            endereco = os.environ.get(str(agenda["variavel"]), "")\n', b'')
-    script.write_bytes(antigo)
-    atualizar = armazenamento.atualizar_bytes
-    personalizado = b'print("Personalizado durante a operacao")\n'
-
-    def concorrer(caminho, transformar, **kwargs):
-        if caminho == script:
-            script.write_bytes(personalizado)
-        return atualizar(caminho, transformar, **kwargs)
-
-    monkeypatch.setattr(armazenamento, 'atualizar_bytes', concorrer)
+    personalizado = b'print("Personalizado pela pessoa")\n'
+    script.write_bytes(personalizado)
     r = cliente.post('/api/agenda/conectar', headers=local(cliente), json={'url':'https://calendar.example.test/basic.ics'})
-    assert r.status_code == 409
+    assert r.status_code == 200
     assert script.read_bytes() == personalizado
     assert 'AGENDA_ICAL_URL' not in carregar_env()

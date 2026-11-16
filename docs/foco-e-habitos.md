@@ -37,8 +37,10 @@ Progresso mostra a meta semanal, sete indicadores dos dias, mapa de treze semana
 registro de hoje e resumo geral. Lista oferece uma versão compacta dos mesmos
 hábitos. Não existe uma lista paralela fora do vault.
 
-Novo hábito e Editar abrem o formulário com nome, meta de 1 a 7 dias por semana e
-tags. Os modelos Academia, Leitura e Caminhada apenas preenchem o formulário: você
+Novo hábito e Editar abrem um formulário compacto com nome, descrição opcional,
+meta de 1 a 7 dias por semana e tags. A descrição é o corpo da nota: aparece na
+Lista ou ao abrir o hábito pelo nome; fica oculta nos cards de Progresso.
+Os modelos Academia, Leitura e Caminhada apenas preenchem o formulário: você
 confirma a criação. Marcar hoje grava uma data ISO em `registros`; clicar novamente
 desmarca o dia. O resumo e o mapa atualizam sem recarregar a página inteira.
 

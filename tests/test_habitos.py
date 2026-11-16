@@ -50,6 +50,19 @@ def test_metas_invalidas_recusadas_sem_criar_modulo(cliente,vault,meta):
     assert not (vault/'habitos').exists()
 
 
+def test_descricao_opcional_e_texto_da_nota_e_omitir_preserva(cliente, vault):
+    criado = cliente.post('/api/habitos', json={'titulo': 'Caminhar', 'descricao': 'Uma volta na praça.'}).json()
+    assert criado['item']['descricao'].strip() == 'Uma volta na praça.'
+    assert 'Uma volta na praça.' in (vault / criado['rel']).read_text(encoding='utf-8')
+    alterado = cliente.post('/api/habitos', json={'rel': criado['rel'], 'versao': criado['versao'], 'titulo': 'Caminhar mais'}).json()
+    assert alterado['item']['descricao'] == criado['item']['descricao']
+    falha = cliente.post('/api/habitos', json={'rel': criado['rel'], 'versao': criado['versao'], 'titulo': 'Antigo', 'descricao': 'Não deve salvar'})
+    assert falha.status_code == 409
+    assert 'Não deve salvar' not in (vault / criado['rel']).read_text(encoding='utf-8')
+    limpo = cliente.post('/api/habitos', json={'rel': alterado['rel'], 'versao': alterado['versao'], 'titulo': 'Caminhar mais', 'descricao': ''}).json()
+    assert not limpo['item']['descricao']
+
+
 def test_resumo_semana_nao_conta_futuro_e_marcacao_recusa_registros_invalidos(cliente,vault):
     novo=cliente.post('/api/habitos',json={'titulo':'Caminhada','meta_semanal':4}).json()
     nota=cliente.painel.editar_nota(novo['rel'],novo['versao'],campos={'registros':['2026-11-09','2026-11-10','2026-11-15']})

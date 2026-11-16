@@ -145,6 +145,15 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             }"""), "Filtros cortados pelo painel"
             page.locator("#grafo-rotulos").uncheck()
             page.locator("#grafo-rotulos").check()
+            # As forças precisam mover pontos desenhados, também sem ligações.
+            antes_forca = page.locator('#grafo-canvas').evaluate('e=>e.__nosDesenhados.map(n=>[n.x,n.y])')
+            page.locator('#grafo-repulsao').fill('20')
+            page.locator('#grafo-repulsao').dispatch_event('input')
+            depois_forca = page.locator('#grafo-canvas').evaluate('e=>e.__nosDesenhados.map(n=>[n.x,n.y])')
+            assert antes_forca != depois_forca, 'Repulsão não moveu as notas'
+            assert antes_forca[-1] != depois_forca[-1], 'Nota sem ligações ignorou a força'
+            page.locator('#grafo-forcas-padrao').click()
+            expect(page.locator('#grafo-repulsao')).to_have_value('10')
             # Busca e notas isoladas filtram o desenho e sua lista acessível.
             page.locator("#grafo-busca").fill("Alpha")
             expect(page.locator("#grafo-estado")).to_contain_text(

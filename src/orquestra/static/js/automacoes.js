@@ -63,6 +63,7 @@
     if (input.type === 'checkbox') input.checked = valor; else input.value = valor == null ? '' : String(valor);
     if (input.type === 'number') { input.min = '1'; input.max = '10000'; input.step = '1'; }
     else input.maxLength = 2000;
+    if(nome==='titulo')input.required=true;
     label.append(span,input);
     return {el:label, ler:function () { return input.type === 'checkbox' ? input.checked : input.type === 'number' ? Number(input.value) : input.value.trim(); }};
   }
@@ -85,6 +86,25 @@
     });
     return resultado;
   }
+  function recorrencia(valor) {
+    var caixa=criar('fieldset','auto-recorrencia'),tipo=criar('select'),dias=criar('div','auto-semana'),mensal=criar('input'),personalizada=criar('input');
+    caixa.append(criar('legend','','Repetir tarefa'));
+    [['todo dia','Todos os dias'],['semana','Toda semana · escolher dias'],['dia util','De segunda a sexta'],['fim de semana','Sábado e domingo'],['mes','Uma vez por mês'],['personalizada','Regra existente']].forEach(function(o){var el=criar('option','',o[1]);el.value=o[0];tipo.append(el);});
+    tipo.setAttribute('aria-label','Frequência da tarefa');mensal.type='number';mensal.min='1';mensal.max='31';mensal.required=true;mensal.value='5';mensal.setAttribute('aria-label','Dia do mês');
+    var mensalRotulo=criar('label','campo');mensalRotulo.append(criar('span','','Dia do mês'),mensal);
+    personalizada.value=valor || '';personalizada.setAttribute('aria-label','Regra existente');
+    var nomes=['segunda','terca','quarta','quinta','sexta','sabado','domingo'],rotulosDias=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+    nomes.forEach(function(nome,i){var l=criar('label'),c=criar('input');c.type='checkbox';c.value=nome;c.setAttribute('aria-label',['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'][i]);l.append(c,criar('span','',rotulosDias[i]));dias.append(l);});
+    var texto=String(valor||'sexta').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(),partes=texto.replace(/ e /g,',').split(',').map(function(d){return d.trim().replace(/-feira$/,'');});
+    texto=({'todos os dias':'todo dia',diario:'todo dia',diaria:'todo dia','dias uteis':'dia util','fins de semana':'fim de semana'})[texto]||texto;
+    if(partes.length&&partes.every(function(d){return nomes.includes(d);})){tipo.value='semana';$$('input',dias).forEach(function(c){c.checked=partes.includes(c.value);});}
+    else if(/^dia ([1-9]|[12][0-9]|3[01])$/.test(texto)){tipo.value='mes';mensal.value=texto.slice(4);}
+    else tipo.value=['todo dia','dia util','fim de semana'].includes(texto)?texto:'personalizada';
+    function mostrar(){dias.hidden=tipo.value!=='semana';mensalRotulo.hidden=tipo.value!=='mes';mensal.disabled=mensalRotulo.hidden;personalizada.hidden=tipo.value!=='personalizada';personalizada.disabled=personalizada.hidden;}
+    tipo.onchange=function(){mostrar();mudou();};mostrar();
+    caixa.append(tipo,dias,mensalRotulo,personalizada,criar('small','campo-ajuda','A tarefa é criada uma vez na data escolhida. Dia 31 usa o último dia dos meses mais curtos.'));
+    return {el:caixa,ler:function(){if(tipo.value==='semana'){var marcados=$$('input',dias).filter(function(c){return c.checked;}).map(function(c){return c.value;});if(!marcados.length)throw new Error('Escolha pelo menos um dia da semana.');return marcados.join(', ');}if(tipo.value==='mes')return 'dia '+mensal.value;return tipo.value==='personalizada'?personalizada.value.trim():tipo.value;}};
+  }
   function parametro(p) {
     var valor = p.padrao, bloco = criar('fieldset','auto-lista-config');
     if (p.tipo === 'lista') {
@@ -104,7 +124,7 @@
       function item(v) {
         var caixa = criar('div','auto-config-item'), campos = {}, tirar = criar('button','botao pequeno discreto','Remover'); tirar.type = 'button';
         var ordem = ['titulo','quando','prioridade','nome','url','variavel','repo','campo_estrelas','campo_forks'];
-        Object.keys(modelo).sort(function (a,b) { var ia = ordem.indexOf(a), ib = ordem.indexOf(b); return (ia < 0 ? 100 : ia) - (ib < 0 ? 100 : ib); }).forEach(function (k) { var c = simples(k,v[k] == null ? '' : v[k]); campos[k] = c.ler; caixa.append(c.el); });
+        Object.keys(modelo).sort(function (a,b) { var ia = ordem.indexOf(a), ib = ordem.indexOf(b); return (ia < 0 ? 100 : ia) - (ib < 0 ? 100 : ib); }).forEach(function (k) { var c = p.nome==='tarefas'&&k==='quando'?recorrencia(v[k]):simples(k,v[k] == null ? '' : v[k]); campos[k] = c.ler; caixa.append(c.el); });
         var registro = {caixa:caixa,campos:campos,original:Object.assign({},v)}; registros.push(registro);
         tirar.onclick = function () { caixa.remove(); registros = registros.filter(function (r) { return r !== registro; }); mudou(); };
         caixa.append(tirar); itens.append(caixa);
@@ -137,6 +157,8 @@
     (selecionada.parametros || []).forEach(function (padrao) {
       var p = Object.assign({},padrao);
       if (Object.prototype.hasOwnProperty.call(valores.config,p.nome)) p.padrao = valores.config[p.nome];
+      // Só o par de exemplos distribuído é reduzido; regras pessoais continuam intactas.
+      if(p.nome==='tarefas'&&p.padrao.length===2&&JSON.stringify(p.padrao)===JSON.stringify([{titulo:'Revisar a semana',quando:'sexta',prioridade:'media'},{titulo:'Conferir as contas do mês',quando:'dia 5'}]))p.padrao=p.padrao.slice(0,1);
       if (p.tipo === 'registros') p.modelo = padrao.padrao[0];
       if (p.nome === 'agendas') { p.tipo = 'registros'; p.modelo = {nome:'',url:'',variavel:''}; p.padrao = p.padrao.map(function (v) { return typeof v === 'string' ? {nome:'',url:v,variavel:''} : v; }); }
       var primario = ['canais','feeds','termos','tarefas','agendas','canal','moedas','repositorios'].includes(p.nome) || selecionada.id.endsWith('google_trends.py') && p.nome === 'pais';
@@ -153,6 +175,9 @@
     $('#automacao-frequencia').value = agenda.diario_as ? 'diaria' : agenda.a_cada || 'manual';
     if ($('#automacao-frequencia').selectedIndex < 0) { var opcao = criar('option','','A cada '+agenda.a_cada); opcao.value=agenda.a_cada; opcao.dataset.personalizada='1'; $('#automacao-frequencia').append(opcao); $('#automacao-frequencia').value=agenda.a_cada; }
     $('#automacao-horario').value = agenda.diario_as || '08:00'; frequencia();
+    var recorrente=selecionada.id.endsWith('/recorrentes.py');
+    var rotuloAgendamento=$('.auto-agendamento label > span');if(rotuloAgendamento)rotuloAgendamento.textContent=recorrente?'Verificar regras':'Executar';
+    var dica=$('#automacao-recorrencia-ajuda');if(dica)dica.hidden=!recorrente;
     var atualizar=!!(editando&&editando.atualizacao_disponivel);$('#automacao-atualizacao').hidden=!atualizar;
     if(atualizar){$$('input,select,textarea',form).forEach(function(c){c.disabled=true;});$('#automacao-salvar').disabled=true;}
     dialogo.showModal(); $('#automacao-nome').focus();
@@ -167,7 +192,7 @@
   function mostrarPrevia(previa) {
     var freq=$('#automacao-frequencia').value, horario=freq==='manual'?'Manualmente':freq==='diaria'?'Todos os dias às '+$('#automacao-horario').value:'A cada '+freq;
     $('#automacao-previa-destino').textContent = (previa.destino || 'Raiz do cofre')+' · '+horario;
-    $('#automacao-previa-texto').textContent = previa.politica;
+    $('#automacao-previa-texto').textContent = previa.politica + (previa.avisos && previa.avisos.length ? '\n\n' + previa.avisos.join('\n\n') : '');
     $('#automacao-previa').hidden = false;
     $('#automacao-form-estado').textContent = '';
     $('#automacao-salvar').textContent = editando ? 'Salvar alterações' : $('#automacao-frequencia').value === 'manual' ? 'Adicionar' : 'Adicionar e ativar';

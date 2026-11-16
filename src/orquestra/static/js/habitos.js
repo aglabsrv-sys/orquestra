@@ -16,7 +16,9 @@
     foco=document.activeElement; atual=item || null; form.reset(); sujo=false; $('#habito-editor-estado').textContent='';
     $('#habito-editor-titulo').textContent=item ? 'Seu hábito' : 'Novo hábito'; $('#habito-salvar').textContent=item ? 'Salvar alterações' : 'Criar hábito';
     $('#habito-titulo').value=item ? item.titulo : modelo ? modelo.titulo : '';
+    $('#habito-descricao').value=item ? item.descricao || '' : '';
     $('#habito-tags').value=item ? item.tags.join(', ') : modelo ? modelo.tags.join(', ') : '';
+    var extras=$('.habito-extras',form);if(extras)extras.open=!!$('#habito-tags').value;
     $('input[name=habito-meta][value="'+(item ? item.meta : modelo ? modelo.meta : 3)+'"]').checked=true;
     editor.showModal(); $('#habito-titulo').focus();
   }
@@ -28,7 +30,7 @@
     e.preventDefault(); if (ocupado || !form.reportValidity()) return;
     ocupado=true; $('#habito-salvar').disabled=true; $('#habito-editor-estado').textContent='Salvando…';
     try {
-      var r=await api('/api/habitos',{titulo:$('#habito-titulo').value,meta_semanal:Number($('input[name=habito-meta]:checked').value),tags:$('#habito-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean),rel:atual ? atual.rel : '',versao:atual ? atual.versao : ''});
+      var r=await api('/api/habitos',{titulo:$('#habito-titulo').value,descricao:$('#habito-descricao').value,meta_semanal:Number($('input[name=habito-meta]:checked').value),tags:$('#habito-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean),rel:atual ? atual.rel : '',versao:atual ? atual.versao : ''});
       sujo=false; editor.close();
       // Ativar o módulo acrescenta o acesso à navegação e à home; só esta transição abre a página completa.
       if (r.ativado) { location.assign('/m/habitos'); return; }
