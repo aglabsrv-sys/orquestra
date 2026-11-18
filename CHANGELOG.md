@@ -2,6 +2,17 @@
 
 ## Em desenvolvimento
 
+- O aviso de atualização aparece apenas com revisão publicada disponível, no
+  canto inferior esquerdo. No celular, fica à esquerda do dock na mesma faixa.
+- Marcadores de hábitos realizados variam a luminosidade da cor do tema, sem
+  atribuir intensidade ou quantidade aos registros.
+
+- Hábitos no celular organiza Progresso em duas colunas compactas, com botão
+  grande de marcar na base dos cards e mapa de dez semanas com marcadores
+  maiores. Títulos longos ficam em uma linha. A Lista mantém título e descrição à
+  esquerda e o histórico de treze semanas à direita. As bordas seguem a
+  personalização do usuário.
+
 - Ajustes reaproveita cálculos de contraste e a interpretação de configurações
   idênticas, mantendo a leitura dos arquivos e a detecção de alterações externas.
   As prévias dos temas calculam apenas as paletas que serão exibidas.

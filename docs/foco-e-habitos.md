@@ -33,9 +33,17 @@ humanas e instruções de máquina. Adicione em Ajustes → Pastas, ou abra
 sobrescrever uma estrutura incompatível. O módulo aparece na home e no menu como
 os demais. O endereço antigo `/habitos` redireciona para o módulo.
 
-Progresso mostra a meta semanal, sete indicadores dos dias, mapa de treze semanas,
+Progresso mostra a meta semanal, histórico de atividade,
 registro de hoje e resumo geral. Lista oferece uma versão compacta dos mesmos
-hábitos. Não existe uma lista paralela fora do vault.
+hábitos. No celular, Progresso organiza cards compactos em duas colunas, com um
+botão grande de Marcar hoje na base de cada card; após marcar, ele mostra Feito
+hoje e permite desmarcar. A Lista mantém título e descrição à esquerda e o
+histórico de atividade à direita. Cards, indicadores e botões respeitam a
+personalização de bordas. O dia atual fica contornado e os registros realizados
+usam a cor de destaque do tema.
+Os dias realizados variam suavemente entre tons dessa cor para dar textura ao
+mapa. A variação é visual: não representa quantidade ou intensidade de atividade.
+Não existe uma lista paralela fora do vault.
 
 Novo hábito e Editar abrem um formulário compacto com nome, descrição opcional,
 meta de 1 a 7 dias por semana e tags. A descrição é o corpo da nota: aparece na
@@ -61,8 +69,11 @@ múltiplas ocorrências por dia continuam fora deste modelo simples.
 
 No celular: [Pomodoro](img/foco-390.png) e [Hábitos](img/habitos-390.png).
 
-Cada card mostra o mapa completo de treze semanas, sempre visível em Progresso
-e Lista, sem nomes dos dias. Passe o mouse sobre um quadrado para consultar sua
+No celular, Progresso mostra as dez semanas mais recentes, com título em uma
+linha e marcadores maiores. O nome completo continua acessível ao abrir o hábito
+ou editar. A Lista e o desktop mostram treze semanas, sem nomes dos dias.
+Passe o mouse sobre um quadrado para consultar sua
 data e realização. Pelo teclado, Tab entra no mapa no dia atual e as setas
-percorrem os dias; Escape fecha a dica. O ícone + ao lado de Editar marca hoje;
-quando marcado, vira ✓ e permite desmarcar.
+percorrem os dias; Escape fecha a dica. No desktop e na Lista, o ícone + ao lado
+de Editar marca hoje; quando marcado, vira ✓ e permite desmarcar. Em Progresso
+no celular, essa mesma ação ocupa o botão na base do card.

@@ -61,7 +61,7 @@
         $('[data-habito-semana]',card).textContent=item.semana; $('[data-habito-meta-estado]',card).textContent=item.semana>=item.meta ? 'Meta alcançada' : 'No seu ritmo';
         var dataHoje=r.hoje.slice(8,10)+'/'+r.hoje.slice(5,7)+'/'+r.hoje.slice(0,4), dica=dataHoje+' · '+(item.marcado?'realizado':'sem registro');
         var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.dataset.habitoTooltip=dica; ponto.setAttribute('aria-label',dica); }
-        var mapa=$('.habito-mapa',card); if (mapa) mapa.setAttribute('aria-label','Histórico das últimas treze semanas de '+item.titulo+'. '+item.total_registros+' dias realizados ao todo.');
+        var mapa=$('.habito-mapa',card); if (mapa) mapa.setAttribute('aria-label','Histórico de atividade de '+item.titulo+'. '+item.total_registros+' dias realizados ao todo.');
       } catch (erro) { estado.textContent=erro.message; }
       finally { marcar.disabled=false; }
     }
@@ -84,7 +84,7 @@
     var ponto=e.target.closest('[data-mapa-dia]'); if (!ponto) return;
     if (e.key==='Escape') { esconderDica(); return; }
     var passo={ArrowLeft:-7,ArrowRight:7,ArrowUp:-1,ArrowDown:1}[e.key]; if (!passo) return;
-    e.preventDefault(); var pontos=Array.from(ponto.parentElement.children), proximo=pontos[pontos.indexOf(ponto)+passo];
+    e.preventDefault(); var pontos=Array.from(ponto.parentElement.children).filter(function (p) { return p.getClientRects().length; }), proximo=pontos[pontos.indexOf(ponto)+passo];
     if (proximo) { ponto.tabIndex=-1; proximo.tabIndex=0; proximo.focus(); }
   });
   window.addEventListener('scroll',esconderDica,true); window.addEventListener('resize',esconderDica);

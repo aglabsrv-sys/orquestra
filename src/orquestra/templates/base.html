@@ -42,6 +42,8 @@
   <main id="conteudo" tabindex="-1">{% block conteudo %}{% endblock %}</main>
 
   {# Dock: só ícones. O nome aparece ao passar o mouse. Com muitas áreas, parte delas fica no botão "Áreas". #}
+  <div class="navegacao-inferior">
+  <button id="atualizar-app" class="botao so-icone atualizar-app" type="button" hidden aria-label="Atualização disponível · atualizar Orquestra" title="Atualização disponível · atualizar Orquestra">{{ icone("atualizar", 18) }}<i aria-hidden="true"></i></button>
   <nav class="dock" aria-label="Navegação">
     <a class="dock-item{% if dock.inicio_ativo %} ativo{% endif %}" href="/"{% if dock.inicio_ativo %} aria-current="page"{% endif %} data-dica="Início" aria-label="Início">{{ icone('inicio', 20) }}</a>
     {% for m in dock.barra %}
@@ -62,6 +64,7 @@
     {% endfor %}
     {% if dock.entrada %}<a class="dock-item dock-entrada{% if dock.entrada.ativo %} ativo{% endif %}" href="{{ dock.entrada.url }}" aria-label="{{ dock.entrada.nome }}" data-dica="{{ dock.entrada.nome }}" data-selo-de="entrada"{% if dock.entrada.ativo %} aria-current="page"{% endif %}>{{ icone(dock.entrada.icone, 20) }}<b class="selo"{% if not dock.entrada.selo %} hidden{% endif %}>{{ dock.entrada.selo }}</b></a>{% endif %}
   </nav>
+  </div>
 
   {% if dock.gaveta %}
   <div class="gaveta" id="gaveta" hidden>
@@ -105,7 +108,6 @@
     <p class="bf-rodape"><span id="bf-estado" role="status" aria-live="polite">Digite para buscar no título e no texto das notas.</span><span class="bf-atalhos"><kbd>↑</kbd> <kbd>↓</kbd> navegar · <kbd>Enter</kbd> abrir · <a id="bf-completa" href="/buscar">Busca completa</a></span></p>
   </dialog>
   {% block dialogos %}{% endblock %}
-  <button id="atualizar-app" class="botao so-icone atualizar-app" type="button" hidden aria-label="Nova atualização disponível" title="Nova atualização disponível">{{ icone("atualizar", 18) }}<i aria-hidden="true"></i></button>
   <div id="avisos" role="region" aria-live="off" aria-label="Notificações"></div>
 
   <script id="cards-ordem" type="application/json">{{ cards_ids|default([])|tojson }}</script>

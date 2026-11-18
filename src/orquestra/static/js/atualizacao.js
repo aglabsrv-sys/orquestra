@@ -14,13 +14,17 @@
     try {
       estado = await consultar();
       botao.hidden = !estado.disponivel;
+      botao.classList.toggle("tem-atualizacao", !!estado.disponivel);
       botao.title = estado.local ? "Atualização disponível · atualizar Orquestra" : "Atualização disponível · abra localhost para instalar";
       botao.setAttribute("aria-label", botao.title);
     } catch (_) { /* Sem rede, o painel continua funcionando. */ }
   }
   botao.addEventListener("click", async function () {
-    if (ocupado || !estado) return;
-    if (!estado.local) { ui.avisar("Há uma atualização disponível. Abra o painel em localhost no computador para instalar.", "info"); return; }
+    if (ocupado) return;
+    // O clique consulta novamente: o resultado automático pode ter falhado ou mudado.
+    try { estado = await consultar(); } catch (erro) { ui.avisar(erro.message, "erro"); return; }
+    if (!estado.disponivel) { botao.hidden = true; ui.avisar("O Orquestra já está atualizado.", "info"); return; }
+    if (!estado.local) { ui.avisar("Abra o painel em localhost no computador para atualizar.", "info"); return; }
     if (!await ui.confirmar({titulo:"Atualizar o Orquestra?", texto:"Salve as edições abertas antes de continuar. O aplicativo será atualizado e o painel reiniciado. Suas notas serão mantidas.", confirmar:"Atualizar e reiniciar"})) return;
     ocupado = true; botao.disabled = true; botao.classList.add("atualizando");
     try {

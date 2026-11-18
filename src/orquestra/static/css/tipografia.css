@@ -38,7 +38,7 @@ html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-modos { margin-left:0; }
 html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-identidade-linha { flex-wrap:wrap; }
 html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-tema-miniatura { flex:none; }
 @media(max-width:900px) {
-  html:is([data-tamanho=xl],[data-tamanho=xxl]) .habitos-lista .habito-card { grid-template-columns:1fr; }
+  html:is([data-tamanho=xl],[data-tamanho=xxl]) .habitos-lista .habito-card { grid-template-columns:minmax(0,1fr) minmax(0,var(--habito-mapa-largura,200px)); }
   html:is([data-tamanho=xl],[data-tamanho=xxl]) #personalizar .campo-editor { grid-template-columns:minmax(0,1fr); gap:.6rem; }
   html:is([data-tamanho=xl],[data-tamanho=xxl]) #personalizar .campo-editor-opcoes[hidden] { display:none!important; }
 }

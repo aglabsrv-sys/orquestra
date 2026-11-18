@@ -23,6 +23,9 @@
 .habito-mapa { display:grid; grid-template-rows:repeat(7,1fr); grid-template-columns:repeat(13,minmax(0,1fr)); grid-auto-flow:column; gap:4px; }
 .habito-dia { display:block; aspect-ratio:1; min-width:0; border-radius:3px; background:var(--superficie-alta); border:1px solid color-mix(in srgb,var(--borda) 70%,transparent); }
 .habito-dia.realizado { background:color-mix(in srgb,var(--destaque) 80%,var(--superficie)); border-color:var(--destaque); }
+.habito-dia.realizado:nth-child(5n+1) { background:color-mix(in srgb,var(--destaque) 58%,var(--superficie)); }
+.habito-dia.realizado:nth-child(7n+2) { background:color-mix(in srgb,var(--destaque) 70%,var(--superficie)); }
+.habito-dia.realizado:nth-child(11n+3) { background:color-mix(in srgb,var(--destaque) 82%,var(--texto)); }
 .habito-dia.hoje { outline:1px solid var(--destaque); outline-offset:1px; }
 .habito-dia.futuro { background:transparent; border-style:dashed; opacity:.4; }
 .habito-dia:is(:hover,:focus-visible) { outline:2px solid var(--texto); outline-offset:1px; }
@@ -82,5 +85,52 @@
 .habitos-lista .habito-mapa-wrap { grid-column:2; grid-row:1/3; margin:0; }
 .habitos-lista .habito-card-rodape { grid-column:1; grid-row:2; align-self:end; margin-top:12px; }
 .habitos-lista .habito-estado { grid-column:1/-1; }
-@media(max-width:600px) { .habitos-pagina { padding:25px 16px 16px; } .habitos-cabecalho { gap:10px; } .habitos-cabecalho h1 { font-size:24px; } .habitos-cabecalho .principal { font-size:11px; padding:8px 11px; } .habitos-sobrancelha { font-size:8px; } .habitos-abas > div { gap:19px; } .habitos-abas a { font-size:11px; } .habitos-modelos-grade { grid-template-columns:1fr; } .habitos-modelos-nota { display:none; } .habitos-lista .habito-card { display:block; } .habitos-lista .habito-card-rodape { justify-content:space-between; }  .habito-card { padding:19px; } .habitos-rodape { align-items:flex-start; line-height:1.6; } }
-@media(max-width:600px) { .habito-card { padding:14px; }  }
+@media(max-width:600px) {
+  .habitos-pagina { padding:25px 16px 16px; }
+  .habitos-cabecalho { gap:10px; }
+  .habitos-cabecalho h1 { font-size:24px; }
+  .habitos-cabecalho .principal { font-size:11px; padding:8px 11px; }
+  .habitos-sobrancelha { font-size:8px; }
+  .habitos-abas > div { gap:19px; }
+  .habitos-abas a { font-size:11px; }
+  .habitos-modelos-grade { grid-template-columns:1fr; }
+  .habitos-modelos-nota { display:none; }
+  .habito-card { padding:14px; }
+  .habito-card-topo > .habito-acoes { grid-template-columns:repeat(2,minmax(44px,2.15rem)); width:auto; }
+  .habito-acoes > .botao.so-icone { width:100%; height:44px; min-height:44px; }
+  .habito-mapa { gap:4px; }
+  .habito-dia { border:0; border-radius:calc(3px * var(--cantos,1)); background:color-mix(in srgb,var(--destaque) 8%,var(--superficie-alta)); }
+  .habito-dia.futuro { background:color-mix(in srgb,var(--borda) 35%,transparent); opacity:.3; }
+  .habitos-grade:not(.habitos-lista) { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:stretch; }
+  .habitos-grade:not(.habitos-lista) .habito-card { display:flex; flex-direction:column; position:relative; gap:10px; padding:10px; }
+  .habitos-grade:not(.habitos-lista) .habito-card-topo,
+  .habitos-grade:not(.habitos-lista) .habito-acoes { display:contents; }
+  .habitos-grade:not(.habitos-lista) .habito-card-topo > div:first-child { order:0; min-width:0; padding-right:22px; }
+  .habitos-grade:not(.habitos-lista) .habito-nome { font-size:14px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .habitos-grade:not(.habitos-lista) .habito-card-topo p { display:none; }
+  .habitos-grade:not(.habitos-lista) .habito-acoes > .habito-editar { position:absolute; top:5px; right:3px; width:32px; min-width:32px; height:32px; min-height:32px; }
+  .habitos-grade:not(.habitos-lista) .habito-mapa-wrap { order:1; margin:0; }
+  .habitos-grade:not(.habitos-lista) .habito-mapa { grid-template-columns:repeat(10,minmax(0,1fr)); gap:3px; }
+  .habitos-grade:not(.habitos-lista) .habito-dia:nth-child(-n+21) { display:none; }
+  .habitos-grade:not(.habitos-lista) .habito-card-rodape { display:none; }
+  .habitos-grade:not(.habitos-lista) .campo-ajuda { order:2; }
+  .habitos-grade:not(.habitos-lista) .habito-acoes > .habito-marcar { order:3; display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-width:0; min-height:44px; height:auto; margin-top:auto; padding:10px 4px; border:1px solid var(--destaque); border-radius:calc(23px * var(--cantos,1)); background:var(--destaque); color:var(--sobre-destaque); font-size:13px; line-height:1.4; }
+  .habitos-grade:not(.habitos-lista) .habito-marcar::after { content:'Marcar hoje'; }
+  .habitos-grade:not(.habitos-lista) .habito-acoes > .habito-marcar.feito { background:color-mix(in srgb,var(--destaque) 16%,var(--superficie)); color:var(--destaque); border-color:color-mix(in srgb,var(--destaque) 35%,var(--borda)); }
+  .habitos-grade:not(.habitos-lista) .habito-marcar.feito::after { content:'Feito hoje'; }
+  .habitos-grade:not(.habitos-lista) .habito-estado { order:4; }
+  .habitos-grade:not(.habitos-lista) .habito-estado:empty { display:none; }
+  .habitos-lista .habito-card { --habito-mapa-largura:148px; grid-template-columns:minmax(0,1fr) minmax(0,var(--habito-mapa-largura)); column-gap:14px; padding:14px; }
+  .habitos-lista .habito-card-topo { grid-template-columns:minmax(0,1fr); gap:6px; }
+  .habitos-lista .habito-nome { font-size:13px; }
+  .habitos-lista .habito-card-topo p { font-size:10px; line-height:1.5; }
+  .habitos-lista .habito-descricao { font-size:11px; line-height:1.5; margin:6px 0; }
+  .habitos-lista .habito-mapa-wrap { align-self:center; }
+  .habitos-lista .habito-mapa { gap:3px; }
+  .habitos-lista .habito-card-rodape { flex-wrap:wrap; gap:4px 8px; margin-top:8px; }
+  .habitos-rodape { align-items:flex-start; line-height:1.6; }
+}
+@media(max-width:360px) {
+  .habitos-lista .habito-card { --habito-mapa-largura:112px; column-gap:10px; padding:12px; }
+  .habitos-lista .habito-mapa { gap:2px; }
+}

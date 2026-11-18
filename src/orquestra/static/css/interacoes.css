@@ -66,12 +66,19 @@
   .abas:has(.lote-barra) .abas-fim > .principal span { display:none; }
   .contatos-filtros .campo:first-child { flex-basis:100%; }
 }
-.atualizar-app { position:fixed; right:max(16px,env(safe-area-inset-right)); bottom:calc(18px + env(safe-area-inset-bottom)); z-index:35; width:36px; height:36px; border-radius:50%; background:var(--superficie); color:var(--texto-suave); box-shadow:0 2px 12px #0002; }
+.navegacao-inferior { display:contents; }
+.atualizar-app { position:fixed; left:max(16px,env(safe-area-inset-left)); bottom:calc(18px + env(safe-area-inset-bottom)); z-index:35; width:36px; height:36px; border-radius:calc(18px * var(--cantos,1)); background:var(--superficie); color:var(--texto-suave); box-shadow:0 2px 12px #0002; }
 .atualizar-app[hidden] { display:none; }
-.atualizar-app i { position:absolute; right:3px; top:3px; width:6px; height:6px; border-radius:50%; background:var(--destaque); }
+.atualizar-app i { display:none; position:absolute; right:3px; top:3px; width:6px; height:6px; border-radius:50%; background:var(--destaque); }
+.atualizar-app.tem-atualizacao i { display:block; }
 .atualizar-app.atualizando svg { animation:atualizar-giro 1.4s linear infinite; }
 @keyframes atualizar-giro { to { transform:rotate(360deg); } }
-@media(max-width:700px) { .atualizar-app { bottom:calc(88px + env(safe-area-inset-bottom)); } }
+@media(max-width:699px) {
+  .navegacao-inferior { position:fixed; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); bottom:max(10px,env(safe-area-inset-bottom)); z-index:35; display:flex; justify-content:center; align-items:center; gap:8px; pointer-events:none; }
+  .navegacao-inferior > .dock { position:static; min-width:0; max-width:100%; margin:0; padding:6px; gap:3px; pointer-events:auto; }
+  .navegacao-inferior > .gaveta { pointer-events:auto; }
+  .navegacao-inferior > .atualizar-app { position:relative; left:auto; bottom:auto; flex:none; width:44px; min-width:44px; height:44px; min-height:44px; pointer-events:auto; }
+}
 @media(prefers-reduced-motion:reduce) { .atualizar-app.atualizando svg { animation:none; } }
 
 .abas .lote-barra [data-lote-acao] { min-width:108px; flex:none; }
