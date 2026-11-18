@@ -35,10 +35,11 @@ Feeds RSS, canais e assuntos de busca podem ser alterados pelo formulário. O bo
 **?** explica cada opção. **Usar em outra pasta** cria outra instância explicitamente;
 a configuração da área mantém seu destino e as notas existentes.
 
-Quando um auxiliar nativo antigo é reconhecido integralmente, **Atualizar
-automação** oferece a atualização com recuperação da cópia anterior. Código
-personalizado permanece na área, com revisão em opções avançadas; ele não é
-substituído ou autorizado pelo formulário de uma automação nativa.
+As correções dos coletores originais acompanham a atualização geral do Orquestra,
+pelo ícone discreto já existente. Ao abrir a versão nova, cópias antigas
+reconhecidas são atualizadas com recuperação da versão anterior. Configurações,
+notas, agendamentos e código personalizado são preservados. A atualização não
+concede novas permissões de execução.
 
 O agendador funciona enquanto o serviço está executando. Ao reabrir, uma rotina
 atrasada é consultada na situação atual; dias perdidos não são reproduzidos. A
@@ -133,6 +134,28 @@ Todas sem IA e com agendamento desligado. Ligue na aba **Máquina**; se personal
 | Números | `youtube_canal.py` | Grava inscritos e visualizações de um canal | sim: `YOUTUBE_API_KEY` |
 
 ### Tarefas que se repetem
+
+No painel, escolha **Tarefas que se repetem** no catálogo, informe as regras e
+guarde em **Tarefas/itens** para usar os estados e a agenda da área de tarefas.
+O horário diário controla quando verificar as regras; mantenha a verificação
+diária mesmo para uma tarefa semanal ou mensal. Após revisar e autorizar a
+configuração, ative a execução automática.
+
+Cada regra cria uma nova ocorrência datada, sem modificar a tarefa anterior.
+Executar novamente no mesmo dia não recria a ocorrência que ainda existe.
+A identidade usa o título normalizado e a data: regras com o mesmo título no
+mesmo destino e dia representam a mesma ocorrência. Renomear a regra depois
+de executá-la pode gerar outra tarefa naquele dia.
+
+A data da ocorrência é sempre a de hoje, mesmo se a regra contiver uma data
+antiga. Dias mensais de 29 a 31 usam o último dia nos meses mais curtos;
+valores fora de 1 a 31 são inválidos. **Dia útil** significa segunda a sexta,
+sem consultar feriados.
+
+O serviço precisa estar rodando. Ao voltar após dias desligado, a verificação
+diária espera o horário de hoje e gera apenas a ocorrência de hoje. Datas
+perdidas não são recriadas. Concluir uma tarefa não dispara a próxima:
+a recorrência segue o calendário, independentemente da conclusão.
 
 Em `tarefas/_modulo.yaml`, na `config` do coletor:
 

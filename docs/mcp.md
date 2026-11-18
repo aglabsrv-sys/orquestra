@@ -129,6 +129,8 @@ padrão é reservada ao protocolo; diagnósticos do processo vão para stderr.
 | `ler_nota` | Campos e texto de uma nota. |
 | `buscar` | Procura um termo em todas as notas. |
 | `agenda` | O que está para um dia (hoje inclui os atrasados). |
+| `conexoes_agenda` | Estado da agenda local, áreas datadas e presença de assinatura externa, sem consultar rede ou revelar segredos. |
+| `diario_dia` | Registro factual do dia, busca e filtros, até 80 mudanças por página e relato de sessão limitado. |
 | `fila_de_decisoes` | O que espera uma decisão sua. |
 | `respostas` | Itens em que você já respondeu uma pergunta. |
 | `criar_item` | Cria um item numa área, sempre como `origem: agente`. |
@@ -185,7 +187,25 @@ as permissões do cliente.
   (máximo de 100). Exclui `humano/`, `maquina/` e `arquivo/`. Títulos são comparados
   dentro da mesma área, normalizando Unicode, caixa e espaços. Coincidência de
   título pede revisão: não significa que duas notas possam ser mescladas.
+  Também compara Agenda pessoal com outras áreas por título, dia e hora,
+  emitindo `possivel_duplicata_agenda`, inclusive ao filtrar uma área relacionada.
   Ausência de `origem` continua significando nota humana e não gera erro.
+- `conexoes_agenda()`: a agenda local sempre reúne os itens de áreas datadas.
+  A assinatura iCal é separada e opcional; a presença de configuração não prova
+  que a fonte externa está disponível. Hábitos/metas semanais não têm horário
+  inferido. Uma tarefa datada não precisa de cópia na área Agenda pessoal.
+- `criar_item`: recusa uma possível cópia entre Agenda e outra área com mesmo
+  título, dia e hora. Leia e atualize o original. `permitir_duplicata=true` só
+  atende a um pedido explícito de itens distintos, sem juntar ou apagar nada.
+- `agenda`: inclui compromissos em andamento e respeita término à meia-noite.
+  Compromissos encerrados não viram atrasos; tarefas com prazo continuam pendentes.
+  A ferramenta lê notas locais, sem buscar eventos iCal.
+- `diario_dia(dia="", q="", autor="", tipo="", pagina=1)`: dia vazio significa
+  hoje. Busca ignora acentos; filtros e páginas seguem o Diário do painel.
+  `total` conta todas as mudanças do dia e `encontradas` conta as filtradas.
+  `sessoes` contém até 12000 caracteres; `sessoes_limitadas` avisa quando usar
+  `ler_nota` para continuar. Atividade observada e relato de agente são evidências
+  distintas: um arquivo alterado não prova conclusão, envio ou autoria identificada.
 - `conexoes_nota(caminho, limite=30)`: retorna `saidas` (ocorrências de links) e
   `entradas` (notas que apontam para ela), com totais e limites separados, de até
   100 por direção. Distingue destinos válidos, notas futuras, anexos ausentes,

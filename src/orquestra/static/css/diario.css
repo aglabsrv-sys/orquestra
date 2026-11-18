@@ -8,6 +8,15 @@
 .diario-ferramentas .navega-dia .botao { border-color:transparent; background:transparent; }
 .diario-atividade { margin:0 0 8px; font-size:.78rem; font-weight:550; }
 .diario-atividade small { font-size:.7rem; font-weight:450; }
+.diario-contexto { font-size:.75rem; line-height:1.6; margin:8px 0; }
+.diario-atalhos { display:flex; gap:16px; flex-wrap:wrap; margin:8px 0 18px; font-size:.76rem; }
+.diario-atalhos a { color:var(--destaque); }
+.diario-filtros { display:flex; flex-wrap:wrap; align-items:end; gap:8px; margin-bottom:20px; }
+.diario-filtros .campo { margin:0; min-width:0; flex:1 1 130px; }
+.diario-filtros .diario-busca { flex:2 1 200px; }
+.diario-filtros input,.diario-filtros select { width:100%; min-width:0; }
+.diario-ferramentas .diario-hoje { width:auto; padding-inline:8px; }
+.diario-paginacao { display:flex; align-items:center; justify-content:center; gap:12px; margin:16px 0; font-size:.75rem; }
 .diario-registro { gap:0; border-top:1px solid var(--borda); }
 .diario-registro > li { display:block; padding:0; border:0; border-bottom:1px solid color-mix(in srgb,var(--borda) 70%,transparent); border-radius:0; background:transparent; }
 .diario-evento > summary { display:grid; grid-template-columns:40px 80px minmax(0,1fr) 14px; align-items:center; gap:12px; padding:10px 0; list-style:none; font-size:.75rem; line-height:1.5; }

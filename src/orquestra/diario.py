@@ -15,6 +15,7 @@ import datetime as dt
 import difflib
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlencode
 
 from orquestra.notas import Nota, simples
 from orquestra import armazenamento
@@ -132,6 +133,31 @@ def ler_registro(vault: Path, dia: dt.date) -> list[Entrada]:
     return entradas
 
 
+def consultar_registro(vault: Path, dia: dt.date, q: str = "", autor: str = "", tipo: str = "", pagina: int = 1) -> dict:
+    """Filtra e pagina a apresentação, preservando o registro completo no disco."""
+    from orquestra.calendario import texto_busca
+
+    entradas = ler_registro(vault, dia)
+    autores = sorted({e.autor for e in entradas})
+    tipos = sorted({e.tipo for e in entradas})
+    termo = texto_busca(q.strip()[:200])
+    filtradas = [e for e in entradas if (not autor or e.autor == autor) and (not tipo or e.tipo == tipo)
+                 and (not termo or termo in texto_busca(" ".join((e.rel, e.detalhe, e.autor, e.tipo))))]
+    tamanho = 80
+    paginas = max(1, (len(filtradas) + tamanho - 1) // tamanho)
+    pagina = min(max(1, pagina), paginas)
+    inicio = (pagina - 1) * tamanho
+
+    def url(numero):
+        return "?" + urlencode({k: v for k, v in {"dia": dia.isoformat(), "q": q[:200], "autor": autor,
+                                                   "tipo": tipo, "pagina": numero}.items() if v})
+
+    return {"entradas": filtradas[inicio:inicio + tamanho], "total": len(entradas), "encontradas": len(filtradas),
+            "arquivos": len({e.rel for e in entradas}), "autores": autores, "tipos": tipos,
+            "q": q[:200], "autor": autor, "tipo": tipo, "pagina": pagina, "paginas": paginas,
+            "anterior": url(pagina - 1) if pagina > 1 else "", "proximo": url(pagina + 1) if pagina < paginas else ""}
+
+
 def ler_sessoes(vault: Path, dia: dt.date) -> str:
     try:
         caminho = caminho_no_vault(vault, Path(PASTA_SESSOES) / f"{dia.isoformat()}.md")
@@ -158,7 +184,7 @@ def dias_com_registro(vault: Path) -> list[dt.date]:
     return sorted(dias, reverse=True)
 
 
-def resumo_dia(painel, alvo: dt.date, hoje: dt.date | None = None) -> dict:
+def resumo_dia(painel, alvo: dt.date, hoje: dt.date | None = None, pagina: int = 1) -> dict:
     """Retrato local do dia, sem reconstruir estados ou atividade não observados.
 
     Datas antigas usam as datas das notas e seu estado *atual*. Pendências sem
@@ -172,7 +198,6 @@ def resumo_dia(painel, alvo: dt.date, hoje: dt.date | None = None) -> dict:
 
     hoje = hoje or dt.date.today()
     itens, atrasados, decisoes = [], [], []
-    iso = alvo.isoformat()
     for modulo, notas in calendario.fontes(painel):
         for nota in notas:
             if nota.erro:
@@ -191,13 +216,8 @@ def resumo_dia(painel, alvo: dt.date, hoje: dt.date | None = None) -> dict:
             evento = calendario.evento(nota, modulo)
             if evento:
                 item["hora"] = evento["hora"]
-                item["tipo"] = "compromisso" if (evento["hora"] or nota.campo("data_fim")
-                    or modulo.id == "agenda" or str(nota.campo("coletor") or "").removesuffix(".py") == "agenda_ics") else "item"
-                no_dia = evento["data"] <= iso <= evento["data_fim"]
-                # A agenda usa término exclusivo: meia-noite não ocupa o dia seguinte.
-                if (evento["hora"] and evento["hora_fim"] == "00:00"
-                        and iso == evento["data_fim"] and iso != evento["data"]):
-                    no_dia = False
+                item["tipo"] = "compromisso" if calendario.e_compromisso(nota, modulo) else "item"
+                no_dia = calendario.no_dia(evento, alvo)
             else:
                 no_dia = data == alvo
             if no_dia and (alvo < hoje or not concluido):
@@ -230,8 +250,16 @@ def resumo_dia(painel, alvo: dt.date, hoje: dt.date | None = None) -> dict:
     totais = {"itens": len(itens), "atrasados": len(atrasados), "decisoes": len(decisoes),
               "atividade": len(entradas), "arquivos": len(por_arquivo), "habitos": len(itens_habitos),
               "habitos_feitos": sum(item["marcado"] for item in itens_habitos)}
-    return {"itens": itens, "atrasados": atrasados, "decisoes": decisoes,
-            "atividade": list(por_arquivo.values())[:8], "habitos": itens_habitos, "totais": totais,
+    tamanho = 80
+    paginas = max(1, (max(len(itens), len(atrasados), len(decisoes), len(itens_habitos)) + tamanho - 1) // tamanho)
+    pagina = min(max(1, pagina), paginas)
+    inicio = (pagina - 1) * tamanho
+    paginacao = {"pagina": pagina, "paginas": paginas,
+                 "anterior": f"/dia/{alvo}?pagina={pagina - 1}" if pagina > 1 else "",
+                 "proximo": f"/dia/{alvo}?pagina={pagina + 1}" if pagina < paginas else ""}
+    return {"itens": itens[inicio:inicio + tamanho], "atrasados": atrasados[inicio:inicio + tamanho],
+            "decisoes": decisoes[inicio:inicio + tamanho], "paginacao": paginacao,
+            "atividade": list(por_arquivo.values())[:8], "habitos": itens_habitos[inicio:inicio + tamanho], "totais": totais,
             "anterior": f"/dia/{alvo - dt.timedelta(days=1)}" if alvo > dt.date.min else "",
             "proximo": f"/dia/{alvo + dt.timedelta(days=1)}" if alvo < dt.date.max else "",
             "historico": alvo < hoje, "tem_conteudo": any(totais.values())}

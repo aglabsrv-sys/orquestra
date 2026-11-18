@@ -43,3 +43,4 @@
   .dia-navegar { gap:0; margin-right:0; padding-right:3px; }
   .dia-item { grid-template-columns:36px minmax(0,1fr) minmax(0,85px); }
 }
+.dia-paginacao { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:12px; margin-top:22px; font-size:.72rem; color:var(--texto-suave); }

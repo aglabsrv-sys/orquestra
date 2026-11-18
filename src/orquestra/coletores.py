@@ -91,6 +91,10 @@ def devido(coletor: ColetorDef, ultima: dt.datetime | None, agora: dt.datetime) 
             alvo = agora.replace(hour=hora, minute=minuto, second=0, microsecond=0)
         except (TypeError, ValueError):
             return False
+        # Recorrências produzem somente a tarefa de hoje; não há coleta de
+        # dias anteriores que justifique antecipar o horário ao reabrir.
+        if coletor.script == "recorrentes.py" and agora < alvo:
+            return False
         if ultima is None:
             return True
         if agora < alvo:

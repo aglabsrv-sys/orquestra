@@ -41,6 +41,15 @@ def autorizar_coletor(painel, modulo, coletor):
 # ---------------------------------------------------------------- agendamento
 
 
+def test_recorrente_diario_nao_antecipa_tarefa_ao_reabrir():
+    regra = ColetorDef(script="recorrentes.py", nome="Rotina", diario_as="05:00")
+    hoje = dt.datetime(2026, 11, 18, 2)
+    for ultima in (None, hoje - dt.timedelta(days=3), hoje.replace(hour=1)):
+        assert not coletores.devido(regra, ultima, hoje)
+        assert coletores.devido(regra, ultima, hoje.replace(hour=5))
+    assert not coletores.devido(regra, hoje.replace(hour=5), hoje.replace(hour=6))
+
+
 def test_intervalos():
     assert coletores.intervalo_em_segundos("30m") == 1800
     assert coletores.intervalo_em_segundos("6h") == 21600

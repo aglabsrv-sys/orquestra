@@ -53,6 +53,8 @@ def cai_hoje(quando: str, hoje: datetime.date) -> bool | None:
             dia = int(regra[4:])
         except ValueError:
             return None
+        if not 1 <= dia <= 31:
+            return None
         ultimo = calendar.monthrange(hoje.year, hoje.month)[1]
         return hoje.day == min(dia, ultimo)
     partes = [p.strip().removesuffix("-feira") for p in regra.replace(" e ", ",").split(",") if p.strip()]
@@ -75,11 +77,12 @@ def main() -> None:
         titulo = str(regra["titulo"]).strip()
         campos = {k: v for k, v in regra.items() if k not in ("titulo", "quando", "corpo")}
         campos.setdefault("tags", ["recorrente"])
+        # A data pertence à ocorrência, mesmo quando a regra veio de uma nota datada.
+        campos["data"] = hoje.isoformat()
         emitir(
             id=f"recorrente:{simples(titulo)}:{hoje.isoformat()}",
             titulo=f"{titulo} - {hoje.day} {MESES[hoje.month - 1]}",
             corpo=str(regra.get("corpo") or ""),
-            data=hoje.isoformat(),
             **campos,
         )
 

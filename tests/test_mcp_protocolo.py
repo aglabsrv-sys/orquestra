@@ -140,6 +140,8 @@ def test_cli_mcp_stdio_executa_todas_as_ferramentas(vault, tmp_path):
         assert cliente.chamar("contexto_area", {"area": "tarefas"})["pasta_itens"] == "tarefas/itens"
         assert cliente.chamar("panorama")["grupos"]["capturas"]["total"] >= 0
         assert cliente.chamar("revisar_organizacao")["itens_analisados"] >= 0
+        assert cliente.chamar("conexoes_agenda")["agenda_local"] is True
+        assert cliente.chamar("diario_dia")["total"] >= 0
         criado = cliente.chamar("criar_item", {
             "area": "tarefas", "titulo": "Ação de teste via MCP", "campos": {"status": "fazendo", "origem": "humano"},
             "texto": "Rascunho do agente.",

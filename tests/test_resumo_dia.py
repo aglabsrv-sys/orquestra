@@ -65,7 +65,7 @@ def test_dia_historico_mostra_estado_atual_e_nunca_pendencias_de_hoje(tmp_path):
 def test_compromisso_multidia_e_fim_exclusivo_sem_virar_tarefa_atrasada(tmp_path):
     painel = contexto(tmp_path)
     adicionar(painel, "tarefas", "Turno encerrado", status="aberto", data="2030-05-15",
-              data_fim="2030-05-16", hora="23:00", hora_fim="00:00")
+              data_fim="2030-05-16", hora="23:00", hora_fim="00:00", categoria="Compromisso")
     adicionar(painel, "tarefas", "Encontro em andamento", status="aberto", data="2030-05-15",
               data_fim="2030-05-16", hora="23:00", hora_fim="10:00")
     adicionar(painel, "tarefas", "Às nove", status="aberto", data=HOJE, hora="09:00", hora_fim="10:00")
@@ -113,6 +113,21 @@ def test_pagina_dia_preserva_navegacao_e_escapa_conteudo(cliente):
     assert f'href="/dia/{hoje - dt.timedelta(days=1)}"' in pagina.text
     assert "<script>doMal()</script>" not in pagina.text and "&lt;script&gt;doMal()&lt;/script&gt;" in pagina.text
     assert url_nota(nota.rel) in pagina.text
+
+
+def test_resumo_extenso_pagina_sem_perder_itens_ou_totais(tmp_path):
+    painel = contexto(tmp_path)
+    for numero in range(181):
+        adicionar(painel, "tarefas", f"Tarefa {numero:03}", data=HOJE, status="aberto")
+    recebidos = []
+    for numero, quantidade in ((1, 80), (2, 80), (3, 21)):
+        resumo = diario.resumo_dia(painel, HOJE, HOJE, pagina=numero)
+        assert resumo["totais"]["itens"] == 181
+        assert resumo["paginacao"]["paginas"] == 3
+        assert len(resumo["itens"]) == quantidade
+        recebidos.extend(item["rel"] for item in resumo["itens"])
+    assert len(set(recebidos)) == 181
+    assert diario.resumo_dia(painel, HOJE, HOJE, pagina=999)["paginacao"]["pagina"] == 3
 
 
 def test_tarefas_independentes_entram_no_resumo_e_agenda_com_data_mapeada(painel):

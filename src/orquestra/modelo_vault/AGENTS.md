@@ -23,6 +23,12 @@ ela; se não houver um, informe a pendência antes de criar esses registros aqui
 3. Confira perguntas já respondidas e pendências relacionadas ao pedido. Uma
    resposta vale para o item e a ação a que se refere; não amplia sua autorização.
 4. Antes de criar um item ou aprendizado, procure um equivalente existente.
+5. A Agenda local já reúne os itens datados de todas as áreas com `campo_data`.
+   Uma tarefa com data não precisa de outra nota em `agenda/itens/`. Agenda externa
+   iCal e automações são opcionais: estarem desconectadas ou pausadas não desliga
+   a agenda local. Pelo MCP, consulte `conexoes_agenda` antes de afirmar o estado
+   de uma integração. Notas sem campo de data e metas semanais não são eventos;
+   hábitos realizados aparecem no resumo do dia.
 
 Esses passos valem tanto para acesso direto aos arquivos quanto pelo MCP. Se
 alternar entre os dois, use o mesmo vault e registre uma única sessão ao terminar.

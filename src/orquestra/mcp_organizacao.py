@@ -82,8 +82,7 @@ def panorama(ferramentas, area: str, dias: int, limite: int, deslocamento: int) 
                     grupos["sem_data"].append(item)
                 continue
             evento = calendario.evento(nota, modulo)
-            compromisso = bool(evento and (modulo.id == "agenda" or str(nota.campo("categoria") or "").casefold() == "compromisso"
-                               or str(nota.campo("coletor") or "").removesuffix(".py") == "agenda_ics"))
+            compromisso = bool(evento and calendario.e_compromisso(nota, modulo))
             item = {**item, "data": quando.isoformat()}
             if evento:
                 item.update({chave: evento[chave] for chave in ("data_fim", "hora", "hora_fim", "dia_inteiro")})
@@ -138,8 +137,18 @@ def revisar_organizacao(ferramentas, area: str, limite: int, deslocamento: int) 
             if len(caminhos) > 1:
                 achados.append({"tipo": "possivel_duplicata", "area": modulo.id, "titulo_normalizado": titulo,
                                 "caminhos": sorted(caminhos)})
+    eventos = [evento for modulo, notas in calendario.fontes(ferramentas.painel)
+               for nota in notas if ferramentas._visivel(nota) and not nota.erro
+               if (evento := calendario.evento(nota, modulo)) is not None]
+    for grupo in calendario.duplicatas(eventos):
+        if area and not any(item["area"] == area for item in grupo["itens"]):
+            continue
+        achados.append({"tipo": "possivel_duplicata_agenda", "titulo": grupo["titulo"], "data": grupo["data"],
+                        "caminhos": [item["caminho"] for item in grupo["itens"]],
+                        "orientacao": "A nota datada já aparece na agenda. Revise as cópias antes de arquivar qualquer arquivo."})
     return {"area": area, "itens_analisados": analisados, "achados": pagina(achados, limite, deslocamento),
             "criterio": "Valida os itens pelo schema de cada área e compara títulos dentro da mesma área "
                         "ignorando caixa, espaços repetidos e normalização Unicode. "
+                        "Também compara Agenda pessoal com outras áreas pelo título, dia e hora. "
                         "Títulos iguais são candidatos à revisão, não prova de duplicação. "
                         "Sem origem continua sendo nota humana. Não analisa arquivos arquivados nem altera nada."}

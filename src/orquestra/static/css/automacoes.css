@@ -29,9 +29,6 @@
 .auto-controles[open] > summary .icone { transform:rotate(90deg); }
 .auto-controles .auto-instancia-corpo { padding:0 0 12px 42px; border:0; }
 .auto-agenda-nota { font-size:.67rem; margin-top:16px; }
-.auto-atualizacao { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin:3px 0 10px 42px; font-size:.7rem; color:var(--texto-suave); }
-#automacao-atualizacao { margin:0; padding:10px; border:1px solid var(--borda); border-radius:calc(8px * var(--cantos,1)); }
-.auto-atualizacao .botao { font-size:.68rem; min-height:30px; }
 .auto-estado { font-size:.64rem; color:var(--texto-suave); white-space:nowrap; }
 .auto-linha > .botao { flex:none; font-size:.7rem; min-height:32px; padding:6px 9px; }
 .auto-instancia > summary { cursor:pointer; list-style:none; }

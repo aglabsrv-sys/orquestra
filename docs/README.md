@@ -14,6 +14,7 @@ apresentam os recursos e as opções de configuração do painel.
 | Criar ou ajustar uma pasta do painel | [Módulos](modulos.md) |
 | Organizar pessoas e acompanhar relações comerciais | [Contatos e clientes](contatos-e-clientes.md) |
 | Organizar compromissos e conectar um calendário | [Agenda](agenda.md) |
+| Consultar mudanças, autores e relatos de agentes | [Diário e registros](diario.md) |
 | Usar o timer e acompanhar metas semanais | [Pomodoro e hábitos](foco-e-habitos.md) |
 | Escolher cores, fonte, cenas ou minha própria capa | [Temas e aparência](temas.md) |
 | Conectar Claude, Codex ou outro agente | [Agentes](agentes.md) e [MCP](mcp.md) |

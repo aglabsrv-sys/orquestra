@@ -44,7 +44,7 @@ def main() -> None:
                      "bytes_por_nota": len(texto.encode()), "amostras": args.amostras,
                      "carga_ms": round((time.perf_counter() - inicio) * 1000, 2), "todas_areas": args.todas_areas, "rotas": {}}
         with TestClient(app, base_url="http://localhost") as cliente:
-            for rota in ("/", "/m/tarefas?aba=v1", "/m/tarefas", "/api/resumo", "/buscar?q=sintética",
+            for rota in ("/", "/m/tarefas?aba=v1", "/m/tarefas", "/api/resumo", "/buscar?q=sintética", "/agenda", "/diario", f"/dia/{dt.date.today()}",
                          *("/ajustes/" + secao for secao in ("painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis"))):
                 cliente.get(rota).raise_for_status()  # aquecimento fora das amostras
                 tempos = []

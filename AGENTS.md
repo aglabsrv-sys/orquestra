@@ -19,6 +19,8 @@ Jornadas no navegador: `scripts/verificar_interface.py` (veja `CONTRIBUTING.md`)
 
 ## Convenções
 
+- Atualizações de recursos acompanham a atualização geral pelo ícone existente;
+  não criar fluxos ou botões separados para atualizar componentes.
 - Código, comentários, mensagens e documentação em português do Brasil.
 - Python 3.11+, servidor FastAPI e templates Jinja em `src/orquestra/`. O JavaScript
   e o CSS do painel ficam em `src/orquestra/static/` e vão ao navegador sem bundler.

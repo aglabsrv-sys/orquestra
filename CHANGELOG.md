@@ -2,6 +2,24 @@
 
 ## Em desenvolvimento
 
+- Tarefas recorrentes preservam a data de cada ocorrência mesmo com uma data
+  antiga na regra, recusam dias mensais inválidos e aguardam o horário diário
+  de hoje ao reabrir. Cópias antigas reconhecidas acompanham a atualização geral,
+  preservando regras, notas e código personalizado, sem botão de atualização separado.
+
+- Agenda mantém o cabeçalho compacto, sem os blocos de explicação das fontes
+  e de aviso de possíveis duplicações. O diagnóstico continua disponível aos agentes.
+- MCP recusa cópias acidentais entre tarefa e compromisso com mesmo título, dia e
+  hora; `conexoes_agenda` informa o estado local sem rede ou segredos. A consulta
+  diária reconhece intervalos e mantém tarefas com horário entre os atrasados.
+- Diário permite buscar mudanças sem acentos, filtrar por autor e ação, escolher
+  a data e percorrer páginas de até 80 registros. Links conectam registro, resumo
+  e agenda do dia. `diario_dia` oferece a mesma consulta factual aos agentes.
+- Resumo do dia pagina seções extensas em até 80 itens por vez, mantendo totais
+  completos e acesso às páginas seguintes para não carregar milhares de linhas.
+- Cancelar no editor da Agenda volta a fechar o formulário e mantém a confirmação
+  de descarte quando há alterações; o botão do evento externo não interfere mais.
+
 - O aviso de atualização aparece apenas com revisão publicada disponível, no
   canto inferior esquerdo. No celular, fica à esquerda do dock na mesma faixa.
 - Marcadores de hábitos realizados variam a luminosidade da cor do tema, sem

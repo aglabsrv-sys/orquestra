@@ -8,7 +8,7 @@ import unicodedata
 from collections import defaultdict
 from urllib.parse import urlencode
 
-from orquestra.apresentacao import url_nota
+from orquestra.apresentacao import url_nota, url_pasta
 from orquestra.indice import data_de
 
 VISOES = ("mes", "semana", "dia", "lista")
@@ -31,6 +31,58 @@ def hora(valor) -> str:
 
 def texto_busca(texto: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFKD", texto.casefold()) if not unicodedata.combining(c))
+
+
+def no_dia(evento: dict, dia: dt.date) -> bool:
+    """Mesma regra civil para painel, resumo e agentes, inclusive à meia-noite."""
+    iso = dia.isoformat()
+    return evento["data"] <= iso <= evento["data_fim"] and not (
+        evento["hora"] and evento["hora_fim"] == "00:00"
+        and iso == evento["data_fim"] and iso != evento["data"])
+
+
+def titulo_normalizado(titulo: str) -> str:
+    return " ".join(unicodedata.normalize("NFC", titulo).casefold().split())
+
+
+def e_compromisso(nota, modulo) -> bool:
+    """Horário em uma tarefa não transforma seu prazo em compromisso encerrado."""
+    return (modulo.id == "agenda" or str(nota.campo("categoria") or "").casefold() == "compromisso"
+            or str(nota.campo("coletor") or "").removesuffix(".py") == "agenda_ics")
+
+
+def duplicatas(eventos: list[dict]) -> list[dict]:
+    """Candidatos entre Agenda pessoal e outra área; nunca oculta nem apaga notas."""
+    grupos = defaultdict(list)
+    for item in eventos:
+        if not item.get("externo"):
+            grupos[(titulo_normalizado(item["titulo"]), item["data"], item["hora"])].append(item)
+    return [{"titulo": itens[0]["titulo"], "data": chave[1], "hora": chave[2],
+             "itens": [{"caminho": e["rel"], "area": e["modulo"], "url": e["url"]} for e in itens]}
+            for chave, itens in grupos.items()
+            if any(e["modulo"] == "agenda" for e in itens) and len({e["modulo"] for e in itens}) > 1]
+
+
+def conexoes(painel, fontes_notas=None) -> dict:
+    """Estado local sem consultar rede, ativar automações ou ler valores secretos."""
+    from orquestra.agenda_externa import Assinatura
+    from orquestra import segredos
+
+    fontes_notas = fontes(painel) if fontes_notas is None else fontes_notas
+    areas = []
+    for modulo, notas in fontes_notas:
+        areas.append({"id": modulo.id, "nome": modulo.nome, "campo_data": modulo.campo_data or "",
+                      "url": "/m/" + modulo.id if modulo.id in painel.indice.modulos else url_pasta(modulo.pasta_itens.relative_to(painel.vault).as_posix()),
+                      "itens": len(notas), "datados": sum(evento(n, modulo) is not None for n in notas)
+                      if modulo.campo_data else 0})
+    try:
+        externa = Assinatura(painel.vault).chave in segredos.nomes(painel.vault)
+    except (OSError, ValueError):
+        externa = None
+    return {"agenda_local": True, "agenda_externa_configurada": externa, "areas": areas,
+            "orientacao": "A agenda local já está ativa. Itens com o campo de data da área aparecem automaticamente; "
+                          "não crie outra nota na Agenda para a mesma tarefa. A conexão iCal é opcional e somente leitura. "
+                          "Hábitos e metas semanais usam registros de realização, sem inventar compromissos; consulte o resumo do dia."}
 
 
 def fontes(painel) -> list[tuple]:
@@ -151,7 +203,8 @@ def montar(painel, alvo: dt.date, visao="mes", q="", pasta="", categoria="", cor
     de, ate = periodo(alvo, visao)
     opcoes_pastas, categorias, tags = [], set(), set()
     todos = []
-    for modulo, notas in fontes(painel):
+    fontes_notas = fontes(painel)
+    for modulo, notas in fontes_notas:
         if not modulo.campo_data:
             continue
         opcoes_pastas.append({"id": modulo.id, "nome": modulo.nome})
@@ -188,7 +241,7 @@ def montar(painel, alvo: dt.date, visao="mes", q="", pasta="", categoria="", cor
         inicio, fim = max(de, data(e["data"])), min(ate, data(e["data_fim"]))
         while inicio <= fim:
             # Horário de término é exclusivo; meia-noite não ocupa o dia seguinte.
-            if not (not e["dia_inteiro"] and inicio.isoformat() == e["data_fim"] and e["hora_fim"] == "00:00" and inicio.isoformat() != e["data"]):
+            if no_dia(e, inicio):
                 por_dia[inicio].append(e)
             inicio += dt.timedelta(days=1)
     dias = [{"iso": (d := de + dt.timedelta(days=i)).isoformat(), "num": d.day, "nome": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][d.weekday()],

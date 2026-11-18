@@ -82,6 +82,27 @@ def test_atualizar_nativo_antigo_e_explicito_e_preserva_configuracao(painel, crl
     assert list((Path(os.environ['ORQUESTRA_HOME']) / 'recuperacao').rglob('*.antes'))
 
 
+@pytest.mark.parametrize("personalizado", [False, True])
+def test_atualizacao_recorrentes_reconhece_original_e_preserva_codigo_proprio(painel, personalizado):
+    modulo = painel.modulo("tarefas")
+    script = modulo.pasta / "maquina/coletores/recorrentes.py"
+    antigo = (Path(__file__).parent / "fixtures/recorrentes-040.txt").read_bytes()
+    assert hashlib.sha256(antigo.replace(b"\r\n", b"\n")).hexdigest() == automacoes._RECORRENTES_DISTRIBUIDO_ANTERIOR
+    script.write_bytes(antigo + (b"\n# Personalizado\n" if personalizado else b""))
+    antes = automacoes._publica_legada(painel, "tarefas", "recorrentes.py")
+    assert antes["atualizacao_disponivel"] is not personalizado
+    yaml = (modulo.pasta / "_modulo.yaml").read_bytes()
+    if personalizado:
+        with pytest.raises(automacoes.ErroAutomacao, match="código próprio"):
+            automacoes.atualizar_codigo_legado(painel, "tarefas", "recorrentes.py", versao=antes["versao"], assinatura=antes["confianca"]["assinatura"])
+        assert script.read_bytes() == antigo + b"\n# Personalizado\n"
+    else:
+        depois = automacoes.atualizar_codigo_legado(painel, "tarefas", "recorrentes.py", versao=antes["versao"], assinatura=antes["confianca"]["assinatura"])
+        assert not depois["atualizacao_disponivel"]
+        assert script.read_bytes() == (Path(automacoes.__file__).parent / "catalogo/tarefas/maquina/coletores/recorrentes.py").read_bytes()
+    assert (modulo.pasta / "_modulo.yaml").read_bytes() == yaml
+
+
 def test_updater_nunca_substitui_codigo_personalizado(painel):
     modulo = painel.modulo("radar")
     script = modulo.pasta / "maquina/coletores/rss.py"
@@ -92,3 +113,42 @@ def test_updater_nunca_substitui_codigo_personalizado(painel):
     with pytest.raises(automacoes.ErroAutomacao, match="código próprio"):
         automacoes.atualizar_codigo_legado(painel, "radar", "rss.py", versao=atual["versao"], assinatura=atual["confianca"]["assinatura"])
     assert script.read_bytes() == antes
+
+
+@pytest.mark.parametrize("personalizado", [False, True])
+@pytest.mark.parametrize("revogado", [False, True])
+def test_abrir_versao_nova_incorpora_originais_sem_fluxo_separado(painel, personalizado, revogado):
+    from fastapi.testclient import TestClient
+    from orquestra import confianca
+    from orquestra.servidor import criar_app
+
+    modulo = painel.modulo("tarefas")
+    coletor = next(c for c in modulo.coletores if c.script == "recorrentes.py")
+    script = modulo.pasta / "maquina/coletores/recorrentes.py"
+    antigo = (Path(__file__).parent / "fixtures/recorrentes-040.txt").read_bytes()
+    anterior = antigo + (b"\n# Personalizado\n" if personalizado else b"")
+    script.write_bytes(anterior)
+    if revogado:
+        confianca.revogar(painel.vault, modulo, coletor)
+    configuracao = (modulo.pasta / "_modulo.yaml").read_bytes()
+    notas = {p: p.read_bytes() for p in modulo.pasta_itens.glob("*.md")}
+    app = criar_app(painel.vault, vigiar=False, agendar=False)
+    with TestClient(app, base_url="http://localhost", client=("127.0.0.1", 50000)) as cliente:
+        pagina = cliente.get("/ajustes/automacoes")
+        assert pagina.status_code == 200
+        assert "Atualizar automação" not in pagina.text
+        assert 'id="automacao-atualizar"' not in pagina.text
+    atual = legado(app.state.painel, "tarefas", "recorrentes.py")
+    assert not atual["ativo"]
+    if personalizado:
+        assert script.read_bytes() == anterior
+    else:
+        assert not atual["atualizacao_disponivel"] and atual["codigo_nativo"]
+        if revogado:
+            assert not atual["confianca"]["confiavel"]
+        assert script.read_bytes() == (Path(automacoes.__file__).parent / "catalogo/tarefas/maquina/coletores/recorrentes.py").read_bytes()
+    assert (modulo.pasta / "_modulo.yaml").read_bytes() == configuracao
+    assert {p: p.read_bytes() for p in modulo.pasta_itens.glob("*.md")} == notas
+    arquivos = {p: p.read_bytes() for p in (modulo.pasta / "maquina/coletores").glob("*.py")}
+    automacoes.sincronizar_catalogo(app.state.painel)
+    assert {p: p.read_bytes() for p in arquivos} == arquivos

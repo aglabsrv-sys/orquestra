@@ -48,10 +48,10 @@ function pagina({definicao,instancia,responder}={}) {
   const catalogo=definicao||{id:'radar/rss.py',nome:'Blogs e newsletters',ajuda:'Escolha os feeds.',config:{feeds:['https://padrao.test/feed'],maximo_por_feed:4},requer:[],parametros:[{nome:'feeds',rotulo:'Feeds',tipo:'lista',padrao:['https://padrao.test/feed']},{nome:'maximo_por_feed',rotulo:'Máximo',tipo:'numero',padrao:4}]};
   const atual=instancia||{id:'legado:rss',definicao:catalogo.id,nome:'Fontes da equipe',destino:'Clientes/Pesquisa',config:{feeds:['https://equipe.test/artigos','https://cliente.test/feed'],maximo_por_feed:9},mapeamento:{},a_cada:'12h',diario_as:'',ativo:true,legado:{modulo:'radar',script:'rss.py'},codigo_nativo:true,confianca:{confiavel:true,assinatura:'hash'},versao:'versao-1'};
   entrada.textContent=JSON.stringify({catalogo:[catalogo],instancias:atual.legado?[]:[atual],legadas:atual.legado?[atual]:[]});
-  const ids=['automacao-config','automacao-config-avancada','automacao-mapeamentos','automacao-previa','automacao-previa-destino','automacao-previa-texto','automacao-form-estado','automacao-titulo','automacao-descricao','automacao-segredos','automacao-pasta-nome','automacao-pasta-atual','automacao-pasta-estado','automacao-pasta-lista','automacao-pasta-picker','automacao-horario-campo','automacao-atualizacao'];
+  const ids=['automacao-config','automacao-config-avancada','automacao-mapeamentos','automacao-previa','automacao-previa-destino','automacao-previa-texto','automacao-form-estado','automacao-titulo','automacao-descricao','automacao-segredos','automacao-pasta-nome','automacao-pasta-atual','automacao-pasta-estado','automacao-pasta-lista','automacao-pasta-picker','automacao-horario-campo'];
   ids.forEach(n=>id(n,'div',form));
   ['automacao-nome','automacao-destino','automacao-horario'].forEach(n=>id(n,'input',form));
-  ['automacao-salvar','automacao-mapear','automacao-pasta-abrir','automacao-pasta-voltar','automacao-pasta-usar','automacao-atualizar'].forEach(n=>id(n,'button',form));
+  ['automacao-salvar','automacao-mapear','automacao-pasta-abrir','automacao-pasta-voltar','automacao-pasta-usar'].forEach(n=>id(n,'button',form));
   ['automacao-campos-avancados','automacao-parametros-avancados'].forEach(n=>{const d=id(n,'details',form);d.className='auto-campos-avancados';});
   const frequencia=id('automacao-frequencia','select',form);
   ['manual','diaria','1h','6h','12h','24h'].forEach(v=>{const o=new E('option');o.value=v;frequencia.append(o);});

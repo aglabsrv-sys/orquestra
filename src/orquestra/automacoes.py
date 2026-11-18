@@ -12,6 +12,7 @@ import copy
 import datetime as dt
 import hashlib
 import json
+import logging
 import os
 import re
 import secrets
@@ -45,6 +46,7 @@ LIMITE_INSTANCIAS = 200
 LIMITE_CONFIGURACAO_BYTES = 32 * 1024 * 1024
 _CAMPO = re.compile(r"^[^\W\d][\w-]{0,99}$", re.UNICODE)
 _HELPER_DISTRIBUIDO_ANTERIOR = "bca7d7d4a1600bc082feeafb4c25f0b5157ab3e8c6796b7d24bb6b9708140d1e"
+_RECORRENTES_DISTRIBUIDO_ANTERIOR = "00b908e23fd3812258ac9f45ffd1beb0e1d0d05841f6924a54e73bfba726f7b5"
 _DESCRICOES = {
     "youtube_rss.py": "Guarda vídeos novos dos canais que você acompanha.",
     "rss.py": "Reúne publicações de feeds RSS e Atom na pasta escolhida.",
@@ -488,7 +490,10 @@ def _atualizacoes_codigo(painel: Painel, modulo, definicao: str, *, arquivos_loc
         novo = desejados[nome]
         if atual == novo:
             continue
-        if nome != "_comum.py" or hashlib.sha256(atual.replace(b"\r\n", b"\n")).hexdigest() != _HELPER_DISTRIBUIDO_ANTERIOR:
+        anteriores = {"_comum.py": _HELPER_DISTRIBUIDO_ANTERIOR}
+        if definicao.startswith("tarefas/"):
+            anteriores["recorrentes.py"] = _RECORRENTES_DISTRIBUIDO_ANTERIOR
+        if hashlib.sha256(atual.replace(b"\r\n", b"\n")).hexdigest() != anteriores.get(nome):
             return None
         mudancas.append((base_local / nome, atual, novo))
     return mudancas
@@ -520,6 +525,29 @@ def atualizar_codigo_legado(painel: Painel, modulo: str, script: str, *, versao:
         painel.mudou_desde_o_backup = bool(mudancas) or painel.mudou_desde_o_backup
         painel.eventos.publicar({"tipo": "coletor", "modulo": modulo})
         return _publica_legada(painel, modulo, script)
+
+
+def sincronizar_catalogo(painel: Painel) -> None:
+    """Incorpora originais conhecidos ao abrir a versão nova do aplicativo.
+
+    Não altera configuração, agendamento ou aceites. Árvores personalizadas
+    ficam intactas; cada arquivo substituído mantém a cópia de recuperação.
+    """
+    scripts = {coletor.script for _, coletor in _definicoes().values()}
+    for modulo in list(painel.indice.modulos.values()):
+        for coletor in modulo.coletores:
+            if coletor.script not in scripts:
+                continue
+            try:
+                atual = _publica_legada(painel, modulo.id, coletor.script)
+                if atual["atualizacao_disponivel"]:
+                    atualizar_codigo_legado(painel, modulo.id, coletor.script,
+                                             versao=atual["versao"], assinatura=atual["confianca"]["assinatura"])
+                # A revisão cobre toda a pasta de coletores deste módulo.
+                break
+            except (OSError, ValueError, KeyError, armazenamento.ConflitoDeEscrita):
+                logging.getLogger(__name__).warning("Não foi possível incorporar os coletores da versão instalada em %s.", modulo.id)
+                break
 
 
 def _publica_legada(painel: Painel, modulo_id: str, script: str) -> dict[str, Any]:
@@ -835,7 +863,7 @@ async def verificar(painel: Painel, agora: dt.datetime) -> None:
             ultima = dt.datetime.fromisoformat(instancia["ultima"]["ultima"]) if instancia["ultima"].get("ultima") else None
         except (ValueError, TypeError):
             ultima = None
-        regra = ColetorDef(script="", nome="", a_cada=instancia.get("a_cada"), diario_as=instancia.get("diario_as"))
+        regra = ColetorDef(script=Path(instancia["definicao"]).name, nome="", a_cada=instancia.get("a_cada"), diario_as=instancia.get("diario_as"))
         if ultima is None and regra.diario_as:
             try:
                 hora = dt.time.fromisoformat(regra.diario_as)

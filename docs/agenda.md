@@ -3,6 +3,20 @@
 Acesso pelo botão Agenda do menu inferior ou pelos dias da home. A agenda reúne
 itens com data das pastas do painel; as notas continuam sendo a fonte dos dados.
 
+A agenda local já está ativa, mesmo sem conectar Google Agenda, iCloud ou uma
+automação. Uma tarefa com `data`, um projeto com `prazo` ou outro item com o
+`campo_data` configurado já aparece aqui: não crie uma cópia em `agenda/itens/`.
+
+Notas não têm campo de data por padrão. Hábitos e metas semanais usam os dias
+realizados; aparecem no resumo do dia, sem gerar compromissos fictícios. Para
+agendar uma ação ligada a uma nota ou meta, use uma tarefa datada com um link
+para a nota original.
+
+O diagnóstico dos agentes identifica possíveis duplicações com mesmo título,
+dia e hora entre Agenda pessoal e outra área. Os arquivos continuam visíveis
+e intactos: confira conteúdo e relações antes de decidir qual cópia arquivar.
+Títulos iguais, sozinhos, não comprovam que os conteúdos são equivalentes.
+
 ## Visões
 
 - **Mês:** grade de seis semanas, eventos por dia e acesso aos itens adicionais.

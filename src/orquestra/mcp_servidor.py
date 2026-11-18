@@ -19,11 +19,12 @@ mudanças na hora, porque os dois trabalham nos mesmos arquivos.
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import asdict
 from functools import wraps
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
-from orquestra import diario
+from orquestra import calendario, diario
 from orquestra.caminhos import CaminhoInseguro, caminho_no_vault, ignorar
 from orquestra.indice import data_de, espera_decisao
 from orquestra.modulos import ValorInvalido, validar
@@ -38,6 +39,7 @@ INSTRUCOES = (
     "Leia `sessoes_recentes` para retomar o trabalho e `contexto_area` antes de agir numa área. "
     "Use `panorama` para organizar pendências, `revisar_organizacao` para conferir inconsistências e "
     "`conexoes_nota` para consultar referências e backlinks. Essas consultas não alteram arquivos nem decidem prioridades. "
+    "A agenda local já reúne itens datados; `conexoes_agenda` explica as fontes. Uma tarefa com data não precisa de cópia em agenda. "
     "Itens novos ficam marcados como feitos por agente; só captura literal da pessoa pode ser marcada como humana. "
     "O texto que a pessoa escreveu "
     "nunca é reescrito: você só acrescenta. Em caso de dúvida, use `perguntar` em vez de supor. "
@@ -151,6 +153,7 @@ class Ferramentas:
             )
             partes.append(f"- **{area['id']}** ({area['nome']}): {area['descricao']} Campos: {campos or 'nenhum'}.")
         partes.append(
+            "\n# Agenda local\n" + calendario.conexoes(self.painel)["orientacao"] + "\n"
             "\nPor este conector, use as ferramentas em vez de editar arquivos: elas já aplicam as regras acima "
             "(origem, texto da pessoa intocado, nada apagado)."
         )
@@ -204,7 +207,10 @@ class Ferramentas:
 
     @_sincronizado
     def agenda(self, dia: str = "") -> list[dict[str, Any]]:
-        """O que está marcado para um dia (AAAA-MM-DD; vazio = hoje). Em "hoje" entram também os atrasados."""
+        """Notas locais para um dia, inclusive compromissos de vários dias. Hoje inclui tarefas atrasadas.
+
+        Não consulta iCal. Use conexoes_agenda para distinguir a agenda local da assinatura externa.
+        """
         self._em_dia()
         hoje = dt.date.today()
         try:
@@ -212,16 +218,46 @@ class Ferramentas:
         except ValueError:
             raise ErroDeFerramenta("Use a data no formato AAAA-MM-DD.") from None
         achados = []
-        for modulo in self.painel.indice.modulos.values():
+        for modulo, notas in calendario.fontes(self.painel):
             if not modulo.campo_data:
                 continue
-            for nota in self.painel.indice.itens(modulo.id):
+            for nota in notas:
                 quando = data_de(nota, modulo)
                 if quando is None or str(nota.campo(modulo.campo_status) or "") in modulo.concluidos:
                     continue
-                if quando == alvo or (alvo == hoje and quando < hoje and modulo.tem_status):
-                    achados.append({**self._resumo(nota), "atrasado": quando < hoje})
+                evento = calendario.evento(nota, modulo)
+                if evento is None:
+                    continue
+                marcado = calendario.no_dia(evento, alvo)
+                compromisso = calendario.e_compromisso(nota, modulo)
+                if marcado or (alvo == hoje and quando < hoje and modulo.tem_status and not compromisso):
+                    achados.append({**self._resumo(nota), "atrasado": not marcado and quando < hoje,
+                                    "hora": evento["hora"], "data_fim": evento["data_fim"]})
+        achados.sort(key=lambda n: (not n["atrasado"], str(n["campos"].get("data") or ""), n["hora"], n["caminho"]))
         return achados
+
+    @_sincronizado
+    def conexoes_agenda(self) -> dict[str, Any]:
+        """Explica quais áreas alimentam a agenda local e se existe iCal configurado, sem rede nem segredos."""
+        self._em_dia()
+        return calendario.conexoes(self.painel)
+
+    @_sincronizado
+    def diario_dia(self, dia: str = "", q: str = "", autor: str = "", tipo: str = "", pagina: int = 1) -> dict[str, Any]:
+        """Consulta o registro factual e o relato do dia, sem escrever. Até 80 mudanças por página.
+
+        Registro externo não identifica qual pessoa ou agente alterou o arquivo.
+        Relatos são declarações dos agentes, não comprovação da execução.
+        """
+        try:
+            alvo = dt.date.fromisoformat(dia) if dia else dt.date.today()
+        except ValueError:
+            raise ErroDeFerramenta("Use a data no formato AAAA-MM-DD.") from None
+        resultado = diario.consultar_registro(self.painel.vault, alvo, q, autor, tipo, pagina)
+        resultado["entradas"] = [asdict(e) for e in resultado["entradas"]]
+        sessoes = diario.ler_sessoes(self.painel.vault, alvo)
+        return {**resultado, "dia": alvo.isoformat(), "sessoes": sessoes[:12000], "sessoes_limitadas": len(sessoes) > 12000,
+                "orientacao": "Atividade observada e relatos de agentes são fontes distintas. Não inferir autoria ou sucesso pelo relato."}
 
     @_sincronizado
     def fila_de_decisoes(self) -> list[dict[str, Any]]:
@@ -295,11 +331,29 @@ class Ferramentas:
             raise ErroDeFerramenta("Já existe uma nota com esse nome.") from None
 
     @_sincronizado
-    def criar_item(self, area: str, titulo: str, campos: dict[str, Any] | None = None, texto: str = "") -> dict[str, Any]:
-        """Cria um item numa área. Fica marcado com `origem: agente`. Em campos de escolha, use só as opções da área."""
+    def criar_item(self, area: str, titulo: str, campos: dict[str, Any] | None = None, texto: str = "", permitir_duplicata: bool = False) -> dict[str, Any]:
+        """Cria um item com origem agente. Itens datados já aparecem na agenda local.
+
+        Recusa uma possível cópia entre Agenda e outra área. Só use permitir_duplicata
+        quando a pessoa tiver pedido dois itens distintos com o mesmo título, dia e hora.
+        """
         self._em_dia()
         modulo = self._area(area)
         campos = {k: v for k, v in (campos or {}).items() if k != "origem"}
+        if modulo.campo_data and not permitir_duplicata:
+            dia = calendario.data(campos.get(modulo.campo_data))
+            if dia:
+                for fonte, notas in calendario.fontes(self.painel):
+                    if fonte.id == area or "agenda" not in (area, fonte.id):
+                        continue
+                    for existente in notas:
+                        if (not existente.erro and data_de(existente, fonte) == dia
+                                and calendario.titulo_normalizado(existente.titulo) == calendario.titulo_normalizado(titulo)
+                                and calendario.hora(existente.campo("hora")) == calendario.hora(campos.get("hora"))):
+                            raise ErroDeFerramenta(
+                                f"Possível duplicação: {existente.rel} já aparece na agenda local. "
+                                "Leia e atualize essa nota. Não é necessário criar uma cópia em outra área. "
+                                "Se a pessoa pediu dois itens distintos, use permitir_duplicata=true.")
         desconhecidos = [k for k in campos if k not in modulo.campos]
         nota = self._executar(lambda: self.painel.criar_nota(modulo.id, titulo, campos, texto, origem="agente", autor=AUTOR))
         resposta = self._resumo(nota)
@@ -455,12 +509,12 @@ FERRAMENTAS = [
     "regras", "listar_areas", "listar_itens", "ler_nota", "buscar", "agenda", "fila_de_decisoes", "respostas",
     "criar_item", "atualizar_item", "perguntar", "capturar", "registrar_numeros",
     "aprendizados", "registrar_aprendizado", "sessoes_recentes", "registrar_sessao",
-    "contexto_area", "panorama", "revisar_organizacao", "conexoes_nota",
+    "contexto_area", "panorama", "revisar_organizacao", "conexoes_nota", "conexoes_agenda", "diario_dia",
 ]
 
 FERRAMENTAS_DE_LEITURA = {
     "regras", "listar_areas", "listar_itens", "ler_nota", "buscar", "agenda", "fila_de_decisoes", "respostas",
-    "aprendizados", "sessoes_recentes", "contexto_area", "panorama", "revisar_organizacao", "conexoes_nota",
+    "aprendizados", "sessoes_recentes", "contexto_area", "panorama", "revisar_organizacao", "conexoes_nota", "conexoes_agenda", "diario_dia",
 }
 
 

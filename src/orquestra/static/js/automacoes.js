@@ -178,8 +178,6 @@
     var recorrente=selecionada.id.endsWith('/recorrentes.py');
     var rotuloAgendamento=$('.auto-agendamento label > span');if(rotuloAgendamento)rotuloAgendamento.textContent=recorrente?'Verificar regras':'Executar';
     var dica=$('#automacao-recorrencia-ajuda');if(dica)dica.hidden=!recorrente;
-    var atualizar=!!(editando&&editando.atualizacao_disponivel);$('#automacao-atualizacao').hidden=!atualizar;
-    if(atualizar){$$('input,select,textarea',form).forEach(function(c){c.disabled=true;});$('#automacao-salvar').disabled=true;}
     dialogo.showModal(); $('#automacao-nome').focus();
   }
   $$('[data-auto-adicionar]').forEach(function (b) { b.onclick = function () { abrir(b.dataset.autoAdicionar); }; });
@@ -224,12 +222,6 @@
     if (!await ui.confirmar({titulo:'Autorizar automação',texto:'Executar “'+instancia.nome+'” com sua configuração atual. As notas produzidas serão guardadas em '+(instancia.destino || 'Raiz do cofre')+'.',confirmar:'Autorizar'})) throw {cancelado:true};
     var nova = await api('POST',instancia.legado?'/api/coletores/confiar':'/api/automacoes/confiar',instancia.legado?Object.assign({},instancia.legado,{assinatura:instancia.confianca.assinatura}):{id:instancia.id,assinatura:instancia.confianca.assinatura});if(instancia.legado)instancia.confianca=nova;else Object.assign(instancia,nova);
   }
-  async function atualizarNativa(instancia){
-    var nova=await api('POST','/api/automacoes/legado/atualizar',Object.assign({},instancia.legado,{versao:instancia.versao,assinatura:instancia.confianca.assinatura}));
-    if(!nova.confianca.confiavel)await autorizar(nova);
-    location.assign('/ajustes/automacoes?modulo='+encodeURIComponent(instancia.legado.modulo)+'&script='+encodeURIComponent(instancia.legado.script));
-  }
-  $('#automacao-atualizar').onclick=async function(){if(!editando)return;var fim=ui.ocupado(this,'Atualizando…');try{await atualizarNativa(editando);}catch(e){if(!e.cancelado)erro(e);}finally{fim();}};
   $$('[data-auto-acao]').forEach(function (botao) {
     botao.addEventListener('click',async function () {
       var linha = botao.closest('[data-auto-id]'), instancia = dados.instancias.find(function (a) { return a.id === linha.dataset.autoId; }); if (!instancia) return;
@@ -237,8 +229,7 @@
       if (botao.dataset.autoAcao === 'copiar') { abrir(instancia.definicao,instancia,true); return; }
       var fim = ui.ocupado(botao,'…'), acao = botao.dataset.autoAcao;
       try {
-        if(acao==='atualizar'){await atualizarNativa(instancia);}
-        else if (acao === 'remover') {
+        if (acao === 'remover') {
           if (!await ui.confirmar({titulo:'Remover automação?',texto:'As notas já produzidas serão preservadas.',confirmar:'Remover'})) return;
           await api('POST','/api/automacoes/remover',{id:instancia.id}); location.reload();
         } else if (acao === 'ativo') {

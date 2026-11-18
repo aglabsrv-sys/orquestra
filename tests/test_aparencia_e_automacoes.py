@@ -220,6 +220,8 @@ def test_regras_de_tarefas_recorrentes():
     assert cai("dia 13", sexta) and not cai("dia 5", sexta)
     assert cai("dia 31", fim_de_fev)  # mês curto: cai no último dia
     assert cai("quando der", sexta) is None and cai("dia x", sexta) is None
+    assert all(cai(regra, fim_de_fev) is None for regra in ("dia 0", "dia -1", "dia 32"))
+    assert cai("dia 31", dt.date(2028, 2, 29))
 
 
 def test_leitura_de_agenda_ical():

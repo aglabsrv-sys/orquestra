@@ -105,12 +105,12 @@
       {% else %}<span class="suave">Ainda não rodou.</span>{% endif %}
     </div>
     {% set conf = c.confianca|default({}) %}
-    <a class="botao pequeno" href="/ajustes/automacoes?modulo={{ modulo.id|urlencode }}&script={{ c.def.script|urlencode }}">{{ 'Atualizar automação' if c.atualizacao_disponivel else 'Configurar' }}</a>
+    <a class="botao pequeno" href="/ajustes/automacoes?modulo={{ modulo.id|urlencode }}&script={{ c.def.script|urlencode }}">Configurar</a>
     <label class="chave" title="Rodar sozinho no horário"><input type="checkbox" data-ativar aria-label="Execução automática de {{ c.def.nome }}"{% if c.def.ativo %} checked{% endif %}{% if not conf.confiavel %} disabled{% endif %}><i aria-hidden="true"></i><span>automático</span></label>
     <button class="botao" type="button" data-rodar{% if not conf.confiavel %} disabled{% endif %}>{{ icone('tocar', 14) }}<span>Rodar agora</span></button>
     <details class="coletor-confianca" data-confianca='{{ conf|tojson }}'>
       <summary>{{ 'Opções avançadas' if conf.confiavel else 'Permissão para executar' }}</summary>
-      {% if c.atualizacao_disponivel %}<p>Uma atualização está disponível. Use Atualizar automação para continuar.</p>{% elif not conf.confiavel %}<p>Esta automação foi personalizada. Confira sua configuração antes de permitir a execução neste computador.</p>{% endif %}
+      {% if not conf.confiavel %}<p>Confira a configuração antes de permitir a execução neste computador.</p>{% endif %}
       {% if conf.erro %}<p class="erro-texto">{{ conf.erro }}</p>{% endif %}
       <p><b>Script:</b> <code>{{ conf.caminho or c.def.script }}</code></p>
       <p><b>Arquivos incluídos na revisão:</b></p>

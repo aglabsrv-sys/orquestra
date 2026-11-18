@@ -5,6 +5,9 @@ Leia antes `tarefas/_modulo.yaml` e `tarefas/humano/`.
 ## O que você pode fazer
 
 - Criar tarefas em `tarefas/itens/` com `origem: agente`, sempre com `data` quando houver prazo.
+- A tarefa com `data` já aparece na Agenda local. Não crie uma segunda nota em
+  `agenda/itens/` para ligá-la ao calendário. Procure a tarefa antes de criar outra;
+  atualize a data do arquivo original quando a pessoa pedir um reagendamento.
 - Mudar `status` para `fazendo` quando começar a trabalhar numa tarefa que é sua.
 - Quando terminar algo que precisa do olho da pessoa, mudar para `aguardando` e, se
   houver uma dúvida concreta, preencher `pergunta`. Isso leva o item para a fila Decidir.

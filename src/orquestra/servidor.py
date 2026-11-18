@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from pydantic import BaseModel, ValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -52,6 +52,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     tela de Ajustes oferece trocar de vault; nos testes ele não existe.
     """
     painel = Painel(vault)
+    automacoes.sincronizar_catalogo(painel)
     from orquestra.github_local import LoginGitHub
     github = LoginGitHub()
     from orquestra.atualizacao import Atualizador
@@ -604,14 +605,14 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
 
     @app.get("/diario", response_class=HTMLResponse)
     @leitura
-    def ver_diario(request: Request, dia: str = ""):
+    def ver_diario(request: Request, dia: str = "", q: str = "", autor: str = "", tipo: str = "", pag: int = Query(1, alias="pagina")):
         hoje = dt.date.today()
         try:
             alvo = dt.date.fromisoformat(dia) if dia else hoje
         except ValueError:
             alvo = hoje
-        entradas = diario.ler_registro(painel.vault, alvo)
-        for entrada in entradas:
+        consulta = diario.consultar_registro(painel.vault, alvo, q, autor, tipo, pag)
+        for entrada in consulta["entradas"]:
             entrada.existe = entrada.rel in painel.indice.notas  # type: ignore[attr-defined]
         return pagina(
             request,
@@ -621,22 +622,22 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             dia=alvo,
             dia_longo=ap.data_longa(alvo),
             e_hoje=alvo == hoje,
-            anterior=(alvo - dt.timedelta(days=1)).isoformat(),
+            anterior=(alvo - dt.timedelta(days=1)).isoformat() if alvo > dt.date.min else "",
             proximo=(alvo + dt.timedelta(days=1)).isoformat() if alvo < hoje else "",
-            entradas=entradas,
+            entradas=consulta["entradas"], consulta=consulta,
             sessoes=ap.render_markdown(diario.ler_sessoes(painel.vault, alvo), painel.indice),
             dias=[d.isoformat() for d in diario.dias_com_registro(painel.vault)[:14]],
         )
 
     @app.get("/dia/{data}", response_class=HTMLResponse)
     @leitura
-    def ver_dia(request: Request, data: str):
+    def ver_dia(request: Request, data: str, pag: int = Query(1, alias="pagina")):
         hoje = dt.date.today()
         try:
             alvo = dt.date.fromisoformat(data)
         except ValueError:
             raise NaoEncontrado(data) from None
-        return pagina(request, "dia.html", "inicio", dia=alvo, dia_longo=ap.data_longa(alvo), e_hoje=alvo == hoje, resumo=diario.resumo_dia(painel, alvo, hoje))
+        return pagina(request, "dia.html", "inicio", dia=alvo, dia_longo=ap.data_longa(alvo), e_hoje=alvo == hoje, resumo=diario.resumo_dia(painel, alvo, hoje, pag))
 
     @app.get("/agenda", response_class=HTMLResponse)
     @app.get("/agenda/{data}", response_class=HTMLResponse)

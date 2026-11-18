@@ -202,6 +202,49 @@ def test_regra_recorrente_preserva_tipos_extras(painel, monkeypatch):
     assert nota.meta["tags"] == ["rotina"]
 
 
+def test_recorrencia_real_com_data_na_regra_deduplica_e_aparece_na_agenda(painel):
+    from orquestra import calendario
+
+    hoje = dt.date.today()
+    a = instalar(painel, "tarefas/recorrentes.py", destino="tarefas/itens", config={"tarefas": [
+        {"titulo": "Rotina de teste", "quando": "todo dia", "data": "2000-01-01", "prioridade": "alta"},
+    ]})
+    assert executar(painel, a, previa=True)["total"] == 1
+    assert not any(n.meta.get("coletor") == "recorrentes" for n in painel.indice.notas.values())
+    assert executar(painel, a)["novos"] == 1
+    nota = next(n for n in painel.indice.notas.values() if n.meta.get("coletor") == "recorrentes")
+    assert str(nota.meta["data"]) == hoje.isoformat()
+    assert nota.meta["prioridade"] == "alta"
+    # A edição humana de uma ocorrência não deve ser desfeita ao executar de novo.
+    nota = ler_nota(nota.caminho, painel.vault)
+    nota.corpo = "\nMinha anotação preservada.\n"
+    gravar_nota(nota, versao_esperada=nota.versao)
+    painel.apos_escrita(nota.caminho, "painel")
+    antes = nota.caminho.read_bytes()
+    assert executar(painel, a)["repetidos"] == 1
+    assert nota.caminho.read_bytes() == antes
+    assert sum(e["rel"] == nota.rel for e in calendario.montar(painel, hoje)["eventos"]) == 1
+
+
+@pytest.mark.parametrize("ultima", [None, "2026-11-10T05:00:00", "2026-11-12T05:00:00"])
+def test_recorrencia_atrasada_aguarda_horario_de_hoje(painel, monkeypatch, ultima):
+    a = instalar(painel, "tarefas/recorrentes.py", config={"tarefas": []}, diario_as="05:00")
+    automacoes.ativar(painel, a["id"], True)
+    if ultima:
+        painel.gravar_estado("automacoes", a["id"], {"ultima": ultima})
+    chamadas = []
+
+    async def rodar(painel, identificador, previa=False):
+        chamadas.append(identificador)
+        return {"ok": True}
+
+    monkeypatch.setattr(automacoes, "rodar", rodar)
+    asyncio.run(automacoes.verificar(painel, dt.datetime(2026, 11, 13, 2)))
+    assert chamadas == []
+    asyncio.run(automacoes.verificar(painel, dt.datetime(2026, 11, 13, 5)))
+    assert chamadas == [a["id"]]
+
+
 def test_configuracao_truncada_nao_bloqueia_backup_git(painel, monkeypatch):
     from orquestra import agenda, backup
     caminho = painel.vault / automacoes.ARQUIVO
