@@ -8,6 +8,7 @@ Acrescente --chromium /usr/bin/chromium para usar um navegador já instalado;
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import re
@@ -125,9 +126,9 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     expect(page.locator(".carrossel")).to_be_visible()
 
     # A capa é a mesma instância ao alternar visões; o histórico continua navegável.
-    page.goto(base + "/m/tarefas", wait_until="domcontentloaded")
+    page.goto(base + "/m/tarefas?aba=v0&concluidas=todas", wait_until="domcontentloaded")
     page.evaluate("window.__capaPersistente=document.querySelector('.cab-modulo canvas')")
-    page.locator('.abas a[href="?aba=v1"]').click()
+    page.locator('.abas').get_by_role('link', name='Lista', exact=True).click()
     expect(page.locator('.tabela-envolta')).to_be_visible()
     assert page.evaluate("window.__capaPersistente===document.querySelector('.cab-modulo canvas')")
     page.go_back()
@@ -172,7 +173,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.goto(base + "/pastas", wait_until="domcontentloaded")
     page.locator('#arvore-pastas a[data-pasta="tarefas"]').click()
     expect(page.locator('#arvore-pastas details[data-rel="tarefas"]')).to_have_attribute('open', '')
-    expect(page.locator('#pasta-painel')).to_have_attribute('data-rel', '')
+    expect(page.locator('#pasta-painel')).to_have_attribute('data-rel', 'tarefas')
     page.locator('[data-pasta-visao="grafo"]').click()
     expect(page.locator('#grafo-estado')).to_contain_text('notas')
 
@@ -234,6 +235,14 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
             resposta = page.goto(base + rota, wait_until="domcontentloaded")
             assert resposta.status == 200, rota
             conferir_layout(page)
+            if rota == "/":
+                pontos = page.locator(".pontos")
+                if largura < 700:
+                    expect(pontos).to_be_hidden()
+                    expect(page.locator(".pular-conteudo")).to_be_hidden()
+                else:
+                    expect(pontos).to_be_visible()
+                    assert pontos.locator("button").evaluate_all("els => els.every(e=>{ const r=e.getBoundingClientRect(); return r.width>=24 && r.height>=24; })")
             if rota == "/ajustes/variaveis":
                 ajuda = page.locator('[data-segredo="YOUTUBE_API_KEY"] summary')
                 expect(ajuda).to_be_visible()
@@ -259,6 +268,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         page.locator("#abrir-novo").click()
         titulo = f"Teste de jornada {largura}"
         page.locator("#novo-titulo").fill(titulo)
+        page.locator("#novo-adicionar-campo").select_option("data")
+        page.locator('[data-novo][name="data"]').fill(dt.date.today().isoformat())
         if not page.locator('#novo-corpo').is_visible():
             page.locator("#novo-adicionar-campo").select_option("__texto")
         page.locator("#novo-corpo").fill("Texto original da demonstração.")
@@ -282,7 +293,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         expect(page.locator("#ver[contenteditable=true]")).to_have_count(0)
         expect(page.locator("#ver")).to_contain_text("Texto revisado pelo navegador.")
         assert "Texto revisado" in (vault / nota["rel"]).read_text(encoding="utf-8")
-        page.locator("#nota-propriedades > summary").click()
+        page.locator("#abrir-propriedades").click()
         page.locator("#consultar-versoes").click()
         expect(page.locator("#versoes-conteudo")).to_be_visible()
         expect(page.locator("#versao-texto")).to_have_value(re.compile("Texto original"))
@@ -392,7 +403,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     for numero in range(100):
         (vault / "tarefas/itens" / f"Volume {numero:03}.md").write_text("---\nstatus: a_fazer\n---\n", encoding="utf-8")
     page.wait_for_timeout(1700)
-    page.goto(base + "/m/tarefas?aba=v0", wait_until="domcontentloaded")
+    page.goto(base + "/m/tarefas?aba=v0&concluidas=todas", wait_until="domcontentloaded")
     coluna = page.locator('.coluna[data-valor="a_fazer"]')
     total = int(coluna.locator(".conta").inner_text())
     assert total > 80
@@ -517,7 +528,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.goto(base, wait_until="domcontentloaded")
     page.wait_for_timeout(350)
     assert page.locator('.slide[aria-hidden="true"]').evaluate_all("els => els.every(e=>e.tabIndex===-1)")
-    assert page.locator(".pontos button").evaluate_all("els => els.every(e=>{ const r=e.getBoundingClientRect(); return r.width>=24 && r.height>=24; })")
+    expect(page.locator(".pontos")).to_be_hidden()
     quadros = page.evaluate("window.__quadros")
     page.wait_for_timeout(450)
     assert page.evaluate("window.__quadros") == quadros, "Animação continua em movimento reduzido"

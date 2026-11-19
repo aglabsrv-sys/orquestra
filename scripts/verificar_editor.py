@@ -60,6 +60,9 @@ def jornadas(browser, base: str, vault: Path, capturas: Path | None) -> dict:
             page = contexto.new_page()
             page.on("pageerror", lambda erro: erros.append(str(erro)))
             page.goto(base + "/pastas/Notas", wait_until="domcontentloaded")
+            alternar = page.locator("#pastas-alternar")
+            if alternar.is_visible():
+                alternar.click()
             page.locator("#arvore-pastas .arvore-nota").filter(has_text=nome).click()
             leitor = page.frame_locator("#leitor-frame")
             expect(leitor.locator("#ver table")).to_be_visible()
