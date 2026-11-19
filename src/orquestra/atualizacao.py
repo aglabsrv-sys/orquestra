@@ -1,6 +1,7 @@
 """Consulta revisões publicadas e aplica atualizações locais sem tocar no vault."""
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import subprocess
@@ -11,6 +12,24 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 REMOTOS = {"https://github.com/aglabsrv-sys/orquestra.git", "https://github.com/aglabsrv-sys/orquestra", "git@github.com:aglabsrv-sys/orquestra.git"}
+
+
+def marca_codigo() -> str:
+    fonte = RAIZ / "src" / "orquestra"
+    if not (RAIZ / ".git").exists() or not fonte.is_dir():
+        return ""
+    arquivos = [RAIZ / "pyproject.toml", RAIZ / "uv.lock"]
+    for pasta, filhas, nomes in os.walk(fonte):
+        filhas[:] = sorted(filha for filha in filhas if filha != "__pycache__")
+        arquivos.extend(Path(pasta) / nome for nome in sorted(nomes) if not nome.endswith((".pyc", ".pyo")))
+    marca = hashlib.sha256()
+    for arquivo in arquivos:
+        try:
+            estado = arquivo.stat()
+        except OSError:
+            continue
+        marca.update(f"{arquivo.relative_to(RAIZ).as_posix()}\0{estado.st_size}:{estado.st_mtime_ns}\n".encode())
+    return marca.hexdigest()
 
 
 def executar(*args: str, pasta: Path | None = None, timeout: int = 20) -> str:
@@ -41,6 +60,7 @@ class Atualizador:
         self.verificado: float | None = None
         self.cache = {"disponivel": False}
         self.processo = None
+        self.codigo_em_uso = marca_codigo()
         try:
             self.revisao_iniciada = conferir_instalacao()
         except (OSError, RuntimeError, subprocess.TimeoutExpired):
@@ -54,6 +74,8 @@ class Atualizador:
                     self.processo = None
                     self.verificado = None
                 return {**self.cache, "estado": "atualizando" if codigo is None else "falhou", "mensagem": "A atualização não terminou. Confira a instalação e tente novamente." if codigo is not None else "Atualizando o aplicativo…"}
+            if self.codigo_em_uso and (codigo := marca_codigo()) and codigo != self.codigo_em_uso:
+                return {"disponivel": True, "estado": "disponivel", "modo": "reiniciar"}
             if self.verificado is not None and time.monotonic() - self.verificado < 1800:
                 return dict(self.cache)
             try:
@@ -73,13 +95,17 @@ class Atualizador:
             self.verificado = time.monotonic()
             return dict(self.cache)
 
-    def iniciar(self, vault: Path, porta: int, pid: int) -> dict:
+    def iniciar(self, vault: Path, porta: int, pid: int, modo: str | None = None) -> dict:
         estado = self.consultar()
         with self.trava:
             if self.processo is not None and self.processo.poll() is None:
                 return {"estado": "atualizando"}
-            conferir_instalacao()
-            conferir_limpa()
+            reinicio = estado.get("modo") == "reiniciar"
+            if modo is not None and modo != ("reiniciar" if reinicio else "baixar"):
+                raise RuntimeError("A atualização disponível mudou. Confira o aviso e tente novamente.")
+            if not reinicio:
+                conferir_instalacao()
+                conferir_limpa()
             uv = shutil.which("uv")
             if not uv:
                 raise RuntimeError("Instale o uv para atualizar pelo painel.")
@@ -89,10 +115,11 @@ class Atualizador:
             executavel = Path(sys.executable)
             if os.name == "nt" and executavel.with_name("pythonw.exe").is_file():
                 executavel = executavel.with_name("pythonw.exe")
-            self.processo = subprocess.Popen([str(executavel), "-m", "orquestra.atualizacao", str(vault), str(porta), str(pid), estado["revisao"], uv], cwd=RAIZ,
+            revisao = "--local" if reinicio else estado["revisao"]
+            self.processo = subprocess.Popen([str(executavel), "-m", "orquestra.atualizacao", str(vault), str(porta), str(pid), revisao, uv], cwd=RAIZ,
                                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True,
                                              env={**os.environ, "ORQUESTRA_EM_SEGUNDO_PLANO": "1"}, **opcoes)
-            return {"estado": "atualizando", "revisao": estado["revisao"]}
+            return {"estado": "atualizando", **({"modo": "reiniciar"} if reinicio else {"revisao": revisao})}
 
 
 def aplicar(vault: Path, porta: int, pid: int, revisao: str, uv: str) -> None:
@@ -105,12 +132,13 @@ def aplicar(vault: Path, porta: int, pid: int, revisao: str, uv: str) -> None:
 
     time.sleep(1)  # deixa a resposta HTTP chegar antes de reiniciar
     conferir_painel()
-    conferir_instalacao()
-    conferir_limpa()
-    executar("git", "fetch", "--quiet", "origin", "main", timeout=120)
-    if executar("git", "rev-parse", "FETCH_HEAD") != revisao:
-        raise RuntimeError("Uma nova revisão foi publicada. Verifique novamente.")
-    executar("git", "merge", "--ff-only", revisao, timeout=120)
+    if revisao != "--local":
+        conferir_instalacao()
+        conferir_limpa()
+        executar("git", "fetch", "--quiet", "origin", "main", timeout=120)
+        if executar("git", "rev-parse", "FETCH_HEAD") != revisao:
+            raise RuntimeError("Uma nova revisão foi publicada. Verifique novamente.")
+        executar("git", "merge", "--ff-only", revisao, timeout=120)
     executar(uv, "sync", "--locked", timeout=300)
     conferir_painel()
     processo.parar(porta, pid_esperado=pid)

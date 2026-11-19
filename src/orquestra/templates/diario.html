@@ -1,63 +1,67 @@
 {% extends "base.html" %}
-{% import "partes.html" as p %}
 {% block titulo %}Diário{% endblock %}
 {% block trilha %}Diário{% endblock %}
-{% block observa %}{% if e_hoje %}tudo{% endif %}{% endblock %}
+{% block observa %}{% if nota %}nota:{{ nota.rel }}{% endif %}{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="/static/css/diario.css?v={{ marca }}">{% endblock %}
 
 {% block conteudo %}
-<section class="pagina diario-pagina">
+<section class="pagina diario-pagina diario-pessoal">
   <header class="pagina-topo diario-topo">
-    <h1>Diário</h1>
+    <div class="diario-titulo">
+      <a class="botao pequeno so-icone" id="diario-voltar" href="/" aria-label="Voltar" title="Voltar">{{ icone('seta_esq', 17) }}</a>
+      <h1>Diário</h1>
+    </div>
     <div class="diario-ferramentas">
-      <nav class="navega-dia" aria-label="Dia do diário">
-        {% if anterior %}<a class="botao pequeno so-icone" href="?dia={{ anterior }}" aria-label="Dia anterior">{{ icone('chevron_esq', 16) }}</a>{% endif %}
-        <time datetime="{{ dia.isoformat() }}" title="{{ dia_longo }}">{{ 'Hoje' if e_hoje else dia.strftime('%d/%m/%Y') }}</time>
-        {% if proximo %}<a class="botao pequeno so-icone" href="?dia={{ proximo }}" aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</a>{% else %}<button class="botao pequeno so-icone" type="button" disabled aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</button>{% endif %}
-      </nav>
-      {% if not e_hoje %}<a class="botao pequeno diario-hoje" href="/diario">Hoje</a>{% endif %}
-      <a class="botao pequeno so-icone" href="/personalizar/diario" title="Capa do Diário no Início" aria-label="Personalizar capa do Diário no Início">{{ icone('paleta', 16) }}</a>
+      <button type="button" class="botao pequeno" id="diario-abrir-calendario" aria-haspopup="dialog" aria-controls="diario-calendario" hidden>{{ icone('calendario', 16) }} Escolher data</button>
+      <a class="botao pequeno so-icone" href="/personalizar/diario" aria-label="Personalizar capa do Diário no Início">{{ icone('paleta', 16) }}</a>
     </div>
   </header>
+  <noscript>
+    <form method="get" action="/diario" class="diario-data-alternativa">
+      <input type="date" name="dia" value="{{ dia.isoformat() }}" aria-label="Data da anotação" required>
+      <button class="botao pequeno" type="submit">Ir</button>
+    </form>
+  </noscript>
 
-  <p class="suave diario-contexto">{{ consulta.total }} {{ 'mudança' if consulta.total == 1 else 'mudanças' }} · {{ consulta.arquivos }} {{ 'arquivo' if consulta.arquivos == 1 else 'arquivos' }}</p>
-  <nav class="diario-atalhos" aria-label="Relacionados ao dia"><a href="/dia/{{ dia.isoformat() }}">Resumo do dia</a><a href="/agenda/{{ dia.isoformat() }}?visao=dia">Agenda do dia</a></nav>
-  <form class="diario-filtros" action="/diario" method="get" role="search" aria-label="Filtrar registros">
-    <label class="campo"><span>Dia</span><input type="date" name="dia" value="{{ dia.isoformat() }}" required></label>
-    <label class="campo diario-busca"><span>Buscar no registro</span><input type="search" name="q" value="{{ consulta.q }}" maxlength="200" placeholder="Arquivo ou alteração"></label>
-    <label class="campo"><span>Autor</span><select name="autor"><option value="">Todos os autores</option>{% for a in consulta.autores %}<option value="{{ a }}"{% if a == consulta.autor %} selected{% endif %}>{{ 'Fora do painel' if a == 'externo' else a }}</option>{% endfor %}</select></label>
-    <label class="campo"><span>Ação</span><select name="tipo"><option value="">Todas as ações</option>{% for t in consulta.tipos %}<option{% if t == consulta.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
-    <button class="botao pequeno" type="submit">Filtrar</button>
-    {% if consulta.q or consulta.autor or consulta.tipo %}<a class="botao pequeno discreto" href="?dia={{ dia.isoformat() }}">Limpar</a>{% endif %}
-  </form>
-  <h2 class="grupo-titulo diario-atividade">Atividade registrada <small>{{ consulta.encontradas }}{% if consulta.encontradas != consulta.total %} de {{ consulta.total }}{% endif %}</small></h2>
-  {% if entradas %}
-  <ol class="registro diario-registro" aria-label="Atividade do dia">
-    {% for e in entradas %}
-    <li class="reg-{{ e.tipo }}">
-      <details class="diario-evento">
-        <summary>
-          <time>{{ e.hora[:5] }}</time>
-          <span class="reg-tipo">{{ e.tipo }}</span>
-          <span class="diario-arquivo">{% if e.existe %}<a href="{{ url_nota(e.rel) }}" title="{{ e.rel }}">{{ e.rel.rsplit('/', 1)[-1].removesuffix('.md') }}</a>{% else %}<span title="{{ e.rel }}">{{ e.rel.rsplit('/', 1)[-1].removesuffix('.md') }}</span>{% endif %}</span>
-          <span class="diario-abrir" aria-hidden="true">{{ icone('chevron_dir', 13) }}</span>
-        </summary>
-        <div class="diario-detalhes"><code>{{ e.rel }}</code><span class="diario-autor">{{ 'Fora do painel' if e.autor.startswith('externo') else e.autor }}</span>{% if e.detalhe %}<p>{{ e.detalhe }}</p>{% endif %}</div>
-      </details>
-    </li>
-    {% endfor %}
-  </ol>
-  {% else %}
-  <p class="diario-vazio suave">{{ 'Nenhuma atividade corresponde aos filtros.' if consulta.total else 'Nenhuma atividade registrada neste dia.' }}</p>
-  {% endif %}
+  <article class="bloco diario-anotacao">
+    <header>
+      <h2><time datetime="{{ dia.isoformat() }}">{{ dia_longo|capitalize }}</time></h2>
+      {% if nota %}
+      <a class="botao pequeno" href="{{ url_nota(nota.rel) }}?editar=1">{{ icone('editar', 16) }} Editar anotação</a>
+      {% else %}
+      <button type="button" class="botao pequeno principal" id="diario-escrever" data-dia="{{ dia.isoformat() }}">{{ icone('mais', 16) }} Escrever</button>
+      {% endif %}
+    </header>
+    {% if anotacao.strip() %}
+    <div class="texto">{{ anotacao }}</div>
+    {% else %}
+    <p class="suave">Nenhuma anotação para este dia.</p>
+    {% endif %}
+  </article>
 
-  {% if consulta.paginas > 1 %}<nav class="diario-paginacao" aria-label="Páginas do registro">{% if consulta.anterior %}<a class="botao pequeno" href="{{ consulta.anterior }}">Anterior</a>{% endif %}<span>{{ consulta.pagina }} de {{ consulta.paginas }}</span>{% if consulta.proximo %}<a class="botao pequeno" href="{{ consulta.proximo }}">Próxima</a>{% endif %}</nav>{% endif %}
-  {% if sessoes.strip() %}
-  <details class="diario-sessoes"><summary>{{ icone('chip', 15) }} Sessões dos agentes {{ icone('chevron_dir', 13) }}</summary><div class="texto">{{ sessoes }}</div></details>
-  {% endif %}
-
-  {% if dias %}
-  <nav class="outros-dias diario-dias" aria-label="Dias recentes">{% for d in dias %}<a href="?dia={{ d }}"{% if d == dia.isoformat() %} aria-current="date"{% endif %}>{{ d[8:] }}/{{ d[5:7] }}</a>{% endfor %}</nav>
-  {% endif %}
 </section>
 {% endblock %}
+
+{% block dialogos %}
+<dialog class="dialogo diario-calendario" id="diario-calendario" aria-label="Escolher data no Diário" data-dia="{{ dia.isoformat() }}" data-hoje="{{ hoje.isoformat() }}">
+  <div class="diario-calendario-corpo">
+    <header class="diario-calendario-topo">
+      <button type="button" class="botao pequeno so-icone" id="diario-mes-anterior" aria-label="Mês anterior">{{ icone('chevron_esq', 16) }}</button>
+      <h2 id="diario-mes" aria-live="polite"></h2>
+      <button type="button" class="botao pequeno so-icone" id="diario-mes-seguinte" aria-label="Mês seguinte">{{ icone('chevron_dir', 16) }}</button>
+    </header>
+    <table role="grid" aria-labelledby="diario-mes">
+      <thead><tr>{% for nome, abreviado in [('segunda-feira', 'Seg'), ('terça-feira', 'Ter'), ('quarta-feira', 'Qua'), ('quinta-feira', 'Qui'), ('sexta-feira', 'Sex'), ('sábado', 'Sáb'), ('domingo', 'Dom')] %}<th scope="col" aria-label="{{ nome }}">{{ abreviado }}</th>{% endfor %}</tr></thead>
+      <tbody id="diario-grade"></tbody>
+    </table>
+    <footer class="diario-calendario-rodape">
+      <span class="diario-calendario-legenda" id="diario-legenda" hidden>Dias com anotação</span>
+      <button type="button" class="botao pequeno" id="diario-hoje">Hoje</button>
+      <button type="button" class="botao pequeno so-icone" data-fechar aria-label="Fechar calendário">{{ icone('x', 16) }}</button>
+    </footer>
+  </div>
+</dialog>
+<script type="application/json" id="diario-datas-anotadas">{{ datas_anotadas|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}<script src="/static/js/diario.js?v={{ marca }}"></script>{% endblock %}

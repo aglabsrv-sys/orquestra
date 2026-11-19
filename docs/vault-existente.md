@@ -36,7 +36,7 @@ uv run --frozen orquestra adotar "C:\caminho\do\vault" --pastas "Projetos,Leitur
 | `Orquestra - comece aqui.md` | Uma nota explicando o que é o quê. Pode apagar. |
 | `<sua pasta>/_modulo.yaml` | Um por pasta que você mandou mostrar no painel. |
 | `<área pronta>/` | Uma pasta nova para cada área pronta que você marcou. |
-| `diario/` | Criada conforme você usa: o registro do que muda. |
+| `diario/` | Criada conforme você usa. Guarda anotações pessoais, registros de atividade e relatos dos agentes em subpastas próprias. |
 
 A preparação foi desenhada para acrescentar os arquivos do painel sem reorganizar
 suas notas. Faça uma cópia do vault antes da primeira adoção; revise os arquivos

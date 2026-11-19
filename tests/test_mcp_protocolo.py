@@ -16,6 +16,7 @@ from threading import Thread
 import pytest
 
 from orquestra.mcp_servidor import FERRAMENTAS, FERRAMENTAS_DE_LEITURA, criar_servidor
+from orquestra.painel import Painel
 
 
 class ClienteStdio:
@@ -125,6 +126,9 @@ def servidor_stdio(vault, cwd):
 
 
 def test_cli_mcp_stdio_executa_todas_as_ferramentas(vault, tmp_path):
+    painel = Painel(vault)
+    if "habitos" not in painel.indice.modulos:
+        painel.adicionar_modulo("habitos")
     with servidor_stdio(vault, tmp_path) as cliente:
         ferramentas = cliente.pedir("tools/list")["tools"]
         assert {ferramenta["name"] for ferramenta in ferramentas} == set(FERRAMENTAS)
@@ -165,6 +169,15 @@ def test_cli_mcp_stdio_executa_todas_as_ferramentas(vault, tmp_path):
         assert captura["campos"]["origem"] == "agente"
         numeros = cliente.chamar("registrar_numeros", {"valores": {"inscritos": 42}})
         assert numeros["campos"]["inscritos"] == 42
+        habito = cliente.chamar("criar_item", {"area": "habitos", "titulo": "Treino de teste", "texto": "Descrição do hábito."})
+        rel = habito["caminho"]
+        dia = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+        nota = cliente.chamar("anotar_realizacao", {"habito": rel, "texto": "Relato de treino.", "data": dia})
+        assert nota["caminho"].startswith("habitos/execucoes/")
+        assert nota["campos"]["data"] == dia and nota["campos"]["origem"] == "agente"
+        assert nota["campos"]["habito"] == f"[[{rel.removesuffix('.md')}]]"
+        assert cliente.chamar("ler_nota", {"caminho": rel})["versao"] == habito["versao"]
+        assert "anotar_realizacao" in cliente.chamar("contexto_area", {"area": "habitos"})["organizacao"]["orientacao"]
         cliente.chamar("registrar_aprendizado", {"area": "tarefas", "aprendizado": "Use perguntas claras."})
         assert "Use perguntas claras." in cliente.chamar("aprendizados", {"area": "tarefas"})
         cliente.chamar("registrar_sessao", {"agente": "teste-mcp", "pedido": "Verificar protocolo", "feito": "Ferramentas exercitadas"})

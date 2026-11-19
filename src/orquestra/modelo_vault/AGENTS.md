@@ -47,6 +47,7 @@ orquestra.yaml       configuração do painel (nome, tema, backup)
   maquina/           instruções para você, aprendizados, coletores
   arquivo/           itens arquivados (não apague, não edite)
 <outras pastas>      notas da pessoa que não são módulo (veja "Pastas da pessoa")
+diario/notas/        anotações diárias da pessoa
 diario/sessoes/      seu relato de cada sessão de trabalho
 diario/registro/     registro automático de mudanças (o painel escreve, você não)
 _orquestra/          temas e estado do painel
@@ -60,6 +61,10 @@ dele e tudo em `maquina/` e `humano/` desse módulo.
 `itens: .`, o módulo foi montado em cima de uma pasta que a pessoa já usava: os
 itens são as notas da própria pasta (e das subpastas dela, menos `humano/`,
 `maquina/` e `arquivo/`). Nesse caso, crie itens novos direto na pasta do módulo.
+
+**Notas de execução de hábitos.** Guarde relatos em `habitos/execucoes/<hábito>/`,
+com o vínculo `habito` para a nota existente e `data` para o dia da execução.
+Use `anotar_realizacao` no MCP. Preserve a descrição e as marcações do hábito.
 
 ## Regras que não têm exceção
 
@@ -161,6 +166,24 @@ Cada módulo tem um `maquina/aprendizados.md`. É a memória do que funciona ali
 Quando ela responder uma `pergunta` sua recusando ou corrigindo algo, quase sempre
 há um aprendizado ali. Registre.
 
+## Ao organizar a semana ou um projeto
+
+- **Projetos e referências:** guarde o resultado esperado, o mapa inicial,
+  os critérios e a ordem de triagem na nota do projeto ou numa referência ligada.
+- **Tarefas:** registre cada próximo passo executável no módulo de tarefas.
+  Procure um item equivalente antes de criar. Ligue a tarefa à nota do projeto
+  com `[[caminho da nota do projeto]]` no corpo. Se o mapa mencionar a tarefa,
+  use um link para ela, mantendo status, data e descrição no item de Tarefas.
+- **Entrada → Para decidir:** ponha a pergunta concreta no campo `pergunta` do item que depende
+  da resposta. Para uma escolha sobre o projeto, use o projeto. Para um passo,
+  use a tarefa. Pelo MCP, use `perguntar` no item correspondente.
+
+Por exemplo, o projeto de organização da semana pode guardar a ordem de triagem.
+“Revisar as tarefas atrasadas” vai para Tarefas, com um link para o projeto.
+“Qual entrega posso adiar para abrir espaço nesta semana?” fica no item da
+entrega ou no projeto, conforme o alcance da decisão. Se um módulo não existir,
+informe a lacuna antes de criar uma área.
+
 ## Quando precisar de uma decisão
 
 Não adivinhe e não fique parado. Deixe a pergunta no próprio item:
@@ -169,7 +192,7 @@ Não adivinhe e não fique parado. Deixe a pergunta no próprio item:
 pergunta: Posso publicar com este título ou prefere o da versão 2?
 ```
 
-O item aparece na fila **Decidir** do painel. A pessoa responde por lá, e a resposta
+O item aparece em **Entrada → Para decidir**. A pessoa responde por lá, e a resposta
 volta no campo `resposta` (o campo `pergunta` é removido). Na sessão seguinte,
 procure itens com `resposta`, aja de acordo e apague o campo `resposta` ao concluir.
 

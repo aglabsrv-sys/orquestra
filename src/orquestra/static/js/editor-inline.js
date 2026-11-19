@@ -222,7 +222,7 @@
     function abrirTexto() {
       var estilo=getComputedStyle(ver),medida=ver.getBoundingClientRect(),nodes=Array.from(ver.childNodes);
       var area=document.createElement('textarea');
-      area.id='editor';area.className='nota-editor-bloco';area.dataset.editorBloco='';area.value=fonte.value;area.spellcheck=true;area.maxLength=1000000;
+      area.className='nota-editor-bloco';area.dataset.editorBloco='';area.value=fonte.value;area.spellcheck=true;area.maxLength=1000000;
       area.setAttribute('aria-label','Editar a nota em Markdown');area.setAttribute('aria-describedby','estado-salvo');
       ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','color'].forEach(function(chave){area.style[chave]=estilo[chave];});
       ver.replaceChildren(area);ver.classList.add('em-edicao');

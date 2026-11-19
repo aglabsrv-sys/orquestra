@@ -191,7 +191,7 @@ def conferir_linhas_iniciais(browser, base: str, vault: Path) -> dict:
                         antes = arquivo.read_bytes()
                         page.locator("#ver > h1").evaluate("e=>{e.dataset.mdInicio='0';e.dataset.mdFim='1';}")
                         page.locator("#ver > h1").dblclick()
-                        editor = page.locator("#editor[data-editor-bloco]")
+                        editor = page.locator("textarea[data-editor-bloco]")
                         expect(editor).to_have_value(esperado)
                         editor.press("Escape")
                         expect(editor).to_be_hidden()

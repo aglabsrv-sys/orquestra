@@ -233,3 +233,9 @@ class Habito(Pedido):
 class MarcarHabito(Pedido):
     rel: str = Field(min_length=1, max_length=2000)
     versao: str = Field(min_length=1, max_length=128)
+
+
+class NotaRealizacao(Pedido):
+    rel: str = Field(min_length=1, max_length=2000)
+    texto: str = Field(min_length=1, max_length=1_000_000)
+    data: str = Field(default="", max_length=10)

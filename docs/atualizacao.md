@@ -4,15 +4,17 @@ O painel consulta a revisão publicada na `main` do repositório oficial ao abri
 uma página e, depois, a cada 30 minutos. Uma revisão nova pode aparecer mesmo
 sem mudança no número da versão. Sem conexão, a consulta não interrompe seu uso.
 
-O botão aparece somente quando há uma atualização publicada, com um ponto na cor
+O botão aparece quando há código novo para carregar, com um ponto na cor
 de destaque. Fica no canto inferior esquerdo; no celular, ao lado esquerdo do dock,
 na mesma faixa inferior, separado dos indicadores do carrossel.
 Clique para atualizar; salve as edições abertas
 e confirme **Atualizar e reiniciar**. A página aguarda o novo processo e recarrega
 quando confirma a revisão instalada.
 
-Mudanças locais ainda não publicadas não fazem o botão aparecer. Para carregar
-esse código, use `uv run --frozen orquestra reiniciar`.
+Se os arquivos da cópia Git local mudarem com o painel aberto, o mesmo botão
+aparece em até 15 segundos numa aba ativa. **Reiniciar com os novos arquivos**
+carrega essa cópia e preserva suas alterações locais. Após o reinício, o botão
+volta a avisar sobre revisões publicadas.
 
 A instalação pelo painel exige acesso direto por localhost e uma cópia Git na
 `main` do repositório oficial, com Git e uv disponíveis. Pelo Tailscale, o ícone

@@ -1,22 +1,24 @@
 {% extends "base.html" %}
 {% import "partes.html" as p %}
-{% block titulo %}Decidir{% endblock %}
-{% block trilha %}Decidir{% endblock %}
+{% block titulo %}Entrada · Para decidir{% endblock %}
+{% block trilha %}Entrada{% endblock %}
 {% block observa %}tudo{% endblock %}
 
 {% block conteudo %}
-<section class="pagina decidir-pagina">
-  <header class="pagina-topo">
-    <div><h1>{{ "Aprovação de criativos" if aprovacao else "Para decidir" }}</h1><p class="suave">{% if total %}{{ total }} {{ 'item espera' if total == 1 else 'itens esperam' }} uma resposta sua.{% else %}Nada esperando por você.{% endif %}</p></div>
-    <a class="botao pequeno so-icone" href="/personalizar/decidir" title="Capa de Decidir no Início" aria-label="Personalizar capa de Decidir no Início">{{ icone('paleta', 17) }}</a>
-  </header>
+<header class="pagina-topo entrada-topo"><h1>Entrada</h1></header>
+{{ p.abas_entrada('decisoes', tem_capturas, dock.decidir) }}
+<section class="pagina decidir-pagina" aria-label="Para decidir">
+  {% if filtrada %}<a class="link" href="/entrada?aba=decisoes">{{ icone('seta_esq', 15) }} Ver todas as decisões</a>{% endif %}
+  {% if aprovacao %}<h2 class="grupo-titulo">Aprovação de criativos</h2>{% endif %}
 
   {% for g in grupos %}
-  <h2 class="grupo-titulo">{{ icone(g.modulo.icone, 18) }} <a href="/m/{{ g.modulo.id }}">{{ g.modulo.nome }}</a> <small>{{ g.cartoes|length }}</small></h2>
+  <section class="fila-grupo">
+  <h2 class="grupo-titulo">{{ icone(g.modulo.icone, 18) }} <a href="/m/{{ g.modulo.id }}">{{ g.modulo.nome }}</a> <small data-fila-total>{{ g.cartoes|length }}</small></h2>
   <div class="fila">
     {% for c in g.cartoes %}
     <div class="fila-item" data-rel="{{ c.rel }}" data-versao="{{ c.versao }}">
       {{ p.cartao(c) }}
+      {{ p.projetos_vinculados(c.projetos_vinculados) }}
       <div class="fila-acoes">
         {% if c.pergunta %}
         <button class="botao principal" type="button" data-responder aria-label="Responder sobre {{ c.titulo }}">Responder</button>
@@ -31,8 +33,13 @@
     </div>
     {% endfor %}
   </div>
+  </section>
+  {% else %}
+  {% if filtrada_por_nota %}
+  {{ p.vazio("Nenhuma decisão pendente nesta nota", "Veja a fila completa para consultar as outras decisões.") }}
   {% else %}
   {{ p.vazio("Nenhum criativo em aprovação" if aprovacao else "Tudo decidido", "Os criativos enviados para aprovação aparecem aqui com uma prévia." if aprovacao else "Quando uma automação trouxer novidades ou um agente precisar da sua aprovação, aparece aqui.") }}
+  {% endif %}
   {% endfor %}
   {{ p.paginar(paginacao|default(none)) }}
 </section>

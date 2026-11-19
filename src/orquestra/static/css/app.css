@@ -589,6 +589,10 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .pagina { max-width: 900px; margin: 0 auto; padding: 4px var(--margem) 24px; }
 .pagina-topo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 8px; }
 .pagina-topo h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 780; letter-spacing: -0.02em; }
+.entrada-topo { margin: 4px var(--margem) 8px; }
+.entrada-abas { margin-bottom: 16px; }
+.decidir-pagina { max-width: none; }
+.decidir-pagina .fila-grupo { max-width: 640px; margin-inline: auto; }
 .navega-ajustes { display: flex; gap: 6px; overflow-x: auto; padding-block: 6px 14px; margin-block: 10px 0; scrollbar-width: thin; }
 .navega-ajustes a { display: inline-flex; align-items: center; flex: none; min-height: 36px; padding: 6px 12px; border: 1px solid var(--borda); border-radius: calc(10px * var(--cantos, 1)); font-size: 12.5px; font-weight: 550; color: var(--texto-suave); background: var(--superficie); }
 .navega-ajustes a:hover { color: var(--texto); border-color: var(--destaque); }

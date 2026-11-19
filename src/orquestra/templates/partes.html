@@ -33,6 +33,38 @@
 </article>
 {% endmacro %}
 
+{% macro decisao_pendente(url, pergunta) %}
+{% if url %}
+<a class="trabalho-decisao" href="{{ url }}">{{ icone('sino', 16) }}<span>{{ pergunta }}</span><small>Responder</small></a>
+{% endif %}
+{% endmacro %}
+
+{% macro projetos_vinculados(projetos) %}
+{% if projetos %}
+<nav class="trabalho-projetos" aria-label="Projetos vinculados">
+  {{ icone('pasta', 15) }}
+  {% for projeto in projetos %}<a class="link" href="{{ url_nota(projeto.rel) }}">{{ projeto.titulo }}</a>{% endfor %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro tarefas_vinculadas(tarefas, paginacao, id_titulo) %}
+{% if tarefas %}
+<section class="notas-relacionadas trabalho-tarefas" aria-labelledby="{{ id_titulo }}">
+  <header class="notas-relacionadas-cab"><h2 id="{{ id_titulo }}">Tarefas do projeto</h2><small>{{ paginacao.total }}</small></header>
+  <ul>
+    {% for tarefa in tarefas %}
+    <li>
+      <a href="{{ tarefa.url }}">{{ icone('check', 16) }}<span>{{ tarefa.titulo }}</span>{% if tarefa.status %}<small>{{ rotulo(tarefa.status) }}</small>{% endif %}{{ icone('chevron_dir', 14) }}</a>
+      {{ decisao_pendente(tarefa.decisao_pendente, tarefa.pergunta) }}
+    </li>
+    {% endfor %}
+  </ul>
+  {{ paginar(paginacao) }}
+</section>
+{% endif %}
+{% endmacro %}
+
 {# Campo de formulário gerado a partir do schema do módulo. #}
 {% macro seletor_contato(opcoes, atual='', marca='data-campo') %}
 <label class="campo"><span>Contato vinculado</span>
@@ -93,3 +125,11 @@
 {% macro duo(escuro, claro) -%}
 color-mix(in srgb, {{ claro }} calc(var(--modo-claro, 0) * 100%), {{ escuro }})
 {%- endmacro %}
+{% macro abas_entrada(ativa, tem_capturas, pendentes) %}
+<nav class="abas entrada-abas" aria-label="Seções da Entrada">
+  <div class="abas-visoes">
+    {% if tem_capturas %}<a class="aba{% if ativa == 'capturas' %} ativa{% endif %}" href="/m/entrada"{% if ativa == 'capturas' %} aria-current="page"{% endif %}>{{ icone('entrada', 16) }} Capturas</a>{% endif %}
+    <a class="aba{% if ativa == 'decisoes' %} ativa{% endif %}" href="/entrada?aba=decisoes"{% if ativa == 'decisoes' %} aria-current="page"{% endif %}>{{ icone('sino', 16) }} Para decidir <small data-conta="decidir">{{ pendentes }}</small></a>
+  </div>
+</nav>
+{% endmacro %}

@@ -14,7 +14,7 @@
     {% endfor %}
   </div>
   <div class="semana-resumo">
-    <a class="resumo-item" href="/decidir">
+    <a class="resumo-item" href="/entrada?aba=decisoes">
       {{ icone('sino', 18) }}
       <span><b>Para decidir</b><small><span data-conta="decidir">{{ total_decidir }}</span> esperando</small></span>
     </a>
@@ -39,9 +39,9 @@
   <div class="trilho">
     {% for s in slides %}
     <a class="slide" href="{{ s.url }}" data-id="{{ s.id }}">
-      {{ p.capa(s.capa) }}
+      {% if s.capa %}{{ p.capa(s.capa) }}{% endif %}
       <span class="slide-sombra"></span>
-      <span class="selo-capa">{{ s.selo }}</span>
+      {% if s.selo %}<span class="selo-capa">{{ s.selo }}</span>{% endif %}
       <span class="slide-texto">
         <small>{{ s.sobre }}</small>
         <strong>{{ s.titulo }}</strong>

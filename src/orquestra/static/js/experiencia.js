@@ -3,27 +3,62 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.from((r || document).querySelectorAll(s)); };
-  var chaveRetornoNota='orq-nota-retorno:'+document.body.dataset.vaultId;
+  var chaveRetornoNota = 'orq-nota-retorno:' + document.body.dataset.vaultId;
+  var chaveRetornoDiario = 'orq-diario-retorno:' + document.body.dataset.vaultId;
+  function guardarRetorno(url) {
+    var destino = new URL(url, location.href);
+    if (destino.origin !== location.origin || destino.pathname === location.pathname) return;
+    var chave = destino.pathname === '/diario' ? chaveRetornoDiario : destino.pathname.startsWith('/n/') ? chaveRetornoNota : null;
+    if (!chave) return;
+    try {
+      sessionStorage.setItem(chave, JSON.stringify({alvo: destino.pathname, origem: location.href, tamanho: history.length}));
+    } catch (_) { /* O link de retorno padrão continua disponível. */ }
+  }
+  function recuperarRetorno(chave) {
+    try {
+      var retorno = JSON.parse(sessionStorage.getItem(chave) || 'null');
+      sessionStorage.removeItem(chave);
+      if (retorno && retorno.alvo === location.pathname && new URL(retorno.origem).origin === location.origin) {
+        // Depois de Voltar, uma nova navegação substitui as entradas adiante.
+        var entradaAnterior = window.navigation?.entries()[window.navigation.currentEntry?.index - 1];
+        retorno.podeVoltar = entradaAnterior
+          ? entradaAnterior.url === retorno.origem
+          : history.length === retorno.tamanho + 1;
+        return retorno;
+      }
+    } catch (_) { /* O link de retorno padrão continua disponível. */ }
+    return null;
+  }
+  function cliqueNormal(e) {
+    return !e.defaultPrevented && !e.button && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey;
+  }
+  window.Orquestra = window.Orquestra || {};
+  window.Orquestra.guardarRetorno = guardarRetorno;
   document.addEventListener('click', function(e) {
-    var a=e.target.closest('a');
-    if(!a||e.defaultPrevented||e.button||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||a.target==='_blank')return;
-    var u=new URL(a.href,location.href);
-    if(u.origin!==location.origin||!u.pathname.startsWith('/n/'))return;
-    try{sessionStorage.setItem(chaveRetornoNota,JSON.stringify({alvo:u.pathname,origem:location.href,tamanho:history.length}));}catch(_){/* O link de retorno padrão continua disponível. */}
+    var a = e.target.closest('a[href]');
+    if (a && cliqueNormal(e) && a.target !== '_blank') guardarRetorno(a.href);
   });
+  var voltarDiario = $('#diario-voltar');
+  var retornoDiario = recuperarRetorno(chaveRetornoDiario) || (voltarDiario && history.state?.orquestraDiario);
+  if (voltarDiario && retornoDiario) {
+    voltarDiario.href = retornoDiario.origem;
+    history.replaceState({...history.state, orquestraDiario: retornoDiario}, '');
+    voltarDiario.addEventListener('click', function (e) {
+      if (retornoDiario.podeVoltar && cliqueNormal(e)) { e.preventDefault(); history.back(); }
+    });
+  }
   var voltarNota = $('#nota-voltar');
-  var retornoNota;
-  try {
-    retornoNota=JSON.parse(sessionStorage.getItem(chaveRetornoNota)||'null');
-    if(!retornoNota||retornoNota.alvo!==location.pathname||new URL(retornoNota.origem).origin!==location.origin||history.length!==retornoNota.tamanho+1)retornoNota=null;
-    if(voltarNota&&retornoNota)voltarNota.href=retornoNota.origem;
-  } catch (_) { retornoNota=null; }
+  var retornoNota = recuperarRetorno(chaveRetornoNota) || (voltarNota && history.state?.orquestraNota);
+  if (voltarNota && retornoNota) {
+    voltarNota.href = retornoNota.origem;
+    history.replaceState({...history.state, orquestraNota: retornoNota}, '');
+  }
   if (voltarNota) voltarNota.addEventListener('click', function (e) {
-    if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (!cliqueNormal(e)) return;
     if (window.parent !== window && new URL(location.href).searchParams.get('explorador') === '1') {
       e.preventDefault(); window.parent.postMessage({tipo:'orquestra:leitor-voltar'},location.origin); return;
     }
-    if (retornoNota) { e.preventDefault(); history.back(); }
+    if (retornoNota?.podeVoltar) { e.preventDefault(); history.back(); }
   });
   // O último acesso inclui navegação pelo dock e links, com memória por vault.
   var ordemCards = $('#cards-ordem') ? JSON.parse($('#cards-ordem').textContent) : [];
@@ -65,7 +100,7 @@
   var pedido = 0, controlador;
   // O histórico restaura a visão daquela entrada, mesmo se a preferência mudar.
   if ($('#modulo-painel')) {
-    var guiaInicial=$('.abas .aba[aria-current]');
+    var guiaInicial=$('.abas:not(.entrada-abas) .aba[aria-current]');
     if(guiaInicial){var entradaInicial=new URL(location.href),escolhaInicial=new URL(guiaInicial.href,location.href).searchParams.get('aba');if(escolhaInicial)entradaInicial.searchParams.set('aba',escolhaInicial);history.replaceState(Object.assign({},history.state,{orquestraVisao:entradaInicial.href}),'');}
   }
   async function navegar(url, historico) {
@@ -89,9 +124,9 @@
         var contagemAtual=$('.pasta-dentro-cab small',pastaAtual),contagemNova=$('.pasta-dentro-cab small',pastaNova);
         if(!contagemAtual.isEqualNode(contagemNova))contagemAtual.replaceWith(document.importNode(contagemNova,true));
       } else painel.replaceWith(document.importNode($('#modulo-painel',doc),true));
-      var novasAbas=document.importNode($('.abas',doc),true);
+      var novasAbas=document.importNode($('.abas:not(.entrada-abas)',doc),true);
       if(mesmaPasta)$('.abas-fim',novasAbas).replaceWith($('.abas-fim'));
-      $('.abas').replaceWith(novasAbas);
+      $('.abas:not(.entrada-abas)').replaceWith(novasAbas);
       var dialogos = $('#modulo-dialogos'), novos = document.importNode($('#modulo-dialogos',doc),true);
       dialogos.replaceWith(novos);
       var numeros = $('.cab-numeros'), novosNumeros = $('.cab-numeros',doc);
@@ -101,12 +136,12 @@
       if(document.title!==doc.title)document.title = doc.title;
       if (historico) history.pushState({orquestraVisao:url},'',url);
       window.Orquestra.prepararModulo(novos);
-      var ativa = $('.aba[aria-current]'); if (ativa) ativa.focus({preventScroll:true});
+      var ativa = $('.aba[aria-current]',novasAbas); if (ativa) ativa.focus({preventScroll:true});
     } catch (e) { if (e.name !== 'AbortError') erro(e); }
     finally { if (numero === pedido && $('#modulo-painel')) $('#modulo-painel').removeAttribute('aria-busy'); }
   }
   document.addEventListener('click', function (e) {
-    var a = e.target.closest('.abas .aba, .tarefas-periodos a, .tarefas-recorte .link');
+    var a = e.target.closest('.abas:not(.entrada-abas) .aba, .tarefas-periodos a, .tarefas-recorte .link');
     if (!a || !$('#modulo-painel') || e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     var url = new URL(a.href,location.href);
     if (url.pathname !== location.pathname || url.origin !== location.origin) return;

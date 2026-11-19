@@ -10,4 +10,4 @@ coletado_em: {{hoje}}
 ---
 
 Item de exemplo, para você ver como chega o que um coletor traz. Os de verdade vêm
-com link e miniatura. Marque como útil ou descarte na fila Decidir.
+com link e miniatura. Marque como útil ou descarte em Entrada → Para decidir.

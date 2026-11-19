@@ -93,7 +93,7 @@ O preview usa a rota confinada de arquivos para mídias locais. Imagens remotas
 dependem do servidor de origem e podem revelar seu IP a ele.
 
 No módulo Conteúdo, o agente usa `miniatura` para o criativo e `status: em_aprovacao`.
-A fila Para decidir mostra o preview com Aprovar criativo e Pedir ajustes. Aprovar
+Em Entrada → Para decidir, a fila mostra o preview com Aprovar criativo e Pedir ajustes. Aprovar
 altera o status para `aprovado`: não publica em redes sociais. O botão para pipelines
 antigos acrescenta opções e ações, preservando as já configuradas.
 

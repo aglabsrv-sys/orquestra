@@ -1,29 +1,26 @@
-# Diário e registros
+# Diário, Hoje e registro de atividade
 
-O Diário reúne o registro factual das mudanças nos arquivos e os relatos de
-sessão dos agentes. Eles são fontes distintas: o registro mostra o que o painel
-observou; um relato informa o que o agente declarou, sem comprovar sua execução.
+O **Diário** é o espaço para anotações pessoais. Abra **Escolher data** para
+navegar pelo calendário mensal. Os dias com anotação têm um ponto. Use
+**Escrever** ou **Editar anotação**. **Voltar** retorna à tela de origem.
+Cada dia tem uma nota em
+`diario/notas/AAAA-MM-DD.md`, que também pode ser aberta no Obsidian.
 
-Escolha um dia, busque pelo arquivo ou alteração e filtre por autor ou ação.
-A busca não exige acentos. Cada página mostra até 80 mudanças, com os mesmos
-filtros preservados ao avançar. Limpar remove os filtros sem trocar o dia.
-O histórico completo continua em diario/registro/AAAA-MM-DD.md dentro do vault.
+**Hoje**, no Início, reúne tarefas com prazo no dia, atrasadas, sem data e hábitos.
+Para consultar compromissos, use a **Agenda**. Clique numa data para ver os
+horários daquele dia ou abra **Lista** para percorrer os próximos eventos.
 
-O total de mudanças e de arquivos se refere ao dia inteiro. O contador da lista
-mostra quantas mudanças correspondem aos filtros. Fora do painel significa que
-o arquivo foi alterado por fora; não identifica uma pessoa ou agente específico.
-Mudanças só são observadas enquanto o painel acompanha o vault ou pelas operações
-do MCP; o Diário não reconstrói uma atividade que não observou.
+## Registro de atividade
 
-**Resumo do dia** reúne itens datados, pendências, hábitos e atividade. **Agenda do
-dia** abre os itens agendados. Essas ligações usam a data selecionada, sem criar
-cópias das notas. Sessões de agentes continuam disponíveis mesmo com a lista
-de mudanças vazia ou filtrada.
+Em **Ajustes → Painel → Registro de atividade**, escolha um dia, busque pelo
+arquivo ou pela alteração e filtre por autor ou ação. A busca aceita palavras
+sem acento. Cada página mostra até 80 mudanças e mantém os filtros ao avançar.
 
-Em dias com muitos itens, o resumo mostra até 80 por seção em cada página. Os
-totais permanecem completos e a navegação ao final permite percorrer o restante.
+O histórico completo fica em `diario/registro/AAAA-MM-DD.md`. **Fora do painel**
+indica que a alteração veio de fora da interface. Mudanças são observadas
+enquanto o painel acompanha o vault ou durante operações do MCP.
 
-Os relatos ficam em diario/sessoes/AAAA-MM-DD.md. Agentes devem seguir a política
-local antes de registrar uma sessão e indicar o que foi feito, verificado e o que
-permanece pendente. Pelo [MCP](mcp.md), `diario_dia` oferece leitura paginada e
-`registrar_sessao` acrescenta o relato quando permitido.
+Os relatos dos agentes aparecem abaixo da lista, inclusive quando ela está vazia.
+Eles descrevem o que o agente declarou ao fim da sessão e ficam em
+`diario/sessoes/AAAA-MM-DD.md`. Pelo [MCP](mcp.md), `diario_dia` oferece leitura
+paginada e `registrar_sessao` acrescenta o relato quando a política do vault permite.

@@ -137,7 +137,7 @@ def test_capas_de_pastas_desconhecidas_nao_repetem_e_herdam_tema(cliente):
 
 
 def test_personalizacao_de_pagina_salva_capa_oculta_e_restaura_tema(cliente):
-    for alvo in ("diario", "decidir", "pastas"):
+    for alvo in ("diario", "pastas"):
         pagina = cliente.get("/personalizar/" + alvo)
         assert pagina.status_code == 200
         versao = pagina.context["config_versao"]
@@ -148,11 +148,18 @@ def test_personalizacao_de_pagina_salva_capa_oculta_e_restaura_tema(cliente):
         versao = cliente.get("/personalizar/" + alvo).context["config_versao"]
         assert cliente.post(f"/api/paginas/{alvo}/personalizar", json={"versao": versao, "ocultar": True}).status_code == 200
         assert cliente.painel.config.capas[alvo] is False
-        if alvo != "pastas":
-            assert cliente.get("/" + alvo).context["capa"] is None
+        if alvo == "diario":
+            slides = cliente.get("/").context["slides"]
+            assert next(slide for slide in slides if slide["id"] == "diario")["capa"] is None
         versao = cliente.get("/personalizar/" + alvo).context["config_versao"]
         assert cliente.post(f"/api/paginas/{alvo}/personalizar", json={"versao": versao, "padrao": True}).status_code == 200
         assert alvo not in cliente.painel.config.capas
+
+
+def test_personalizacao_antiga_de_decidir_abre_a_entrada(cliente):
+    resposta = cliente.get("/personalizar/decidir", follow_redirects=False)
+    assert resposta.status_code == 303
+    assert resposta.headers["location"] == "/entrada?aba=decisoes"
 
 
 def test_upload_de_capa_da_pagina_usa_contrato_binario(cliente):
@@ -164,4 +171,5 @@ def test_upload_de_capa_da_pagina_usa_contrato_binario(cliente):
     pagina = cliente.get("/personalizar/diario")
     r = cliente.post("/api/paginas/diario/personalizar", json={"versao": pagina.context["config_versao"], "capa": upload.json()["caminho"]})
     assert r.status_code == 200
-    assert cliente.get("/diario").context["capa"]["url"].startswith("/arquivo/midia/capas/")
+    slides = cliente.get("/").context["slides"]
+    assert next(slide for slide in slides if slide["id"] == "diario")["capa"]["url"].startswith("/arquivo/midia/capas/")

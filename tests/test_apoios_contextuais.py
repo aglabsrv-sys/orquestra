@@ -7,6 +7,7 @@ import pytest
 
 from orquestra import habitos
 from orquestra.config import gravar_yaml, ler_yaml
+from orquestra.mcp_servidor import Ferramentas
 
 
 @pytest.fixture(autouse=True)
@@ -50,6 +51,49 @@ def test_execucao_aparece_no_habito_e_na_data_sem_marcar_automaticamente(cliente
     assert "Nenhuma nota nesta data" in cliente.get("/n/" + rel, params={"dia": "2020-01-01"}).text
     assert "Sessão sintética" not in cliente.get("/m/notas").text
     assert nota.read_bytes() == antes
+
+
+def test_anotar_realizacao_no_dia_do_mapa_ou_hoje_preserva_o_habito(cliente):
+    painel = cliente.painel
+    item = cliente.post("/api/habitos", json={"titulo": "Academia", "descricao": "Treinar com regularidade."}).json()["item"]
+    outro = cliente.post("/api/habitos", json={"titulo": "Caminhada"}).json()["item"]
+    habito = painel.nota(item["rel"])
+    antes = habito.caminho.read_bytes()
+    agora = dt.date.today()
+    ontem = (agora - dt.timedelta(days=1)).isoformat()
+    painel_habitos = cliente.get("/m/habitos").text
+    assert f'href="{item["url"]}?dia={ontem}" tabindex="-1"' in painel_habitos
+    assert f'data-dia="{ontem}"' in cliente.get(item["url"], params={"dia": ontem}).text
+
+    rota = "/api/habitos/realizacoes/notas"
+    dados = {"rel": habito.rel, "texto": "Treino de perna\n\nTambém conversei sobre [[Caminhada]]."}
+    primeira = cliente.post(rota, json={**dados, "data": ontem})
+    assert primeira.status_code == 200
+    registro = primeira.json()
+    nota = painel.nota(registro["rel"])
+    assert nota.rel.startswith("habitos/execucoes/Academia/")
+    assert registro["data"] == nota.campo("data") == ontem
+    assert nota.campo("habito") == f"[[{habito.rel.removesuffix('.md')}]]"
+    assert nota.corpo.strip() == dados["texto"]
+    assert cliente.get(outro["url"], params={"dia": ontem}).context["relacionadas"] == []
+    hoje = cliente.post(rota, json={**dados, "texto": "Treino de braço"}).json()
+    assert hoje["data"] == agora.isoformat()
+    assert [n["rel"] for n in cliente.get(item["url"], params={"dia": ontem}).context["relacionadas"]] == [nota.rel]
+    assert cliente.post(rota, json={**dados, "data": (agora + dt.timedelta(days=1)).isoformat()}).status_code == 400
+    assert habito.caminho.read_bytes() == antes
+
+
+def test_notas_de_realizacao_paginam_com_datas_recentes_primeiro(cliente):
+    item = cliente.post("/api/habitos", json={"titulo": "Leitura"}).json()["item"]
+    hoje = dt.date.today()
+    for dias in (5, 1, 7, 0, 4, 8, 2, 6, 3):
+        data = hoje - dt.timedelta(days=dias)
+        apoio(cliente.painel, f"habitos/execucoes/Leitura/Leitura {data}.md", "Registro de exemplo.")
+    primeira = cliente.get(item["url"]).context
+    assert [n["data"] for n in primeira["relacionadas"]] == [(hoje - dt.timedelta(days=d)).isoformat() for d in range(6)]
+    seguinte = cliente.get(primeira["paginacao_relacionadas"]["proxima"]).context
+    assert [n["data"] for n in seguinte["relacionadas"]] == [(hoje - dt.timedelta(days=d)).isoformat() for d in range(6, 9)]
+    assert seguinte["paginacao_relacionadas"]["anterior"]
 
 
 def test_referencia_e_apoio_de_projeto_nao_recebem_schema_de_cartao(cliente):
@@ -115,3 +159,76 @@ def test_estudos_exibem_notas_no_contexto_sem_aba_referencias(cliente):
     assert "?aba=referencias" not in pagina.text
     assert "Aula" in cliente.get("/n/" + estudo.rel).text
     assert arquivo.read_bytes() == antes
+
+
+def test_projeto_reune_tarefas_vinculadas_nos_dois_sentidos_sem_duplicar(cliente):
+    painel = cliente.painel
+    painel.adicionar_modulo("projetos")
+    projeto = painel.criar_nota("projetos", "Triagem da semana", corpo=(
+        "## Mapa inicial\n\n"
+        "[Rever prazos](../../tarefas/itens/Rever%20prazos.md)\n"
+        "[[tarefas/itens/Conferir retornos]]"
+    ))
+    antes = projeto.caminho.read_bytes()
+    ferramentas = Ferramentas(painel.vault)
+    criada = ferramentas.criar_item("tarefas", "Rever prazos", texto="[[projetos/itens/Triagem da semana]]")
+    apoio(painel, "tarefas/itens/Conferir retornos.md", "---\nstatus: feito\n---\n")
+    apoio(painel, "tarefas/itens/Reunir pendências.md", "---\nprojeto: '[[Triagem da semana]]'\n---\n")
+    apoio(painel, "tarefas/itens/Outras compras.md", "Sem vínculo")
+    apoio(painel, "tarefas/arquivo/Passo antigo.md", "[[Triagem da semana]]")
+    painel.indice.sincronizar()
+    for url, parametros in (
+        ("/m/projetos", {"abrir": projeto.rel, "aba": "v0"}),
+        ("/m/projetos", {"abrir": projeto.rel, "aba": "v1"}),
+        ("/n/" + projeto.rel, {}),
+    ):
+        resposta = cliente.get(url, params=parametros)
+        assert resposta.status_code == 200
+        assert "Tarefas do projeto" in resposta.text
+        tarefas = resposta.context["tarefas_vinculadas"]
+        assert [t["titulo"] for t in tarefas] == ["Conferir retornos", "Reunir pendências", "Rever prazos"]
+        assert tarefas[0]["status"] == "feito"
+
+    for rel in (criada["caminho"], "tarefas/itens/Conferir retornos.md", "tarefas/itens/Reunir pendências.md"):
+        assert [n.rel for n in cliente.get("/n/" + rel).context["projetos_vinculados"]] == [projeto.rel]
+    conexoes = ferramentas.conexoes_nota(projeto.rel)
+    assert criada["caminho"] in {n["caminho"] for n in conexoes["entradas"]["itens"]}
+    assert criada["caminho"] in {n["caminho"] for n in conexoes["saidas"]["itens"]}
+    assert projeto.caminho.read_bytes() == antes
+
+
+def test_pergunta_aparece_no_contexto_e_em_decidir_sem_criar_outra_nota(cliente):
+    painel = cliente.painel
+    painel.adicionar_modulo("projetos")
+    projeto = painel.criar_nota("projetos", "Organização semanal")
+    tarefa = painel.criar_nota("tarefas", "Reservar horário", corpo="[[Organização semanal]]")
+    ferramentas = Ferramentas(painel.vault)
+    assert "ordem de triagem" in ferramentas.regras()
+    assert "próximo passo executável" in ferramentas.contexto_area("projetos")["orientacao"]
+
+    pergunta_projeto = "Qual entrega pode esperar até a próxima semana?"
+    pergunta_tarefa = "Reservo terça ou quinta?"
+    ferramentas.perguntar(projeto.rel, pergunta_projeto)
+    ferramentas.perguntar(tarefa.rel, pergunta_tarefa)
+    painel.indice.sincronizar()
+    caminhos_antes = set(painel.indice.notas)
+
+    pasta = cliente.get("/m/projetos", params={"abrir": projeto.rel})
+    assert pergunta_projeto in pasta.text and pergunta_tarefa in pasta.text
+    link_tarefa = pasta.context["tarefas_vinculadas"][0]["decisao_pendente"]
+    resposta = cliente.get(link_tarefa)
+    assert resposta.context["total"] == 1
+    cartao = resposta.context["grupos"][0]["cartoes"][0]
+    assert cartao["rel"] == tarefa.rel and pergunta_tarefa in resposta.text
+    assert pergunta_projeto not in resposta.text and projeto.titulo in resposta.text
+    fila = ferramentas.fila_de_decisoes()
+    assert {item["caminho"] for item in fila} >= {projeto.rel, tarefa.rel}
+
+    resposta = cliente.put("/api/notas/" + tarefa.rel, json={
+        "versao": cartao["versao"], "campos": {"resposta": "Terça.", "pergunta": ""},
+    })
+    assert resposta.status_code == 200
+    assert cliente.get(link_tarefa).context["total"] == 0
+    assert pergunta_tarefa not in cliente.get("/m/projetos", params={"abrir": projeto.rel}).text
+    assert ferramentas.ler_nota(tarefa.rel)["campos"]["resposta"] == "Terça."
+    assert set(painel.indice.notas) == caminhos_antes

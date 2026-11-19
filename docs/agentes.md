@@ -99,6 +99,19 @@ podem ter custos ou limites próprios. Veja [coletores.md](coletores.md).
 - "Crie um módulo de finanças com receitas e despesas por mês."
 - "Crie um tema claro, com capas de mar."
 
+## Organizar a semana ou um projeto
+
+Use Projetos ou uma referência ligada para o mapa inicial e a ordem de triagem.
+Coloque os próximos passos executáveis em Tarefas, reaproveitando os itens que
+já existem. Use um wikilink na tarefa para a nota do projeto e, se mencionar a
+tarefa no mapa, aponte para o item original. O painel mostra a mesma tarefa em
+seu projeto e em Tarefas.
+
+Quando uma escolha depender de você, o agente coloca a pergunta concreta no
+campo `pergunta` do projeto ou da tarefa que precisa da resposta. Entrada → Para decidir abre
+esse mesmo item e guarda nele a resposta. O contrato na raiz traz esse fluxo
+para novos cofres, e a ferramenta `regras` também o descreve em cofres existentes.
+
 ## Agentes que aprendem com o uso
 
 Cada área tem um `maquina/aprendizados.md`. O contrato manda o agente ler antes de
@@ -127,9 +140,9 @@ Dois pedidos que ajudam:
 
 ## Como acompanhar o que o agente fez
 
-- **Diário** (ícone de pulso no dock): mostra o relato que o agente escreveu ao fim
-  da sessão e, abaixo, o registro automático de cada arquivo criado ou alterado.
-- **Decidir** (ícone de sino): as perguntas que o agente deixou para você.
+- Em **Ajustes → Painel → Registro de atividade**, consulte as alterações nos
+  arquivos e os relatos de fim de sessão dos agentes.
+- Em **Entrada → Para decidir**, responda às perguntas deixadas pelos agentes.
 - **Histórico Git**: quando autorizado e habilitado, o painel cria snapshots em
   `refs/orquestra/backups`, sem mover sua branch ou staging. Consulte com
   `git log --oneline refs/orquestra/backups` na pasta do vault e recupere primeiro

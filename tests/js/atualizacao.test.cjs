@@ -6,27 +6,47 @@ const {join}=require('node:path');
 const {runInNewContext}=require('node:vm');
 const fonte=readFileSync(join(__dirname,'../../src/orquestra/static/js/atualizacao.js'),'utf8');
 
-function ambiente({disponivel=false,local=true,confirmar=true}={}) {
+function ambiente({disponivel=false,local=true,confirmar=true,modo}={}) {
   const eventos={},pedidos=[],confirmacoes=[],avisos=[];
   let automatico,posts=0,recargas=0;
   const botao={hidden:true,classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(n,f){eventos[n]=f;}};
   const document={hidden:false,body:{dataset:{vaultId:'vault-ficticio'}},querySelector(){return botao;},addEventListener(){}};
-  const window={OrquestraInterface:{confirmar:async dados=>{confirmacoes.push(dados);return confirmar;},avisar:(...args)=>avisos.push(args)}};
+  const window={addEventListener(n,f){eventos[n]=f;},OrquestraInterface:{confirmar:async dados=>{confirmacoes.push(dados);return confirmar;},avisar:(...args)=>avisos.push(args)}};
   const fetch=async(url,opcoes)=>{
     pedidos.push({url,opcoes});
     if(url==='/api/local/capacidade') return {ok:true,json:async()=>({token:'capacidade-ficticia'})};
-    if(opcoes.method==='POST') { posts++;return {ok:true,json:async()=>({revisao:'nova'})}; }
-    return {ok:true,json:async()=>({disponivel,local,pid:posts?2:1,instalada:posts?'nova':'antiga',revisao:'nova'})};
+    if(opcoes.method==='POST') { posts++;return {ok:true,json:async()=>modo ? {modo} : {revisao:'nova'}}; }
+    return {ok:true,json:async()=>({disponivel,local,modo,pid:posts?2:1,instalada:posts&&!modo?'nova':'antiga',revisao:'nova'})};
   };
-  runInNewContext(fonte,{document,window,fetch,AbortSignal,Date,location:{reload(){recargas++;}},setInterval(){},setTimeout(f,tempo){if(tempo===3000)automatico=f;else f();}});
-  return {botao,pedidos,confirmacoes,avisos,verificar:()=>automatico(),clicar:()=>eventos.click(),recargas:()=>recargas};
+  runInNewContext(fonte,{document,window,fetch,AbortController,Date,location:{reload(){recargas++;}},setInterval(f){automatico=f;},
+    setTimeout(f,tempo){if(tempo!==25000)f();},clearTimeout(){}});
+  return {botao,pedidos,confirmacoes,avisos,verificar:()=>automatico(),clicar:()=>eventos.click(),recargas:()=>recargas,
+    pronta:()=>new Promise(setImmediate),restaurar:()=>eventos.pageshow({persisted:true})};
 }
 
-test('aviso só aparece quando há atualização publicada',async()=>{
+test('aviso acompanha a disponibilidade informada pelo painel',async()=>{
   for(const disponivel of [true,false]) {
-    const p=ambiente({disponivel});await p.verificar();
+    const p=ambiente({disponivel});
+    assert.equal(p.pedidos[0].url,'/api/atualizacao');
+    await p.pronta();
     assert.equal(p.botao.hidden,!disponivel);
   }
+});
+
+test('voltar a uma página preservada pelo navegador consulta o aviso novamente',async()=>{
+  const p=ambiente();await p.pronta();p.restaurar();await p.pronta();
+  assert.equal(p.pedidos.length,2);
+});
+
+test('arquivos locais usam o mesmo aviso e reiniciam sem mudar a revisão Git',async()=>{
+  const p=ambiente({disponivel:true,modo:'reiniciar'});await p.pronta();
+  assert.equal(p.botao.hidden,false);
+  assert.match(p.botao.title,/Arquivos novos/);
+  await p.clicar();
+  assert.equal(p.confirmacoes[0].confirmar,'Reiniciar com os novos arquivos');
+  const post=p.pedidos.find(p=>p.opcoes.method==='POST');
+  assert.equal(JSON.parse(post.opcoes.body).modo,'reiniciar');
+  assert.equal(p.recargas(),1);
 });
 
 test('sem revisão disponível o clique oculta o aviso e não reinicia nem atualiza',async()=>{
@@ -54,4 +74,11 @@ test('cancelar ou acessar remotamente não inicia atualização nem reinício',a
     assert.equal(p.pedidos.some(p=>p.opcoes.method==='POST'),false);
     assert.equal(p.recargas(),0);
   }
+});
+
+test('dois cliques durante a consulta abrem uma confirmação e iniciam uma atualização', async () => {
+  const p = ambiente({disponivel: true});
+  await Promise.all([p.clicar(), p.clicar()]);
+  assert.equal(p.confirmacoes.length, 1);
+  assert.equal(p.pedidos.filter(pedido => pedido.opcoes.method === 'POST').length, 1);
 });

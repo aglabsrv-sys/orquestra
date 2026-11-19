@@ -138,11 +138,14 @@ body.bv { isolation:isolate; }
 .nota-habito { max-width:960px; }
 .nota-habito .nota-cabecalho { margin-bottom:8px; }
 .nota-habito-icone { display:grid; flex:none; place-items:center; width:42px; height:42px; border-radius:calc(10px * var(--cantos, 1)); background:color-mix(in srgb,var(--destaque) 13%,var(--superficie)); color:var(--destaque); }
-.nota-habito .texto, .nota:has(.notas-relacionadas) .texto { min-height:0; }
+.nota-habito .texto, .nota:has(.notas-relacionadas, .trabalho-projetos, .trabalho-decisao) .texto { min-height:0; }
 .notas-relacionadas { margin-top:18px; border:1px solid var(--borda); border-radius:calc(12px * var(--cantos, 1)); background:var(--superficie); overflow:hidden; }
 .notas-relacionadas-cab { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; padding:12px 14px; }
 .notas-relacionadas-cab h2 { margin:0; font-size:.95rem; font-weight:650; }
-.notas-relacionadas-filtro { display:flex; align-items:center; gap:12px; font-size:.78rem; }
+.notas-relacionadas-filtro { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:.78rem; }
+.realizacao-dialogo { max-width:440px; }
+.realizacao-dialogo .dialogo-corpo { gap:12px; }
+.realizacao-dialogo .dialogo-acoes { margin:0; padding:0; border:0; }
 .notas-relacionadas :is(time, small) { flex:none; color:var(--texto-suave); font-size:.76rem; font-variant-numeric:tabular-nums; }
 .notas-relacionadas ul { list-style:none; padding:0; margin:0; }
 .notas-relacionadas li { border-top:1px solid var(--borda); }
@@ -152,6 +155,15 @@ body.bv { isolation:isolate; }
 .notas-relacionadas li .icone { flex:none; color:var(--texto-suave); }
 .notas-relacionadas > :is(p, .link) { display:block; margin:0; padding:10px 14px; }
 .notas-relacionadas .paginacao { padding:10px 14px; margin:0; }
+.pasta-conteudo > .trabalho-tarefas { margin-top:0; }
+.trabalho-projetos { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:8px 14px; font-size:.86rem; overflow-wrap:anywhere; }
+.trabalho-projetos a { min-width:0; }
+.trabalho-decisao, .trabalho-tarefas li a.trabalho-decisao { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; min-height:42px; padding:9px 14px; border-radius:8px; color:var(--texto); background:var(--superficie-alta); }
+.trabalho-decisao:is(:hover,:focus-visible) { text-decoration:underline; }
+.trabalho-decisao > span { flex:1 1 12em; min-width:0; overflow-wrap:anywhere; }
+.trabalho-decisao > .icone { flex:none; color:var(--texto-suave); }
+.trabalho-decisao > small { color:var(--texto-suave); font-size:.76rem; }
+.trabalho-tarefas li a.trabalho-decisao { border-radius:0; border-top:1px solid var(--borda); }
 @media (max-width:600px) {
   .nota-habito .nota-cabecalho { gap:8px; }
   .nota-habito .nota-cabecalho .nota-titulo { flex:1 1 calc(100% - 48px); }

@@ -22,15 +22,18 @@ from typing import Any
 from urllib.parse import quote
 
 from fastapi import FastAPI, Query, Request
+from fastapi.exception_handlers import http_exception_handler
 from pydantic import BaseModel, ValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException
 
 from orquestra import __version__, adocao, agenda, aparencia, armazenamento, automacoes, backup, coletores, confianca, contratos, diario, graficos, preparo, temas, segredos, vinculos
 from orquestra.caminhos import CaminhoInseguro, eh_link, ignorar
 from orquestra.config import ConfigInvalida, ler_yaml
 from orquestra import apresentacao as ap
+from orquestra import trabalho
 from orquestra.indice import EXT_MIDIA, data_de, deve_ignorar, espera_decisao
 from orquestra.modulos import ARQUIVO_DESLIGADO, ARTES_DE_PASTA, ESTILOS_DE_SUBPASTAS, ValorInvalido, Visao, padroes, rotulo, validar
 from orquestra.notas import Conflito, FrontmatterInvalido, simples
@@ -111,7 +114,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             "hoje": hoje,
             "hoje_longo": ap.data_longa(hoje),
             "dock": ap.montar_dock(painel, ativo, hoje),
-            "cards_ids": [m.id for m in painel.indice.modulos.values() if not ap.agenda_nativa(m)] + (["pastas"] if painel.indice.fora_dos_modulos() else []) + ["decidir", "diario"],
+            "cards_ids": [m.id for m in painel.indice.modulos.values() if not ap.agenda_nativa(m)] + (["pastas"] if painel.indice.fora_dos_modulos() else []) + ["diario"],
             "ativo": ativo,
             "modulo_captura": painel.indice.modulos.get(painel.config.captura),
             **extra,
@@ -126,6 +129,15 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
 
     def quer_json(request: Request) -> bool:
         return request.url.path.startswith("/api/")
+
+    @app.exception_handler(404)
+    async def rota_nao_encontrada(request: Request, erro: HTTPException):
+        if request.method != "GET" or "text/html" not in request.headers.get("accept", ""):
+            return await http_exception_handler(request, erro)
+        if request.url.path.startswith(("/api/", "/static/", "/arquivo/")):
+            return await http_exception_handler(request, erro)
+        return pagina(request, "erro.html", "", 404, titulo="Página não encontrada",
+                      mensagem="Confira o endereço ou volte ao início do painel.")
 
     @app.exception_handler(NaoEncontrado)
     async def nao_encontrado(request: Request, erro: NaoEncontrado):
@@ -228,12 +240,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_atualizar(request: Request):
         if erro := exigir_local(request):
             return erro
-        await corpo_json(request)
+        dados = await corpo_json(request)
         if hospedeiro is None or hospedeiro.servidor is None:
             raise Recusado("Inicie o painel pelo comando orquestra para atualizar por aqui.")
         try:
             porta = hospedeiro.servidor.config.port
-            return await asyncio.to_thread(atualizador.iniciar, painel.vault, porta, os.getpid())
+            return await asyncio.to_thread(atualizador.iniciar, painel.vault, porta, os.getpid(), dados.get("modo"))
         except (OSError, RuntimeError, subprocess.TimeoutExpired) as erro:
             raise Recusado(str(erro) if isinstance(erro, RuntimeError) else "Não foi possível iniciar a atualização.") from None
 
@@ -244,18 +256,37 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             return JSONResponse({"erro": "Abra localhost diretamente no computador para autorizar esta operação."}, status_code=403)
         return {"token": token}
 
-    def paginar(request: Request, itens: list, tamanho: int = TAMANHO_PAGINA) -> tuple[list, dict]:
+    def paginar(request: Request, itens: list, tamanho: int = TAMANHO_PAGINA, *, parametro: str = "pagina") -> tuple[list, dict]:
         total = len(itens)
         paginas = max(1, (total + tamanho - 1) // tamanho)
         try:
-            numero = max(1, min(int(request.query_params.get("pagina", "1")), paginas))
+            numero = max(1, min(int(request.query_params.get(parametro, "1")), paginas))
         except ValueError:
             numero = 1
         return itens[(numero - 1) * tamanho:numero * tamanho], {
             "pagina": numero, "paginas": paginas, "total": total,
-            "anterior": str(request.url.include_query_params(pagina=numero - 1)) if numero > 1 else None,
-            "proxima": str(request.url.include_query_params(pagina=numero + 1)) if numero < paginas else None,
+            "anterior": str(request.url.include_query_params(**{parametro: numero - 1})) if numero > 1 else None,
+            "proxima": str(request.url.include_query_params(**{parametro: numero + 1})) if numero < paginas else None,
         }
+
+    def link_decisao(nota, modulo) -> str:
+        if str(nota.campo("pergunta") or "").strip() and espera_decisao(nota, modulo):
+            return "/entrada?aba=decisoes&nota=" + quote(nota.rel, safe="")
+        return ""
+
+    def contexto_trabalho(request: Request, nota, modulo) -> dict:
+        ligadas = trabalho.vinculos_de_trabalho(painel.indice, {nota.rel}).get(nota.rel, [])
+        decisao = {"decisao_pendente": link_decisao(nota, modulo), "pergunta_pendente": nota.campo("pergunta")}
+        if modulo.id == "tarefas":
+            return {**decisao, "projetos_vinculados": ligadas}
+        modulo_tarefas = painel.indice.modulos.get("tarefas")
+        tarefas, paginacao = paginar(request, ligadas, parametro="pagina_tarefas")
+        hoje = dt.date.today()
+        cartoes = [
+            {**ap.cartao(tarefa, modulo_tarefas, hoje), "decisao_pendente": link_decisao(tarefa, modulo_tarefas)}
+            for tarefa in tarefas
+        ]
+        return {**decisao, "tarefas_vinculadas": cartoes, "paginacao_tarefas": paginacao}
 
     def estado_confianca(modulo, coletor):
         try:
@@ -290,7 +321,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 {
                     "id": modulo.id,
                     "titulo": modulo.nome,
-                    "sobre": modulo.descricao,
+                    "sobre": "Capturas rápidas e decisões pendentes." if modulo.id == "entrada" else modulo.descricao,
                     "url": f"/m/{quote(modulo.id)}",
                     "capa": ap.capa_de(painel, modulo.id, modulo.capa),
                     "selo": ap.texto_selo(resumo, modulo),
@@ -310,22 +341,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             )
         slides.append(
             {
-                "id": "decidir",
-                "titulo": "Para decidir",
-                "sobre": "Tudo que espera uma resposta sua, de qualquer módulo.",
-                "url": "/decidir",
-                "capa": ap.capa_de(painel, "decidir"),
-                "selo": f"{total_decidir} esperando" if total_decidir else "nada pendente",
-            }
-        )
-        slides.append(
-            {
                 "id": "diario",
                 "titulo": "Diário",
-                "sobre": "O que mudou no vault e o que os agentes fizeram.",
+                "sobre": "Suas anotações de cada dia.",
                 "url": "/diario",
-                "capa": ap.capa_de(painel, "diario"),
-                "selo": f"{len(diario.ler_registro(painel.vault, hoje))} mudanças hoje",
+                "capa": None if painel.config.capas.get("diario") is False else ap.capa_de(painel, "diario"),
+                "selo": "Hoje" if diario.caminho_anotacao(hoje) in painel.indice.notas else "",
             }
         )
         return pagina(
@@ -345,6 +366,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         from orquestra import apoios, lixeira
         if modulo_id == "agenda" and ap.agenda_nativa(painel.modulo(modulo_id)) and not aba and not pasta:
             return RedirectResponse("/agenda", status_code=303)
+        if modulo_id == "entrada" and not aba and modulo_id not in painel.indice.modulos:
+            return RedirectResponse("/entrada?aba=decisoes", status_code=303)
         preferencia = "orq-visao-" + hashlib.sha256(f"{vault_id}:{modulo_id}".encode()).hexdigest()[:20]
         preferencia_externa = preferencia
         if request.query_params.get("abrir"):
@@ -531,6 +554,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 if abriu_item:
                     pasta_aberta = apoios.dentro(painel, modulo, abriu_item)
                     contexto["pasta_aberta"] = apoios.nivel(painel, modulo, pasta_aberta, pasta)
+                    if modulo.id == "projetos" and pasta_aberta["vinculo"] and not pasta:
+                        contexto.update(contexto_trabalho(request, painel.indice.notas[abriu_item], modulo))
                     estilo = pasta_aberta["ajuste"]["subpastas"]
                     contexto["estilo_subpastas"] = estilo if estilo in ESTILOS_DE_SUBPASTAS else estilo_da_area
                     contexto["modo_subpastas"] = "lista" if visao.tipo == "tabela" else contexto["estilo_subpastas"]
@@ -622,6 +647,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         nota = painel.nota(rel)
         modulo = painel.indice.modulo_de(rel)
         zona = painel.indice.zona_de(rel) if modulo else ""
+        nota_habito = modulo is not None and modulo.id == "habitos" and zona == "itens"
         campos = []
         outros = {}
         if modulo and zona in ("itens", "arquivo"):
@@ -636,7 +662,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         imagem = None
         relacionadas = []
         if modulo and zona == "itens":
-            relacionadas = apoios.por_item(painel, modulo.id, "execucoes" if modulo.id == "habitos" else "referencias").get(rel, [])
+            relacionadas = apoios.por_item(painel, modulo.id, "execucoes" if nota_habito else "referencias").get(rel, [])
+        trabalho_relacionado = contexto_trabalho(request, nota, modulo) if modulo and zona == "itens" and modulo.id in ("projetos", "tarefas") else {}
         dia_relacionado = request.query_params.get("dia", "")
         if dia_relacionado:
             try:
@@ -644,8 +671,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             except ValueError:
                 raise Recusado("Use uma data no formato AAAA-MM-DD.") from None
             relacionadas = [n for n in relacionadas if n["data"] == dia_relacionado]
-        relacionadas, paginacao_relacionadas = paginar(request, relacionadas)
-        if modulo and modulo.id == "habitos" and zona == "itens":
+        relacionadas, paginacao_relacionadas = paginar(request, relacionadas, 6 if nota_habito else TAMANHO_PAGINA)
+        if nota_habito:
             for relacionada in relacionadas:
                 titulo, data = relacionada["titulo"], relacionada["data"]
                 for separador in (" - ", " – ", " — "):
@@ -659,20 +686,24 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         return pagina(
             request,
             "nota.html",
-            f"m:{modulo.id}" if modulo else "",
+            "diario" if diario.data_da_anotacao(rel) else (f"m:{modulo.id}" if modulo else ""),
             nota=nota,
             modulo=modulo,
             zona=zona,
             campos=campos,
             outros={k: (", ".join(map(str, v)) if isinstance(v, list) else v) for k, v in outros.items()},
             pasta=rel.rsplit("/", 1)[0] if "/" in rel else "",
+            data_diario=diario.data_da_anotacao(rel),
             html=ap.render_markdown(nota.corpo, painel.indice, nota.rel),
             avisos=validar(modulo, nota.meta) if modulo and zona == "itens" else [],
             imagem=imagem,
             campo_imagem=next((c.nome for c in modulo.campos.values() if c.tipo == "imagem"), "") if modulo else "",
             link_grafo="/pastas?visao=grafo&nota=" + quote(rel, safe=""),
             relacionadas=relacionadas, paginacao_relacionadas=paginacao_relacionadas, dia_relacionado=dia_relacionado,
+            pode_anotar_habito=nota_habito and not (nota.erro or modulo.invalido)
+            and (not dia_relacionado or dia_relacionado <= dt.date.today().isoformat()),
             pode_excluir=lixeira.pode_excluir(painel, rel),
+            **trabalho_relacionado,
             **(contatos.contexto(painel, nota) if modulo and modulo.id in ("contatos", "clientes") else {}),
         )
 
@@ -683,44 +714,87 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         return pagina(request, "lixeira.html", "pastas", excluidas=lixeira.listar(painel.vault))
 
     @app.get("/decidir", response_class=HTMLResponse)
+    def decidir_antigo(request: Request):
+        destino = request.url.include_query_params(aba="decisoes")
+        return RedirectResponse("/entrada?" + destino.query, status_code=303)
+
+    @app.get("/entrada", response_class=HTMLResponse)
     @leitura
-    def decidir(request: Request, modulo: str = ""):
+    def entrada(request: Request, aba: str = "", modulo: str = "", caminho: str = Query("", alias="nota")):
+        tem_capturas = "entrada" in painel.indice.modulos
+        if aba != "decisoes" and not (modulo or caminho) and tem_capturas:
+            return RedirectResponse("/m/entrada", status_code=303)
         hoje = dt.date.today()
         aprovacao = modulo == "conteudo"
         pendentes = [(m, n) for m in painel.indice.modulos.values() for n in painel.indice.itens(m.id) if espera_decisao(n, m)]
         if modulo:
             painel.modulo(modulo)
             pendentes = [(m, n) for m, n in pendentes if m.id == modulo]
+        if caminho:
+            pendentes = [(m, n) for m, n in pendentes if n.rel == caminho]
         selecionadas, paginacao = paginar(request, pendentes)
+        tarefas = {n.rel for m, n in selecionadas if m.id == "tarefas"}
+        projetos = trabalho.vinculos_de_trabalho(painel.indice, tarefas) if tarefas else {}
         grupos: dict[str, dict] = {}
-        for modulo, nota in selecionadas:
-            c = ap.cartao(nota, modulo, hoje)
+        for origem, nota in selecionadas:
+            c = ap.cartao(nota, origem, hoje)
             c["trecho"] = ap.trecho(nota, 180)
-            c["por_status"] = str(nota.campo(modulo.campo_status) or "") in modulo.decidir
-            grupos.setdefault(modulo.id, {"modulo": modulo, "cartoes": []})["cartoes"].append(c)
-        return pagina(request, "decidir.html", "decidir", grupos=list(grupos.values()), total=len(pendentes), paginacao=paginacao, aprovacao=aprovacao, capa=None if painel.config.capas.get("decidir") is False else ap.capa_de(painel, "decidir"))
+            c["por_status"] = str(nota.campo(origem.campo_status) or "") in origem.decidir
+            c["projetos_vinculados"] = projetos.get(nota.rel, [])
+            grupos.setdefault(origem.id, {"modulo": origem, "cartoes": []})["cartoes"].append(c)
+        return pagina(
+            request, "decidir.html", "m:entrada", grupos=list(grupos.values()), total=len(pendentes),
+            paginacao=paginacao, aprovacao=aprovacao, filtrada=bool(caminho or modulo),
+            filtrada_por_nota=bool(caminho), tem_capturas=tem_capturas,
+        )
 
-    @app.get("/diario", response_class=HTMLResponse)
-    @leitura
-    def ver_diario(request: Request, dia: str = "", q: str = "", autor: str = "", tipo: str = "", pag: int = Query(1, alias="pagina")):
+    def contexto_data_diario(dia: str) -> dict:
         hoje = dt.date.today()
         try:
             alvo = dt.date.fromisoformat(dia) if dia else hoje
         except ValueError:
             alvo = hoje
+        return {
+            "dia": alvo, "dia_longo": ap.data_longa(alvo), "e_hoje": alvo == hoje,
+            "anterior": (alvo - dt.timedelta(days=1)).isoformat() if alvo > dt.date.min else "",
+            "proximo": (alvo + dt.timedelta(days=1)).isoformat() if alvo < hoje else "",
+        }
+
+    @app.get("/diario", response_class=HTMLResponse)
+    @leitura
+    def ver_diario(request: Request, dia: str = ""):
+        if any(chave in request.query_params for chave in ("q", "autor", "tipo", "pagina")):
+            return RedirectResponse("/ajustes/atividade?" + str(request.query_params), status_code=303)
+        contexto = contexto_data_diario(dia)
+        rel = diario.caminho_anotacao(contexto["dia"])
+        nota = painel.indice.notas.get(rel)
+        _, notas = painel.indice.conteudo_da_pasta(diario.PASTA_ANOTACOES)
+        datas_anotadas = [data.isoformat() for n in notas if (data := diario.data_da_anotacao(n.rel))]
+        return pagina(
+            request, "diario.html", "diario", **contexto,
+            nota=nota, datas_anotadas=datas_anotadas,
+            anotacao=ap.render_markdown(nota.corpo, painel.indice, nota.rel) if nota else "",
+        )
+
+    @app.post("/api/diario/anotacao/{data}")
+    async def api_anotacao_diario(request: Request, data: dt.date):
+        await corpo_json(request)
+        rel = await asyncio.to_thread(painel.abrir_anotacao_diaria, data)
+        return {"url": ap.url_nota(rel)}
+
+    @app.get("/ajustes/atividade", response_class=HTMLResponse)
+    @leitura
+    def ver_atividade(request: Request, dia: str = "", q: str = "", autor: str = "", tipo: str = "", pag: int = Query(1, alias="pagina")):
+        contexto = contexto_data_diario(dia)
+        alvo = contexto["dia"]
         consulta = diario.consultar_registro(painel.vault, alvo, q, autor, tipo, pag)
         for entrada in consulta["entradas"]:
             entrada.existe = entrada.rel in painel.indice.notas  # type: ignore[attr-defined]
         return pagina(
             request,
-            "diario.html",
-            "diario",
-            capa=None if painel.config.capas.get("diario") is False else ap.capa_de(painel, "diario"),
-            dia=alvo,
-            dia_longo=ap.data_longa(alvo),
-            e_hoje=alvo == hoje,
-            anterior=(alvo - dt.timedelta(days=1)).isoformat() if alvo > dt.date.min else "",
-            proximo=(alvo + dt.timedelta(days=1)).isoformat() if alvo < hoje else "",
+            "atividade.html",
+            "ajustes",
+            **contexto,
             entradas=consulta["entradas"], consulta=consulta,
             sessoes=ap.render_markdown(diario.ler_sessoes(painel.vault, alvo), painel.indice),
             dias=[d.isoformat() for d in diario.dias_com_registro(painel.vault)[:14]],
@@ -830,6 +904,13 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         from orquestra import habitos
         dados = await corpo_json(request, contratos.MarcarHabito)
         return await asyncio.to_thread(habitos.marcar, painel, dados)
+
+    @app.post("/api/habitos/realizacoes/notas")
+    async def anotar_realizacao(request: Request):
+        from orquestra import habitos
+        dados = await corpo_json(request, contratos.NotaRealizacao)
+        nota = await asyncio.to_thread(habitos.anotar_realizacao, painel, **dados)
+        return {"rel": nota.rel, "url": ap.url_nota(nota.rel), "data": nota.campo("data")}
 
     @app.post("/api/conteudo/aprovacao")
     async def preparar_aprovacao(request: Request):
@@ -1015,7 +1096,9 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.get("/personalizar/{alvo}", response_class=HTMLResponse)
     @leitura
     def personalizar_pagina(request: Request, alvo: str):
-        nomes = {"diario": "Diário", "decidir": "Decidir", "pastas": "Pastas"}
+        if alvo == "decidir":
+            return RedirectResponse("/entrada?aba=decisoes", status_code=303)
+        nomes = {"diario": "Diário", "pastas": "Pastas"}
         if alvo not in nomes:
             raise NaoEncontrado(alvo)
         rel = request.query_params.get("rel", "").strip("/") if alvo == "pastas" else ""
@@ -1202,7 +1285,10 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             with painel._trava:
                 nota = painel.editar_nota(rel, dados["versao"], titulo=dados.get("titulo"),
                                            campos=dados.get("campos"), corpo=dados.get("corpo"))
-                return {"rel": nota.rel, "versao": nota.versao, "html": str(ap.render_markdown(nota.corpo, painel.indice, nota.rel))}
+                modulo = painel.indice.modulo_de(rel)
+                return {"rel": nota.rel, "versao": nota.versao,
+                        "html": str(ap.render_markdown(nota.corpo, painel.indice, nota.rel)),
+                        "decisao_pendente": modulo is not None and espera_decisao(nota, modulo)}
         return await asyncio.to_thread(editar_e_renderizar)
 
     @app.post("/api/arquivar/{rel:path}")
@@ -1753,6 +1839,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         dock = ap.montar_dock(painel, "", hoje)
         _, para_hoje = ap.montar_semana(painel, hoje)
         selos = {m["id"]: m["selo"] for m in dock["modulos"]}
+        selos["entrada"] = dock["entrada"]["selo"]
         selos["decidir"] = dock["decidir"]
         selos["_gaveta"] = dock["gaveta_selo"]
         return {"selos": selos, "decidir": dock["decidir"], "hoje": para_hoje, "vault_id": vault_id}

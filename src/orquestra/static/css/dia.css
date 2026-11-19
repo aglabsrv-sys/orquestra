@@ -27,8 +27,6 @@
 .dia-mais summary { display:flex; align-items:center; justify-content:flex-end; gap:5px; padding:8px 0; list-style:none; color:var(--texto-suave); font-size:.7rem; }
 .dia-mais summary::-webkit-details-marker { display:none; }
 .dia-mais[open] summary .icone { transform:rotate(90deg); }
-.dia-ver-tudo { display:flex; align-items:center; justify-content:flex-end; gap:5px; padding:9px 0 0; color:var(--texto-suave); font-size:.7rem; }
-.dia-ver-tudo:hover { color:var(--destaque); }
 .dia-vazio { display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:35px; padding:30px 15px; border-block:1px solid var(--borda); color:var(--texto-suave); }
 .dia-vazio p { margin:0; font-size:.84rem; }
 @media(max-width:760px) {

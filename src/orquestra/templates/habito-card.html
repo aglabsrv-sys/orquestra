@@ -11,9 +11,9 @@
     <div class="habito-mapa"{% if item.tem_repeticoes %} data-mapa-intensidade{% endif %} role="group" aria-label="Histórico de atividade de {{ item.titulo }}. {{ item.total_registros }} dias realizados ao todo.">
       {% for d in dias_mapa %}
       {% set iso = d.isoformat() %}{% set quantidade = item.contagens.get(iso, 0) %}{% set realizado = quantidade > 0 and d <= hoje %}{% set tem_nota = iso in item.dias_com_notas %}
-      {% set abre = d <= hoje and (realizado or tem_nota or d == hoje) %}{% set tag = 'a' if abre else 'span' %}
+      {% set abre = d <= hoje %}{% set tag = 'a' if abre else 'span' %}
       {% set dica = d.strftime('%d/%m/%Y') ~ ' · ' ~ (quantidade ~ ' realizações' if realizado and quantidade > 1 else 'realizado' if realizado else 'sem registro') %}
-      <{{ tag }}{% if abre %} href="{{ item.url }}?dia={{ iso }}"{% else %} role="img"{% endif %} class="habito-dia{% if realizado %} realizado{% endif %}{% if tem_nota %} com-nota{% endif %}{% if d == hoje %} hoje{% endif %}{% if d > hoje %} futuro{% endif %}" data-mapa-dia="{{ iso }}"{% if realizado %} data-intensidade="{{ [quantidade, 4]|min }}"{% endif %} data-habito-tooltip="{{ dica }}" aria-label="{{ dica }}{{ ' · Ver notas do dia' if abre else '' }}"></{{ tag }}>
+      <{{ tag }}{% if abre %} href="{{ item.url }}?dia={{ iso }}"{% if d != hoje %} tabindex="-1"{% endif %}{% else %} role="img"{% endif %} class="habito-dia{% if realizado %} realizado{% endif %}{% if tem_nota %} com-nota{% endif %}{% if d == hoje %} hoje{% endif %}{% if d > hoje %} futuro{% endif %}" data-mapa-dia="{{ iso }}"{% if realizado %} data-intensidade="{{ [quantidade, 4]|min }}"{% endif %} data-habito-tooltip="{{ dica }}" aria-label="{{ dica }}{{ ' · Ver notas do dia' if abre else '' }}"></{{ tag }}>
       {% endfor %}
     </div>
   </div>

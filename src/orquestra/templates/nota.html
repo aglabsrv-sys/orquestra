@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% import "partes.html" as p %}
 {% block titulo %}{{ nota.titulo }}{% endblock %}
-{% block trilha %}{% if modulo and zona %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a>{% else %}<a href="{{ url_pasta(pasta) }}">{{ pasta or 'Pastas' }}</a>{% endif %}{% endblock %}
+{% block trilha %}{% if data_diario %}<a href="/diario?dia={{ data_diario.isoformat() }}">Diário</a>{% elif modulo and zona %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a>{% else %}<a href="{{ url_pasta(pasta) }}">{{ pasta or 'Pastas' }}</a>{% endif %}{% endblock %}
 {% block observa %}nota:{{ nota.rel }}{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="/static/css/editor-inline.css?v={{ marca }}">{% endblock %}
 {% block scripts %}<script src="/static/js/editor-inline.js?v={{ marca }}"></script>{% endblock %}
@@ -31,7 +31,8 @@
 {% endif %}
 
 {% set nota_habito = modulo and modulo.id == 'habitos' and zona == 'itens' %}
-<article class="nota{% if nota_habito %} nota-habito{% endif %}" data-rel="{{ nota.rel }}" data-versao="{{ nota.versao }}" data-vault-id="{{ vault_id }}" data-meta-original='{{ nota.campos()|tojson }}' data-imagem-campo="{{ campo_imagem }}" data-voltar="{{ '/m/' ~ modulo.id|urlencode if modulo and zona else url_pasta(pasta) }}"{% if nota.erro %} data-travada{% endif %}>
+{% set volta = '/diario?dia=' ~ data_diario.isoformat() if data_diario else ('/m/' ~ modulo.id|urlencode if modulo and zona else url_pasta(pasta)) %}
+<article class="nota{% if nota_habito %} nota-habito{% endif %}" data-rel="{{ nota.rel }}" data-versao="{{ nota.versao }}" data-vault-id="{{ vault_id }}" data-meta-original='{{ nota.campos()|tojson }}' data-imagem-campo="{{ campo_imagem }}" data-voltar="{{ volta }}"{% if nota.erro %} data-travada{% endif %}{% if data_diario and request.query_params.get('editar') == '1' %} data-iniciar-edicao{% endif %}>
   <h1 class="somente-leitor">Nota: {{ nota.titulo }}</h1>
   {% if campo_imagem %}<input type="hidden" id="nota-imagem-campo" name="{{ campo_imagem }}" value="{{ nota.campo(campo_imagem) or '' }}" data-campo>{% endif %}
   <div class="nota-principal">
@@ -39,9 +40,10 @@
     {% if nota_habito %}<span class="nota-habito-icone" aria-hidden="true">{{ icone('pulso', 22) }}</span>{% endif %}
     <input class="nota-titulo" id="nota-titulo" value="{{ nota.titulo }}" aria-label="Título da nota" aria-describedby="estado-salvo" maxlength="500"{% if nota.erro %} disabled{% endif %}>
     <div class="nota-acoes">
-      <a class="botao pequeno so-icone" id="nota-voltar" href="{{ '/m/' ~ modulo.id|urlencode if modulo and zona else url_pasta(pasta) }}" aria-label="Voltar" title="Voltar">{{ icone('seta_esq', 15) }}</a>
+      <a class="botao pequeno so-icone" id="nota-voltar" href="{{ volta }}" aria-label="Voltar" title="Voltar">{{ icone('seta_esq', 15) }}</a>
       {% if not nota.erro %}
-      <button class="botao pequeno so-icone" type="button" id="editar" aria-label="Editar nota" title="Editar nota">{{ icone('editar', 15) }}</button>
+      {% set rotulo_editar = 'Editar descrição do hábito' if nota_habito else 'Editar nota' %}
+      <button class="botao pequeno so-icone" type="button" id="editar" aria-label="{{ rotulo_editar }}" title="{{ rotulo_editar }}">{{ icone('editar', 15) }}</button>
       <button class="botao pequeno so-icone principal" type="button" id="salvar" aria-label="Salvar texto" title="Salvar texto (Ctrl+S ou Cmd+S)" hidden><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
       <button class="botao pequeno so-icone" type="button" id="cancelar" aria-label="Cancelar edição" title="Cancelar edição" hidden>{{ icone('x', 15) }}</button>
       {% endif %}
@@ -93,15 +95,23 @@
     </dialog>
     {% if campo_imagem and not nota.erro %}<div class="nota-anexo"><label class="botao pequeno discreto" title="Arraste ou cole uma imagem na nota">{{ icone('mais', 14) }} Imagem<input type="file" id="nota-anexo" accept="image/png,image/jpeg,image/webp" class="somente-leitor"></label><span class="campo-ajuda" id="anexo-estado" role="status">Arraste ou cole uma imagem aqui.</span></div>{% endif %}
     {% if imagem %}<img class="nota-imagem" src="{{ imagem }}" alt="Criativo da nota">{% endif %}
-    <div class="texto" id="ver" tabindex="0" title="Clique duas vezes para editar" aria-label="Texto da nota. Clique duas vezes ou pressione Enter para editar.">{% if nota.corpo.strip() %}{{ html }}{% else %}<p class="suave">Clique duas vezes para começar a escrever.</p>{% endif %}</div>
+    <div class="texto" id="ver" tabindex="0" title="Clique duas vezes para editar" aria-label="{{ 'Descrição do hábito' if nota_habito else 'Texto da nota' }}. Clique duas vezes ou pressione Enter para editar.">{% if nota.corpo.strip() %}{{ html }}{% else %}<p class="suave">{{ 'Sem descrição.' if nota_habito else 'Clique duas vezes para começar a escrever.' }}</p>{% endif %}</div>
     {# O parser HTML remove o primeiro LF de textarea; este LF pertence ao template. #}
     <textarea class="editor" id="editor" aria-label="Texto da nota em Markdown" aria-describedby="estado-salvo" maxlength="1000000" hidden spellcheck="true">
 {{ nota.corpo }}</textarea>
+    {{ p.decisao_pendente(decisao_pendente, pergunta_pendente) }}
+    {{ p.projetos_vinculados(projetos_vinculados) }}
+    {{ p.tarefas_vinculadas(tarefas_vinculadas, paginacao_tarefas, 'nota-tarefas-titulo') }}
     {% if relacionadas or dia_relacionado or nota_habito %}
     <section id="notas-relacionadas" class="notas-relacionadas" aria-labelledby="notas-relacionadas-titulo">
       <header class="notas-relacionadas-cab">
         <h2 id="notas-relacionadas-titulo">{{ 'Notas das realizações' if nota_habito else 'Notas de apoio' }}</h2>
-        {% if dia_relacionado %}<div class="notas-relacionadas-filtro"><time datetime="{{ dia_relacionado }}">{{ dia_relacionado[8:] }}/{{ dia_relacionado[5:7] }}/{{ dia_relacionado[:4] }}</time><a class="link" href="{{ url_nota(nota.rel) }}{% if request.query_params.get('explorador') == '1' %}?explorador=1{% endif %}">Todas as notas</a></div>{% elif relacionadas %}<small>{{ paginacao_relacionadas.total }}</small>{% endif %}
+        {% if dia_relacionado or pode_anotar_habito or (relacionadas and not nota_habito) %}
+        <div class="notas-relacionadas-filtro">
+          {% if dia_relacionado %}<time datetime="{{ dia_relacionado }}">{{ dia_relacionado[8:] }}/{{ dia_relacionado[5:7] }}/{{ dia_relacionado[:4] }}</time><a class="link" href="{{ url_nota(nota.rel) }}{% if request.query_params.get('explorador') == '1' %}?explorador=1{% endif %}">Todas as notas</a>{% elif relacionadas and not nota_habito %}<small>{{ paginacao_relacionadas.total }}</small>{% endif %}
+          {% if pode_anotar_habito %}<button class="botao pequeno" id="anotar-realizacao" type="button" aria-haspopup="dialog" aria-controls="realizacao-dialogo">{{ icone('mais', 15) }} Adicionar nota</button>{% endif %}
+        </div>
+        {% endif %}
       </header>
       {% if relacionadas %}<ul>
         {% for n in relacionadas %}
@@ -129,4 +139,20 @@
     <div class="linha-botoes"><button class="botao" type="button" id="copiar-versao">Copiar versão</button><button class="botao principal" type="button" id="salvar-versao-copia">Salvar versão como nova nota</button><a class="botao" id="copia-recuperada" href="#" target="_blank" rel="noopener noreferrer" hidden>Abrir a cópia recuperada</a></div>
   </div>
 </section>
+{% endblock %}
+
+{% block dialogos %}
+{% if pode_anotar_habito %}
+<dialog class="dialogo realizacao-dialogo" id="realizacao-dialogo" aria-labelledby="realizacao-titulo" data-dia="{{ dia_relacionado }}">
+  <form class="dialogo-corpo" id="realizacao-form">
+    <h2 id="realizacao-titulo">Nota de realização</h2>
+    <textarea id="realizacao-texto" aria-label="Texto da realização" rows="5" maxlength="1000000" required></textarea>
+    <p id="realizacao-erro" class="erro-texto pequeno" role="status" hidden></p>
+    <div class="dialogo-acoes">
+      <button class="botao" type="button" data-fechar>Cancelar</button>
+      <button class="botao principal" type="submit" id="realizacao-salvar">Guardar nota</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
 {% endblock %}

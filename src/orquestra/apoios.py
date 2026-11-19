@@ -305,8 +305,13 @@ def por_item(painel, modulo_id: str, zona: str) -> dict[str, list[dict]]:
             if nota.erro:
                 continue
             referencias = list(painel.indice.referencias_de(nota.rel))
-            destinos = {d.rel for ref in referencias
-                        if (d := painel.indice.resolver_referencia(ref, nota.rel)).rel in ids}
+            destinos = set()
+            if zona == "execucoes":
+                destinos = {d.rel for ref in referencias if ref.campo == "habito"
+                            and (d := painel.indice.resolver_referencia(ref, nota.rel)).rel in ids}
+            if not destinos:
+                destinos = {d.rel for ref in referencias
+                            if (d := painel.indice.resolver_referencia(ref, nota.rel)).rel in ids}
             if not destinos:
                 # A pasta mais próxima pode dar contexto; nomes ambíguos não são associados.
                 for pasta in reversed(PurePosixPath(nota.rel).parts[2:-1]):
@@ -317,5 +322,8 @@ def por_item(painel, modulo_id: str, zona: str) -> dict[str, list[dict]]:
             for rel in destinos:
                 resultado[rel].append(apresentar(nota))
     for notas in resultado.values():
-        notas.sort(key=lambda n: (n["data"], n["titulo"].casefold(), n["rel"]), reverse=True)
+        if zona == "execucoes":
+            notas.sort(key=lambda n: (n["data"], painel.indice.notas[n["rel"]].mtime, n["rel"]), reverse=True)
+        else:
+            notas.sort(key=lambda n: (n["data"], n["titulo"].casefold(), n["rel"]), reverse=True)
     return resultado

@@ -406,26 +406,55 @@
   // ---------------------------------------------------------------- fila Decidir
 
   function decidir() {
-    function resolver(item, campos) {
+    var fila = $(".decidir-pagina");
+    if (!fila) return;
+
+    function removerDaFila(item) {
+      var grupo = item.closest(".fila-grupo");
+      var pendentes = $$(".fila-item", fila), vizinho = null;
+      if (document.activeElement === document.body || item.contains(document.activeElement)) {
+        var indice = pendentes.indexOf(item);
+        vizinho = pendentes.slice(indice + 1).concat(pendentes.slice(0, indice).reverse())
+          .find(function (cartao) { return !cartao.classList.contains("saindo"); });
+      }
+      item.remove();
+      var restantes = $$(".fila-item", grupo).length;
+      if (restantes) $("[data-fila-total]", grupo).textContent = restantes;
+      else grupo.remove();
+      if (vizinho) $(".fila-acoes :is(button:enabled, a)", vizinho).focus();
+      atualizarSelos();
+      if (!$(".fila-item", fila)) location.reload();
+    }
+
+    function resolver(item, campos, acao) {
       $$("button", item).forEach(function (b) { b.disabled = true; });
       return api("PUT", "/api/notas/" + caminho(item.dataset.rel), { versao: item.dataset.versao, campos: campos })
-        .then(function () {
+        .then(function (nota) {
+          if (nota.decisao_pendente || $(".decidir-pagina .paginacao")) {
+            location.reload();
+            return true;
+          }
           item.classList.add("saindo");
-          setTimeout(function () { item.remove(); atualizarSelos(); if (!$(".fila-item")) location.reload(); }, 260);
+          setTimeout(function () { removerDaFila(item); }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 260);
           return true;
         })
-        .catch(function (erro) { $$("button", item).forEach(function (b) { b.disabled = false; }); mostrarErro(erro); return false; });
+        .catch(function (erro) {
+          $$("button", item).forEach(function (b) { b.disabled = false; });
+          if (acao && document.activeElement === document.body) acao.focus();
+          mostrarErro(erro);
+          return false;
+        });
     }
     $$("[data-acao]").forEach(function (botao) {
       botao.onclick = function () {
         var item=botao.closest('.fila-item'),campos=JSON.parse(botao.dataset.acao);
         if($('[data-responder]',item)&&!Object.prototype.hasOwnProperty.call(campos,'pergunta'))campos.pergunta='';
-        resolver(item,campos);
+        resolver(item,campos,botao);
       };
     });
     // Pergunta de um agente: a resposta fica no frontmatter (campo `resposta`) e a pergunta sai da fila.
-    var dialogo = $("#dialogo-resposta"), texto = $("#resposta-texto"), itemAtual = null;
-    if (!dialogo) return;
+    var dialogo = $("#dialogo-resposta"), texto = $("#resposta-texto"), salvar = $("#resposta-salvar"), itemAtual = null;
+    dialogo.addEventListener("cancel", function (e) { if (salvar.disabled) e.preventDefault(); });
     $$("[data-responder]").forEach(function (botao) {
       botao.onclick = function () {
         var item = botao.closest(".fila-item"), pergunta = $(".cartao-pergunta", item);
@@ -436,15 +465,71 @@
     });
     $("#form-resposta").addEventListener("submit", function (e) {
       e.preventDefault();
+      if (salvar.disabled) return;
       if (!itemAtual || !texto.value.trim()) { texto.focus(); return; }
-      var salvar = $("#resposta-salvar"); salvar.disabled = true;
-      resolver(itemAtual, { resposta: texto.value.trim(), pergunta: "" }).then(function (ok) { if (ok) dialogo.close(); }).finally(function () { salvar.disabled = false; });
+      var concluir = window.OrquestraInterface.ocupado(salvar, "Guardando…");
+      resolver(itemAtual, { resposta: texto.value.trim(), pergunta: "" }).then(function (ok) {
+        if (ok) dialogo.close();
+        else texto.focus();
+      }).finally(concluir);
     });
+  }
+
+  function diario() {
+    var escrever = $("#diario-escrever");
+    if (!escrever) return;
+    escrever.onclick = async function () {
+      var concluir = window.OrquestraInterface.ocupado(escrever, "Abrindo…");
+      try {
+        var nota = await api("POST", "/api/diario/anotacao/" + escrever.dataset.dia, {});
+        window.Orquestra.guardarRetorno?.(nota.url);
+        location.assign(nota.url + "?editar=1");
+      } catch (erro) {
+        mostrarErro(erro);
+        concluir();
+      }
+    };
   }
 
   // ---------------------------------------------------------------- nota
 
   var notaSuja = false;
+
+  function notaDeRealizacao() {
+    var dialogo = $("#realizacao-dialogo");
+    if (!dialogo) return;
+    var abrir = $("#anotar-realizacao"), form = $("#realizacao-form"), texto = $("#realizacao-texto");
+    var salvar = $("#realizacao-salvar"), erro = $("#realizacao-erro");
+    abrir.addEventListener("click", function () {
+      if (notaSuja) { avisar("Salve a descrição do hábito antes de continuar."); return; }
+      dialogo.showModal(); texto.focus();
+    });
+    dialogo.addEventListener("cancel", function (e) { if (salvar.disabled) e.preventDefault(); });
+    texto.addEventListener("input", function () { erro.hidden = true; });
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      if (salvar.disabled) return;
+      var conteudo = texto.value.trim();
+      if (!conteudo || notaSuja) {
+        erro.textContent = !conteudo ? "Escreva sua nota antes de guardar." : "Salve a descrição do hábito antes de continuar.";
+        erro.hidden = false;
+        return;
+      }
+      var concluir = window.OrquestraInterface.ocupado(salvar, "Guardando…");
+      try {
+        await api("POST", "/api/habitos/realizacoes/notas", { rel: $(".nota").dataset.rel, texto: conteudo, data: dialogo.dataset.dia });
+        var destino = new URL(location.href);
+        destino.searchParams.delete("pagina");
+        destino.hash = "notas-relacionadas";
+        history.replaceState(history.state, "", destino);
+        location.reload();
+      } catch (falha) {
+        erro.textContent = falha.message;
+        erro.hidden = false;
+        concluir();
+      }
+    });
+  }
 
   function nota() {
     var raiz = $(".nota");
@@ -700,6 +785,10 @@
         };
       }
     } catch (e) { rascunhos = null; }
+
+    if (bEditar && "iniciarEdicao" in raiz.dataset && $("#recuperar-rascunho").hidden) {
+      modoEdicao(true);
+    }
 
     ["excluir-nota", "vincular-cliente"].forEach(function (id) {
       var botao = $("#" + id);
@@ -1517,6 +1606,6 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     relogio(); carrossel(); dialogos(); gaveta(); captura(); novoItem(); quadro(); seletoresSoltos();
-    decidir(); nota(); maquina(); ajustes(); tabela(); pastas(); personalizar(); numeros(); aoVivo();
+    decidir(); diario(); nota(); notaDeRealizacao(); maquina(); ajustes(); tabela(); pastas(); personalizar(); numeros(); aoVivo();
   });
 })();

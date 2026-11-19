@@ -127,6 +127,22 @@ class Painel:
     # ------------------------------------------------------------ mudanças
 
     @_sincronizado
+    def abrir_anotacao_diaria(self, data: dt.date) -> str:
+        rel = diario.caminho_anotacao(data)
+        caminho = self.caminho_seguro(rel)
+        if caminho.exists() and not caminho.is_file():
+            raise Recusado("O caminho da anotação já está em uso.")
+        if not caminho.is_file():
+            nova = Nota(caminho, rel, vault=self.vault)
+            try:
+                gravar_nota(nova, criar=True)
+            except FileExistsError:
+                if not self.caminho_seguro(rel).is_file():
+                    raise Recusado("O caminho da anotação já está em uso.") from None
+        self.apos_escrita(caminho, "painel")
+        return rel
+
+    @_sincronizado
     def apos_escrita(self, caminho: Path, autor: str) -> Mudanca | None:
         """Atualiza o índice, registra no diário e avisa as abas abertas.
 
@@ -304,7 +320,7 @@ class Painel:
 
     @_sincronizado
     def criar_nota_em_pasta(self, pasta: str, titulo: str, corpo: str = "", origem: str = "humano", autor: str = "painel",
-                            campos: dict[str, str] | None = None) -> Nota:
+                            campos: dict[str, str] | None = None, *, data: dt.date | None = None) -> Nota:
         """Cria uma nota numa pasta qualquer do vault (não precisa ser módulo).
 
         `campos` aceita só propriedades de vínculo em texto, como `projeto: [[X]]`.
@@ -333,6 +349,8 @@ class Painel:
         for nome, valor in (campos or {}).items():
             if nome in ("projeto", "estudo", "habito") and isinstance(valor, str) and valor.strip():
                 meta[nome] = valor.strip()
+        if data is not None:
+            meta["data"] = data
         if campos:
             meta["criado_em"] = dt.date.today()
         corpo = (corpo or "").replace("\r\n", "\n").strip()

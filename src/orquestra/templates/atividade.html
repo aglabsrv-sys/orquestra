@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block titulo %}Registro de atividade{% endblock %}
+{% block trilha %}<a href="/ajustes">Ajustes</a> / Registro de atividade{% endblock %}
+{% block observa %}{% if e_hoje %}tudo{% endif %}{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/diario.css?v={{ marca }}">{% endblock %}
+
+{% block conteudo %}
+<section class="pagina diario-pagina">
+  <header class="pagina-topo diario-topo">
+    <h1>Registro de atividade</h1>
+    <div class="diario-ferramentas">
+      <nav class="navega-dia" aria-label="Dia do registro">
+        {% if anterior %}<a class="botao pequeno so-icone" href="?dia={{ anterior }}" aria-label="Dia anterior">{{ icone('chevron_esq', 16) }}</a>{% endif %}
+        <time datetime="{{ dia.isoformat() }}" title="{{ dia_longo }}">{{ 'Hoje' if e_hoje else dia.strftime('%d/%m/%Y') }}</time>
+        {% if proximo %}<a class="botao pequeno so-icone" href="?dia={{ proximo }}" aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</a>{% else %}<button class="botao pequeno so-icone" type="button" disabled aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</button>{% endif %}
+      </nav>
+      {% if not e_hoje %}<a class="botao pequeno diario-hoje" href="/ajustes/atividade">Hoje</a>{% endif %}
+    </div>
+  </header>
+
+  <p class="suave diario-contexto">{{ consulta.total }} {{ 'mudança' if consulta.total == 1 else 'mudanças' }} · {{ consulta.arquivos }} {{ 'arquivo' if consulta.arquivos == 1 else 'arquivos' }}</p>
+  <form class="diario-filtros" action="/ajustes/atividade" method="get" role="search" aria-label="Filtrar registros">
+    <label class="campo"><span>Dia</span><input type="date" name="dia" value="{{ dia.isoformat() }}" required></label>
+    <label class="campo diario-busca"><span>Buscar no registro</span><input type="search" name="q" value="{{ consulta.q }}" maxlength="200" placeholder="Arquivo ou alteração"></label>
+    <label class="campo"><span>Autor</span><select name="autor"><option value="">Todos os autores</option>{% for a in consulta.autores %}<option value="{{ a }}"{% if a == consulta.autor %} selected{% endif %}>{{ 'Fora do painel' if a == 'externo' else a }}</option>{% endfor %}</select></label>
+    <label class="campo"><span>Ação</span><select name="tipo"><option value="">Todas as ações</option>{% for t in consulta.tipos %}<option{% if t == consulta.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <button class="botao pequeno" type="submit">Filtrar</button>
+    {% if consulta.q or consulta.autor or consulta.tipo %}<a class="botao pequeno discreto" href="?dia={{ dia.isoformat() }}">Limpar</a>{% endif %}
+  </form>
+  <h2 class="grupo-titulo diario-atividade">Atividade registrada <small>{{ consulta.encontradas }}{% if consulta.encontradas != consulta.total %} de {{ consulta.total }}{% endif %}</small></h2>
+  {% if entradas %}
+  <ol class="registro diario-registro" aria-label="Atividade do dia">
+    {% for e in entradas %}
+    <li class="reg-{{ e.tipo }}">
+      <details class="diario-evento">
+        <summary>
+          <time>{{ e.hora[:5] }}</time>
+          <span class="reg-tipo">{{ e.tipo }}</span>
+          <span class="diario-arquivo">{% if e.existe %}<a href="{{ url_nota(e.rel) }}" title="{{ e.rel }}">{{ e.rel.rsplit('/', 1)[-1].removesuffix('.md') }}</a>{% else %}<span title="{{ e.rel }}">{{ e.rel.rsplit('/', 1)[-1].removesuffix('.md') }}</span>{% endif %}</span>
+          <span class="diario-abrir" aria-hidden="true">{{ icone('chevron_dir', 13) }}</span>
+        </summary>
+        <div class="diario-detalhes"><code>{{ e.rel }}</code><span class="diario-autor">{{ 'Fora do painel' if e.autor.startswith('externo') else e.autor }}</span>{% if e.detalhe %}<p>{{ e.detalhe }}</p>{% endif %}</div>
+      </details>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="diario-vazio suave">{{ 'Nenhuma atividade corresponde aos filtros.' if consulta.total else 'Nenhuma atividade registrada neste dia.' }}</p>
+  {% endif %}
+
+  {% if consulta.paginas > 1 %}<nav class="diario-paginacao" aria-label="Páginas do registro">{% if consulta.anterior %}<a class="botao pequeno" href="{{ consulta.anterior }}">Anterior</a>{% endif %}<span>{{ consulta.pagina }} de {{ consulta.paginas }}</span>{% if consulta.proximo %}<a class="botao pequeno" href="{{ consulta.proximo }}">Próxima</a>{% endif %}</nav>{% endif %}
+  {% if sessoes.strip() %}
+  <details class="diario-sessoes"><summary>{{ icone('chip', 15) }} Sessões dos agentes {{ icone('chevron_dir', 13) }}</summary><div class="texto">{{ sessoes }}</div></details>
+  {% endif %}
+
+  {% if dias %}
+  <nav class="outros-dias diario-dias" aria-label="Dias recentes">{% for d in dias %}<a href="?dia={{ d }}"{% if d == dia.isoformat() %} aria-current="date"{% endif %}>{{ d[8:] }}/{{ d[5:7] }}</a>{% endfor %}</nav>
+  {% endif %}
+</section>
+{% endblock %}

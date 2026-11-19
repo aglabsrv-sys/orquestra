@@ -35,18 +35,22 @@ def titulos(resumo, grupo):
     return {item["titulo"] for item in resumo[grupo]}
 
 
-def test_pendencias_exigem_status_e_concluidos_nao_voltam_para_decidir(tmp_path):
+def test_pendencias_exigem_status_e_concluidos_nao_entram_em_hoje(tmp_path):
     painel = contexto(tmp_path)
     adicionar(painel, "tarefas", "Vencida", data="2030-05-15", status="aberto")
     adicionar(painel, "tarefas", "Prazo hoje", data=HOJE, status="aberto")
     adicionar(painel, "tarefas", "Concluída", data=HOJE, status="feito", pergunta="Ainda aprova?")
     adicionar(painel, "tarefas", "Aprovar", status="aguardando")
+    adicionar(painel, "tarefas", "Concluída sem data", status="feito")
+    adicionar(painel, "tarefas", "Data inválida", data="pendente", status="aberto")
+    adicionar(painel, "notas", "Nota sem data")
     adicionar(painel, "notas", "Nota antiga", data="2030-05-15")
     adicionar(painel, "notas", "Nota de hoje", data=HOJE)
     r = diario.resumo_dia(painel, HOJE, HOJE)
     assert titulos(r, "itens") == {"Prazo hoje", "Nota de hoje"}
     assert titulos(r, "atrasados") == {"Vencida"}
-    assert titulos(r, "decisoes") == {"Aprovar"}
+    assert titulos(r, "sem_data") == {"Aprovar"}
+    assert r["sem_data"][0]["data"] == ""
 
 
 def test_dia_historico_mostra_estado_atual_e_nunca_pendencias_de_hoje(tmp_path):
@@ -58,7 +62,7 @@ def test_dia_historico_mostra_estado_atual_e_nunca_pendencias_de_hoje(tmp_path):
     r = diario.resumo_dia(painel, ontem, HOJE)
     assert titulos(r, "itens") == {"Concluída depois"}
     assert r["itens"][0]["concluido"] and r["historico"]
-    assert not r["atrasados"] and not r["decisoes"]
+    assert not r["atrasados"] and not r["sem_data"]
     assert r["anterior"] == "/dia/2030-05-14" and r["proximo"] == "/dia/2030-05-16"
 
 
@@ -74,11 +78,11 @@ def test_compromisso_multidia_e_fim_exclusivo_sem_virar_tarefa_atrasada(tmp_path
     assert not r["atrasados"]
 
 
-def test_atividade_vem_do_registro_e_agrupa_gravacoes_sem_inventar_eventos(tmp_path):
+def test_registro_completo_fica_fora_do_resumo(tmp_path):
     painel = contexto(tmp_path)
     nota = adicionar(painel, "tarefas", "Documento", status="aberto")
     nota.mtime = dt.datetime(2030, 5, 16, 10).timestamp()
-    assert not diario.resumo_dia(painel, HOJE, HOJE)["atividade"]
+    assert not diario.ler_registro(tmp_path, HOJE)
     pasta = tmp_path / diario.PASTA_REGISTRO
     pasta.mkdir(parents=True)
     (pasta / f"{HOJE}.md").write_text(
@@ -86,10 +90,9 @@ def test_atividade_vem_do_registro_e_agrupa_gravacoes_sem_inventar_eventos(tmp_p
         f"- 10:00:00 | editado | {nota.rel} | status: aberto | agente\n"
         "- 11:00:00 | removido | notas/itens/Removida.md | | externo\n", encoding="utf-8")
     r = diario.resumo_dia(painel, HOJE, HOJE)
-    assert r["totais"]["atividade"] == 3 and r["totais"]["arquivos"] == 2
-    assert r["atividade"][0]["titulo"] == "Removida" and not r["atividade"][0]["url"]
-    assert r["atividade"][1]["quantidade"] == 2 and r["atividade"][1]["hora"] == "10:00:00"
-    assert not diario.resumo_dia(painel, HOJE - dt.timedelta(days=1), HOJE)["atividade"]
+    assert "atividade" not in r and "atividade" not in r["totais"]
+    consulta = diario.consultar_registro(tmp_path, HOJE)
+    assert consulta["total"] == 3 and consulta["arquivos"] == 2
 
 
 def test_habitos_usam_confirmacoes_da_data_sem_sugerir_instalacao(tmp_path):
@@ -106,6 +109,10 @@ def test_habitos_usam_confirmacoes_da_data_sem_sugerir_instalacao(tmp_path):
 
 def test_pagina_dia_preserva_navegacao_e_escapa_conteudo(cliente):
     hoje = dt.date.today()
+    antes = cliente.get("/").context["para_hoje"]
+    sem_data = cliente.painel.criar_nota("tarefas", "Aberta sem previsão")
+    inicio = cliente.get("/").context
+    assert inicio["para_hoje"] == antes + 1
     nota = cliente.painel.criar_nota("tarefas", "<script>doMal()</script>", {"data": hoje.isoformat()})
     pagina = cliente.get(f"/dia/{hoje}")
     assert pagina.status_code == 200, pagina.text
@@ -113,6 +120,9 @@ def test_pagina_dia_preserva_navegacao_e_escapa_conteudo(cliente):
     assert f'href="/dia/{hoje - dt.timedelta(days=1)}"' in pagina.text
     assert "<script>doMal()</script>" not in pagina.text and "&lt;script&gt;doMal()&lt;/script&gt;" in pagina.text
     assert url_nota(nota.rel) in pagina.text
+    assert 'id="dia-sem-data"' in pagina.text
+    assert sem_data.rel in {item["rel"] for item in pagina.context["resumo"]["sem_data"]}
+    assert cliente.painel.nota(sem_data.rel).campo("data") is None
 
 
 def test_resumo_extenso_pagina_sem_perder_itens_ou_totais(tmp_path):
@@ -145,7 +155,7 @@ def test_tarefas_independentes_entram_no_resumo_e_agenda_com_data_mapeada(painel
     painel.indice.sincronizar()
     resumo = diario.resumo_dia(painel, HOJE, HOJE)
     assert [i["titulo"] for i in resumo["itens"]] == ["Rotina independente"]
-    assert not any(i["rel"] == notas[0].rel for grupo in ("atrasados", "decisoes") for i in resumo[grupo])
+    assert notas[0].rel not in {item["rel"] for item in resumo["atrasados"]}
     eventos = calendario.montar(painel, HOJE, "dia")["eventos"]
     assert [e["titulo"] for e in eventos] == ["Rotina independente"]
     assert not eventos[0]["editavel"] and eventos[0]["url"] == url_nota(notas[0].rel)
@@ -165,8 +175,9 @@ def test_ical_independente_preserva_hora_e_modulo_existente_nao_duplica(cliente)
     automacoes.criar(painel, "tarefas/recorrentes.py", "tarefas/itens")
     tarefa = painel.criar_nota("tarefas", "Tarefa no módulo", {"data": HOJE.isoformat(), "status": "feito"})
     resumo = diario.resumo_dia(painel, HOJE, HOJE)
-    reuniao = next(i for i in resumo["itens"] if i["rel"] == notas[0].rel)
-    assert reuniao["hora"] == "09:30" and reuniao["tipo"] == "compromisso"
+    assert not any(i["rel"] == notas[0].rel for i in resumo["itens"])
+    reuniao = next(e for e in calendario.montar(painel, HOJE, "dia")["eventos"] if e["rel"] == notas[0].rel)
+    assert reuniao["hora"] == "09:30"
     assert not any(i["rel"] == tarefa.rel for i in resumo["itens"])
     fontes = calendario.fontes(painel)
     assert sum(n.rel == tarefa.rel for _, notas_fonte in fontes for n in notas_fonte) == 1

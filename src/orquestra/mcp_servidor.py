@@ -40,6 +40,7 @@ INSTRUCOES = (
     "Use `panorama` para organizar pendências, `revisar_organizacao` para conferir inconsistências e "
     "`conexoes_nota` para consultar referências e backlinks. Essas consultas não alteram arquivos nem decidem prioridades. "
     "A agenda local já reúne itens datados; `conexoes_agenda` explica as fontes. Uma tarefa com data não precisa de cópia em agenda. "
+    "Para anotar uma execução de hábito, use `anotar_realizacao` com o hábito existente e a data em que aconteceu. "
     "Itens novos ficam marcados como feitos por agente; só captura literal da pessoa pode ser marcada como humana. "
     "O texto que a pessoa escreveu "
     "nunca é reescrito: você só acrescenta. Em caso de dúvida, use `perguntar` em vez de supor. "
@@ -154,6 +155,7 @@ class Ferramentas:
             partes.append(f"- **{area['id']}** ({area['nome']}): {area['descricao']} Campos: {campos or 'nenhum'}.")
         partes.append(
             "\n# Agenda local\n" + calendario.conexoes(self.painel)["orientacao"] + "\n"
+            "\n# Projetos, tarefas e decisões\n" + mcp_organizacao.ORIENTACAO_TRABALHO + "\n"
             "\nPor este conector, use as ferramentas em vez de editar arquivos: elas já aplicam as regras acima "
             "(origem, texto da pessoa intocado, nada apagado)."
         )
@@ -336,6 +338,9 @@ class Ferramentas:
 
         Recusa uma possível cópia entre Agenda e outra área. Só use permitir_duplicata
         quando a pessoa tiver pedido dois itens distintos com o mesmo título, dia e hora.
+        Para um próximo passo de projeto, reaproveite a tarefa existente ou crie em
+        Tarefas com um wikilink para a nota do projeto em `texto`. Use `perguntar`
+        no item que precisa da resposta da pessoa.
         """
         self._em_dia()
         modulo = self._area(area)
@@ -360,6 +365,24 @@ class Ferramentas:
         if desconhecidos:
             resposta["ignorados"] = f"Campos que não existem nesta área e foram ignorados: {', '.join(desconhecidos)}."
         return resposta
+
+    @_sincronizado
+    def anotar_realizacao(self, habito: str, texto: str, data: str = "") -> dict[str, Any]:
+        """Cria uma nota para uma execução de hábito que a pessoa relatou.
+
+        `habito` é o caminho retornado por listar_itens. Informe a data da
+        execução em AAAA-MM-DD se não foi hoje. A nota fica separada da descrição
+        do hábito e não altera as marcações. Para complementar uma nota já
+        existente, encontre-a com `buscar` e use `atualizar_item` com `acrescentar`.
+        """
+        from orquestra import habitos
+
+        self._em_dia()
+        item = self._nota(habito)
+        nota = self._executar(lambda: habitos.anotar_realizacao(
+            self.painel, item.rel, texto, data, origem="agente", autor=AUTOR,
+        ))
+        return self._resumo(nota)
 
     @_sincronizado
     def atualizar_item(
@@ -422,7 +445,11 @@ class Ferramentas:
 
     @_sincronizado
     def perguntar(self, caminho: str, pergunta: str, versao: str = "") -> dict[str, Any]:
-        """Deixa uma pergunta para a pessoa num item. Ele aparece na fila Decidir do painel; a resposta volta em `resposta`."""
+        """Registra uma pergunta concreta no próprio item que precisa da decisão.
+
+        Use a nota do projeto para decisões sobre o projeto e a tarefa para decisões
+        sobre um passo. O item aparece em Entrada → Para decidir e a resposta volta em `resposta`.
+        """
         if not pergunta.strip():
             raise ErroDeFerramenta("Escreva a pergunta.")
         return self.atualizar_item(caminho, campos={"pergunta": " ".join(pergunta.split())}, versao=versao)
@@ -507,7 +534,7 @@ class Ferramentas:
 
 FERRAMENTAS = [
     "regras", "listar_areas", "listar_itens", "ler_nota", "buscar", "agenda", "fila_de_decisoes", "respostas",
-    "criar_item", "atualizar_item", "perguntar", "capturar", "registrar_numeros",
+    "criar_item", "atualizar_item", "perguntar", "capturar", "registrar_numeros", "anotar_realizacao",
     "aprendizados", "registrar_aprendizado", "sessoes_recentes", "registrar_sessao",
     "contexto_area", "panorama", "revisar_organizacao", "conexoes_nota", "conexoes_agenda", "diario_dia",
 ]

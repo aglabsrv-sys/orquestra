@@ -125,6 +125,30 @@ def _nota(painel, rel: str):
     return nota
 
 
+def anotar_realizacao(painel, rel: str, texto: str, data: str = "", *, origem: str = "humano", autor: str = "painel"):
+    """Guarda o texto da execução sem alterar a descrição nem as marcações."""
+    texto = texto.strip()
+    if not texto or len(texto) > 1_000_000:
+        raise Recusado("Escreva uma nota de até um milhão de caracteres.")
+    hoje = dt.date.today()
+    try:
+        dia = dt.date.fromisoformat(data) if data else hoje
+        if data and dia.isoformat() != data:
+            raise ValueError
+    except ValueError:
+        raise Recusado("Use uma data no formato AAAA-MM-DD.") from None
+    if dia > hoje:
+        raise Recusado("Escolha hoje ou um dia anterior para anotar a realização.")
+    titulo = texto.splitlines()[0].lstrip("# ").strip() or "Realização"
+    titulo = titulo if len(titulo) <= 65 else titulo[:62].rstrip() + "..."
+    with painel._trava:
+        item = _nota(painel, rel)
+        pasta = f"habitos/execucoes/{item.caminho.stem}"
+        painel.caminho_seguro(pasta).mkdir(parents=True, exist_ok=True)
+        return painel.criar_nota_em_pasta(pasta, f"{titulo} - {dia}", texto, origem, autor,
+                                         {"habito": f"[[{item.rel.removesuffix('.md')}]]"}, data=dia)
+
+
 def salvar(painel, dados: dict, hoje: dt.date | None = None) -> dict:
     """Edita o hábito sem substituir registros ou propriedades desconhecidas."""
     hoje = hoje or dt.date.today()

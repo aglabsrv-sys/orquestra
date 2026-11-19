@@ -63,6 +63,56 @@ def test_consulta_nao_anuncia_codigo_local_a_frente(monkeypatch):
     assert not a.Atualizador().consultar()["disponivel"]
 
 
+def test_codigo_local_mudou_com_consulta_remota_em_cache(monkeypatch, tmp_path):
+    comando = preparar(monkeypatch)
+    monkeypatch.setattr(a, "RAIZ", tmp_path)
+    (tmp_path / ".git").mkdir()
+    fonte = tmp_path / "src/orquestra"
+    fonte.mkdir(parents=True)
+    codigo = fonte / "painel.py"
+    codigo.write_text("x = 1")
+    atualizador = a.Atualizador()
+    assert atualizador.consultar()["revisao"] == "b" * 40
+    chamadas = comando.call_count
+    cache = fonte / "__pycache__"
+    cache.mkdir()
+    (cache / "painel.pyc").write_bytes(b"cache")
+    assert atualizador.consultar().get("modo") is None
+    codigo.write_text("x = 22")
+    assert atualizador.consultar()["modo"] == "reiniciar"
+    assert comando.call_count == chamadas
+
+
+def test_reinicio_local_aceita_arquivos_editados_e_preserva_vault(monkeypatch, tmp_path):
+    preparar(monkeypatch)
+    marca = Mock(return_value="antiga")
+    monkeypatch.setattr(a, "marca_codigo", marca)
+    atualizador = a.Atualizador()
+    marca.return_value = "nova"
+    monkeypatch.setattr(a.shutil, "which", lambda _: "uv")
+    limpeza = Mock(side_effect=RuntimeError("Há alterações locais"))
+    monkeypatch.setattr(a, "conferir_limpa", limpeza)
+    iniciar = Mock()
+    monkeypatch.setattr(a.subprocess, "Popen", iniciar)
+    with pytest.raises(RuntimeError, match="mudou"):
+        atualizador.iniciar(tmp_path, 8427, 123, "baixar")
+    resposta = atualizador.iniciar(tmp_path, 8427, 123, "reiniciar")
+    assert resposta == {"estado": "atualizando", "modo": "reiniciar"}
+    assert iniciar.call_args.args[0][-5:] == [str(tmp_path), "8427", "123", "--local", "uv"]
+    limpeza.assert_not_called()
+    monkeypatch.setattr(a.time, "sleep", lambda _: None)
+    monkeypatch.setattr(processo, "consultar", lambda porta: {"pid": 123, "vault": str(tmp_path)})
+    passos = []
+    monkeypatch.setattr(a, "executar", lambda *args, **kwargs: passos.append(args))
+    monkeypatch.setattr(processo, "parar", lambda porta, pid_esperado: passos.append(("parar", porta, pid_esperado)))
+    monkeypatch.setattr(a.subprocess, "check_call", lambda args, **kwargs: passos.append(tuple(args)))
+    a.aplicar(tmp_path, 8427, 123, "--local", "uv")
+    assert passos == [
+        ("uv", "sync", "--locked"), ("parar", 8427, 123),
+        ("uv", "run", "--frozen", "orquestra", "iniciar", "--vault", str(tmp_path), "--porta", "8427"),
+    ]
+
+
 def test_falha_dependencias_preserva_processo_rodando(monkeypatch, tmp_path):
     preparar(monkeypatch)
     monkeypatch.setattr(a.time, "sleep", lambda _: None)

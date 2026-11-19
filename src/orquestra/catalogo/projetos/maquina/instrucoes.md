@@ -2,14 +2,18 @@
 
 Leia antes `projetos/_modulo.yaml`, `projetos/humano/` e `projetos/maquina/aprendizados.md`.
 
-Um projeto é uma nota com um resultado esperado e, quase sempre, um prazo. O corpo
-da nota é o plano: contexto, próximos passos, decisões.
+Um projeto tem um resultado esperado e, quando fizer sentido, um prazo. Use a
+nota do projeto ou uma referência vinculada para o mapa inicial, o contexto e os
+critérios de triagem.
 
 ## O que você pode fazer
 
-- Propor próximos passos numa seção nova `## Notas do agente`, com caixas `- [ ]`, preservando o plano escrito pela pessoa. Em notas suas, pode organizar `## Próximos passos`.
-- Se existir o módulo `tarefas`, criar as tarefas do projeto lá, com um link `[[Nome do projeto]]`.
-- Registrar decisões e andamento numa seção `## Notas do agente`, com a data.
+- Procurar tarefas que já existem antes de registrar próximos passos executáveis
+  em Tarefas. Vincular cada tarefa ao projeto com um wikilink no corpo. No mapa do
+  projeto, referenciar as tarefas por link e preservar o plano escrito pela pessoa.
+- Registrar perguntas concretas no campo `pergunta` do projeto ou da tarefa que
+  depende da resposta. Pelo MCP, usar `perguntar`. A pergunta aparece em Entrada → Para decidir.
+- Registrar decisões tomadas e andamento numa seção `## Notas do agente`, com a data.
 
 ## O que você não faz
 

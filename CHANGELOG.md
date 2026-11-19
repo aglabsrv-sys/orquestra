@@ -2,6 +2,32 @@
 
 ## Em desenvolvimento
 
+- Links antigos de Decidir abrem Entrada. Depois de responder pelo teclado, o
+  foco segue para o próximo cartão. A capa do Diário no Início respeita a
+  opção Sem capa, e cliques repetidos em Atualizar abrem uma só confirmação.
+
+- Hábitos aceita notas de realização pelo painel e pelo MCP. O dia selecionado
+  no mapa é vinculado automaticamente, e as notas aparecem seis por página,
+  com as mais recentes primeiro.
+
+- O Diário volta à tela de origem e tem um calendário mensal para escolher a
+  data. Os cartões de Para decidir ficam mais estreitos e centralizados.
+
+- Entrada reúne Capturas e Para decidir. As respostas são salvas nos itens de
+  origem. O Diário abre a anotação pessoal da data, e os registros automáticos
+  e de sessão ficam em Ajustes → Painel → Registro de atividade. Hoje reúne
+  os itens de trabalho e os hábitos. Os compromissos ficam na Agenda.
+
+- O botão Atualizar sinaliza mudanças nos arquivos locais e oferece reiniciar
+  o painel com o código disponível no computador.
+- O aviso é consultado ao abrir o painel, inclusive em páginas não encontradas.
+
+- Hoje inclui as tarefas abertas sem data no Quadro, na Lista e no resumo do Início.
+
+- Projetos e Tarefas exibem vínculos existentes entre seus itens. Perguntas
+  pendentes abrem o item correspondente em Entrada → Para decidir. O contrato dos agentes e o
+  MCP orientam onde registrar o mapa, os próximos passos e as perguntas.
+
 - Hábitos registra várias realizações por dia e mostra a contagem no marcador.
   A meta continua em dias, e o mapa da Lista exibe oito semanas com intensidades
   proporcionais quando há repetições.

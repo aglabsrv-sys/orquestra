@@ -253,10 +253,10 @@ def test_dock_mobile_mantem_area_atual_e_acesso_a_todas_as_telas(app_leve):
     assert len(mobile) == 1 and mobile[0]["id"] == "estudos"
     assert dock["entrada"]["id"] == "entrada"
     assert not any(m["id"] == "entrada" for m in dock["barra"] + dock["gaveta"])
-    assert {i["id"] for i in dock["gaveta"]} | {dock["entrada"]["id"]} == set(painel.indice.modulos) | {"ajustes", "diario", "pastas", "calendario"}
+    assert {i["id"] for i in dock["gaveta"]} | {dock["entrada"]["id"]} == set(painel.indice.modulos) | {"ajustes", "diario", "pastas"}
     html_dock = resposta.text.split('<nav class="dock"', 1)[1].split('</nav>', 1)[0]
     assert html_dock.count('href="/m/entrada"') == 1
-    assert html_dock.rfind('href="/m/entrada"') > html_dock.rfind('href="/decidir"')
+    assert 'href="/decidir"' not in html_dock
 
 
 def test_personalizacao_de_aba_antiga_nao_sobrescreve_configuracao_nova(app_leve):

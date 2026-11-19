@@ -250,7 +250,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
              "/m/conteudo", "/m/numeros", "/m/radar", "/m/entrada", "/ajustes", "/m/tarefas/personalizar",
              "/buscar?q=vídeo", "/pastas", "/decidir", "/diario", "/agenda", "/agenda?visao=semana",
              "/agenda?visao=dia", "/agenda?visao=lista", "/foco", "/m/habitos",
-             "/personalizar/diario", "/personalizar/decidir", "/personalizar/pastas",
+             "/personalizar/diario", "/personalizar/decidir", "/personalizar/pastas", "/ajustes/atividade",
              *["/ajustes/" + s for s in ("painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis")])
     for largura in (1440, 390, 320):
         page.set_viewport_size({"width": largura, "height": 900})
@@ -266,6 +266,20 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
                 else:
                     expect(pontos).to_be_visible()
                     assert pontos.locator("button").evaluate_all("els => els.every(e=>{ const r=e.getBoundingClientRect(); return r.width>=24 && r.height>=24; })")
+            if rota in {"/decidir", "/personalizar/decidir"}:
+                expect(page.locator('.entrada-abas [aria-current="page"]')).to_contain_text("Para decidir")
+                assert page.locator(".fila-grupo").evaluate_all(
+                    "grupos => grupos.every(g => {const r=g.getBoundingClientRect(); "
+                    "return r.width<=640 && Math.abs(r.left+r.width/2-innerWidth/2)<2;})"
+                )
+            if rota == "/diario":
+                page.locator("#diario-abrir-calendario").click()
+                grade = page.get_by_role("grid")
+                expect(grade).to_be_visible()
+                assert grade.evaluate("e => e.scrollWidth <= e.clientWidth + 1")
+                expect(grade.locator('[aria-selected="true"] button')).to_be_focused()
+                page.keyboard.press("Escape")
+                expect(page.locator("#diario-abrir-calendario")).to_be_focused()
             if rota == "/ajustes/variaveis":
                 ajuda = page.locator('[data-segredo="YOUTUBE_API_KEY"] summary')
                 expect(ajuda).to_be_visible()
@@ -429,6 +443,51 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     with page.expect_response(lambda r: "/api/notas/" in r.url and r.request.method == "PUT") as decisao:
         page.locator("[data-acao]").first.click()
     assert decisao.value.status == 200
+    for titulo in ("Definir prioridade", "Rever a ordem"):
+        nova = page.request.post(base + "/api/notas", headers={"Origin": base}, data={
+            "modulo": "tarefas", "titulo": titulo,
+        })
+        assert nova.ok, nova.text()
+        nota = nova.json()
+        api_nota = nota["url"].replace("/n/", "/api/notas/", 1)
+        pergunta = page.request.put(base + api_nota, headers={"Origin": base}, data={
+            "versao": nota["versao"], "campos": {"pergunta": "O que vem primeiro?"},
+        })
+        assert pergunta.ok, pergunta.text()
+    page.goto(base + "/entrada?aba=decisoes&modulo=tarefas", wait_until="domcontentloaded")
+    perguntas = page.locator(".fila-item [data-responder]")
+    expect(perguntas).to_have_count(2)
+    perguntas.first.press("Enter")
+    expect(page.locator("#resposta-texto")).to_be_focused()
+    page.locator("#resposta-texto").fill("Revisar o plano.")
+    page.locator("#resposta-salvar").press("Enter")
+    expect(perguntas).to_have_count(1)
+    expect(perguntas.first).to_be_focused()
+
+    hoje = dt.date.today()
+    ontem = (hoje - dt.timedelta(days=1)).isoformat()
+    url_dia = f"{base}/dia/{hoje.isoformat()}"
+    page.goto(url_dia, wait_until="domcontentloaded")
+    page.goto(base + "/agenda", wait_until="domcontentloaded")
+    page.go_back(wait_until="domcontentloaded")
+    page.get_by_role("link", name="Abrir anotação do dia").click()
+    page.locator("#diario-abrir-calendario").click()
+    page.keyboard.press("ArrowLeft")
+    expect(page.locator(f'#diario-grade [data-dia="{ontem}"]')).to_be_focused()
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(base + "/diario?dia=" + ontem)
+    page.locator("#diario-voltar").click()
+    expect(page).to_have_url(url_dia)
+    page.get_by_role("link", name="Abrir anotação do dia").click()
+    page.locator("#diario-escrever").click()
+    editor_diario = page.get_by_role("textbox", name="Editar a nota em Markdown")
+    expect(editor_diario).to_be_focused()
+    editor_diario.fill("Minha anotação do dia.")
+    page.locator("#salvar").click()
+    expect(page.locator("#ver")).to_contain_text("Minha anotação do dia.")
+    page.locator("#nota-voltar").click()
+    expect(page.locator(".diario-anotacao a")).to_contain_text("Editar anotação")
+    expect(page.locator(".diario-anotacao .texto")).to_contain_text("Minha anotação do dia.")
     page.goto(base + "/m/tarefas", wait_until="domcontentloaded")
 
     # Captura pelo teclado e modal com falha de rede: entrada permanece disponível.
@@ -533,6 +592,15 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     expect(card.locator(".habito-dia:visible")).to_have_count(56)
     expect(card.locator("[data-habito-contagem]")).to_have_text("x3")
     assert card.locator(".habito-acoes button").last.get_attribute("data-habito-marcar") is not None
+    card.locator(".habito-dia.hoje").focus()
+    page.keyboard.press("ArrowUp")
+    expect(card.locator(f'[data-mapa-dia="{ontem}"]')).to_be_focused()
+    page.keyboard.press("Enter")
+    page.locator("#anotar-realizacao").click()
+    page.locator("#realizacao-texto").fill("Li dois capítulos.")
+    page.locator("#realizacao-salvar").click()
+    expect(page.locator("#notas-relacionadas li")).to_contain_text("Li dois capítulos.")
+    expect(page.locator(".notas-relacionadas-filtro time")).to_have_attribute("datetime", ontem)
 
     # Pomodoro conserva intenção e prazo ao navegar na mesma sessão.
     page.goto(base + "/foco", wait_until="domcontentloaded")
@@ -605,7 +673,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     contexto.close()
     return {"rotas_por_largura": len(rotas), "larguras": [1440, 390, 320], "erros_javascript": erros,
             "jornadas": ["primeiro uso", "navegação e gaveta", "criar e editar", "recuperação", "conflito externo e cópia",
-                         "personalização pendente", "números", "decisão", "falha e repetição de captura", "contagem do Kanban",
+                         "personalização pendente", "números", "decisão pelo teclado", "calendário e retorno do Diário",
+                         "falha e repetição de captura", "contagem do Kanban", "nota de realização pelo dia",
                          "agenda e falha recuperável", "hábitos e preservação de registros", "Pomodoro ao navegar",
                          "modo claro e fonte ampliada", "animação e movimento reduzido"]}
 

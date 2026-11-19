@@ -43,6 +43,7 @@
     <p id="autostart-estado" class="campo-ajuda" role="status" aria-live="polite">Conferindo inicialização…</p>
     <details><summary>Informações do aplicativo</summary><p>Orquestra {{ versao }} · {{ n_notas }} notas</p><code>{{ vault }}</code><p class="campo-ajuda">Ative o início automático para aplicar o funcionamento em segundo plano. Aguarde a confirmação antes de fechar o terminal. Para abrir novamente: <code>uv run --frozen orquestra</code>.</p></details>
   </div>
+  <div class="bloco"><a class="link" href="/ajustes/atividade">{{ icone('pulso', 16) }} Registro de atividade</a></div>
 
   {% endif %}
   {% if secao == "areas" %}

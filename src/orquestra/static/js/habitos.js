@@ -94,7 +94,7 @@
     var ponto=e.target.closest('[data-mapa-dia]'); if (!ponto) return;
     if (e.key==='Escape') { esconderDica(); return; }
     var passo={ArrowLeft:-7,ArrowRight:7,ArrowUp:-1,ArrowDown:1}[e.key]; if (!passo) return;
-    e.preventDefault(); var pontos=Array.from(ponto.parentElement.children).filter(function (p) { return p.getClientRects().length; }), proximo=pontos[pontos.indexOf(ponto)+passo];
+    e.preventDefault(); var pontos=Array.from(ponto.parentElement.children).filter(function (p) { return p.hasAttribute('href') && p.getClientRects().length; }), proximo=pontos[pontos.indexOf(ponto)+passo];
     if (proximo) { ponto.tabIndex=-1; proximo.tabIndex=0; proximo.focus(); }
   });
   window.addEventListener('scroll',esconderDica,true); window.addEventListener('resize',esconderDica);

@@ -27,7 +27,7 @@
         {% if resumo.proximo %}<a class="botao pequeno so-icone" href="{{ resumo.proximo }}" aria-label="Dia seguinte">{{ icone('chevron_dir', 16) }}</a>{% endif %}
       </nav>
       <a class="botao pequeno so-icone" href="/agenda/{{ dia.isoformat() }}?visao=dia" title="Abrir agenda do dia" aria-label="Abrir agenda do dia">{{ icone('calendario', 16) }}</a>
-      <a class="botao pequeno so-icone" href="/diario?dia={{ dia.isoformat() }}" title="Abrir registro do dia" aria-label="Abrir registro do dia">{{ icone('livro', 16) }}</a>
+      <a class="botao pequeno so-icone" href="/diario?dia={{ dia.isoformat() }}" title="Abrir anotação do dia" aria-label="Abrir anotação do dia">{{ icone('livro', 16) }}</a>
     </div>
   </header>
 
@@ -36,16 +36,14 @@
   <nav class="dia-indicadores" aria-label="Resumo">
     {% if resumo.totais.itens %}<a href="#dia-itens"><b>{{ resumo.totais.itens }}</b> no dia</a>{% endif %}
     {% if resumo.totais.atrasados %}<a href="#dia-atrasados"><b>{{ resumo.totais.atrasados }}</b> atrasados</a>{% endif %}
-    {% if resumo.totais.decisoes %}<a href="#dia-decisoes"><b>{{ resumo.totais.decisoes }}</b> para decidir</a>{% endif %}
-    {% if resumo.totais.atividade %}<a href="#dia-atividade"><b>{{ resumo.totais.arquivos }}</b> {{ 'arquivo alterado' if resumo.totais.arquivos == 1 else 'arquivos alterados' }}</a>{% endif %}
+    {% if resumo.totais.sem_data %}<a href="#dia-sem-data"><b>{{ resumo.totais.sem_data }}</b> sem data</a>{% endif %}
     {% if resumo.totais.habitos %}<a href="#dia-habitos"><b>{{ resumo.totais.habitos_feitos }}/{{ resumo.totais.habitos }}</b> hábitos</a>{% endif %}
   </nav>
   <div class="dia-secoes">
     {% if resumo.itens %}<section class="dia-bloco" id="dia-itens"><h2>No dia <small>{{ resumo.totais.itens }}</small></h2>{{ lista(resumo.itens) }}</section>{% endif %}
     {% if resumo.atrasados %}<section class="dia-bloco" id="dia-atrasados"><h2>Atrasados <small>{{ resumo.totais.atrasados }}</small></h2>{{ lista(resumo.atrasados, true) }}</section>{% endif %}
-    {% if resumo.decisoes %}<section class="dia-bloco" id="dia-decisoes"><h2><a href="/decidir">Para decidir</a> <small>{{ resumo.totais.decisoes }}</small></h2>{{ lista(resumo.decisoes) }}</section>{% endif %}
+    {% if resumo.sem_data %}<section class="dia-bloco" id="dia-sem-data"><h2>Tarefas sem data <small>{{ resumo.totais.sem_data }}</small></h2>{{ lista(resumo.sem_data) }}</section>{% endif %}
     {% if resumo.habitos %}<section class="dia-bloco" id="dia-habitos"><h2><a href="/m/habitos">Hábitos</a> <small>{{ resumo.totais.habitos_feitos }}/{{ resumo.totais.habitos }}</small></h2><ul class="dia-lista">{% for h in resumo.habitos %}<li class="dia-item"><span class="dia-item-marca{% if h.marcado %} dia-feito{% endif %}">{{ icone('check' if h.marcado else 'pulso', 15) }}</span><a href="{{ h.url }}" class="dia-item-titulo">{{ h.titulo }}</a><span class="dia-item-contexto">{{ h.semana }}/{{ h.meta }} na semana</span></li>{% endfor %}</ul></section>{% endif %}
-    {% if resumo.atividade %}<section class="dia-bloco" id="dia-atividade"><h2><a href="/diario?dia={{ dia.isoformat() }}">Atividade observada</a> <small>{{ resumo.totais.atividade }}</small></h2><ul class="dia-lista">{% for e in resumo.atividade %}<li class="dia-item"><time class="dia-item-marca">{{ e.hora[:5] }}</time>{% if e.url %}<a href="{{ e.url }}" class="dia-item-titulo">{{ e.titulo }}</a>{% else %}<span class="dia-item-titulo">{{ e.titulo }}</span>{% endif %}<span class="dia-item-contexto">{{ e.tipo }}{% if e.quantidade > 1 %} · {{ e.quantidade }}×{% endif %}</span></li>{% endfor %}</ul><a class="dia-ver-tudo" href="/diario?dia={{ dia.isoformat() }}">Ver registro {{ icone('seta_dir', 13) }}</a></section>{% endif %}
   </div>
   {% if resumo.paginacao.paginas > 1 %}<nav class="dia-paginacao" aria-label="Páginas do resumo">{% if resumo.paginacao.anterior %}<a class="botao pequeno" href="{{ resumo.paginacao.anterior }}">Anterior</a>{% endif %}<span>Página {{ resumo.paginacao.pagina }} de {{ resumo.paginacao.paginas }} · até 80 itens por seção</span>{% if resumo.paginacao.proximo %}<a class="botao pequeno" href="{{ resumo.paginacao.proximo }}">Próxima</a>{% endif %}</nav>{% endif %}
   {% else %}<div class="dia-vazio"><span>{{ icone('calendario', 24) }}</span><p>Nenhum item para este dia.</p><a class="botao pequeno" href="/agenda/{{ dia.isoformat() }}?visao=dia">Abrir agenda</a></div>{% endif %}

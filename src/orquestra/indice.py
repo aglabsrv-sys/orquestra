@@ -330,6 +330,8 @@ class Indice:
         return replace(resultado)
 
     def _calcular_resumo(self, modulo: Modulo, hoje: dt.date) -> Resumo:
+        from orquestra.tarefas import sem_data
+
         r = Resumo()
         if not modulo.tem_status:
             # Sem status não há "em aberto" nem "para hoje": é só uma coleção de notas.
@@ -346,7 +348,7 @@ class Indice:
                 continue
             r.abertos += 1
             data = data_de(nota, modulo)
-            if data and data <= hoje:
+            if (data and data <= hoje) or sem_data(nota, modulo):
                 r.hoje += 1
         return r
 

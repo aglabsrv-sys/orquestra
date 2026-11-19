@@ -33,6 +33,15 @@ def test_todas_as_paginas_abrem(cliente):
         assert "Orquestra" in resposta.text
 
 
+def test_rota_desconhecida_no_navegador_mantem_o_atualizador(cliente):
+    headers = {"Accept": "text/html"}
+    pagina = cliente.get("/pagina-inexistente", headers=headers)
+    assert pagina.status_code == 404
+    assert "Página não encontrada" in pagina.text
+    assert 'id="atualizar-app"' in pagina.text and "/static/js/atualizacao.js" in pagina.text
+    assert cliente.get("/api/rota-inexistente", headers=headers).json() == {"detail": "Not Found"}
+
+
 def test_o_exemplo_ja_nasce_com_itens_para_hoje(cliente):
     resumo = cliente.get("/api/resumo").json()
     assert resumo["hoje"] == 2

@@ -81,7 +81,7 @@ def test_mcp_e_resumo_concordam_em_intervalos_meia_noite_e_atrasos(cliente):
     assert encerrado.rel not in consulta
     assert consulta[prazo.rel]["atrasado"]
     resumo = diario.resumo_dia(painel, hoje)
-    assert viagem.rel in {i["rel"] for i in resumo["itens"]}
+    assert viagem.rel not in {i["rel"] for i in resumo["itens"]}
     assert encerrado.rel not in {i["rel"] for i in resumo["itens"]}
     assert prazo.rel in {i["rel"] for i in resumo["atrasados"]}
 
@@ -101,7 +101,7 @@ def test_diario_pagina_sem_perder_registros_e_preserva_filtros(cliente):
     consulta = diario.consultar_registro(cliente.painel.vault, dt.date.today())
     assert consulta["total"] == consulta["encontradas"] == 181
     assert len(consulta["entradas"]) == 80 and consulta["paginas"] == 3
-    pagina = cliente.get("/diario").text
+    pagina = cliente.get("/ajustes/atividade").text
     assert pagina.count('class="diario-evento"') == 80
     segunda = cliente.get("/diario?pagina=2").text
     assert segunda.count('class="diario-evento"') == 80
@@ -125,4 +125,26 @@ def test_diario_busca_acentos_nao_injeta_html_e_mcp_le_sem_escrever(cliente):
     assert caminho.read_bytes() == original
     with pytest.raises(ErroDeFerramenta, match="AAAA-MM-DD"):
         mcp.diario_dia("ontem")
-    assert cliente.get("/diario?dia=0001-01-01").status_code == 200
+    assert cliente.get("/ajustes/atividade?dia=0001-01-01").status_code == 200
+
+
+def test_anotacao_diaria_reaproveita_a_mesma_nota_e_separa_o_registro(cliente):
+    hoje = dt.date.today()
+    rota = f"/api/diario/anotacao/{hoje}"
+    assert 'id="diario-escrever"' in cliente.get(f"/diario?dia={hoje}").text
+    assert cliente.post(rota, json={}, headers={"X-Orquestra-Vault": "outro-cofre"}).status_code == 409
+    primeira = cliente.post(rota, json={})
+    assert primeira.status_code == 200
+    url = primeira.json()["url"]
+    rel = diario.caminho_anotacao(hoje)
+    nota = cliente.painel.nota(rel)
+    resposta = cliente.put("/api/notas/" + rel, json={"versao": nota.versao, "corpo": "**Anotação pessoal**"})
+    assert resposta.status_code == 200
+    assert cliente.post(rota, json={}).json()["url"] == url
+    assert list((cliente.painel.vault / diario.PASTA_ANOTACOES).glob("*.md")) == [nota.caminho]
+    assert 'data-iniciar-edicao' in cliente.get(url + "?editar=1").text
+    assert f'href="/diario?dia={hoje}"' in cliente.get(url).text
+    pagina = cliente.get("/diario").text
+    assert "<strong>Anotação pessoal</strong>" in pagina and "diario-evento" not in pagina
+    assert "diario-evento" in cliente.get("/ajustes/atividade").text
+    assert "Atividade observada" not in cliente.get(f"/dia/{hoje}").text

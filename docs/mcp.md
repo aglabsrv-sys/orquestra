@@ -25,6 +25,16 @@ nas conexões MCP. Nas saídas, `campo` identifica a propriedade e `linha: 0`
 indica que o vínculo não pertence ao corpo; nas entradas, `campos` lista essas
 propriedades separadamente das linhas do texto.
 
+Em Hábitos, `anotar_realizacao` guarda o relato numa nota vinculada ao hábito e à
+data da execução. Use o caminho do hábito retornado por `listar_itens` e informe
+`data` em AAAA-MM-DD para uma realização anterior a hoje.
+
+Ao organizar a semana, use `listar_itens` ou `buscar` para reaproveitar tarefas
+existentes. Mantenha o mapa e os critérios de triagem no projeto ou numa
+referência. Use `criar_item` em Tarefas para um próximo passo novo e inclua um
+wikilink para a nota do projeto em `texto`. Use `perguntar` no item que precisa de
+uma resposta. O mesmo item aparece em `fila_de_decisoes` e em Entrada → Para decidir.
+
 As ferramentas deste conector não permitem:
 
 - reescrever o texto de uma nota sua (só acrescentar, sob "Notas do agente");
@@ -145,9 +155,10 @@ padrão é reservada ao protocolo; diagnósticos do processo vão para stderr.
 | `respostas` | Itens em que você já respondeu uma pergunta. |
 | `criar_item` | Cria um item numa área, sempre como `origem: agente`. |
 | `atualizar_item` | Muda campos e acrescenta texto, respeitando as regras acima. |
-| `perguntar` | Deixa uma pergunta num item; ele aparece em Decidir. |
+| `perguntar` | Deixa uma pergunta num item; ele aparece em Entrada → Para decidir. |
 | `capturar` | Guarda uma anotação na área de captura configurada; texto do agente por padrão, ou transcrição literal da pessoa quando indicado. |
 | `registrar_numeros` | Grava os números de um dia (módulo Números). |
+| `anotar_realizacao` | Guarda uma nota de execução em Hábitos na data relatada. |
 | `aprendizados` | Lê o que os agentes já aprenderam numa área. |
 | `registrar_aprendizado` | Acrescenta uma linha aos aprendizados da área. |
 | `sessoes_recentes` | O relato das últimas sessões: a memória entre conversas. |

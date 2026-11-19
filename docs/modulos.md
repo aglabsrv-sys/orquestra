@@ -28,6 +28,12 @@ vinculadas por link ou pasta de nome inequívoco, dentro do estudo correspondent
 
 ## Criar e organizar itens
 
+Em Projetos, a pasta e sua nota principal mostram as **Tarefas do projeto**.
+Um wikilink ou link Markdown entre as notas, em qualquer direção, já cria o
+vínculo para o painel. Wikilinks na propriedade `projeto` também funcionam.
+A tarefa mantém seu status em Tarefas e mostra os projetos ligados. Uma pergunta
+pendente pode ser aberta diretamente em **Entrada → Para decidir**.
+
 Em Projetos e Estudos, **Novo** cria uma pasta: o título dá nome à pasta e a
 descrição opcional vira sua primeira nota, com a primeira linha como título.
 Dentro dela, **Nova nota** cria uma nota vinculada. Pastas, Cartões e Lista
@@ -51,9 +57,11 @@ preenchido com um visto e o título riscado; clicar novamente reabre. O controle
 funciona por teclado e só muda depois da confirmação do servidor. Os estados
 intermediários continuam disponíveis nas propriedades da nota e no quadro.
 
-Em Tarefas, **Hoje** é o padrão no quadro e na lista. As abertas aparecem pela
-data agendada: Hoje corresponde ao dia atual e Semana vai de segunda a domingo.
-Sem data ou fora do período, continuam disponíveis em **Todas**. As concluídas
+Em Tarefas, **Hoje** é o padrão no quadro e na lista. Mostra as tarefas abertas
+do dia, as atrasadas e as que estão sem data. O resumo **Hoje** do Início reúne
+as últimas em **Tarefas sem data**, e o calendário usa as datas agendadas.
+**Semana** vai de segunda a domingo. **Todas** também inclui as tarefas abertas
+fora do período. As concluídas
 aparecem pela data de conclusão, até hoje, dentro do período selecionado. Concluir
 registra `concluido_em` na nota; reabrir remove essa data e uma nova conclusão a
 renova. Editar o texto de uma tarefa concluída conserva sua data. O prazo da tarefa
@@ -153,8 +161,8 @@ campo_data: vencimento    # alimenta a faixa da semana e o "para hoje"
 status:
   campo: status           # opcional: qual campo é o status (padrão: status)
   concluidos: [pago]      # não contam como "em aberto"
-  decidir: [atrasado]     # entram na fila Decidir
-  acoes:                  # botões da fila Decidir
+  decidir: [atrasado]     # entram em Entrada → Para decidir
+  acoes:                  # botões de Entrada → Para decidir
     - rotulo: Marcar como pago
       definir: {status: pago}
       estilo: principal   # principal | discreto
@@ -237,13 +245,14 @@ Para acompanhar outro número, acrescente um campo do tipo `numero` no `_modulo.
   o `orquestra doctor` conta quantas existem.
 - **Erro no `_modulo.yaml` não derruba o painel.** O problema aparece como aviso na
   página do módulo e em Ajustes.
-- **A fila Decidir** junta dois tipos de item: os que têm um status da lista
-  `decidir` e os que têm um campo `pergunta` preenchido por um agente.
+- **Entrada** reúne **Capturas**, ideias e pedidos para organizar, e **Para decidir**,
+  itens com status da lista `decidir` ou com uma pergunta pendente. Cada decisão
+  é gravada na nota de origem. A fila continua acessível em cofres sem Capturas.
 - **O número no dock** é "para hoje" quando o módulo tem `campo_data`; senão, o que
   espera decisão; senão, o que está em aberto.
 - **O dock não cresce sem parar.** Com até nove itens, mostra tudo. Acima disso, mostra
   cinco áreas, a área em que você está e o botão **Mais atalhos** (tecla `G`), que abre
-  a lista completa com Diário, Pastas e Ajustes. Agenda e Decidir continuam na barra.
+  a lista completa com Diário, Pastas e Ajustes. Agenda e Entrada continuam na barra.
   Para escolher quais ficam sempre à mão,
   liste no `orquestra.yaml`: `dock: [tarefas, projetos, notas]`.
 - **Tirar do painel não apaga nada.** O `_modulo.yaml` vira `_modulo.desligado.yaml`

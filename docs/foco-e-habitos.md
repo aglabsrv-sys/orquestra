@@ -6,10 +6,11 @@ Notas em `habitos/execucoes/Nome do hábito/` aparecem dentro do hábito, separa
 dos itens de Hábitos e de Notas. Um link como `[[Nome do hábito]]` identifica a
 relação; a pasta também pode dar contexto quando há um único hábito com esse nome.
 A data vem de `data: AAAA-MM-DD` ou da data no nome do arquivo. Clique no nome
-do hábito para ver a descrição e suas notas de realização. Os dias marcados ou
-com notas abrem a consulta daquela data. **Todas as notas** retira o filtro.
-Criar ou consultar uma nota não marca o hábito como realizado. Os registros
-continuam sendo confirmados pela pessoa, e nenhum arquivo é movido pelo painel.
+do hábito para ver a descrição e as notas, das mais recentes para as mais antigas,
+seis por página. **Adicionar nota** guarda o texto na data de hoje. Para outro dia,
+abra o quadrado daquela data no mapa e use **Adicionar nota**. **Todas as notas**
+retira o filtro. Agentes podem guardar uma execução na data relatada com
+`anotar_realizacao` no [MCP](mcp.md). A nota é independente da marcação no mapa.
 
 ## Pomodoro
 

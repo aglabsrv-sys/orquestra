@@ -115,7 +115,8 @@ def jornada(page, base, largura, capturas):
     page.goto(base + "/")
     expect(page.locator('.dock a[href="/m/agenda"]')).to_have_count(0)
     expect(page.locator('.dock a[href="/agenda"]')).to_have_count(1)
-    assert page.locator('.dock .dock-entrada').count() == 0  # este cofre fictício não instalou Entrada
+    # A fila de decisões está disponível mesmo sem a área de capturas.
+    assert page.locator('.dock .dock-entrada').get_attribute("href") == "/entrada?aba=decisoes"
 
     # Seleção de vários itens e conferência da operação real nos arquivos.
     for nome in ('A', 'B'):

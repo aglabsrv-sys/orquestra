@@ -36,10 +36,11 @@ def test_quadro_recorta_pela_conclusao_preserva_abertas_e_historico(cliente):
     painel.editar_nota(sem_data.rel, sem_data.versao, campos={"concluido_em": None})
     resposta = cliente.get("/m/tarefas?aba=v0")
     cartoes = [c["rel"] for col in resposta.context["colunas"] for c in col["cartoes"]]
-    assert atual.rel in cartoes and atrasada.rel in cartoes
-    assert not {antiga.rel, sem_data.rel, aberta.rel, sem_prazo.rel} & set(cartoes)
+    assert {atual.rel, atrasada.rel, sem_prazo.rel} <= set(cartoes)
+    assert not {antiga.rel, sem_data.rel, aberta.rel} & set(cartoes)
     lista_hoje = cliente.get("/m/tarefas?aba=v1")
-    assert not {aberta.rel, sem_prazo.rel, antiga.rel} & {l["cartao"]["rel"] for l in lista_hoje.context["linhas"]}
+    linhas = {l["cartao"]["rel"] for l in lista_hoje.context["linhas"]}
+    assert sem_prazo.rel in linhas and not {aberta.rel, antiga.rel} & linhas
     assert resposta.context["concluidas_ocultas"] == ocultas_antes + 2
     assert resposta.context["resumo"].abertos >= 1
     todas = cliente.get("/m/tarefas?aba=v0&concluidas=todas")
@@ -82,8 +83,8 @@ def test_periodo_filtra_abertas_e_conclusoes_na_lista_e_quadro(cliente):
     painel.editar_nota(ontem.rel, ontem.versao, campos={"concluido_em": (hoje - dt.timedelta(days=1)).isoformat()})
     for aba in ("v0", "v1"):
         pagina = cliente.get(f"/m/tarefas?aba={aba}&concluidas=hoje")
-        assert hoje_nota.titulo in pagina.text
-        assert all(n.titulo not in pagina.text for n in (fora, sem_dia, ontem))
+        assert hoje_nota.titulo in pagina.text and sem_dia.titulo in pagina.text
+        assert all(n.titulo not in pagina.text for n in (fora, ontem))
         assert 'aria-label="Período das tarefas"' in pagina.text
         todas = cliente.get(f"/m/tarefas?aba={aba}&concluidas=todas")
         assert all(n.titulo in todas.text for n in (hoje_nota, fora, sem_dia, ontem))

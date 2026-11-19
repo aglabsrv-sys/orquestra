@@ -58,11 +58,11 @@
     {% endif %}
     <span class="dock-sep" aria-hidden="true"></span>
     {% for s in dock.sistema_barra %}
-    <a class="dock-item{% if s.id != 'decidir' %} dock-so-desktop{% endif %}{% if s.ativo %} ativo{% endif %}" href="{{ s.url }}"{% if s.ativo %} aria-current="page"{% endif %} data-dica="{{ s.nome }}" aria-label="{{ s.nome }}" data-selo-de="{{ s.id }}">
+    <a class="dock-item{% if s.id != 'calendario' %} dock-so-desktop{% endif %}{% if s.ativo %} ativo{% endif %}" href="{{ s.url }}"{% if s.ativo %} aria-current="page"{% endif %} data-dica="{{ s.nome }}" aria-label="{{ s.nome }}" data-selo-de="{{ s.id }}">
       {{ icone(s.icone, 20) }}<b class="selo"{% if not s.selo %} hidden{% endif %}>{{ "99+" if s.selo > 99 else s.selo }}</b>
     </a>
     {% endfor %}
-    {% if dock.entrada %}<a class="dock-item dock-entrada{% if dock.entrada.ativo %} ativo{% endif %}" href="{{ dock.entrada.url }}" aria-label="{{ dock.entrada.nome }}" data-dica="{{ dock.entrada.nome }}" data-selo-de="entrada"{% if dock.entrada.ativo %} aria-current="page"{% endif %}>{{ icone(dock.entrada.icone, 20) }}<b class="selo"{% if not dock.entrada.selo %} hidden{% endif %}>{{ dock.entrada.selo }}</b></a>{% endif %}
+    <a class="dock-item dock-entrada{% if dock.entrada.ativo %} ativo{% endif %}" href="{{ dock.entrada.url }}" aria-label="{{ dock.entrada.nome }}" data-dica="{{ dock.entrada.nome }}" data-selo-de="entrada"{% if dock.entrada.ativo %} aria-current="page"{% endif %}>{{ icone(dock.entrada.icone, 20) }}<b class="selo"{% if not dock.entrada.selo %} hidden{% endif %}>{{ "99+" if dock.entrada.selo > 99 else dock.entrada.selo }}</b></a>
   </nav>
   </div>
 

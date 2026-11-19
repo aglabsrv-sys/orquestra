@@ -372,8 +372,7 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
         )
     sistema = [
         {"id": "calendario", "nome": "Agenda", "icone": "calendario", "url": "/agenda", "selo": 0},
-        {"id": "decidir", "nome": "Decidir", "icone": "sino", "url": "/decidir", "selo": total_decidir},
-        {"id": "diario", "nome": "Diário", "icone": "pulso", "url": "/diario", "selo": 0},
+        {"id": "diario", "nome": "Diário", "icone": "livro", "url": "/diario", "selo": 0},
         {"id": "pastas", "nome": "Pastas", "icone": "pasta", "url": "/pastas", "selo": 0},
         {"id": "ajustes", "nome": "Ajustes", "icone": "ajustes", "url": "/ajustes", "selo": 0},
     ]
@@ -382,36 +381,36 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
 
     # Com poucas áreas, tudo cabe. Com muitas, o dock mostra as fixadas (ou as primeiras),
     # mais a área em que a pessoa está, e o resto fica a um clique, no botão "Áreas".
-    entrada = next((m for m in modulos if m["id"] == "entrada"), None)
-    areas = [m for m in modulos if m is not entrada]
+    capturas = next((m for m in modulos if m["id"] == "entrada"), None)
+    entrada = {"id": "entrada", "nome": "Entrada", "icone": "entrada",
+               "url": "/m/entrada" if capturas else "/entrada?aba=decisoes",
+               "ativo": ativo == "m:entrada", "selo": total_decidir}
+    areas = [m for m in modulos if m is not capturas]
     barra, sistema_barra, gaveta = areas, sistema, []
-    if len(modulos) + len(sistema) > DOCK_SEM_GAVETA:
+    if len(areas) + len(sistema) + 1 > DOCK_SEM_GAVETA:
         fixas = [m for nome in painel.config.dock for m in areas if m["id"] == nome][:DOCK_AREAS]
         barra = fixas or areas[:DOCK_AREAS]
         atual = next((m for m in areas if m["ativo"]), None)
         if atual and atual not in barra:
             barra = [*barra, atual]
-        sistema_barra = [s for s in sistema if s["id"] in {"decidir", "calendario"}]
-        gaveta = [*areas, *[s for s in sistema if s["id"] not in {"decidir", "calendario"}]]
+        sistema_barra = [s for s in sistema if s["id"] == "calendario"]
+        gaveta = [*areas, *[s for s in sistema if s["id"] != "calendario"]]
     escondidos = [i for i in gaveta if i not in barra]
     # A largura do navegador não chega ao servidor. O CSS alterna a mesma barra
-    # para dois atalhos no celular, mantendo a área atual e todas as demais na gaveta.
-    limite_mobile = 1 if entrada else 2
-    mobile = barra[:limite_mobile]
+    # para a área atual (ou a primeira) no celular, além de Agenda e Entrada.
     atual = next((m for m in barra if m["ativo"]), None)
-    if atual and atual not in mobile:
-        mobile = [*mobile[:limite_mobile - 1], atual]
+    mobile = atual or (barra[0] if barra else None)
     for item in barra:
-        item["no_mobile"] = item in mobile
+        item["no_mobile"] = item is mobile
     return {
         "modulos": modulos,
         "sistema": sistema,
         "barra": barra,
         "sistema_barra": sistema_barra,
-        "gaveta": [*areas, *[s for s in sistema if s["id"] != "decidir"]],
+        "gaveta": [*areas, *[s for s in sistema if s["id"] != "calendario"]],
         "gaveta_desktop": bool(gaveta),
         "gaveta_ativa": any(i["ativo"] for i in escondidos),
-        "gaveta_mobile_ativa": any(s["ativo"] for s in sistema if s["id"] != "decidir"),
+        "gaveta_mobile_ativa": any(s["ativo"] for s in sistema if s["id"] != "calendario"),
         "gaveta_selo": sum(int(i["selo"] or 0) for i in escondidos),
         "decidir": total_decidir,
         "inicio_ativo": ativo == "inicio",
@@ -421,30 +420,31 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
 
 def montar_semana(painel: Painel, hoje: dt.date) -> tuple[list[dict[str, Any]], int]:
     """Os próximos 7 dias com a quantidade de itens em aberto em cada um."""
+    from orquestra.calendario import e_compromisso
+    from orquestra.tarefas import sem_data
+
     por_dia: dict[dt.date, int] = {}
-    atrasados = 0
+    pendencias = 0
     for modulo in painel.indice.modulos.values():
-        if not modulo.campo_data:
+        if not modulo.campo_data and modulo.id != "tarefas":
             continue
         for nota in painel.indice.notas_em(modulo.id, "itens", ordenar=False):
-            if str(nota.campo(modulo.campo_status) or "") in modulo.concluidos:
+            if nota.erro or str(nota.campo(modulo.campo_status) or "") in modulo.concluidos:
                 continue
             dia = data_de(nota, modulo)
+            if not e_compromisso(nota, modulo):
+                pendencias += sem_data(nota, modulo) if dia is None else (dia == hoje or (dia < hoje and modulo.tem_status))
             if dia is None:
                 continue
-            if dia < hoje:
-                # Sem status não existe "atrasado": uma data que passou é só um registro antigo.
-                if not modulo.tem_status:
-                    continue
-                atrasados += 1
-            por_dia[dia] = por_dia.get(dia, 0) + 1
+            if dia >= hoje:
+                por_dia[dia] = por_dia.get(dia, 0) + 1
     semana = []
     for i in range(7):
         dia = hoje + dt.timedelta(days=i)
         semana.append(
             {"iso": dia.isoformat(), "nome": DIAS[dia.weekday()], "num": dia.day, "n": por_dia.get(dia, 0), "hoje": i == 0}
         )
-    return semana, por_dia.get(hoje, 0) + atrasados
+    return semana, pendencias
 
 
 def capa_de(painel: Painel, alvo: str, propria: Any = None) -> dict[str, Any]:

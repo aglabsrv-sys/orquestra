@@ -8,6 +8,10 @@
 {% block scripts %}{% if area_com_pastas or modulo.itens_na_raiz %}<script src="/static/js/pastas-vidro.js?v={{ marca }}"></script>{% endif %}{% endblock %}
 
 {% block conteudo %}
+{% if modulo.id == 'entrada' %}
+<header class="pagina-topo entrada-topo"><h1>Entrada</h1></header>
+{{ p.abas_entrada('capturas', true, dock.decidir) }}
+{% else %}
 <section class="cab-modulo">
   {{ p.capa(capa) }}
   <span class="slide-sombra"></span>
@@ -24,6 +28,7 @@
     {% if modulo.decidir or resumo.decidir %}<span><b>{{ resumo.decidir }}</b> para decidir</span>{% endif %}
   </div>
 </section>
+{% endif %}
 
 {% set acoes_lote %}
 {% if linhas|default([]) and not conclusao_tarefa and aba not in ('humano', 'maquina') and visao.tipo not in ('kanban', 'grafico') %}
@@ -39,7 +44,7 @@
 <nav class="abas{% if modulo.id == 'contatos' %} abas-contatos{% endif %}" aria-label="Visões do módulo">
   <div class="abas-visoes">
   {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos?aba=progresso">Progresso</a>{% endif %}
-  {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir?modulo=conteudo">Aprovação de criativos</a>{% endif %}
+  {% if modulo.id == 'conteudo' %}<a class="aba" href="/entrada?aba=decisoes&amp;modulo=conteudo">Aprovação de criativos</a>{% endif %}
   {% if n_referencias|default(0) %}<a class="aba{% if aba == 'referencias' %} ativa{% endif %}" href="?aba=referencias"{% if aba == 'referencias' %} aria-current="page"{% endif %}>Referências <small>{{ n_referencias }}</small></a>{% endif %}
   {% if colecao_disponivel %}<a class="aba{% if aba == 'colecao' %} ativa{% endif %}" href="?aba=colecao{% if pasta_atual %}&amp;pasta={{ pasta_atual|urlencode }}{% endif %}"{% if aba == 'colecao' %} aria-current="page"{% endif %}>{{ opcoes_subpastas[estilo_subpastas] }}</a>{% endif %}
   {% for v in modulo.visoes if modulo.id != 'contatos' %}
@@ -226,6 +231,8 @@
   </div>
   {% endif %}
   {{ pasta_ui.midias(pa.midias) }}
+  {{ p.decisao_pendente(decisao_pendente, pergunta_pendente) }}
+  {{ p.tarefas_vinculadas(tarefas_vinculadas, paginacao_tarefas, 'pasta-tarefas-titulo') }}
   </div>
   {{ pasta_ui.ajustes(pa, modulo, pastas_capas or modo_subpastas == "pastas" and pa.sub) }}
 </section>
