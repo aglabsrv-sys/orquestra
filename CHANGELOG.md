@@ -5,6 +5,8 @@
 - Links antigos de Decidir abrem Entrada. Depois de responder pelo teclado, o
   foco segue para o próximo cartão. A capa do Diário no Início respeita a
   opção Sem capa, e cliques repetidos em Atualizar abrem uma só confirmação.
+- O carrossel aceita arrastar com o mouse também quando a tela sensível ao toque
+  é o dispositivo apontador principal.
 
 - Hábitos aceita notas de realização pelo painel e pelo MCP. O dia selecionado
   no mapa é vinculado automaticamente, e as notas aparecem seis por página,

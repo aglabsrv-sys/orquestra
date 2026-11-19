@@ -38,7 +38,8 @@
 .tailscale-linha { display:flex; gap:8px; align-items:center; border-bottom:1px solid var(--borda); padding:12px 0; }
 .tailscale-linha a { min-width:0; flex:1; overflow-wrap:anywhere; font-size:.8rem; }
 .dock-entrada { margin-left:4px; border-left:1px solid var(--borda); }
-@media(pointer:fine) { .trilho { cursor:grab; } .trilho.arrastando { cursor:grabbing; scroll-snap-type:none; scroll-behavior:auto; user-select:none; } .trilho.arrastando * { cursor:grabbing; } }
+.trilho.arrastando { scroll-snap-type:none; scroll-behavior:auto; user-select:none; }
+@media(pointer:fine) { .trilho { cursor:grab; } .trilho.arrastando, .trilho.arrastando * { cursor:grabbing; } }
 @media(max-width:600px) { #dialogo-novo .grade-campos { grid-template-columns:1fr; } .lote-barra { gap:6px; } .lote-barra select { flex:1; min-width:0; } }
 
 /* A seleção ocupa o mesmo espaço antes e depois de marcar uma nota. */

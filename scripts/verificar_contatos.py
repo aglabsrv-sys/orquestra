@@ -25,6 +25,28 @@ def conferir(page):
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), page.url
 
 
+def conferir_carrossel(page, base):
+    page.goto(base + '/')
+    page.keyboard.press('1')
+    primeiro = page.locator('.slide').first.get_attribute('data-id')
+    ativo = page.locator('.slide.ativo')
+    expect(ativo).to_have_attribute('data-id', primeiro)
+    page.wait_for_function("() => document.querySelector('.trilho').scrollLeft < 1")
+    trilho = page.locator('.trilho')
+    caixa = trilho.bounding_box()
+    x, y = caixa['x'] + caixa['width'] * .8, caixa['y'] + caixa['height'] * .5
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x - caixa['width'] * .6, y, steps=15)
+    try:
+        expect(trilho).to_have_css('scroll-snap-type', 'none')
+        assert trilho.evaluate('e => e.scrollLeft') > 0
+    finally:
+        page.mouse.up()
+    expect(ativo).not_to_have_attribute('data-id', primeiro)
+    assert page.url.rstrip('/') == base
+
+
 def jornada(page, base, largura, capturas):
     page.set_viewport_size({"width": largura, "height": 900})
     page.goto(base + "/m/contatos")
@@ -168,19 +190,7 @@ def jornada(page, base, largura, capturas):
     expect(page.locator('#tailscale-links a')).to_have_count(0)
 
     if largura == 1440:
-        page.goto(base + '/')
-        page.keyboard.press('1')
-        primeiro = page.locator('.slide').first.get_attribute('data-id')
-        expect(page.locator('.slide.ativo')).to_have_attribute('data-id', primeiro)
-        inicial = page.locator('.slide.ativo').get_attribute('data-id')
-        trilho = page.locator('.trilho').bounding_box()
-        x, y = trilho['x'] + trilho['width'] * .8, trilho['y'] + trilho['height'] * .5
-        page.mouse.move(x, y)
-        page.mouse.down()
-        page.mouse.move(x - trilho['width'] * .6, y, steps=15)
-        page.mouse.up()
-        page.wait_for_function("id=>document.querySelector('.slide.ativo').dataset.id!==id", arg=inicial)
-        assert page.url.rstrip('/') == base
+        conferir_carrossel(page, base)
 
 
 def main():
@@ -213,6 +223,12 @@ def main():
                     page.on("pageerror", lambda erro: erros.append(str(erro)))
                     for largura in (1440, 390):
                         jornada(page, base, largura, args.capturas)
+                    hibrido = browser.new_page(
+                        viewport={"width": 1440, "height": 900}, has_touch=True, is_mobile=True, reduced_motion="reduce",
+                    )
+                    hibrido.on("pageerror", lambda erro: erros.append(str(erro)))
+                    assert not hibrido.evaluate("matchMedia('(pointer: fine)').matches")
+                    conferir_carrossel(hibrido, base)
                     assert not erros, erros
                     browser.close()
                 print("Contatos, clientes, filtros, lixeira e reativação: OK em 1440 e 390 px.")
