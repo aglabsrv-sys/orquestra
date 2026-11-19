@@ -47,6 +47,7 @@ LIMITE_CONFIGURACAO_BYTES = 32 * 1024 * 1024
 _CAMPO = re.compile(r"^[^\W\d][\w-]{0,99}$", re.UNICODE)
 _HELPER_DISTRIBUIDO_ANTERIOR = "bca7d7d4a1600bc082feeafb4c25f0b5157ab3e8c6796b7d24bb6b9708140d1e"
 _RECORRENTES_DISTRIBUIDO_ANTERIOR = "00b908e23fd3812258ac9f45ffd1beb0e1d0d05841f6924a54e73bfba726f7b5"
+_YOUTUBE_RSS_DISTRIBUIDO_ANTERIOR = "57c16eb66853af92cf49a92ecd2d1ae9c6768c6411726beac0df62104d4d8fd8"
 _DESCRICOES = {
     "youtube_rss.py": "Guarda vídeos novos dos canais que você acompanha.",
     "rss.py": "Reúne publicações de feeds RSS e Atom na pasta escolhida.",
@@ -62,6 +63,7 @@ _ROTULOS = {
     "canais": "Canais", "feeds": "Endereços dos feeds", "pais": "País", "idioma": "Idioma",
     "maximo": "Máximo de itens", "maximo_por_canal": "Vídeos por canal", "maximo_por_feed": "Itens por feed",
     "maximo_por_termo": "Vídeos por busca", "termos": "Assuntos da busca", "tarefas": "Regras das tarefas",
+    "titulos_contem": "Títulos contendo (opcional)",
     "agendas": "Agendas iCal", "dias_a_frente": "Dias à frente", "canal": "Canal",
     "campo_inscritos": "Campo para inscritos", "campo_visualizacoes": "Campo para visualizações",
     "moedas": "Campos e pares de moedas", "repositorios": "Repositórios e campos",
@@ -204,7 +206,7 @@ def _config(definicao: str, config: dict | None) -> dict:
             raise ErroAutomacao(f"{chave.replace('_', ' ').capitalize()} precisa ser texto.")
         if isinstance(padrao, int) and (isinstance(valor, bool) or not isinstance(valor, int) or not 1 <= valor <= 10000):
             raise ErroAutomacao(f"{chave.replace('_', ' ').capitalize()} precisa ser um inteiro positivo, até 10000.")
-    for chave in ("canais", "feeds", "termos"):
+    for chave in ("canais", "feeds", "termos", "titulos_contem"):
         if chave in resultado and any(not isinstance(v, str) for v in resultado[chave]):
             raise ErroAutomacao(f"Cada item de {chave} precisa ser texto.")
     for chave in ("tarefas", "repositorios"):
@@ -493,6 +495,8 @@ def _atualizacoes_codigo(painel: Painel, modulo, definicao: str, *, arquivos_loc
         anteriores = {"_comum.py": _HELPER_DISTRIBUIDO_ANTERIOR}
         if definicao.startswith("tarefas/"):
             anteriores["recorrentes.py"] = _RECORRENTES_DISTRIBUIDO_ANTERIOR
+        if definicao.startswith("radar/"):
+            anteriores["youtube_rss.py"] = _YOUTUBE_RSS_DISTRIBUIDO_ANTERIOR
         if hashlib.sha256(atual.replace(b"\r\n", b"\n")).hexdigest() != anteriores.get(nome):
             return None
         mudancas.append((base_local / nome, atual, novo))

@@ -7,14 +7,22 @@
 Configuração (em radar/_modulo.yaml):
     canais: lista com @nome, link do canal ou ID (começa com UC)
     maximo_por_canal: quantos vídeos recentes pegar de cada canal
+    titulos_contem: lista opcional de termos ou frases; basta um aparecer no título
 """
 
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
 
 from _comum import CONFIG, avisar, baixar, emitir
 
 NS = {"a": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015", "m": "http://search.yahoo.com/mrss/"}
+
+
+def normalizar(texto: str) -> str:
+    sem_acentos = "".join(c for c in unicodedata.normalize("NFKD", texto.casefold())
+                         if not unicodedata.combining(c))
+    return " ".join(sem_acentos.split())
 
 
 def id_do_canal(canal: str) -> str | None:
@@ -32,6 +40,7 @@ def id_do_canal(canal: str) -> str | None:
 
 def main() -> None:
     maximo = int(CONFIG.get("maximo_por_canal", 5))
+    termos = [termo for valor in CONFIG.get("titulos_contem", []) if (termo := normalizar(valor))]
     for canal in CONFIG.get("canais", []):
         try:
             canal_id = id_do_canal(str(canal))
@@ -44,13 +53,21 @@ def main() -> None:
             continue
 
         nome_canal = feed.findtext("a:title", default=str(canal), namespaces=NS)
-        for entrada in feed.findall("a:entry", NS)[:maximo]:
+        encontrados = 0
+        for entrada in feed.findall("a:entry", NS):
             video = entrada.findtext("yt:videoId", namespaces=NS)
             if not video:
                 continue
+            titulo = entrada.findtext("a:title", default="(sem título)", namespaces=NS)
+            if termos:
+                texto = normalizar(titulo)
+                if not any(termo in texto for termo in termos):
+                    continue
+            if encontrados >= maximo:
+                break
             emitir(
                 id=f"youtube:{video}",
-                titulo=entrada.findtext("a:title", default="(sem título)", namespaces=NS),
+                titulo=titulo,
                 corpo=entrada.findtext("m:group/m:description", default="", namespaces=NS).strip()[:600],
                 fonte="youtube",
                 canal=nome_canal,
@@ -58,6 +75,7 @@ def main() -> None:
                 miniatura=f"https://i.ytimg.com/vi/{video}/hqdefault.jpg",
                 publicado_em=entrada.findtext("a:published", default="", namespaces=NS)[:10],
             )
+            encontrados += 1
 
 
 if __name__ == "__main__":

@@ -35,7 +35,12 @@ def _original(modulo: Modulo, coletor: ColetorDef, arquivos: dict[str, bytes]) -
     try:
         original = carregar_modulo(pasta)
         definicao = next((c for c in original.coletores if c.script == coletor.script), None)
-        if definicao is None or simples(definicao.config) != simples(coletor.config) or sorted(definicao.requer) != sorted(coletor.requer):
+        configuracao = simples(coletor.config)
+        if coletor.script == "youtube_rss.py":
+            # Nas versões anteriores, ausência do filtro já significava coletar
+            # todos os títulos. Isso equivale somente ao novo padrão vazio.
+            configuracao.setdefault("titulos_contem", [])
+        if definicao is None or simples(definicao.config) != configuracao or sorted(definicao.requer) != sorted(coletor.requer):
             return False
         base = pasta / "maquina" / "coletores"
         esperado = {p.relative_to(base).as_posix(): p.read_bytes() for p in base.rglob("*") if p.is_file() and "__pycache__" not in p.parts}

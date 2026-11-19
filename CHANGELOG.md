@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- Canais do YouTube oferece filtro opcional por termos ou frases no título em
+  Mais opções, sem chave de API. Vazio preserva a coleta habitual; o limite por
+  canal considera os vídeos que passaram no filtro dentro do feed recente.
+
 - Tarefas recorrentes preservam a data de cada ocorrência mesmo com uma data
   antiga na regra, recusam dias mensais inválidos e aguardam o horário diário
   de hoje ao reabrir. Cópias antigas reconhecidas acompanham a atualização geral,

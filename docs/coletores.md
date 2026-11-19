@@ -87,7 +87,16 @@ segredos no código, logs ou argumentos de comando.
 | `google_trends.py` | assuntos em alta no Google no seu país | não |
 | `youtube_api.py` | busca de vídeos por termo | sim (gratuita) |
 
-Todos vêm com o agendamento desligado. Personalizar a configuração exige aprovação da nova versão. Para configurar, edite `radar/_modulo.yaml`:
+Todos vêm com o agendamento desligado. Personalizar a configuração exige aprovação da nova versão.
+
+Em **Canais do YouTube → Mais opções**, **Títulos contendo (opcional)** filtra
+os vídeos pelos termos ou frases informados, um por linha. Basta um deles
+aparecer no título; acentos, maiúsculas e espaços repetidos são ignorados.
+Vazio mantém a coleta habitual. O limite por canal é aplicado depois do filtro,
+dentro dos vídeos recentes disponíveis no feed; não é uma busca no histórico.
+Na configuração YAML, a opção é `titulos_contem`, uma lista de textos.
+
+Para configurar pelo arquivo, edite `radar/_modulo.yaml`:
 
 ```yaml
 coletores:

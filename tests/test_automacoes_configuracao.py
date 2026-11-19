@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from orquestra import automacoes, confianca
-from orquestra.config import ler_yaml
+from orquestra.config import gravar_yaml, ler_yaml
 
 
 def legado(painel, modulo="radar", script="rss.py"):
@@ -152,3 +152,31 @@ def test_abrir_versao_nova_incorpora_originais_sem_fluxo_separado(painel, person
     arquivos = {p: p.read_bytes() for p in (modulo.pasta / "maquina/coletores").glob("*.py")}
     automacoes.sincronizar_catalogo(app.state.painel)
     assert {p: p.read_bytes() for p in arquivos} == arquivos
+
+
+@pytest.mark.parametrize("revogado", [False, True])
+def test_atualizacao_youtube_preserva_config_antiga_e_revogacao(painel, revogado):
+    modulo = painel.modulo("radar")
+    script = modulo.pasta / "maquina/coletores/youtube_rss.py"
+    antigo = (Path(__file__).parent / "fixtures/youtube-rss-040.txt").read_bytes()
+    assert hashlib.sha256(antigo.replace(b"\r\n", b"\n")).hexdigest() == automacoes._YOUTUBE_RSS_DISTRIBUIDO_ANTERIOR
+    script.write_bytes(antigo)
+    arquivo = modulo.pasta / "_modulo.yaml"
+    dados = ler_yaml(arquivo)
+    for c in dados["coletores"]:
+        if c["script"] == "youtube_rss.py":
+            c["config"].pop("titulos_contem", None)
+    gravar_yaml(arquivo, dados)
+    painel.recarregar_config()
+    modulo, coletor = painel.coletor("radar", "youtube_rss.py")
+    if revogado:
+        confianca.revogar(painel.vault, modulo, coletor)
+    antes = arquivo.read_bytes()
+    automacoes.sincronizar_catalogo(painel)
+    assert arquivo.read_bytes() == antes
+    atual = legado(painel, "radar", "youtube_rss.py")
+    assert atual["codigo_nativo"] and not atual["atualizacao_disponivel"]
+    assert atual["confianca"]["confiavel"] is not revogado
+    # Um filtro preenchido continua sendo uma mudança de configuração.
+    coletor.config["titulos_contem"] = ["python"]
+    assert not confianca.resumo(painel.vault, modulo, coletor)["confiavel"]

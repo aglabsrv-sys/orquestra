@@ -64,6 +64,7 @@ coletores:
         - "@GoogleDevelopers"
         - "@Fireship"
       maximo_por_canal: 4
+      titulos_contem: []
 
   - script: rss.py
     nome: Blogs e newsletters

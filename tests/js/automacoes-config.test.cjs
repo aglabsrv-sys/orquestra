@@ -114,3 +114,19 @@ test('configurar preserva campos extras e valores de registros customizados',asy
   assert.equal(config.opcao_propria,'valor existente');
   assert.deepEqual(config.tarefas,[{titulo:'Revisar contrato',quando:'todo dia',prioridade:'alta',estimativa:2,urgente:true,tags:['cliente'],dados:{preservar:'sim'}}]);
 });
+
+test('filtro de títulos do YouTube fica em Mais opções e preserva os canais',async()=>{
+  const config={canais:['@Canal'],maximo_por_canal:4,titulos_contem:[]};
+  const definicao={id:'radar/youtube_rss.py',nome:'Canais do YouTube',ajuda:'Canais',config,parametros:[
+    {nome:'canais',rotulo:'Canais',tipo:'lista',padrao:config.canais},
+    {nome:'maximo_por_canal',rotulo:'Vídeos por canal',tipo:'numero',padrao:4},
+    {nome:'titulos_contem',rotulo:'Títulos contendo (opcional)',tipo:'lista',padrao:[]}
+  ],requer:[]};
+  const instancia={id:'youtube-1',definicao:definicao.id,nome:definicao.nome,destino:'radar/itens',config,mapeamento:{},a_cada:'6h',diario_as:'',ativo:false,confianca:{confiavel:true}};
+  const p=pagina({definicao,instancia});await p.editar.emitir('click');
+  assert.equal(p.get('automacao-parametros-avancados').open,false);
+  assert.equal(p.get('automacao-config').querySelector('textarea').value,'@Canal');
+  p.get('automacao-config-avancada').querySelector('textarea').value='Python\nInteligência artificial';
+  await p.form.emitir('submit');
+  assert.deepEqual(p.chamadas[0].corpo.config,{canais:['@Canal'],maximo_por_canal:4,titulos_contem:['Python','Inteligência artificial']});
+});
