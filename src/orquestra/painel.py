@@ -22,7 +22,7 @@ from ruamel.yaml.comments import CommentedMap
 
 from orquestra import adocao, aparencia, backup, coletores, diario, preparo, temas
 from orquestra import armazenamento
-from orquestra.caminhos import CaminhoInseguro, caminho_no_vault
+from orquestra.caminhos import CaminhoInseguro, caminho_no_vault, eh_link
 from orquestra.config import ConfigPainel, gravar_yaml, ler_config_painel, ler_yaml
 from orquestra.eventos import Eventos
 from orquestra.indice import Indice, Mudanca, deve_ignorar
@@ -303,8 +303,12 @@ class Painel:
         return self.indice.notas.get(nota.rel, nota)
 
     @_sincronizado
-    def criar_nota_em_pasta(self, pasta: str, titulo: str, corpo: str = "", origem: str = "humano", autor: str = "painel") -> Nota:
-        """Cria uma nota numa pasta qualquer do vault (não precisa ser módulo)."""
+    def criar_nota_em_pasta(self, pasta: str, titulo: str, corpo: str = "", origem: str = "humano", autor: str = "painel",
+                            campos: dict[str, str] | None = None) -> Nota:
+        """Cria uma nota numa pasta qualquer do vault (não precisa ser módulo).
+
+        `campos` aceita só propriedades de vínculo em texto, como `projeto: [[X]]`.
+        """
         pasta = pasta.strip().strip("/")
         titulo = (titulo or "").strip()
         if not titulo:
@@ -326,6 +330,11 @@ class Painel:
                 meta["contato_id"] = str(uuid4())
         if origem != "humano" or (modulo and "origem" in modulo.campos):
             meta["origem"] = origem
+        for nome, valor in (campos or {}).items():
+            if nome in ("projeto", "estudo", "habito") and isinstance(valor, str) and valor.strip():
+                meta[nome] = valor.strip()
+        if campos:
+            meta["criado_em"] = dt.date.today()
         corpo = (corpo or "").replace("\r\n", "\n").strip()
         caminho = caminho_livre(destino, titulo)
         nota = Nota(
@@ -443,7 +452,11 @@ class Painel:
     def restaurar_excluida(self, identificador: str, versao: str) -> str:
         from orquestra import lixeira
         rel = lixeira.restaurar(self.vault, identificador, versao)
-        self.apos_escrita(self.caminho_seguro(rel), "painel")
+        caminho = self.caminho_seguro(rel)
+        if caminho.is_dir():
+            self.recarregar_tudo()
+        else:
+            self.apos_escrita(caminho, "painel")
         return rel
 
     @_sincronizado
@@ -718,6 +731,117 @@ class Painel:
         return self.modulo(modulo_id)
 
     @_sincronizado
+    def agir_pasta(self, modulo_id: str, chave: str, acao: str, versao: str) -> dict:
+        """Arquiva ou envia para a lixeira a pasta física ou as notas de um item."""
+        from orquestra import apoios, lixeira
+        modulo = self.modulo(modulo_id)
+        if chave.startswith("diretorio:"):
+            rel = chave.removeprefix("diretorio:")
+            origem = self.diretorio_de_pasta(modulo, rel)
+            titulo = modulo.pastas.get(chave, {}).get("titulo") or origem.name
+            try:
+                if acao == "excluir":
+                    lixeira.excluir_pasta(self.vault, rel, versao, titulo)
+                else:
+                    raiz = self.caminho_seguro(f"{modulo_id}/arquivo")
+                    destino = raiz / origem.name
+                    numero = 2
+                    while destino.exists() or eh_link(destino):
+                        destino = raiz / f"{origem.name} {numero}"
+                        numero += 1
+                    lixeira.mover_pasta(self.vault, origem, destino, versao)
+            except ValueError as erro:
+                raise Recusado(str(erro)) from None
+            self.recarregar_tudo()
+            return {"movidas": 1, "parcial": False}
+        if (modulo_id not in ("projetos", "estudos") or getattr(self.indice.modulo_de(chave), "id", None) != modulo_id
+                or self.indice.zona_de(chave) != "itens"):
+            raise NaoEncontrado(chave)
+        notas = apoios.notas_da_acao(self, chave, apoios.por_item(self, modulo_id, "referencias"))
+        if apoios.versao_da_acao(notas) != versao:
+            raise Conflito("O conteúdo desta pasta mudou. Reabra os ajustes antes de continuar.")
+        for nota in notas:
+            if not lixeira.pode_excluir(self, nota.rel) or ler_nota(self.caminho_seguro(nota.rel), self.vault).versao != nota.versao:
+                raise Conflito("Uma nota da pasta mudou ou está protegida. Reabra os ajustes antes de continuar.")
+        movidas = 0
+        for nota in notas:
+            try:
+                if acao == "arquivar":
+                    self.arquivar(nota.rel, versao=nota.versao)
+                else:
+                    self.excluir(nota.rel, nota.versao)
+            except (OSError, armazenamento.ConflitoDeEscrita, Conflito, NaoEncontrado, Recusado):
+                if not movidas:
+                    raise
+                return {"movidas": movidas, "parcial": True}
+            movidas += 1
+        return {"movidas": movidas, "parcial": False}
+
+    def diretorio_de_pasta(self, modulo: Modulo, rel: str) -> Path:
+        from orquestra.modulos import ZONAS
+        raiz = modulo.id if modulo.itens_na_raiz else f"{modulo.id}/referencias"
+        if not rel.startswith(raiz + "/") or not self.caminho_seguro(rel).is_dir() or any(
+            p.casefold() in ("", *ZONAS) or p.startswith((".", "_")) for p in rel[len(raiz) + 1:].split("/")
+        ):
+            raise NaoEncontrado(rel)
+        return self.caminho_seguro(rel)
+
+    @_sincronizado
+    def configurar_pasta(self, modulo_id: str, chave: str, dados: dict[str, Any]) -> dict:
+        """Capa e entrada rápida de uma pasta da visão em pastas, no _modulo.yaml da área."""
+        from orquestra import apoios
+        from orquestra.modulos import ARTES_DE_PASTA, COR_DE_PASTA, VISOES_DE_SUBPASTAS
+        modulo = self._modulo_para_escrita(self.modulo(modulo_id))
+        if chave.startswith("diretorio:"):
+            self.diretorio_de_pasta(modulo, chave.removeprefix("diretorio:"))
+        elif chave.startswith("grupo:"):
+            apoios.dentro(self, modulo, chave)
+        elif chave not in self.indice.notas or getattr(self.indice.modulo_de(chave), "id", None) != modulo.id or self.indice.zona_de(chave) != "itens":
+            raise NaoEncontrado(chave)
+        ajuste = CommentedMap()
+        subpastas = str(dados.get("subpastas") or "")
+        if subpastas:
+            if subpastas not in VISOES_DE_SUBPASTAS:
+                raise Recusado("Escolha uma visualização de subpastas disponível.")
+            ajuste["subpastas"] = subpastas
+        if "titulo" in dados:
+            titulo = " ".join(str(dados["titulo"] or "").split())
+            if not titulo or len(titulo) > 200:
+                raise Recusado("Use um título de 1 a 200 caracteres.")
+            ajuste["titulo"] = titulo
+        arte, imagem = str(dados.get("arte") or ""), str(dados.get("imagem") or "").strip()
+        cor = str(dados.get("cor") or "").strip()
+        if cor and not COR_DE_PASTA.fullmatch(cor):
+            raise Recusado("Escolha uma cor no formato #rrggbb.")
+        if imagem:
+            midia = caminho_no_vault(self.vault, imagem)
+            if not midia.is_file() or midia.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+                raise Recusado("Escolha uma imagem PNG, JPEG ou WebP enviada ao vault.")
+            ajuste["imagem"] = midia.relative_to(self.vault).as_posix()
+        elif cor:
+            ajuste["cor"] = cor.lower()
+        elif arte:
+            if arte not in ARTES_DE_PASTA:
+                raise Recusado("Escolha uma das capas disponíveis.")
+            ajuste["arte"] = arte
+        if dados.get("entrada_rapida") is True and not chave.startswith(("grupo:", "diretorio:")):
+            ajuste["entrada_rapida"] = True
+        caminho = caminho_no_vault(self.vault, modulo.pasta / ARQUIVO_MODULO)
+        yaml = ler_yaml(caminho)
+        if not isinstance(yaml.get("pastas"), dict):
+            yaml["pastas"] = CommentedMap()
+        if ajuste:
+            yaml["pastas"][chave] = ajuste
+        else:
+            yaml["pastas"].pop(chave, None)
+            if not yaml["pastas"]:
+                del yaml["pastas"]
+        gravar_yaml(caminho, yaml)
+        self.indice.recarregar_modulos()
+        self.eventos.publicar({"tipo": "config"})
+        return dict(ajuste)
+
+    @_sincronizado
     def personalizar_pagina(self, alvo: str, dados: dict[str, Any]) -> None:
         """Capas das páginas próprias, com as mesmas mídias das pastas."""
         if alvo not in {"diario", "decidir", "pastas"}:
@@ -726,6 +850,12 @@ class Painel:
         yaml = ler_yaml(arquivo)
         if not dados.get("versao") or dados["versao"] != armazenamento.versao(yaml._orq_original or b""):
             raise Conflito("Os ajustes mudaram. Reabra a personalização antes de salvar.")
+        if alvo == "pastas" and "subpastas" in dados:
+            from orquestra.modulos import VISOES_DE_SUBPASTAS
+            subpastas = str(dados["subpastas"])
+            if subpastas not in VISOES_DE_SUBPASTAS:
+                raise Recusado("Escolha uma visualização de subpastas disponível.")
+            yaml["subpastas"] = subpastas
         if not isinstance(yaml.get("capas"), dict):
             yaml["capas"] = CommentedMap()
         if dados.get("padrao"):
@@ -826,6 +956,11 @@ class Painel:
             yaml["nome"] = nome[:60]
         if "descricao" in dados:
             yaml["descricao"] = str(dados.get("descricao") or "").strip()[:160]
+        if "subpastas" in dados:
+            if dados["subpastas"]:
+                yaml["subpastas"] = dados["subpastas"]
+            else:
+                yaml.pop("subpastas", None)
         if dados.get("icone"):
             yaml["icone"] = str(dados["icone"])
         cena = str(dados.get("cena") or "")

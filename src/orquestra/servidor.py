@@ -32,7 +32,7 @@ from orquestra.caminhos import CaminhoInseguro, eh_link, ignorar
 from orquestra.config import ConfigInvalida, ler_yaml
 from orquestra import apresentacao as ap
 from orquestra.indice import EXT_MIDIA, data_de, deve_ignorar, espera_decisao
-from orquestra.modulos import ARQUIVO_DESLIGADO, TIPOS_DE_CAMPO, ValorInvalido, padroes, rotulo, validar
+from orquestra.modulos import ARQUIVO_DESLIGADO, ARTES_DE_PASTA, ESTILOS_DE_SUBPASTAS, TIPOS_DE_CAMPO, ValorInvalido, Visao, padroes, rotulo, validar
 from orquestra.notas import Conflito, FrontmatterInvalido, simples
 from orquestra.painel import NaoEncontrado, Painel, Recusado
 from orquestra.recursos import marca_estaticos
@@ -106,6 +106,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             "versao": __version__,
             "marca": marca,
             "vault_id": vault_id,
+            "marca_eventos": painel.eventos.marca(),
             "avisos_config": painel.avisos + [a for m in painel.indice.modulos.values() for a in m.avisos],
             "hoje": hoje,
             "hoje_longo": ap.data_longa(hoje),
@@ -341,10 +342,15 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.get("/m/{modulo_id}", response_class=HTMLResponse)
     @leitura
     def ver_modulo(request: Request, modulo_id: str, aba: str = "", pasta: str = ""):
+        from orquestra import apoios, lixeira
         if modulo_id == "agenda" and ap.agenda_nativa(painel.modulo(modulo_id)) and not aba and not pasta:
             return RedirectResponse("/agenda", status_code=303)
         preferencia = "orq-visao-" + hashlib.sha256(f"{vault_id}:{modulo_id}".encode()).hexdigest()[:20]
+        preferencia_externa = preferencia
+        if request.query_params.get("abrir"):
+            preferencia += "-dentro"
         escolha_explicita = aba
+        abriu_item = request.query_params.get("abrir", "")
         aba = aba or request.cookies.get(preferencia, "")
         if modulo_id == "habitos" and aba in ("v0", "progresso", "lista", "v1"):
             from orquestra import habitos
@@ -356,9 +362,21 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             from orquestra import habitos
             return pagina(request, "habitos.html", "m:habitos", **habitos.montar(painel, "v0"))
         modulo = painel.modulo(modulo_id)
+        graficas = [v.tipo for v in modulo.visoes if v.tipo in ESTILOS_DE_SUBPASTAS]
+        padrao_subpastas = graficas[0] if graficas else "cartoes"
+        estilo_da_area = modulo.subpastas if modulo.subpastas in ESTILOS_DE_SUBPASTAS else padrao_subpastas
+        if pasta and modulo.itens_na_raiz and not abriu_item:
+            preferencia = preferencia_externa + "-dentro"
+            aba = escolha_explicita or request.cookies.get(preferencia, "")
         hoje = dt.date.today()
         contexto: dict[str, Any] = {
             "modulo": modulo,
+            "opcoes_subpastas": ESTILOS_DE_SUBPASTAS,
+            "estilo_da_area": estilo_da_area,
+            "artes_pasta": ARTES_DE_PASTA,
+            "cores_pasta": aparencia.SUGESTOES,
+            "area_com_pastas": bool(graficas),
+            "visao_externa": request.cookies.get(preferencia_externa, "v0"),
             "aba": aba,
             "capa": ap.capa_de(painel, modulo.id, modulo.capa),
             "resumo": painel.indice.resumo(modulo, hoje),
@@ -368,7 +386,21 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 k: (", ".join(map(str, v)) if isinstance(v, list) else simples(v)) for k, v in padroes(modulo).items()
             },
         }
+        if contexto["visao_externa"] not in {f"v{i}" for i in range(len(modulo.visoes))}:
+            contexto["visao_externa"] = "v0"
         contexto["opcoes_status"] = modulo.campos[modulo.campo_status].opcoes if modulo.tem_status else []
+        referencias = painel.indice.notas_em(modulo.id, "referencias")
+        # Em Estudos, a referência pertence ao próprio estudo: aparece na nota
+        # do item ligado, sem uma lista avulsa na área.
+        # Na visão em pastas, as referências já aparecem como pastas próprias.
+        sem_aba_referencias = modulo.id == "estudos" or any(v.tipo == "pastas" for v in modulo.visoes)
+        contexto["n_referencias"] = 0 if sem_aba_referencias else len(referencias)
+        if aba == "referencias" and sem_aba_referencias:
+            aba = contexto["aba"] = ""
+        if aba == "referencias":
+            notas, contexto["paginacao"] = paginar(request, referencias)
+            contexto["referencias"] = [apoios.apresentar(n) for n in notas]
+            return pagina(request, "modulo.html", f"m:{modulo.id}", **contexto)
         contexto["conclusao_tarefa"] = modulo.id == "tarefas" and modulo.tem_status and bool(modulo.concluidos) and any(
             o not in modulo.concluidos for o in contexto["opcoes_status"]
         ) and any(o in modulo.concluidos for o in contexto["opcoes_status"])
@@ -406,6 +438,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 for c in modulo.coletores
             ]
             contexto["arquivadas"] = len(painel.indice.notas_em(modulo.id, "arquivo"))
+            arquivo = painel.caminho_seguro(f"{modulo.id}/arquivo")
+            contexto["tem_arquivo"] = arquivo.is_dir() and any(arquivo.iterdir())
         else:
             itens = painel.indice.itens(modulo.id)
             if modulo_id == "contatos":
@@ -414,12 +448,13 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 contexto.update(filtros)
             # Pastas existentes conservam a hierarquia: abrir uma pasta mostra
             # suas notas diretas e seus filhos, em vez de achatar o vault.
-            if modulo.itens_na_raiz:
+            if modulo.itens_na_raiz and not abriu_item:
                 pasta = pasta.replace("\\", "/").strip("/")
                 if pasta and any(p in ("", ".", "..", "humano", "maquina", "arquivo") or p.startswith((".", "_")) for p in pasta.split("/")):
                     raise Recusado("Escolha uma subpasta desta área.")
                 prefixo = modulo.id + "/" + (pasta + "/" if pasta else "")
-                filhas: dict[str, int] = {}
+                filhas = {nome: 0 for nome in apoios.subpastas_fisicas(painel, prefixo.rstrip("/"))
+                          if nome.casefold() not in ("humano", "maquina", "arquivo", "referencias")}
                 diretas = []
                 for nota in itens:
                     if not nota.rel.startswith(prefixo):
@@ -427,15 +462,38 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     resto = nota.rel[len(prefixo):]
                     if "/" in resto:
                         filha = resto.split("/", 1)[0]
-                        filhas[filha] = filhas.get(filha, 0) + 1
+                        if filha in filhas:
+                            filhas[filha] += 1
                     else:
                         diretas.append(nota)
-                if pasta and not diretas and not filhas:
+                rel_pasta = prefixo.rstrip("/")
+                if pasta and not painel.caminho_seguro(rel_pasta).is_dir():
                     raise NaoEncontrado(pasta)
                 contexto["pasta_atual"] = pasta
                 contexto["subpastas"] = [{"nome": nome, "total": total, "caminho": "/".join(filter(None, (pasta, nome)))} for nome, total in sorted(filhas.items(), key=lambda p: p[0].casefold())]
                 partes = pasta.split("/") if pasta else []
                 contexto["trilha_pastas"] = [{"nome": nome, "caminho": "/".join(partes[:i + 1])} for i, nome in enumerate(partes)]
+                ajuste = apoios.ajuste_de(modulo, "diretorio:" + rel_pasta, False, capa_automatica=True)
+                estilo = ajuste["ajuste"]["subpastas"]
+                contexto["estilo_subpastas"] = estilo if estilo in ESTILOS_DE_SUBPASTAS else estilo_da_area
+                contexto["colecao_disponivel"] = bool(filhas) and not graficas and modulo_id != "contatos"
+                contexto["modo_subpastas"] = contexto["estilo_subpastas"] if aba == "colecao" and contexto["colecao_disponivel"] else "lista"
+                contexto["midias_modulo"] = apoios.midias_da_pasta(painel, rel_pasta)
+                if pasta:
+                    contexto["ajustes_diretorio"] = {**ajuste, "chave": "diretorio:" + rel_pasta,
+                                                      "titulo": ajuste["ajuste"]["titulo"] or partes[-1], "tipo_acao": "diretorio",
+                                                      "versao": lixeira.versao_pasta(painel.caminho_seguro(rel_pasta)),
+                                                      "voltar": "?pasta=" + quote(pasta.rsplit("/", 1)[0], safe="") if len(partes) > 1 else f"/m/{quote(modulo.id)}"}
+                if contexto["modo_subpastas"] != "lista":
+                    for filho in contexto["subpastas"]:
+                        rel_filho = f"{modulo.id}/{filho['caminho']}"
+                        midias = apoios.midias_da_pasta(painel, rel_filho) if contexto["modo_subpastas"] == "pastas" else []
+                        filho.update(apoios.pasta_visual("diretorio:" + rel_filho, filho["nome"],
+                                                        "?pasta=" + quote(filho["caminho"], safe=""), filho["total"], modulo,
+                                                        [dict(a, titulo=a["nome"]) for a in midias[:4]]))
+                else:
+                    for filho in contexto["subpastas"]:
+                        filho["nome"] = modulo.pastas.get(f"diretorio:{modulo.id}/{filho['caminho']}", {}).get("titulo") or filho["nome"]
                 itens = diretas
             if not aba:
                 # Coleções e hierarquias funcionam melhor como listas. Um quadro
@@ -449,9 +507,36 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             except ValueError:
                 indice_visao = 0
             visao = modulo.visoes[indice_visao]
-            contexto["aba"] = f"v{indice_visao}"
+            colecao = aba == "colecao" and contexto.get("colecao_disponivel", False)
+            if colecao or modulo_id == "contatos":
+                indice_visao, visao = next(((i, v) for i, v in enumerate(modulo.visoes) if v.tipo == "tabela"), (0, Visao("tabela", "Lista")))
+            if abriu_item and contexto["area_com_pastas"] and visao.tipo not in ("pastas", "cartoes", "tabela"):
+                indice_visao, visao = next((i, v) for i, v in enumerate(modulo.visoes) if v.tipo in ("pastas", "cartoes", "tabela"))
+            contexto["aba"] = "colecao" if colecao else f"v{indice_visao}"
             contexto["visao"] = visao
-            if visao.tipo == "grafico":
+            if modulo.id == "tarefas" and visao.tipo != "grafico":
+                from orquestra.tarefas import recortar_quadro
+                periodo = request.query_params.get("concluidas", "hoje")
+                if periodo not in {"hoje", "semana", "todas"}:
+                    periodo = "hoje"
+                itens, ocultas = recortar_quadro(itens, modulo, hoje, periodo)
+                contexto.update(periodo_concluidas=periodo, concluidas_ocultas=ocultas,
+                                periodos_concluidas=[{"id": id, "nome": nome, "url": str(request.url.include_query_params(aba=contexto["aba"], concluidas=id, pagina=1))}
+                                                    for id, nome in (("hoje", "Hoje"), ("semana", "Semana"), ("todas", "Todas"))])
+            # Áreas organizadas em pastas (Projetos, Estudos): Pastas, Cartões e
+            # Lista mostram as mesmas pastas; `abrir` entra numa delas.
+            com_pastas = contexto["area_com_pastas"]
+            if com_pastas and visao.tipo in ("pastas", "cartoes", "tabela"):
+                contexto["pastas_capas"] = any(v.tipo == "pastas" for v in modulo.visoes)
+                if abriu_item:
+                    pasta_aberta = apoios.dentro(painel, modulo, abriu_item)
+                    contexto["pasta_aberta"] = apoios.nivel(painel, modulo, pasta_aberta, pasta)
+                    estilo = pasta_aberta["ajuste"]["subpastas"]
+                    contexto["estilo_subpastas"] = estilo if estilo in ESTILOS_DE_SUBPASTAS else estilo_da_area
+                    contexto["modo_subpastas"] = "lista" if visao.tipo == "tabela" else contexto["estilo_subpastas"]
+                else:
+                    contexto["pastas"] = apoios.pastas(painel, modulo, itens)
+            elif visao.tipo == "grafico":
                 contexto["quadros"] = graficos.montar(painel.indice, modulo, visao, hoje)
                 de_hoje = painel.indice.notas.get(f"{modulo.id}/" + ("" if modulo.itens_na_raiz else modulo.itens_em + "/") + f"{hoje.isoformat()}.md")
                 contexto["numericos"] = [
@@ -459,15 +544,6 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     for n in modulo.campos_numericos
                 ]
             elif visao.tipo == "kanban":
-                if modulo.id == "tarefas" and visao.agrupar_por == modulo.campo_status:
-                    from orquestra.tarefas import recortar_quadro
-                    periodo = request.query_params.get("concluidas", "hoje")
-                    if periodo not in {"hoje", "semana", "todas"}:
-                        periodo = "hoje"
-                    itens, ocultas = recortar_quadro(itens, modulo, hoje, periodo)
-                    contexto.update(periodo_concluidas=periodo, concluidas_ocultas=ocultas,
-                                    periodos_concluidas=[{"id": id, "nome": nome, "url": str(request.url.include_query_params(aba=contexto["aba"], concluidas=id, pagina=1))}
-                                                        for id, nome in (("hoje", "Hoje"), ("semana", "Semana"), ("todas", "Todas"))])
                 campo = modulo.campos.get(visao.agrupar_por)
                 opcoes = campo.opcoes if campo else []
                 grupos: dict[str, list] = {o: [] for o in opcoes}
@@ -533,14 +609,14 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     linhas.append({"cartao": c, "celulas": celulas})
                 contexto["linhas"] = linhas
         resposta = pagina(request, "modulo.html", f"m:{modulo.id}", **contexto)
-        if escolha_explicita and escolha_explicita in {f"v{i}" for i in range(len(modulo.visoes))}:
+        if escolha_explicita in {f"v{i}" for i in range(len(modulo.visoes))} or escolha_explicita == contexto["aba"] == "colecao":
             resposta.set_cookie(preferencia, contexto["aba"], max_age=31536000, httponly=True, samesite="strict")
         return resposta
 
     @app.get("/n/{rel:path}", response_class=HTMLResponse)
     @leitura
     def ver_nota(request: Request, rel: str):
-        from orquestra import contatos, lixeira
+        from orquestra import apoios, contatos, lixeira
         nota = painel.nota(rel)
         modulo = painel.indice.modulo_de(rel)
         zona = painel.indice.zona_de(rel) if modulo else ""
@@ -556,6 +632,24 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         else:
             outros = {k: v for k, v in nota.campos().items() if k != "titulo"}
         imagem = None
+        relacionadas = []
+        if modulo and zona == "itens":
+            relacionadas = apoios.por_item(painel, modulo.id, "execucoes" if modulo.id == "habitos" else "referencias").get(rel, [])
+        dia_relacionado = request.query_params.get("dia", "")
+        if dia_relacionado:
+            try:
+                dia_relacionado = dt.date.fromisoformat(dia_relacionado).isoformat()
+            except ValueError:
+                raise Recusado("Use uma data no formato AAAA-MM-DD.") from None
+            relacionadas = [n for n in relacionadas if n["data"] == dia_relacionado]
+        relacionadas, paginacao_relacionadas = paginar(request, relacionadas)
+        if modulo and modulo.id == "habitos" and zona == "itens":
+            for relacionada in relacionadas:
+                titulo, data = relacionada["titulo"], relacionada["data"]
+                for separador in (" - ", " – ", " — "):
+                    if data and titulo.endswith(separador + data):
+                        relacionada["rotulo"] = titulo.removesuffix(separador + data)
+                        break
         if modulo:
             for campo in modulo.campos.values():
                 if campo.tipo == "imagem" and nota.campo(campo.nome):
@@ -574,7 +668,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             avisos=validar(modulo, nota.meta) if modulo and zona == "itens" else [],
             imagem=imagem,
             campo_imagem=next((c.nome for c in modulo.campos.values() if c.tipo == "imagem"), "") if modulo else "",
-            link_obsidian="obsidian://open?path=" + quote(str(nota.caminho), safe=""),
+            link_grafo="/pastas?visao=grafo&nota=" + quote(rel, safe=""),
+            relacionadas=relacionadas, paginacao_relacionadas=paginacao_relacionadas, dia_relacionado=dia_relacionado,
             pode_excluir=lixeira.pode_excluir(painel, rel),
             **(contatos.contexto(painel, nota) if modulo and modulo.id in ("contatos", "clientes") else {}),
         )
@@ -722,6 +817,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 instalado = "habitos" in painel.indice.modulos
                 resultado = habitos.salvar(painel, dados)
                 contexto = habitos.montar(painel)
+                resultado["item"] = next(i for i in contexto["itens"] if i["rel"] == resultado["item"]["rel"])
                 resultado["html"] = modelos.env.get_template("habito-card.html").render(**{**contexto, "item": resultado["item"], "hoje": dt.date.today()})
                 resultado["ativado"] = not instalado
                 return resultado
@@ -760,16 +856,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         return {"ok": True}
 
     def arquivos_da_pasta(rel: str) -> list[dict]:
-        pasta = painel.caminho_seguro(rel)
-        arquivos = []
-        for filho in sorted(pasta.iterdir(), key=lambda p: p.name.casefold()):
-            caminho = (rel + "/" + filho.name).strip("/")
-            if filho.is_symlink() or not filho.is_file() or ignorar(caminho):
-                continue
-            ext = filho.suffix.lower()
-            if ext in EXT_MIDIA or ext in {".html", ".htm"}:
-                arquivos.append({"nome": filho.name, "rel": caminho, "url": "/documento/" + quote(caminho), "tipo": "html" if ext in {".html", ".htm"} else "midia"})
-        return arquivos
+        from orquestra import apoios
+        return apoios.midias_da_pasta(painel, rel)
 
     @app.get("/documento/{rel:path}")
     @leitura
@@ -820,7 +908,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             if not pasta.is_dir() or deve_ignorar(rel + "/x.md"):
                 raise NaoEncontrado(rel)
         notas = [n for n in painel.indice.notas.values() if not rel or n.rel.startswith(rel + "/")]
-        selecionadas = sorted(notas, key=lambda n: n.rel.casefold())[:600]
+        selecionadas = sorted(notas, key=lambda n: n.rel.casefold())
         ids = {n.rel for n in selecionadas}
         ligacoes = set()
         with vinculos.resolver_em_lote(painel.indice):
@@ -829,11 +917,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     destino = painel.indice.resolver_referencia(referencia, n.rel).rel
                     if destino in ids and destino != n.rel:
                         ligacoes.add(tuple(sorted((n.rel, destino))))
-                    if len(ligacoes) >= 3000:
-                        break
-                if len(ligacoes) >= 3000:
-                    break
-        return {"limitado": len(notas) > len(selecionadas) or len(ligacoes) >= 3000, "notas": [{"id": n.rel, "titulo": n.titulo, "url": ap.url_nota(n.rel)} for n in selecionadas], "ligacoes": sorted(ligacoes), "total": len(notas)}
+        return {"limitado": False, "notas": [{"id": n.rel, "titulo": n.titulo, "url": ap.url_nota(n.rel)} for n in selecionadas], "ligacoes": sorted(ligacoes), "total": len(notas)}
 
     def conferir_pasta_vinculos(rel: str) -> str:
         rel = rel.strip("/")
@@ -870,6 +954,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @leitura
     def ver_pasta(request: Request, rel: str = ""):
         """Navegador de pastas: o vault como ele é no disco, inclusive o que não é módulo."""
+        from orquestra import apoios
         rel = rel.strip("/")
         if rel:
             caminho = painel.caminho_seguro(rel)
@@ -884,11 +969,14 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         pastas = []
         for nome in sorted(nomes, key=str.lower):
             modulo = painel.indice.modulos.get(nome) if not rel else None
+            caminho = (rel + "/" + nome).strip("/")
+            capas = arquivos_da_pasta(caminho) if painel.config.subpastas == "pastas" else []
             pastas.append(
                 {
+                    **apoios.pasta_visual(caminho, nome, ap.url_pasta(caminho), nomes[nome],
+                                         arquivos=[dict(a, titulo=a["nome"]) for a in capas[:4]]),
                     "nome": nome,
                     "notas": nomes[nome],
-                    "url": ap.url_pasta(f"{rel}/{nome}"),
                     "modulo": modulo,
                     "desligada": not rel and (painel.vault / nome / ARQUIVO_DESLIGADO).is_file(),
                     "pode_adotar": not rel and modulo is None and nome != "diario" and not nome.startswith("_"),
@@ -904,6 +992,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             rel=rel,
             trilha=[{"nome": parte, "url": ap.url_pasta("/".join(partes[: i + 1]))} for i, parte in enumerate(partes)],
             pastas=pastas,
+            modo_subpastas=painel.config.subpastas if painel.config.subpastas in ESTILOS_DE_SUBPASTAS else "cartoes",
             arquivos=arquivos_da_pasta(rel),
             notas=[
                 {
@@ -927,6 +1016,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             raise NaoEncontrado(alvo)
         return pagina(request, "personalizar-pagina.html", alvo, alvo=alvo, nome_pagina=nomes[alvo],
                       capa=ap.capa_de(painel, alvo), escolha=painel.config.capas.get(alvo),
+                      opcoes_subpastas=ESTILOS_DE_SUBPASTAS, modo_subpastas=painel.config.subpastas if painel.config.subpastas in ESTILOS_DE_SUBPASTAS else "cartoes",
                       config_versao=armazenamento.versao((painel.vault / "orquestra.yaml").read_bytes() if (painel.vault / "orquestra.yaml").is_file() else b""),
                       cenas=temas.previas_das_cenas(painel.tema, alvo), colecao=temas.colecao(painel.tema["id"]))
 
@@ -945,6 +1035,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             "personalizar.html",
             f"m:{modulo.id}",
             modulo=modulo,
+            opcoes_subpastas=ESTILOS_DE_SUBPASTAS,
+            estilo_subpastas_padrao=next((v.tipo for v in modulo.visoes if v.tipo in ESTILOS_DE_SUBPASTAS), "cartoes"),
             capa=ap.capa_de(painel, modulo.id, modulo.capa),
             campos=[c for c in modulo.campos.values() if c.nome != "origem"],
             tipos=sorted(TIPOS_DE_CAMPO),
@@ -1067,6 +1159,24 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.post("/api/notas")
     async def api_criar(request: Request):
         dados = await corpo_json(request, contratos.CriarNota)
+        modulo = painel.indice.modulos.get(str(dados.get("modulo") or ""))
+        corpo = str(dados.get("corpo") or "").strip()
+        if modulo and dados.get("zona", "itens") == "itens" and corpo and any(v.tipo in ("pastas", "cartoes") for v in modulo.visoes):
+            # Em áreas de pastas, Novo cria a pasta (o item); o texto vira a
+            # primeira nota dentro dela, com a primeira linha como título.
+            from orquestra import apoios
+
+            def criar_pasta():
+                item = painel.criar_nota(modulo.id, str(dados.get("titulo") or ""),
+                                         dados.get("campos") if isinstance(dados.get("campos"), dict) else {}, "",
+                                         subpasta=str(dados.get("subpasta") or ""))
+                linhas = corpo.splitlines()
+                titulo = linhas[0].strip().lstrip("# ").strip() or "Nota"
+                titulo = titulo if len(titulo) <= 70 else titulo[:67].rstrip() + "..."
+                apoios.criar_vinculada(painel, item.rel, titulo, "\n".join(linhas[1:]).strip())
+                return item
+            nota = await asyncio.to_thread(criar_pasta)
+            return {"rel": nota.rel, "url": ap.url_nota(nota.rel), "versao": nota.versao}
         nota = await asyncio.to_thread(painel.criar_nota,
             str(dados.get("modulo") or ""),
             str(dados.get("titulo") or ""),
@@ -1153,7 +1263,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         try:
             if acao == "restaurar":
                 rel = await asyncio.to_thread(painel.restaurar_excluida, identificador, dados["versao"])
-                return {"url": ap.url_nota(rel)}
+                return {"url": ap.url_pasta(rel) if painel.caminho_seguro(rel).is_dir() else ap.url_nota(rel)}
             if acao == "apagar":
                 await asyncio.to_thread(lixeira.apagar, painel.vault, identificador, dados["versao"])
                 return {"ok": True}
@@ -1194,10 +1304,18 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         texto = str(dados.get("texto") or "").strip()
         if not texto:
             raise Recusado("Escreva alguma coisa antes de guardar.")
-        if painel.config.captura not in painel.indice.modulos:
-            raise Recusado(f"O módulo de captura '{painel.config.captura}' não existe. Ajuste 'captura' no orquestra.yaml.")
         primeira = texto.splitlines()[0].strip()
         titulo = primeira if len(primeira) <= 70 else primeira[:67].rstrip() + "..."
+        if vinculo := str(dados.get("vinculo") or "").strip():
+            from orquestra import apoios
+            painel.caminho_seguro(vinculo)
+            nota = await asyncio.to_thread(apoios.criar_vinculada, painel, vinculo, titulo, texto, dados.get("pasta", ""))
+            return {"rel": nota.rel, "url": ap.url_nota(nota.rel), "titulo": nota.titulo, "versao": nota.versao}
+        if pasta := dados.get("pasta"):
+            nota = await asyncio.to_thread(painel.criar_nota_em_pasta, pasta, titulo, texto)
+            return {"rel": nota.rel, "url": ap.url_nota(nota.rel), "titulo": nota.titulo, "versao": nota.versao}
+        if painel.config.captura not in painel.indice.modulos:
+            raise Recusado(f"O módulo de captura '{painel.config.captura}' não existe. Ajuste 'captura' no orquestra.yaml.")
         nota = await asyncio.to_thread(painel.criar_nota, painel.config.captura, titulo, {}, texto, origem="humano")
         return {"rel": nota.rel, "url": ap.url_nota(nota.rel)}
 
@@ -1568,6 +1686,21 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         modulo = await asyncio.to_thread(painel.personalizar_modulo, modulo_id, dados)
         return {"id": modulo.id, "url": f"/m/{quote(modulo.id)}", "avisos": modulo.avisos, "versao": modulo.versao}
 
+    @app.post("/api/modulos/{modulo_id}/pastas")
+    async def api_configurar_pasta(request: Request, modulo_id: str):
+        dados = await corpo_json(request)
+        chave = str(dados.get("chave") or "")
+        if not chave or len(chave) > 1000:
+            raise Recusado("Pasta não informada.")
+        return await asyncio.to_thread(painel.configurar_pasta, modulo_id, chave, dados)
+
+    @app.post("/api/modulos/{modulo_id}/pastas/acao")
+    async def api_acao_pasta(request: Request, modulo_id: str):
+        dados = await corpo_json(request, contratos.AcaoPasta)
+        if dados["acao"] == "excluir" and (erro := exigir_exclusao(request)):
+            return erro
+        return await asyncio.to_thread(painel.agir_pasta, modulo_id, dados["chave"], dados["acao"], dados["versao"])
+
     @app.post("/api/modulos/{modulo_id}/desligar")
     async def api_desligar(request: Request, modulo_id: str):
         await corpo_json(request)
@@ -1626,12 +1759,21 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         async def fluxo():
             try:
                 yield "retry: 3000\n\n"
+                # A aba compara com a última marca que viu: recarrega só se perdeu eventos.
+                yield f"data: {json.dumps({'tipo': 'estado', 'marca': painel.eventos.marca()})}\n\n"
+                ultimo_ping = asyncio.get_running_loop().time()
                 while True:
+                    servidor = getattr(hospedeiro, "servidor", None)
+                    if servidor and servidor.should_exit:
+                        break
                     try:
-                        evento = await asyncio.wait_for(fila.get(), timeout=20)
+                        evento = await asyncio.wait_for(fila.get(), timeout=0.5)
                         yield f"data: {json.dumps(evento, ensure_ascii=False)}\n\n"
                     except asyncio.TimeoutError:
-                        yield ": ping\n\n"  # mantém a conexão viva
+                        agora = asyncio.get_running_loop().time()
+                        if agora - ultimo_ping >= 20:
+                            yield ": ping\n\n"
+                            ultimo_ping = agora
                     if await request.is_disconnected():
                         break
             finally:

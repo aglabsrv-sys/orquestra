@@ -1,0 +1,135 @@
+{% import "partes.html" as p %}
+{% macro acao(f) %}
+  {% if f.modulo %}<a class="et et-area pasta-atalho" href="/m/{{ f.modulo.id|urlencode }}" aria-label="Abrir a área {{ f.modulo.nome }}">Ver painel</a>
+  {% elif f.pode_adotar %}<button class="botao pequeno pasta-atalho" type="button" data-adotar="{{ f.nome }}">{{ 'Religar no painel' if f.desligada else 'Mostrar no painel' }}</button>{% endif %}
+{% endmacro %}
+
+{% macro grade(pastas, modo, rotulo_grade, icone_item='pasta') %}
+{% if modo == 'pastas' %}
+{% set frente = "M0 22A22 22 0 0 1 22 0L118 0C144 0 146 32 172 32L318 32A22 22 0 0 1 340 54L340 176A22 22 0 0 1 318 198L22 198A22 22 0 0 1 0 176Z" %}
+{% set fundo = "M0 56A22 22 0 0 1 22 34L146 34C170 34 172 0 198 0L318 0A22 22 0 0 1 340 22L340 128L338.5 128L338.5 250A20.5 20.5 0 0 1 318 270.5L22 270.5A20.5 20.5 0 0 1 1.5 250L1.5 96L0 96Z" %}
+<svg width="0" height="0" class="gf-defs" aria-hidden="true" focusable="false"><defs><linearGradient id="gf-borda" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient></defs></svg>
+<section class="pastas-vidro" aria-label="{{ rotulo_grade }}">
+  {% for f in pastas %}
+  {% set visiveis = f.arquivos[:4]|reverse|list %}
+  <div class="gf-root{% if f.concluido %} gf-concluido{% endif %}" data-tone="dark" data-titulo="{{ f.titulo }}"{% if f.item %} data-vinculo="{{ f.rel }}"{% endif %}{% if f.arte %} data-arte="{{ f.arte }}"{% endif %} data-total="{{ f.total }}">
+    <div class="gf-stage"><div class="gf-tilt">
+      <div class="gf-shadow" aria-hidden="true"></div>
+      <div class="gf-back"{% if f.cor %} style="background:{{ f.cor }}"{% endif %} aria-hidden="true">{% if f.imagem %}<img class="gf-art" src="{{ f.imagem }}" alt="" loading="lazy" draggable="false">{% elif f.arte %}<canvas class="gf-art"></canvas>{% endif %}<div class="gf-back-sheen"></div></div>
+      <svg class="gf-rim gf-back-rim" viewBox="0 0 340 272" aria-hidden="true"><path d="{{ fundo }}"/></svg>
+      <div class="gf-front">
+        <div class="gf-tint" aria-hidden="true"></div>
+        <div class="gf-spec" aria-hidden="true"></div>
+        <svg class="gf-rim gf-front-rim" viewBox="0 0 340 198" aria-hidden="true"><path d="{{ frente }}"/></svg>
+        <div class="gf-label">
+          <span class="gf-title">{{ f.titulo }}</span>
+          <span class="gf-meta"><span data-gf-total>{{ f.total }}</span> nota{{ 's' if f.total != 1 }}{% if f.estado %} · {{ f.estado }}{% endif %}</span>
+        </div>
+      </div>
+      <a class="gf-hit" href="{{ f.href|default(f.url) }}" aria-label="Abrir a pasta {{ f.titulo }}, {{ f.total }} nota{{ 's' if f.total != 1 }}"></a>
+      <div class="gf-files" aria-hidden="true">
+        {% for a in visiveis %}{% set n = visiveis|length %}
+        <div class="gf-sheet-slot"><span class="gf-sheet{% if a.imagem %} gf-sheet--art{% endif %}" style="--gf-slot:{{ ((loop.index0 / (n - 1)) * 2 - 1) if n > 1 else 0 }};--gf-depth:{{ n - 1 - loop.index0 }};--gf-jx:{{ (loop.index0 * 37 % 10) - 5 }}px;--gf-jr:{{ ((loop.index0 * 53 % 32) / 10 - 1.6)|round(1) }}deg;z-index:{{ loop.index }}">
+          {% if a.imagem %}<img class="gf-sheet-art" src="{{ a.imagem }}" alt="" loading="lazy" draggable="false">{% else %}<span class="gf-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>{% endif %}
+          <span class="gf-sheet-head"><span class="gf-sheet-name">{{ a.titulo }}</span>{% if a.data %}<span class="gf-sheet-meta">{{ a.data[8:10] }}/{{ a.data[5:7] }}</span>{% endif %}</span>
+        </span></div>
+        {% endfor %}
+      </div>
+      {% if f.entrada_rapida %}<button type="button" class="gf-key gf-key--add" aria-label="Nova nota em {{ f.titulo }}" title="Nova nota em {{ f.titulo }}"><svg class="gf-glyph gf-glyph--plus" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg></button>{% endif %}
+    </div></div>
+    {{ acao(f) }}
+  </div>
+  {% else %}
+  {{ p.vazio("Nada aqui ainda", "Crie o primeiro com o botão Novo.") }}
+  {% endfor %}
+</section>
+
+{% elif modo == 'cartoes' %}
+<section class="cartoes-simples" aria-label="{{ rotulo_grade }}">
+  {% for f in pastas %}
+  <div class="cartao-pasta"><a class="cartao-simples{% if f.concluido %} concluido{% endif %}" href="{{ f.href|default(f.url) }}">
+    <span class="cartao-simples-icone" aria-hidden="true">{{ icone(f.modulo.icone if f.modulo else (icone_item if f.item else 'pasta'), 20) }}</span>
+    <b>{{ f.titulo }}</b>
+    <small>{% if f.apoio or f.estado %}{{ f.apoio or f.estado }} · {% endif %}{{ f.total }} nota{{ 's' if f.total != 1 }}</small>
+  </a>{{ acao(f) }}</div>
+  {% else %}
+  {{ p.vazio("Nada aqui ainda", "Crie o primeiro com o botão Novo.") }}
+  {% endfor %}
+</section>
+
+{% else %}
+<ul class="lista-pasta lista-pastas" aria-label="{{ rotulo_grade }}">
+  {% for f in pastas %}
+  <li{% if f.concluido %} class="concluido"{% endif %}><a href="{{ f.href|default(f.url) }}">{{ icone('pasta', 15) }}<b>{{ f.titulo }}</b>{% if f.estado %}<span class="et">{{ f.estado }}</span>{% endif %}{% if f.quando %}<span class="suave">{{ f.quando }}</span>{% endif %}<small>{{ f.total }} nota{{ 's' if f.total != 1 }}</small></a></li>
+  {% else %}
+  <li>{{ p.vazio("Nada aqui ainda", "Crie o primeiro com o botão Novo.") }}</li>
+  {% endfor %}
+</ul>
+
+{% endif %}
+{% endmacro %}
+
+{% macro midias(arquivos) %}
+{% if arquivos %}<div class="arquivos-grade" aria-label="Arquivos">
+{% for a in arquivos %}
+<a class="arquivo-item" href="{{ a.url }}">{% if a.imagem %}<img src="{{ a.imagem }}" alt="" loading="lazy">{% else %}<span>{{ icone('nota' if a.tipo == 'html' else 'imagem', 18) }}</span>{% endif %}<b>{{ a.nome }}</b><small>{{ 'HTML' if a.tipo == 'html' else 'Mídia' }}</small></a>
+{% endfor %}
+</div>{% endif %}
+{% endmacro %}
+
+{% macro escolher_subpastas(id, valor, opcoes, padrao) %}
+{% set salvo = valor if valor in opcoes else '' %}
+<label class="campo"><span>Visualização de subpastas</span><select id="{{ id }}" data-padrao="{{ padrao }}" data-salvo="{{ salvo }}">
+  {% for chave, nome in opcoes.items() %}<option value="{{ chave }}"{% if (salvo or padrao) == chave %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+</select></label>
+{% endmacro %}
+
+{% macro ajustes(pa, modulo, pastas_capas) %}
+  <dialog class="dialogo pasta-ajustes" id="pasta-ajustes" aria-labelledby="pasta-ajustes-titulo" data-modulo="{{ modulo.id }}" data-chave="{{ pa.chave_ajustes or pa.chave }}" data-chave-acao="{{ pa.chave_ajustes or pa.chave_acao or pa.chave }}" data-tipo-acao="{{ pa.tipo_acao or '' }}" data-versao="{{ pa.versao or '' }}" data-voltar="{{ pa.voltar or '?aba=' ~ visao_externa }}">
+    <form class="dialogo-corpo" method="dialog">
+      <div class="pasta-ajustes-tela" id="pasta-ajustes-principal">
+      <h2 id="pasta-ajustes-titulo" tabindex="-1" autofocus>Ajustes da pasta</h2>
+      <label class="campo"><span>Título da pasta</span><input id="pasta-ajustes-nome" value="{{ pa.titulo }}" required maxlength="200" autocomplete="off"></label>
+      {{ escolher_subpastas('pasta-ajustes-subpastas', pa.ajuste.subpastas, opcoes_subpastas, estilo_da_area) }}
+      {% if pastas_capas %}
+      <button type="button" class="botao pasta-ajustes-capa-abrir" data-abrir-capas aria-controls="pasta-ajustes-capas">{{ icone('imagem', 17) }}<span>Capa</span><small data-capa-rotulo>{{ artes_pasta.get(pa.ajuste.arte) or ('Imagem própria' if pa.ajuste.imagem else ('Cor lisa' if pa.cor else 'Automática')) }}</small>{{ icone('chevron_dir', 15) }}</button>
+      {% endif %}
+      {% if pastas_capas and pa.vinculo and not pa.sub %}<label class="chave"><input type="checkbox" id="pasta-ajustes-rapida"{% if pa.ajuste.entrada_rapida %} checked{% endif %}><i aria-hidden="true"></i><span>Entrada rápida: botão + na pasta</span></label>{% endif %}
+      {% if pa.versao %}
+      <div class="pasta-ajustes-acoes" role="group" aria-label="Ações da pasta">
+        <button type="button" class="botao pequeno discreto" data-acao-pasta="arquivar">{{ icone('caixa', 15) }} Arquivar pasta</button>
+        <button type="button" class="botao pequeno discreto" data-acao-pasta="excluir">{{ icone('lixeira', 15) }} Mover para a lixeira</button>
+      </div>
+      {% endif %}
+      <div class="dialogo-acoes">
+        <button type="button" class="botao" data-fechar>Cancelar</button>
+        <button type="submit" class="botao principal" id="pasta-ajustes-salvar">Salvar</button>
+      </div>
+      </div>
+      {% if pastas_capas %}
+      <div class="pasta-ajustes-tela" id="pasta-ajustes-capas" hidden>
+      <header class="pasta-ajustes-capas-cab"><button type="button" class="botao pequeno so-icone" data-voltar-capas aria-label="Voltar aos ajustes">{{ icone('seta_esq', 16) }}</button><h2 id="pasta-ajustes-capas-titulo" tabindex="-1">Capa da pasta</h2></header>
+      <fieldset class="pasta-capas"><legend class="somente-leitor">Capa</legend>
+        <label class="pasta-capa"><input type="radio" name="capa" value="automatica"{% if not pa.ajuste.arte and not pa.ajuste.imagem and not pa.cor %} checked{% endif %}><span class="pasta-capa-lisa" aria-hidden="true">{{ icone('pasta', 24) }}</span><span>Automática</span></label>
+        {% for id, nome in artes_pasta.items() %}<label class="pasta-capa"><input type="radio" name="capa" value="arte:{{ id }}"{% if pa.ajuste.arte == id %} checked{% endif %}><canvas data-arte-previa="{{ id }}" aria-hidden="true"></canvas><span>{{ nome }}</span></label>{% endfor %}
+        <label class="pasta-capa"><input type="radio" name="capa" value="imagem"{% if pa.ajuste.imagem %} checked{% endif %}><span class="pasta-capa-imagem"{% if pa.ajuste.imagem %} style="background-image:url('/arquivo/{{ pa.ajuste.imagem|urlencode }}')"{% endif %} aria-hidden="true">{{ icone('mais', 18) }}</span><span>Imagem própria</span></label>
+        <label class="pasta-capa"><input type="radio" name="capa" value="cor"{% if pa.cor %} checked{% endif %}><span class="pasta-capa-lisa" data-previa-cor style="background:{{ pa.cor or '#121214' }}" aria-hidden="true"></span><span>Cor lisa</span></label>
+      </fieldset>
+      <div class="pasta-cores"{% if not pa.cor %} hidden{% endif %}>
+        <div class="cores" role="radiogroup" aria-label="Cor da pasta">
+          {% for cor in cores_pasta %}<button type="button" class="cor" role="radio" data-pasta-cor="{{ cor }}" aria-label="{{ cor }}" aria-checked="{{ 'true' if pa.cor == cor else 'false' }}" style="--c:{{ cor }}"></button>{% endfor %}
+          <label class="cor livre" title="Escolher outra cor" style="--c:{{ pa.cor or '#121214' }}"><input type="color" id="pasta-cor" value="{{ pa.cor or '#121214' }}" aria-label="Escolher outra cor para a pasta">{{ icone('paleta', 14) }}</label>
+        </div>
+      </div>
+      <input type="file" id="pasta-ajustes-arquivo" accept="image/png,image/jpeg,image/webp" hidden>
+      <input type="hidden" id="pasta-ajustes-imagem" value="{{ pa.ajuste.imagem }}">
+      <button type="button" class="botao pequeno" id="pasta-ajustes-trocar-imagem"{% if not pa.ajuste.imagem %} hidden{% endif %}>Trocar imagem</button>
+      <div class="dialogo-acoes">
+        <button type="button" class="botao principal" data-usar-capa>Usar esta capa</button>
+      </div>
+      </div>
+      {% endif %}
+      <p class="campo-ajuda" id="pasta-ajustes-estado" role="status"></p>
+    </form>
+  </dialog>
+{% endmacro %}

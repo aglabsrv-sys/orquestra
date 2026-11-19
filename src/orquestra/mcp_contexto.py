@@ -42,6 +42,8 @@ def conexoes_nota(ferramentas, caminho: str, limite: int = 30) -> dict:
                 "tipo": referencia.tipo,
                 "embutido": referencia.embutido,
             }
+            if referencia.campo:
+                item["campo"] = referencia.campo
             alvo = unquote(referencia.alvo.partition("#")[0].split("?", 1)[0]).replace("\\", "/")
             nome = posixpath.basename(alvo).lower()
             bloqueado = (
@@ -82,12 +84,13 @@ def conexoes_nota(ferramentas, caminho: str, limite: int = 30) -> dict:
                 entradas.append({
                     **ferramentas._resumo(origem),
                     "ocorrencias": len(referencias),
-                    "linhas": sorted({referencia.linha for referencia in referencias})[:limite],
-                    "linhas_limitadas": len({referencia.linha for referencia in referencias}) > limite,
+                    "linhas": sorted({referencia.linha for referencia in referencias if not referencia.campo})[:limite],
+                    "linhas_limitadas": len({referencia.linha for referencia in referencias if not referencia.campo}) > limite,
+                    "campos": sorted({referencia.campo for referencia in referencias if referencia.campo}),
                 })
 
-    # Linhas do corpo Markdown, sem contar o frontmatter. A ordem de saída segue
-    # a posição no texto; entradas seguem o caminho, sem depender do scandir.
+    # Propriedades usam linha zero e campo identificado; linhas positivas são
+    # do corpo Markdown. Entradas seguem o caminho, sem depender do scandir.
     saidas.sort(key=lambda item: item["linha"])
     return {
         "nota": ferramentas._resumo(nota),

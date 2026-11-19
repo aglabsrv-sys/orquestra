@@ -121,10 +121,12 @@ class Indice:
                 encontrados.discard(rel)
                 if not encontrados:
                     self._links.pop(chave, None)
-        for zona in ("itens", "humano", "maquina", "arquivo", ""):
-            grupo = self._zonas.get((rel.split("/", 1)[0], zona))
-            if grupo is not None:
-                grupo.pop(rel, None)
+        chave_zona = (rel.split("/", 1)[0], self.zona_de(rel))
+        grupo = self._zonas.get(chave_zona)
+        if grupo is not None:
+            grupo.pop(rel, None)
+            if not grupo:
+                del self._zonas[chave_zona]
 
     def sincronizar(self) -> None:
         """Atualiza o índice comparando datas de modificação, sem reler tudo.
@@ -243,6 +245,8 @@ class Indice:
         modulo = self.modulos.get(partes[0])
         if modulo is None or len(partes) < 2:
             return ""
+        if modulo.itens_na_raiz and len(partes) > 2 and (partes[1] == "referencias" or partes[0] == "habitos" and partes[1] == "execucoes"):
+            return partes[1]
         if len(partes) > 2 and partes[1] in ZONAS:
             return partes[1]
         if modulo.itens_na_raiz:

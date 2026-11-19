@@ -3,6 +3,28 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.from((r || document).querySelectorAll(s)); };
+  var chaveRetornoNota='orq-nota-retorno:'+document.body.dataset.vaultId;
+  document.addEventListener('click', function(e) {
+    var a=e.target.closest('a');
+    if(!a||e.defaultPrevented||e.button||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||a.target==='_blank')return;
+    var u=new URL(a.href,location.href);
+    if(u.origin!==location.origin||!u.pathname.startsWith('/n/'))return;
+    try{sessionStorage.setItem(chaveRetornoNota,JSON.stringify({alvo:u.pathname,origem:location.href,tamanho:history.length}));}catch(_){/* O link de retorno padrão continua disponível. */}
+  });
+  var voltarNota = $('#nota-voltar');
+  var retornoNota;
+  try {
+    retornoNota=JSON.parse(sessionStorage.getItem(chaveRetornoNota)||'null');
+    if(!retornoNota||retornoNota.alvo!==location.pathname||new URL(retornoNota.origem).origin!==location.origin||history.length!==retornoNota.tamanho+1)retornoNota=null;
+    if(voltarNota&&retornoNota)voltarNota.href=retornoNota.origem;
+  } catch (_) { retornoNota=null; }
+  if (voltarNota) voltarNota.addEventListener('click', function (e) {
+    if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (window.parent !== window && new URL(location.href).searchParams.get('explorador') === '1') {
+      e.preventDefault(); window.parent.postMessage({tipo:'orquestra:leitor-voltar'},location.origin); return;
+    }
+    if (retornoNota) { e.preventDefault(); history.back(); }
+  });
   // O último acesso inclui navegação pelo dock e links, com memória por vault.
   var ordemCards = $('#cards-ordem') ? JSON.parse($('#cards-ordem').textContent) : [];
   var paginaAtual = (document.body.dataset.pagina || '').replace(/^m:/, '');
@@ -59,15 +81,24 @@
       var doc = new DOMParser().parseFromString(await r.text(), 'text/html');
       if (numero !== pedido) return;
       if (!$('#modulo-painel',doc) || doc.body.dataset.vaultId !== document.body.dataset.vaultId) { location.assign(url); return; }
-      painel.replaceWith(document.importNode($('#modulo-painel',doc),true));
-      $('.abas').replaceWith(document.importNode($('.abas',doc),true));
+      var pastaAtual=$('.pasta-dentro',painel),pastaNova=$('.pasta-dentro',doc);
+      var mesmaPasta=pastaAtual&&pastaNova&&pastaAtual.dataset.chave===pastaNova.dataset.chave&&pastaAtual.dataset.subpasta===pastaNova.dataset.subpasta;
+      if(mesmaPasta) {
+        // Muda só a apresentação das notas: título, ajustes e foco não remontam.
+        $('.pasta-conteudo',pastaAtual).replaceWith(document.importNode($('.pasta-conteudo',pastaNova),true));
+        var contagemAtual=$('.pasta-dentro-cab small',pastaAtual),contagemNova=$('.pasta-dentro-cab small',pastaNova);
+        if(!contagemAtual.isEqualNode(contagemNova))contagemAtual.replaceWith(document.importNode(contagemNova,true));
+      } else painel.replaceWith(document.importNode($('#modulo-painel',doc),true));
+      var novasAbas=document.importNode($('.abas',doc),true);
+      if(mesmaPasta)$('.abas-fim',novasAbas).replaceWith($('.abas-fim'));
+      $('.abas').replaceWith(novasAbas);
       var dialogos = $('#modulo-dialogos'), novos = document.importNode($('#modulo-dialogos',doc),true);
       dialogos.replaceWith(novos);
       var numeros = $('.cab-numeros'), novosNumeros = $('.cab-numeros',doc);
-      if (numeros && novosNumeros) numeros.replaceWith(document.importNode(novosNumeros,true));
+      if (numeros && novosNumeros && !numeros.isEqualNode(novosNumeros)) numeros.replaceWith(document.importNode(novosNumeros,true));
       var trilhaAtual=$('.topo .aqui'),novaTrilha=$('.topo .aqui',doc);
-      if(trilhaAtual&&novaTrilha)trilhaAtual.replaceWith(document.importNode(novaTrilha,true));
-      document.title = doc.title;
+      if(trilhaAtual&&novaTrilha&&!trilhaAtual.isEqualNode(novaTrilha))trilhaAtual.replaceWith(document.importNode(novaTrilha,true));
+      if(document.title!==doc.title)document.title = doc.title;
       if (historico) history.pushState({orquestraVisao:url},'',url);
       window.Orquestra.prepararModulo(novos);
       var ativa = $('.aba[aria-current]'); if (ativa) ativa.focus({preventScroll:true});

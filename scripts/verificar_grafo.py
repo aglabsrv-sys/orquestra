@@ -148,20 +148,29 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
                 page.wait_for_timeout(160)
                 page.screenshot(path=str(capturas / f"grafo-{largura}{'-curto' if altura<700 else ''}.png"), full_page=True)
 
-            # A árvore só expande: mantém o mesmo grafo, URL, posições e escopo.
+            # A seta só expande: mantém o mesmo grafo, URL, posições e escopo.
+            alternar = page.locator("#pastas-alternar")
+            if alternar.is_visible():
+                alternar.click()
             ramo = page.locator('details[data-rel="Segunda"]')
             original = page.url
             page.evaluate("window.__canvasPasta=document.querySelector('#grafo-canvas')")
             antes = page.locator("#grafo-canvas").evaluate("e=>e.__nosDesenhados")
-            ramo.locator(":scope > summary > a").click()
+            ramo.locator(":scope > summary").click(position={"x": 10, "y": 15})
             expect(ramo).to_have_attribute("open", "")
             expect(ramo.locator('.arvore-ramo[data-rel="Segunda/Interna"]')).to_be_visible()
             assert page.url == original
             assert page.evaluate("window.__canvasPasta===document.querySelector('#grafo-canvas')")
             assert page.locator("#grafo-canvas").evaluate("e=>e.__nosDesenhados") == antes
             expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Grafo QA")
-            ramo.locator(":scope > summary > a").click()
+            ramo.locator(":scope > summary").click(position={"x": 10, "y": 15})
             expect(ramo).not_to_have_attribute("open", "")
+            ramo.locator(":scope > summary > a").click()
+            expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Segunda")
+            aguardar_grafo(page)
+            expect(page.locator("#grafo-estado")).to_contain_text("2 de 2 notas · 0 ligações")
+            page.goto(url, wait_until="domcontentloaded")
+            aguardar_grafo(page)
             conferir_viewport(page)
             # Regressão da captura real: 35 notas sem nenhuma ligação.
             # A animação precisa terminar enquadrada sem clicar em Centralizar.
@@ -312,6 +321,8 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             page.get_by_role("button", name="Voltar às notas", exact=True).click()
             expect(page.locator("#pasta-notas")).to_be_visible()
             expect(page.locator("#pasta-grafo")).to_be_hidden()
+            if alternar.is_visible() and alternar.get_attribute("aria-expanded") == "false":
+                alternar.click()
             page.locator('#arvore-pastas a[data-pasta="Grafo QA"]').click()
             expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Grafo QA")
             expect(page.locator("#pasta-notas")).to_be_visible()
@@ -376,7 +387,7 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
                      "zoom pelo teclado e centralização", "arrastar e abrir notas",
                      "visualização memorizada por pasta e após recarregar",
                      "modo Notas preservado em subpastas, histórico e leitor",
-                     "nome da pasta só expande sem alterar grafo", "centralização com muitos avulsos",
+                     "seta expande o ramo e nome abre a pasta", "centralização com muitos avulsos",
                      "35 notas sem links legíveis após animação e forças extremas",
                      "rede com hubs e conexões visíveis", "painéis dentro do viewport"],
     }

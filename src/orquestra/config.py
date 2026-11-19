@@ -171,6 +171,7 @@ class ConfigPainel:
     backup: ConfigBackup = field(default_factory=ConfigBackup)
     aparencia: Aparencia = field(default_factory=Aparencia)
     capas: dict[str, Any] = field(default_factory=dict)
+    subpastas: str = "lista"
 
 
 def ler_config_painel(vault: Path) -> ConfigPainel:
@@ -209,6 +210,8 @@ def ler_config_painel(vault: Path) -> ConfigPainel:
     if not isinstance(capas, dict):
         raise ConfigInvalida("orquestra.yaml: 'capas' precisa ser um mapa de páginas.")
     cfg.capas = {str(k): v for k, v in capas.items() if k in {"diario", "decidir", "pastas"} and (isinstance(v, (str, dict)) or v is False)}
+    if bruto.get("subpastas") in ("lista", "cartoes", "pastas"):
+        cfg.subpastas = bruto["subpastas"]
     b = bruto.get("backup", {})
     if not isinstance(b, dict):
         raise ConfigInvalida("orquestra.yaml: 'backup' precisa ser um mapa de opções.")

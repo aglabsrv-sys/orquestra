@@ -31,7 +31,8 @@ html:has(.explorador) { height:100%; overflow:hidden; }
 body:has(.explorador) { height:100dvh; max-height:100dvh; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-bottom:calc(78px + env(safe-area-inset-bottom)); }
 body:has(.explorador) > .topo { flex:none; }
 body:has(.explorador) > #conteudo { flex:1; min-height:0; display:flex; flex-direction:column; }
-.explorador { flex:1; min-height:0; grid-template-rows:minmax(0,1fr); }
+.explorador { position:relative; flex:1; min-height:0; grid-template-rows:minmax(0,1fr); }
+.pastas-alternar { display:none; }
 .explorador-lateral { display:flex; flex-direction:column; min-height:0; overflow:hidden; padding:14px; }
 .explorador-lateral > header,.explorador-busca { flex:none; }
 #arvore-pastas { flex:1; min-height:0; max-height:none; overflow:auto; padding:2px 5px 10px 3px; }
@@ -55,35 +56,46 @@ body:has(.explorador) > #conteudo { flex:1; min-height:0; display:flex; flex-dir
 #leitor-frame { flex:1; height:0; min-height:0; }
 .lendo-nota .explorador-topo,.lendo-nota .pagina-capa { display:none; }
 @media(max-width:600px) {
-  .explorador { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(112px,24%) minmax(0,1fr); margin-inline:8px; }
-  .explorador-lateral { padding:8px 12px; }
+  .explorador { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr); margin-inline:8px; }
+  .pastas-alternar { display:flex; position:absolute; top:8px; left:8px; z-index:42; min-width:36px; min-height:36px; background:var(--superficie); }
+  .explorador-lateral { display:none; position:absolute; inset:0 auto 0 0; width:min(290px,88%); padding:52px 12px 10px; background:var(--superficie); z-index:40; border-right:1px solid var(--borda); box-shadow:12px 0 30px -15px var(--sombra); }
+  .pastas-expandidas .explorador-lateral { display:flex; }
   .explorador-lateral > header { margin-bottom:4px; }
   .explorador-busca { display:none; }
   #arvore-pastas,.com-grafo #arvore-pastas { max-height:none; padding-bottom:4px; }
   .explorador-painel { padding:10px 12px 0; }
   .explorador-topo { gap:7px; margin-bottom:8px; }
-  .explorador-topo .linha-botoes { gap:5px; }
+  .explorador-topo .linha-botoes { flex-wrap:nowrap; gap:4px; }
+  .explorador-topo .linha-botoes > .botao { width:32px; min-width:32px; min-height:36px; padding:0; }
+  .explorador-topo #abrir-nota-pasta span { display:none; }
+  .explorador-topo .segmentos button { min-height:36px; }
   .explorador-topo .segmentos button { padding:6px 9px; }
   .explorador-topo .botao { padding-inline:8px; font-size:.7rem; }
   .explorador-titulo h1 { font-size:1rem; }
+  .explorador-titulo { padding-left:40px; }
   .pasta-grafo,#pasta-leitor { margin-inline:-12px; }
   #grafo-canvas { height:0; min-height:0; }
   .grafo-controles { inset:8px 8px auto; }
   .grafo-ferramentas { gap:2px; }
   .grafo-lista { padding:7px 12px; }
-  .leitor-barra { padding:6px 10px; }
+  .leitor-barra { min-height:44px; padding:6px 10px 6px 48px; }
 }
 
 .grafo-opcoes > div { max-height:var(--grafo-filtros-altura,300px); overflow:auto; overscroll-behavior:contain; }
 
 #pasta-notas .pastas-linhas { display:grid; gap:0; margin-bottom:18px; border-block:1px solid var(--borda); }
+#pasta-notas .explorador-notas-titulo { margin-top:18px; }
+@media(max-width:360px) {
+  .explorador-topo .linha-botoes { flex-wrap:wrap; }
+  .explorador-topo .linha-botoes > a:last-child { margin-left:0; }
+}
 #pasta-notas .pasta-linha { border:0; border-bottom:1px solid var(--borda); border-radius:0; background:transparent; padding:6px 8px; }
 #pasta-notas .lista-notas { gap:0; }
 #pasta-notas .linha-nota { border:0; border-bottom:1px solid var(--borda); border-radius:0; padding:11px 8px; background:transparent; }
 #pasta-notas .linha-principal > span { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
 /* Celular baixo (ex.: 320x568): a árvore encolhe para o grafo manter uma área útil. */
 @media(max-width:600px) and (max-height:620px) {
-  .explorador { grid-template-rows:minmax(72px,16%) minmax(0,1fr); }
+  .explorador { grid-template-rows:minmax(0,1fr); }
   .explorador-topo { margin-bottom:4px; }
 }
 /* Forças do grafo, como no Obsidian. */

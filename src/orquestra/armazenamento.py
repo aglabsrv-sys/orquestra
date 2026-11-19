@@ -417,3 +417,16 @@ def mover_seguro(origem: Path, destino: Path, *, esperado: object, validar: Call
         if movido != antes:
             preservar(destino, movido, antes, motivo="conflito_ao_mover")
             raise ConflitoDeEscrita("O conteúdo mudou durante o movimento. Confira o destino e a recuperação local.")
+
+
+def mover_diretorio(origem: Path, destino: Path, *, validar: Callable[[], object]) -> None:
+    """Move a árvore em uma operação no mesmo volume, sem substituir o destino."""
+    with contextlib.ExitStack() as pilha:
+        for caminho in sorted((origem, destino), key=_chave):
+            pilha.enter_context(trava(caminho))
+        validar()
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        validar()
+        _renomear_exclusivo(origem, destino)
+        _sincronizar_pasta(origem.parent)
+        _sincronizar_pasta(destino.parent)

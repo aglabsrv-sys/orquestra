@@ -2,6 +2,70 @@
 
 ## Em desenvolvimento
 
+- No celular, Contatos mantém a busca junto de uma barra compacta e o Início
+  libera espaço junto ao dock. A aba Lista também organiza as subpastas em lista.
+  Ajustes da pasta mostra as ações diretamente e abre a escolha da capa em uma
+  segunda tela do mesmo modal.
+
+- Ajustes de pasta agrupam capas e ações de arquivamento e lixeira. A nova
+  visualização das subpastas funciona com notas, mídias e pastas aninhadas.
+  Excluir volta à origem, e as notas de realização aparecem em uma lista
+  compacta no detalhe do hábito.
+
+- O leitor de notas oferece Voltar junto às ações: retorna à tela anterior do
+  painel ou fecha a leitura interna de Pastas, preservando o grafo e a árvore.
+- Ajustes da pasta oferecem Cor lisa, com a paleta existente e seletor de cor
+  personalizada. Projetos e Estudos lembram separadamente a visualização da área
+  e a do interior das pastas. Trocar a visão interna preserva título e controles,
+  substituindo somente a apresentação das notas. O contexto MCP informa a
+  organização por pastas e o vínculo das notas de apoio.
+- Ajustes internos de Projetos e Estudos permitem editar o título da pasta no
+  painel, preservando nomes e conteúdo dos arquivos. No celular, cartões de
+  Estudos e notas em grade dentro das pastas também usam duas colunas.
+- Vínculos em `projeto`, `estudo` e `habito` são reconhecidos igualmente no grafo,
+  diagnóstico e MCP, com indicação de que vêm de uma propriedade da nota.
+- Trocar entre Pastas, Cartões e Lista conserva a pasta aberta em Projetos e
+  Estudos. Voltar retorna à área mantendo a visualização escolhida. Grupos de
+  referências exibem as mesmas notas da contagem, sem repetir apoios vinculados.
+  Ajustes, Nova nota e capas continuam funcionando após trocar de visão ou
+  retornar das abas Humano e Máquina, sem acumular observadores da grade anterior.
+- Projetos ganham a visão Pastas: cada projeto é uma pasta de vidro com arte
+  gerada ou imagem própria; entrar na pasta mostra a nota do projeto e as notas
+  vinculadas. Ajustes da pasta escolhem entre quatro capas nativas (Aurora,
+  Brasa, Ametista, Oceano) ou uma imagem, e ligam a entrada rápida (+), que cria
+  a nota em `projetos/referencias/<projeto>/` com `projeto: [[...]]`. Os ajustes
+  ficam em `pastas:` no `_modulo.yaml`. Referências soltas viram pastas lisas.
+- Estudos ganham a visão Cartões, simples e compacta; o status segue nas propriedades.
+- Em Projetos e Estudos, Pastas, Cartões e Lista mostram as mesmas pastas e
+  entrar numa delas mostra o item e suas notas. Novo cria a pasta; o texto
+  opcional vira a primeira nota (primeira linha como título). Dentro da pasta,
+  Ajustes e Nova nota agem na pasta. Sem ajuste, a capa nativa é escolhida pelo
+  nome e não muda com a ordem. Pastas menores; duas colunas no celular; sem
+  animação de entrada.
+- Áreas sem descrição genérica no cabeçalho; textos óbvios retirados das telas diárias.
+- O canal ao vivo numera os eventos: ao reconectar ou voltar à aba, a página só
+  se atualiza se perdeu mudanças ou se o servidor reiniciou.
+- Tarefas aplicam Hoje, Semana e Todas ao quadro e à lista, com controles compactos
+  junto às configurações. A data de conclusão determina o histórico diário;
+  a data agendada determina as tarefas abertas do período. Atrasadas continuam
+  em Hoje; futuras e sem data ficam em Todas.
+- Propriedades da nota abrem em painel lateral à direita. Mostrar esta nota na
+  pasta destaca sua posição no grafo completo e na árvore, sem reabrir o conteúdo.
+- Em Estudos, notas de referência aparecem dentro do estudo vinculado, sem lista
+  avulsa na área. Nenhum arquivo existente é movido ou convertido.
+- Abas ocultas liberam a conexão de eventos e conferem mudanças ao retornar.
+  A virada do dia atualiza o recorte; edições pendentes continuam protegidas.
+- Com o início automático ativo, o painel aberto por agentes ou scripts sem
+  console passa para segundo plano e não cai quando quem o abriu termina.
+  Reiniciar encerra as conexões ao vivo sem erro.
+
+- Hábitos mostram notas de execução por data, sem criar marcações nem misturar
+  essas notas com os hábitos. Referências de áreas e projetos têm visualização
+  própria, preservando os estados originais e separadas dos cartões.
+- No celular, Pastas abre o grafo com a árvore recolhida, botão de expansão e
+  leitura na área principal. Lista permanece compacta. O leitor oferece abrir
+  a nota em Pastas e grafo, em vez de abrir um aplicativo externo.
+
 - Canais do YouTube oferece filtro opcional por termos ou frases no título em
   Mais opções, sem chave de API. Vazio preserva a coleta habitual; o limite por
   canal considera os vídeos que passaram no filtro dentro do feed recente.

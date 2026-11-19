@@ -67,13 +67,23 @@
   function mostrarErro(erro) {
     if (!erro || !erro.cancelado) avisar(window.OrquestraInterface.mensagemErro(erro), "erro");
   }
+  function estiloEscolhido(seletor) {
+    var padrao = seletor.dataset.padrao, salvo = seletor.dataset.salvo;
+    if (seletor.value === (salvo || padrao)) return salvo;
+    return seletor.value === padrao ? "" : seletor.value;
+  }
 
   // ---------------------------------------------------------------- relógio
 
   function relogio() {
     var el = $("#relogio");
     if (!el) return;
-    function tique() { el.textContent = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); }
+    var diaAtual = new Date().toDateString();
+    function tique() {
+      var agora = new Date(), dia = agora.toDateString();
+      el.textContent = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      if (dia !== diaAtual) { diaAtual = dia; recarregarLogo(false, true); }
+    }
     tique();
     setInterval(tique, 10000);
   }
@@ -239,21 +249,37 @@
 
   function captura() {
     var dialogo = $("#captura"), abrir = $("#abrir-captura");
-    if (!dialogo || !abrir) return;
-    var texto = $("#captura-texto"), salvar = $("#captura-salvar");
-    function mostrar() { dialogo.showModal(); texto.focus(); }
+    if (!dialogo) return;
+    var texto = $("#captura-texto"), salvar = $("#captura-salvar"), titulo = $("#titulo-captura"), explica = $("#captura-explica");
+    var tituloPadrao = titulo.textContent, destino = null;
+    // Sem destino, a captura vai para a entrada; com destino, vira nota de apoio do item.
+    function mostrar(opcoes) {
+      destino = opcoes && (opcoes.vinculo || opcoes.pasta) ? opcoes : null;
+      titulo.textContent = destino ? "Nota em " + destino.nome : tituloPadrao;
+      if (explica) explica.hidden = !!destino;
+      dialogo.showModal(); texto.focus();
+    }
     function guardar() {
       if (salvar.disabled) return;
       if (!texto.value.trim()) { texto.focus(); return; }
-      var concluir = window.OrquestraInterface.ocupado(salvar, "Guardando…");
-      api("POST", "/api/captura", { texto: texto.value })
-        .then(function () { texto.value = ""; dialogo.close(); avisar("Guardado na entrada."); })
+      var concluir = window.OrquestraInterface.ocupado(salvar, "Guardando…"), alvo = destino;
+      api("POST", "/api/captura", alvo ? { texto: texto.value, vinculo: alvo.vinculo, pasta: alvo.pasta } : { texto: texto.value })
+        .then(function (r) {
+          texto.value = ""; dialogo.close();
+          avisar(alvo ? "Guardada em " + alvo.nome + "." : "Guardado na entrada.");
+          if (alvo && alvo.aoGuardar) alvo.aoGuardar(r);
+        })
         .catch(mostrarErro)
         .finally(concluir);
     }
-    abrir.onclick = mostrar;
+    dialogo.addEventListener("close", function () { destino = null; });
+    window.Orquestra = window.Orquestra || {};
+    window.Orquestra.capturar = mostrar;
     salvar.onclick = guardar;
     texto.addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) guardar(); });
+    // Sem área de entrada, o diálogo só serve às capturas ligadas a um item.
+    if (!abrir) return;
+    abrir.onclick = function () { mostrar(); };
     document.addEventListener("keydown", function (e) {
       if (e.key.toLowerCase() === "c" && !e.ctrlKey && !e.metaKey && !e.altKey && !digitando(e) && !$("dialog[open]")) { e.preventDefault(); mostrar(); }
     });
@@ -426,6 +452,12 @@
     var rel = raiz.dataset.rel, versao = raiz.dataset.versao, url = "/api/notas/" + caminho(rel);
     var ver = $("#ver"), editor = $("#editor"), titulo = $("#nota-titulo");
     var bEditar = $("#editar"), bSalvar = $("#salvar"), bCancelar = $("#cancelar");
+    var propriedades = $("#nota-propriedades"), abrirPropriedades = $("#abrir-propriedades");
+    if (propriedades && abrirPropriedades) {
+      abrirPropriedades.onclick = function () { propriedades.showModal(); };
+      $("#fechar-propriedades").onclick = function () { propriedades.close(); };
+      propriedades.addEventListener("click", function (e) { if (e.target === propriedades) { var b = propriedades.getBoundingClientRect(); if (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom) propriedades.close(); } });
+    }
     var estado = $("#estado-salvo"), faixa = $("#faixa-conflito"), falha = $("#falha-gravacao");
     var bRepetir = $("#repetir-gravacao"), bReverter = $("#reverter-gravacao");
     var campos = $$("[data-campo]", raiz), bloqueioExterno = false, recuperado = null, rascunhos = null;
@@ -680,7 +712,18 @@
         botao.disabled = true;
         try {
           var resposta = await api("POST", (excluir ? "/api/excluir/" : "/api/contatos/cliente/") + caminho(rel), {versao: versao});
-          location.href = resposta.url || "/lixeira";
+          if (excluir) {
+            if (window.parent !== window && new URLSearchParams(location.search).get("explorador") === "1") {
+              window.parent.postMessage({tipo: "orquestra:leitor-excluiu"}, location.origin);
+            } else {
+              var voltar = $("#nota-voltar");
+              var origem = new URL(voltar ? voltar.href : raiz.dataset.voltar || "/pastas", location.href);
+              if (origem.searchParams.get("abrir") === rel) {
+                ["abrir", "pasta", "aba"].forEach(function (p) { origem.searchParams.delete(p); });
+              }
+              location.replace(origem.href);
+            }
+          } else location.assign(resposta.url);
         } catch (erro) { botao.disabled = false; mostrarErro(erro); }
       };
     });
@@ -720,6 +763,7 @@
         }).catch(function (erro) { if (numero === buscaVersao) mensagem.textContent = erro.message; });
       }
       $("#consultar-versoes").onclick = function () {
+        if (propriedades && propriedades.open) propriedades.close();
         historico.hidden = false;
         if (carregado) return;
         mensagem.textContent = "Consultando versões locais…";
@@ -946,9 +990,12 @@
         versao: raiz.dataset.versao,
         nome: $("#p-nome").value, descricao: $("#p-descricao").value, icone: $("#p-icone").value, cena: $("#p-cena").value,
         capa: $("#p-capa").value || null,
-        campos: campos, remover: remover, quadro: $("#p-quadro").checked, grafico: $("#p-grafico").checked
+        campos: campos, remover: remover
       };
+      if ($("#p-quadro")) dados.quadro = $("#p-quadro").checked;
+      if ($("#p-grafico")) dados.grafico = $("#p-grafico").checked;
       if ($("#p-concluidos")) dados.concluidos = $("#p-concluidos").value;
+      if ($("#p-subpastas")) dados.subpastas = estiloEscolhido($("#p-subpastas"));
       var botao = $("#p-salvar");
       var enviado = retrato();
       var concluir = window.OrquestraInterface.ocupado(botao, "Salvando…");
@@ -1401,34 +1448,47 @@
     }, 450);
   }
 
-  var fonteAoVivo = null, cicloAoVivoLigado = false;
+  // Marca do último evento visto ("início do servidor:número"). Eventos não têm
+  // replay: ao reconectar, o servidor informa a marca atual e a página só se
+  // atualiza se perdeu algo ou se o servidor reiniciou. Voltar à aba sem
+  // mudanças não recarrega nada.
+  var fonteAoVivo = null, cicloAoVivoLigado = false, marcaVista = (document.body.dataset && document.body.dataset.eventos) || "";
   function aoVivo() {
     if (!window.EventSource) return;
     if (fonteAoVivo) fonteAoVivo.close();
-    var fonte = new EventSource("/eventos"), abriu = false, houveFalha = false;
+    if (!cicloAoVivoLigado) {
+      cicloAoVivoLigado = true;
+      window.addEventListener("pagehide", function () { if (fonteAoVivo) fonteAoVivo.close(); });
+      window.addEventListener("pageshow", function (e) { if (e.persisted) aoVivo(); });
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) { if (fonteAoVivo) fonteAoVivo.close(); }
+        else aoVivo();
+      });
+    }
+    // HTTP/1 limita conexões por origem. Abas ocultas não precisam ocupar um canal permanente.
+    if (document.hidden) return;
+    var fonte = new EventSource("/eventos");
     fonteAoVivo = fonte;
     var estado = $("#estado-conexao");
     fonte.onerror = function () {
-      houveFalha = true;
       if (estado) { estado.hidden = false; estado.textContent = "Reconectando…"; }
     };
     fonte.onopen = function () {
       if (estado) { estado.hidden = true; estado.textContent = ""; }
       atualizarSelos();
-      // Eventos não têm replay. Após qualquer interrupção, conferir a página
-      // inteira, preservando editores, formulários e diálogos com trabalho pendente.
-      if (abriu || houveFalha) recarregarLogo(true, true);
-      abriu = true;
     };
-    if (!cicloAoVivoLigado) {
-      cicloAoVivoLigado = true;
-      window.addEventListener("pagehide", function () { if (fonteAoVivo) fonteAoVivo.close(); });
-      window.addEventListener("pageshow", function (e) { if (e.persisted) { aoVivo(); recarregarLogo(false, true); } });
-    }
     fonte.onmessage = function (mensagem) {
       var ev;
       try { ev = JSON.parse(mensagem.data); } catch (e) { return; }
       if (!ev || typeof ev !== "object") return;
+      if (ev.tipo === "estado") {
+        var perdeu = !!marcaVista && !!ev.marca && ev.marca !== marcaVista;
+        if (ev.marca) marcaVista = ev.marca;
+        // Preserva editores, formulários e diálogos com trabalho pendente.
+        if (perdeu) recarregarLogo(true, true);
+        return;
+      }
+      if (ev.marca) marcaVista = ev.marca;
       // Pequena espera: a resposta da nossa própria gravação pode chegar depois do evento.
       setTimeout(function () {
         if (ev.tipo === "config") { if (Date.now() > configPropriaAte) recarregarLogo(); return; }
@@ -1448,8 +1508,12 @@
 
   window.Orquestra = window.Orquestra || {};
   window.Orquestra.api = api;
+  window.Orquestra.estiloEscolhido = estiloEscolhido;
   window.Orquestra.prepararPastas = function (novos) { dialogos(novos); pastas(); };
-  window.Orquestra.prepararModulo = function (dialogosNovos) { dialogos(dialogosNovos); novoItem(); quadro(); maquina(); tabela(); numeros(); };
+  window.Orquestra.prepararModulo = function (dialogosNovos) {
+    dialogos(dialogosNovos); novoItem(); quadro(); maquina(); tabela(); numeros();
+    if (window.Orquestra.prepararPastasModulo) window.Orquestra.prepararPastasModulo();
+  };
 
   document.addEventListener("DOMContentLoaded", function () {
     relogio(); carrossel(); dialogos(); gaveta(); captura(); novoItem(); quadro(); seletoresSoltos();

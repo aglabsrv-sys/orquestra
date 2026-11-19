@@ -40,6 +40,14 @@ def contexto_area(ferramentas, area: str, limite: int, deslocamento: int) -> dic
     ]
     return {
         "area": area, "nome": modulo.nome, "descricao": modulo.descricao,
+        "organizacao": {
+            "tipo": "pastas" if area in ("projetos", "estudos") else "itens",
+            "apoios_em": f"{area}/referencias" if area in ("projetos", "estudos") else "",
+            "campo_vinculo": {"projetos": "projeto", "estudos": "estudo"}.get(area, ""),
+            "orientacao": "Cada item representa uma pasta no painel; sua nota principal conserva texto e status. "
+                          "Notas de apoio ficam separadas dos itens e se ligam por link ou subpasta de nome inequívoco."
+                          if area in ("projetos", "estudos") else "Itens seguem o schema da área.",
+        },
         "pasta_itens": modulo.pasta_itens.relative_to(indice.vault).as_posix(),
         "campos": [{"nome": campo.nome, "tipo": campo.tipo, "opcoes": campo.opcoes,
                     "obrigatorio": campo.obrigatorio, "padrao": campo.padrao}

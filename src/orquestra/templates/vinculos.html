@@ -11,7 +11,7 @@
   <ul class="vinculos-lista">
     {% for v in ocorrencias %}<li class="vinculo-item">
       <span class="vinculo-simbolo">{{ icone('nota' if v.estado == 'futuro' else 'link', 17) }}</span>
-      <div class="vinculo-conteudo"><a href="{{ v.url_origem }}" class="vinculo-origem">{{ v.titulo }}</a><span class="vinculo-alvo">{{ v.alvo }}</span><small>{{ v.origem }} · linha {{ v.linha }} do texto</small>
+      <div class="vinculo-conteudo"><a href="{{ v.url_origem }}" class="vinculo-origem">{{ v.titulo }}</a><span class="vinculo-alvo">{{ v.alvo }}</span><small>{{ v.origem }} · {% if v.campo %}propriedade {{ v.campo }}{% else %}linha {{ v.linha }} do texto{% endif %}</small>
       {% if v.opcoes %}<details class="vinculo-opcoes"><summary>{{ v.opcoes|length }} destinos possíveis</summary>{% for opcao in v.opcoes %}<a href="{{ opcao.url }}">{{ opcao.rel }}</a>{% endfor %}</details>{% endif %}</div>
       <span class="vinculo-estado">{{ rotulos_vinculos[v.estado] }}{% if v.url_destino %}<a class="link" href="{{ v.url_destino }}">Abrir destino {{ icone('seta_dir', 12) }}</a>{% endif %}</span>
       <a href="{{ v.url_origem }}" class="botao pequeno so-icone" aria-label="Abrir {{ v.titulo }}" title="Abrir nota de origem">{{ icone('chevron_dir', 15) }}</a>

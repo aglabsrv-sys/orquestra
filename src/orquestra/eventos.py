@@ -9,12 +9,21 @@ from __future__ import annotations
 
 import asyncio
 import threading
+import uuid
 
 
 class Eventos:
+    """Cada evento leva um número crescente. Ao reconectar, a aba compara o
+    número atual com o último que viu e só recarrega se perdeu algo."""
+
     def __init__(self) -> None:
         self._filas: dict[asyncio.Queue, asyncio.AbstractEventLoop | None] = {}
         self._trava = threading.Lock()
+        self.inicio = uuid.uuid4().hex[:12]
+        self.seq = 0
+
+    def marca(self) -> str:
+        return f"{self.inicio}:{self.seq}"
 
     def assinar(self) -> asyncio.Queue:
         fila: asyncio.Queue = asyncio.Queue(maxsize=200)
@@ -32,6 +41,8 @@ class Eventos:
 
     def publicar(self, evento: dict) -> None:
         with self._trava:
+            self.seq += 1
+            evento = {**evento, "marca": f"{self.inicio}:{self.seq}"}
             assinantes = list(self._filas.items())
         for fila, laco in assinantes:
             if laco is not None:

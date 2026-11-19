@@ -36,11 +36,14 @@ _retomada: tuple[tuple[str, int, int], int] | None = None
 
 
 def em_segundo_plano() -> bool:
-    if sys.platform == "win32":
-        import ctypes
-        return not bool(ctypes.windll.kernel32.GetConsoleWindow())
     if os.environ.get("ORQUESTRA_EM_SEGUNDO_PLANO") == "1":
         return True
+    if sys.platform == "win32":
+        import ctypes
+        # Sem console não basta: um agente ou script abre o painel com saídas
+        # redirecionadas e encerra a árvore de processos ao terminar. Só o
+        # pythonw do início automático (sem saída própria) já está independente.
+        return not bool(ctypes.windll.kernel32.GetConsoleWindow()) and sys.__stdout__ is None
     return os.getsid(0) == os.getpid() and (sys.stdin is None or not sys.stdin.isatty())
 
 

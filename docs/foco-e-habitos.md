@@ -1,5 +1,16 @@
 # Pomodoro e hábitos
 
+## Notas de realizações
+
+Notas em `habitos/execucoes/Nome do hábito/` aparecem dentro do hábito, separadas
+dos itens de Hábitos e de Notas. Um link como `[[Nome do hábito]]` identifica a
+relação; a pasta também pode dar contexto quando há um único hábito com esse nome.
+A data vem de `data: AAAA-MM-DD` ou da data no nome do arquivo. Clique no nome
+do hábito para ver a descrição e suas notas de realização. Os dias marcados ou
+com notas abrem a consulta daquela data. **Todas as notas** retira o filtro.
+Criar ou consultar uma nota não marca o hábito como realizado. Os registros
+continuam sendo confirmados pela pessoa, e nenhum arquivo é movido pelo painel.
+
 ## Pomodoro
 
 O ícone de cronômetro ao lado da busca abre `/foco`. A home fica dedicada à visão

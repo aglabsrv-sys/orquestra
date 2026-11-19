@@ -31,7 +31,7 @@
 .tarefas-recorte { margin:14px var(--margem); }
 .tarefas-periodos { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:.8rem; }
 .tarefas-periodos > span { color:var(--texto-suave); margin-right:8px; }
-.tarefas-periodos a { padding:7px 12px; border-radius:calc(8px * var(--cantos,1)); }
+.tarefas-periodos a { padding:5px 7px; border-radius:calc(8px * var(--cantos,1)); }
 .tarefas-periodos a[aria-current] { color:var(--destaque); background:color-mix(in srgb,var(--destaque) 12%,transparent); }
 .tarefas-recorte .campo-ajuda { margin:8px 0 0; }
 .lote-resultado { white-space:pre-line; font-size:.8rem; }
@@ -52,6 +52,10 @@
 .contatos-filtros .campo-linha { display:flex; align-items:center; flex-direction:row; gap:7px; min-height:40px; white-space:nowrap; }
 .contatos-filtros input[type=checkbox] { width:16px; height:16px; margin:0; }
 .contatos-filtros .linha-botoes { flex-wrap:nowrap; margin:0; }
+.contatos-filtros-mobile { display:none; }
+.contatos-lote { margin-inline:var(--margem); }
+.contatos-lote .lote-barra[hidden] { display:none; }
+.contatos-lote .lote-barra:not([hidden]) { margin-bottom:12px; }
 @media(max-width:900px) {
   .abas:has(.lote-barra) { flex-wrap:wrap; }
   .abas:has(.lote-barra) .abas-fim { width:100%; }
@@ -65,6 +69,11 @@
   .abas .lote-barra [data-lote-contagem] { max-width:70px; white-space:normal; }
   .abas:has(.lote-barra) .abas-fim > .principal span { display:none; }
   .contatos-filtros .campo:first-child { flex-basis:100%; }
+}
+@media(max-width:699px) {
+  .contatos-filtros-desktop { display:none; }
+  .contatos-filtros-mobile { display:flex; padding:10px 0 0; border:0; margin-bottom:12px; }
+  .abas-contatos .aba { padding-inline:9px; }
 }
 .navegacao-inferior { display:contents; }
 .atualizar-app { position:fixed; left:max(16px,env(safe-area-inset-left)); bottom:calc(18px + env(safe-area-inset-bottom)); z-index:35; width:36px; height:36px; border-radius:calc(18px * var(--cantos,1)); background:var(--superficie); color:var(--texto-suave); box-shadow:0 2px 12px #0002; }

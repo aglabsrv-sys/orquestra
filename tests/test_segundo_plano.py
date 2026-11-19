@@ -20,6 +20,22 @@ from orquestra.servidor import criar_app
 from orquestra.seguranca import CapabilityLocal
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="detecção de console do Windows")
+def test_sem_console_mas_com_saida_redirecionada_ainda_destaca(monkeypatch):
+    # Um agente abre o painel sem console e encerra a árvore ao terminar:
+    # só o pythonw do início automático (sem saída) já está independente.
+    import ctypes
+    monkeypatch.delenv("ORQUESTRA_EM_SEGUNDO_PLANO", raising=False)
+    monkeypatch.setattr(ctypes.windll.kernel32, "GetConsoleWindow", lambda: 0)
+    monkeypatch.setattr(sys, "__stdout__", object())
+    assert not processo.em_segundo_plano()
+    monkeypatch.setattr(sys, "__stdout__", None)
+    assert processo.em_segundo_plano()
+    monkeypatch.setenv("ORQUESTRA_EM_SEGUNDO_PLANO", "1")
+    monkeypatch.setattr(sys, "__stdout__", object())
+    assert processo.em_segundo_plano()
+
+
 def test_porta_com_servidor_ativo_nao_e_considerada_livre():
     with socket.socket() as servidor:
         if os.name != "nt":

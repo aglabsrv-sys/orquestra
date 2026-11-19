@@ -55,6 +55,8 @@ class CopiaRecuperacao(Pedido):
 
 class Captura(Pedido):
     texto: str = Field(default="", max_length=1_000_000)
+    vinculo: str = Field(default="", max_length=1000)  # item de projeto ou estudo
+    pasta: str = Field(default="", max_length=1000)
 
 
 class SalvarSegredo(Pedido):
@@ -171,11 +173,17 @@ class Personalizacao(Pedido):
     concluidos: list[str] | str | None = None
     quadro: bool | None = None
     grafico: bool | None = None
+    subpastas: Literal["", "lista", "cartoes", "pastas"] = ""
 
 
 class AdotarPasta(Pedido):
     pasta: str
     quadro: bool = False
+
+
+class AcaoPasta(Versao):
+    chave: str = Field(min_length=1, max_length=1000)
+    acao: Literal["arquivar", "excluir"]
 
 
 class NotaPasta(Pedido):

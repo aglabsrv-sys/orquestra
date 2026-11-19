@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 {% import "partes.html" as p %}
+{% import "componentes-pastas.html" as pasta_ui with context %}
 {% block titulo %}{{ trilha[-1].nome if trilha else 'Pastas' }}{% endblock %}
 {% block trilha %}{% if trilha %}<a href="/pastas">Pastas</a>{% else %}Pastas{% endif %}{% endblock %}
 {% block observa %}tudo{% endblock %}
-{% block estilos %}<link rel="stylesheet" href="/static/css/grafo.css?v={{ marca }}">{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/grafo.css?v={{ marca }}"><link rel="stylesheet" href="/static/css/pastas-vidro.css?v={{ marca }}">{% endblock %}
 
 {% block conteudo %}
 <section class="explorador" data-pasta="{{ rel }}">
-  <aside class="explorador-lateral" aria-label="Arquivos do cofre">
+  <button class="botao pequeno so-icone pastas-alternar" id="pastas-alternar" type="button" aria-label="Mostrar pastas" aria-expanded="false" aria-controls="pastas-lateral">{{ icone('pasta', 17) }}</button>
+  <aside class="explorador-lateral" id="pastas-lateral" aria-label="Arquivos do cofre">
     <header><a href="/pastas" class="explorador-nome">{{ icone('pasta', 17) }} {{ cfg.nome }}</a><a class="botao pequeno so-icone" href="/ajustes/vault" title="Gerenciar cofres" aria-label="Gerenciar cofres">{{ icone('caixa', 16) }}</a></header>
     <a class="explorador-busca" href="/buscar">{{ icone('busca', 15) }} Buscar no cofre</a>
     <a class="explorador-busca" href="/lixeira">{{ icone('caixa', 15) }} Lixeira</a>
@@ -16,17 +18,18 @@
   </aside>
   <div id="pasta-painel" class="explorador-painel" data-rel="{{ rel }}">
     <header class="explorador-topo"><div class="explorador-titulo">{% if rel %}<a class="botao pequeno so-icone explorador-voltar" href="{{ trilha[-2].url if trilha|length > 1 else '/pastas' }}" aria-label="Voltar à pasta anterior" title="Voltar à pasta anterior">{{ icone('seta_esq', 17) }}</a>{% endif %}<h1>{{ trilha[-1].nome if trilha else cfg.nome }}</h1></div><div class="linha-botoes sem-topo">
-      <div class="segmentos" role="group" aria-label="Visualização dos arquivos"><button type="button" data-pasta-visao="notas" aria-pressed="false">Notas</button><button type="button" data-pasta-visao="grafo" aria-pressed="true">Grafo</button></div>
+      <div class="segmentos" role="group" aria-label="Visualização dos arquivos"><button type="button" data-pasta-visao="notas" aria-pressed="false">Lista</button><button type="button" data-pasta-visao="colecao" aria-pressed="false">{{ 'Pastas' if modo_subpastas == 'pastas' else 'Cartões' }}</button><button type="button" data-pasta-visao="grafo" aria-pressed="true">Grafo</button></div>
       {% if modulo and trilha|length == 1 %}<a class="botao pequeno" href="/m/{{ modulo.id|urlencode }}">{{ icone(modulo.icone, 15) }} Ver painel</a>{% endif %}
-      {% if pode_criar %}<button class="botao principal pequeno" type="button" id="abrir-nota-pasta">{{ icone('mais', 16) }} Nova nota</button>{% endif %}
+      {% if pode_criar %}<button class="botao principal pequeno" type="button" id="abrir-nota-pasta" aria-label="Nova nota">{{ icone('mais', 16) }}<span>Nova nota</span></button>{% endif %}
       <a class="botao pequeno so-icone" href="/vinculos?rel={{ rel|urlencode }}" title="Verificar links nesta pasta" aria-label="Verificar links nesta pasta">{{ icone('link', 16) }}</a>
       <a class="botao pequeno so-icone" href="/ajustes/automacoes?destino={{ rel|urlencode }}" title="Adicionar automação nesta pasta" aria-label="Adicionar automação nesta pasta">{{ icone('raio', 16) }}</a>
-      <a class="botao pequeno so-icone" href="/personalizar/pastas" title="Personalizar Pastas" aria-label="Personalizar Pastas">{{ icone('paleta', 16) }}</a>
+      <a class="botao pequeno so-icone" href="/personalizar/pastas" title="Ajustes de Pastas" aria-label="Ajustes de Pastas">{{ icone('ajustes', 16) }}</a>
     </div></header>
     {% if capa_pasta %}<div class="pagina-capa">{{ p.capa(capa_pasta) }}</div>{% endif %}
     <div id="pasta-notas" hidden>
   {% if pastas %}
-  <div class="pastas-linhas">
+  <div id="explorador-colecao" hidden>{{ pasta_ui.grade(pastas, modo_subpastas, 'Subpastas') }}</div>
+  <div id="explorador-lista" class="pastas-linhas">
     {% for f in pastas %}
     <div class="pasta-cartao pasta-linha{% if f.modulo %} e-area{% endif %}">
       <a class="pasta-link" href="{{ f.url }}">
@@ -44,9 +47,9 @@
   </div>
   {% endif %}
 
-  {% if arquivos %}<div class="arquivos-grade">{% for a in arquivos %}<a class="arquivo-item" href="{{ a.url }}"><span>{{ icone('nota' if a.tipo == 'html' else 'imagem', 18) }}</span><b>{{ a.nome }}</b><small>{{ 'HTML' if a.tipo == 'html' else 'Mídia' }}</small></a>{% endfor %}</div>{% endif %}
+  {{ pasta_ui.midias(arquivos) }}
   {% if notas %}
-  <h2 class="grupo-titulo">{{ icone('nota', 18) }} Notas <small>{{ notas|length }}</small></h2>
+  <h2 class="grupo-titulo explorador-notas-titulo">{{ icone('nota', 18) }} Notas <small>{{ notas|length }}</small></h2>
   <div class="lista-notas sem-margem">
     {% for n in notas %}
     <a class="linha-nota com-lado" href="{{ n.url }}">
@@ -55,7 +58,7 @@
     </a>
     {% endfor %}
   </div>
-  {% elif not pastas %}
+  {% elif not pastas and not arquivos %}
   {{ p.vazio("Pasta vazia", "Não há notas aqui ainda. Crie a primeira com o botão acima, ou escreva no Obsidian: ela aparece sozinha.") }}
   {% endif %}
   {{ p.paginar(paginacao|default(none)) }}
@@ -122,4 +125,4 @@
 {% endblock %}
 
 
-{% block scripts %}<script src="/static/js/pastas.js?v={{ marca }}"></script>{% endblock %}
+{% block scripts %}{% if modo_subpastas == 'pastas' %}<script src="/static/js/pastas-vidro.js?v={{ marca }}"></script>{% endif %}<script src="/static/js/pastas.js?v={{ marca }}"></script>{% endblock %}

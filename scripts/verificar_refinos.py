@@ -5,6 +5,7 @@ uv run --frozen --group browser python scripts/verificar_refinos.py
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 from pathlib import Path
@@ -25,6 +26,11 @@ def jornadas(browser, base, vault, capturas):
         page = contexto.new_page()
         page.on('pageerror', lambda e: erros.append(str(e)))
         page.goto(base)
+        if largura < 700:
+            expect(page.locator('#carrossel .pontos')).to_be_hidden()
+            expect(page.locator('.pular-conteudo')).to_be_hidden()
+        else:
+            expect(page.locator('#carrossel .pontos')).to_be_visible()
         ids = page.locator('.slide').evaluate_all('els=>els.map(e=>e.dataset.id)')
         page.keyboard.press('2')
         expect(page.locator('.slide.ativo')).to_have_attribute('data-id', ids[1])
@@ -42,6 +48,9 @@ def jornadas(browser, base, vault, capturas):
             expect(page.locator('#novo-corpo')).to_be_visible()
             page.locator('#novo-titulo').fill('Teste ' + modulo + ' ' + str(largura))
             page.locator('#novo-corpo').fill('Descrição opcional preservada no texto.')
+            if modulo == 'tarefas':
+                page.locator('#novo-adicionar-campo').select_option('data')
+                page.locator('[data-novo][name="data"]').fill(dt.date.today().isoformat())
             url_antes = page.url
             page.keyboard.press('2')
             assert page.url == url_antes
@@ -116,7 +125,7 @@ def jornadas(browser, base, vault, capturas):
         page.reload()
 
         # Quadro: concluir acompanha a aparência; recortes mantêm a mesma capa.
-        page.locator('.abas .aba[href="?aba=v0"]').click()
+        page.locator('.abas .aba[href^="?aba=v0"]').click()
         page.evaluate("window.__capaTarefas=document.querySelector('.cab-modulo canvas')")
         cartao = page.locator('.cartao').filter(has=page.get_by_role('link', name='Teste tarefas ' + str(largura), exact=True))
         cartao.locator('.mudar-status').select_option('feito')
@@ -161,7 +170,7 @@ def jornadas(browser, base, vault, capturas):
             page.locator('#lixeira-acao').select_option('restaurar')
             page.locator('#lixeira-executar').click()
             expect(page.locator('[data-lixeira-id]')).to_have_count(0)
-            expect(page.locator('#lixeira-resultado')).to_contain_text('restauradas')
+            expect(page.locator('#lixeira-resultado')).to_contain_text('restaurados')
 
         page.goto(base + '/agenda/2026-11-16?visao=semana')
         page.locator('[data-guia=agenda]').click()

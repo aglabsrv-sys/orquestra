@@ -46,7 +46,7 @@
 
 {% macro entrada(campo, valor="", marca="data-campo") %}
 {% set id = (marca ~ '-' ~ campo.nome)|urlencode %}
-{% set dica = {'lista': 'Separe os itens por vírgulas. Exemplo: trabalho, pessoal.', 'link': 'Informe um endereço completo, começando por https:// ou http://.', 'imagem': 'Use o caminho da imagem no vault ou um endereço completo na web.'}.get(campo.tipo, '') %}
+{% set dica = {'lista': 'Separe por vírgulas.', 'link': 'Informe um endereço completo, começando por https:// ou http://.', 'imagem': 'Use o caminho da imagem no vault ou um endereço completo na web.'}.get(campo.tipo, '') %}
 <label class="campo{% if campo.tipo == 'booleano' %} campo-linha{% endif %}">
   <span id="{{ id }}-rotulo">{{ campo.rotulo }}{% if campo.obrigatorio and campo.tipo != 'booleano' %} <span class="obrigatorio">Obrigatório</span>{% endif %}</span>
   {% if campo.tipo == "escolha" %}

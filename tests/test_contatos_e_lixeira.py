@@ -150,6 +150,32 @@ def test_lixeira_api_exige_capacidade_e_versao(cliente):
     assert cliente.post(rota, headers=headers, json={"versao": item["versao"]}).status_code == 200
 
 
+def test_lixeira_restaura_subpasta_inteira_e_recusa_pasta_protegida(cliente):
+    painel = cliente.painel
+    pasta = painel.vault / "Biblioteca/Material"
+    pasta.mkdir(parents=True)
+    (pasta / "Ficha.md").write_text("Nota fictícia", encoding="utf-8")
+    (pasta / "Capa.png").write_bytes(b"imagem de teste")
+    (pasta / "Vazia").mkdir()
+    painel.adotar_pasta("Biblioteca")
+    url = "/api/modulos/Biblioteca/pastas/acao"
+    headers = local(cliente)
+    dados = {"chave": "diretorio:Biblioteca/Material", "acao": "excluir", "versao": lixeira.versao_pasta(pasta)}
+    assert cliente.post(url, json=dados).status_code == 403
+    assert cliente.post(url, headers=headers, json=dados).status_code == 200
+    assert not pasta.exists()
+    item = lixeira.listar(painel.vault)[0]
+    assert item["tipo"] == "pasta" and item["rel"] == "Biblioteca/Material"
+    r = cliente.post(f'/api/lixeira/{item["id"]}/restaurar', headers=headers, json={"versao": item["versao"]})
+    assert r.status_code == 200 and r.json()["url"] == "/pastas/Biblioteca/Material"
+    assert (pasta / "Capa.png").read_bytes() == b"imagem de teste"
+    assert (pasta / "Vazia").is_dir() and "Biblioteca/Material/Ficha.md" in painel.indice.notas
+    (pasta / "AGENTS.md").write_text("Instrução de teste", encoding="utf-8")
+    dados["versao"] = lixeira.versao_pasta(pasta)
+    assert cliente.post(url, headers=headers, json=dados).status_code == 400
+    assert pasta.is_dir() and not lixeira.listar(painel.vault)
+
+
 def test_lixeira_metadados_fora_do_vault_nao_restauram(painel):
     nota = contato(painel)
     identificador = painel.excluir(nota.rel, nota.versao)

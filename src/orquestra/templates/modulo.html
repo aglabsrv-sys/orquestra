@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 {% import "partes.html" as p %}
+{% import "componentes-pastas.html" as pasta_ui with context %}
 {% block titulo %}{{ modulo.nome }}{% endblock %}
-{% block trilha %}{% if pasta_atual|default('') %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a><span> / {{ pasta_atual|replace('/', ' / ') }}</span>{% else %}{{ modulo.nome }}{% endif %}{% endblock %}
+{% block trilha %}{% if pasta_aberta is defined %}<a href="/m/{{ modulo.id|urlencode }}?aba={{ visao_externa }}">{{ modulo.nome }}</a><span> / {{ pasta_aberta.titulo }}</span>{% elif pasta_atual|default('') %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a><span> / {{ ajustes_diretorio.titulo }}</span>{% elif modulo.id == 'contatos' and aba in ('humano', 'maquina') %}<a href="/m/contatos">Contatos</a>{% else %}{{ modulo.nome }}{% endif %}{% endblock %}
 {% block observa %}modulo:{{ modulo.id }}{% endblock %}
-{% block estilos %}<link rel="stylesheet" href="/static/css/pastas-refino.css?v={{ marca }}">{% if aba == 'maquina' %}<link rel="stylesheet" href="/static/css/automacoes.css?v={{ marca }}">{% endif %}{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/pastas-refino.css?v={{ marca }}">{% if aba == 'maquina' %}<link rel="stylesheet" href="/static/css/automacoes.css?v={{ marca }}">{% endif %}{% if area_com_pastas or modulo.itens_na_raiz %}<link rel="stylesheet" href="/static/css/pastas-vidro.css?v={{ marca }}">{% endif %}{% endblock %}
+{% block scripts %}{% if area_com_pastas or modulo.itens_na_raiz %}<script src="/static/js/pastas-vidro.js?v={{ marca }}"></script>{% endif %}{% endblock %}
 
 {% block conteudo %}
 <section class="cab-modulo">
   {{ p.capa(capa) }}
   <span class="slide-sombra"></span>
   <div class="cab-texto">
-    <h1>{{ modulo.nome }}</h1>
-    {% if modulo.descricao %}<p>{{ modulo.descricao }}</p>{% endif %}
+    <h1>{% if modulo.id == 'contatos' %}<a href="/m/contatos"{% if visao is defined %} aria-current="page"{% endif %}>{{ modulo.nome }}</a>{% else %}{{ modulo.nome }}{% endif %}</h1>
   </div>
   <div class="cab-numeros">
     {% if modulo.tem_status %}
@@ -24,20 +25,8 @@
   </div>
 </section>
 
-<nav class="abas" aria-label="Visões do módulo">
-  <div class="abas-visoes">
-  {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos?aba=progresso">Progresso</a>{% endif %}
-  {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir?modulo=conteudo">Aprovação de criativos</a>{% endif %}
-  {% for v in modulo.visoes %}
-  <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}{% if pasta_atual|default('') %}&amp;pasta={{ pasta_atual|urlencode }}{% endif %}"{% if aba == 'v' ~ loop.index0 %} aria-current="page"{% endif %}>{{ v.nome }}</a>
-  {% endfor %}
-  {% if modulo.id != "entrada" %}
-  <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano"{% if aba == 'humano' %} aria-current="page"{% endif %}>{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
-  {% endif %}
-  <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina"{% if aba == 'maquina' %} aria-current="page"{% endif %}>{{ icone('chip', 15) }} Máquina</a>
-  </div>
-  <span class="abas-fim">
-{% if linhas|default([]) and not conclusao_tarefa and aba not in ("humano", "maquina") and visao.tipo not in ("kanban", "grafico") %}
+{% set acoes_lote %}
+{% if linhas|default([]) and not conclusao_tarefa and aba not in ('humano', 'maquina') and visao.tipo not in ('kanban', 'grafico') %}
   <span class="lote-barra" id="acoes-lote" hidden>
     <span data-lote-contagem aria-live="polite"></span>
     <select data-lote-acao aria-label="Ação para selecionados"><option value="arquivar">Arquivar</option><option value="excluir">Excluir</option>{% if opcoes_status %}<option value="status">Alterar status</option>{% endif %}</select>
@@ -45,10 +34,36 @@
     <button class="botao pequeno" type="button" data-lote-executar>Aplicar</button>
   </span>
 {% endif %}
+{% endset %}
+
+<nav class="abas{% if modulo.id == 'contatos' %} abas-contatos{% endif %}" aria-label="Visões do módulo">
+  <div class="abas-visoes">
+  {% if modulo.id == 'habitos' %}<a class="aba" href="/m/habitos?aba=progresso">Progresso</a>{% endif %}
+  {% if modulo.id == 'conteudo' %}<a class="aba" href="/decidir?modulo=conteudo">Aprovação de criativos</a>{% endif %}
+  {% if n_referencias|default(0) %}<a class="aba{% if aba == 'referencias' %} ativa{% endif %}" href="?aba=referencias"{% if aba == 'referencias' %} aria-current="page"{% endif %}>Referências <small>{{ n_referencias }}</small></a>{% endif %}
+  {% if colecao_disponivel %}<a class="aba{% if aba == 'colecao' %} ativa{% endif %}" href="?aba=colecao{% if pasta_atual %}&amp;pasta={{ pasta_atual|urlencode }}{% endif %}"{% if aba == 'colecao' %} aria-current="page"{% endif %}>{{ opcoes_subpastas[estilo_subpastas] }}</a>{% endif %}
+  {% for v in modulo.visoes if modulo.id != 'contatos' %}
+  <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}{% if periodo_concluidas is defined %}&amp;concluidas={{ periodo_concluidas }}{% endif %}{% if pasta_atual|default('') %}&amp;pasta={{ pasta_atual|urlencode }}{% endif %}{% if pasta_aberta is defined and v.tipo in ('pastas', 'cartoes', 'tabela') %}&amp;abrir={{ pasta_aberta.chave|urlencode }}{% if pasta_aberta.sub %}&amp;pasta={{ pasta_aberta.sub|urlencode }}{% endif %}{% endif %}"{% if aba == 'v' ~ loop.index0 %} aria-current="page"{% endif %}>{{ v.nome }}</a>
+  {% endfor %}
+  {% if modulo.id != "entrada" %}
+  <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano"{% if aba == 'humano' %} aria-current="page"{% endif %}>{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
+  {% endif %}
+  <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina"{% if aba == 'maquina' %} aria-current="page"{% endif %}>{{ icone('chip', 15) }} Máquina</a>
+  </div>
+  <span class="abas-fim">
+    {% if modulo.id != 'contatos' %}{{ acoes_lote }}{% endif %}
+    {% if periodo_concluidas is defined %}<nav class="tarefas-periodos" aria-label="Período das tarefas">{% for periodo in periodos_concluidas %}<a href="{{ periodo.url }}"{% if periodo.id == periodo_concluidas %} aria-current="page"{% endif %}>{{ periodo.nome }}</a>{% endfor %}</nav>{% endif %}
+    {# Dentro de uma pasta, ajustes e Novo agem na pasta, não na área. #}
+    {% if pasta_aberta is defined or ajustes_diretorio is defined %}
+    <button type="button" class="botao so-icone" data-pasta-ajustes aria-haspopup="dialog" title="Ajustes da pasta" aria-label="Ajustes da pasta">{{ icone('ajustes', 17) }}</button>
+    {% if pasta_aberta is defined %}<button class="botao principal novo" type="button" data-pasta-nova aria-label="Nova nota em {{ pasta_aberta.titulo }}">{{ icone('mais', 16) }}<span>Nova nota</span></button>{% endif %}
+    {% else %}
     <a class="botao so-icone" href="/m/{{ modulo.id|urlencode }}/personalizar" title="Personalizar esta área" aria-label="Personalizar esta área">{{ icone('ajustes', 17) }}</a>
-    {% if visao is defined and visao.tipo == 'grafico' and aba not in ('humano', 'maquina') %}
+    {% endif %}
+    {% if pasta_aberta is defined %}
+    {% elif visao is defined and visao.tipo == 'grafico' and aba not in ('humano', 'maquina') %}
     <button class="botao principal" type="button" id="abrir-numeros">{{ icone('mais', 16) }}<span>Registrar</span></button>
-    {% elif aba != 'maquina' %}
+    {% elif aba not in ('maquina', 'referencias') %}
     <button class="botao principal novo" type="button" id="abrir-novo" aria-label="{{ 'Nova nota sua' if aba == 'humano' else 'Novo item em ' ~ modulo.nome }}">{{ icone('mais', 16) }}<span>{{ 'Nova nota' if aba == 'humano' else 'Novo' }}</span></button>
     {% endif %}
   </span>
@@ -56,17 +71,23 @@
 
 <div id="modulo-painel" tabindex="-1">
 {% if modulo.id == 'contatos' and aba not in ('humano', 'maquina') %}
-<form class="contatos-filtros" role="search" method="get" action="/m/contatos">
+<form class="contatos-filtros contatos-filtros-desktop" role="search" method="get" action="/m/contatos">
   <label class="campo"><span>Buscar contato</span><input type="search" name="q" value="{{ busca_contato }}" placeholder="Nome, telefone, e-mail ou organização"></label>
   <label class="campo"><span>Grupo</span><select name="grupo"><option value="">Todos os grupos</option>{% for g in grupos_contatos %}<option value="{{ g }}"{% if g == grupo_contato %} selected{% endif %}>{{ g }}</option>{% endfor %}</select></label>
   <label class="campo campo-linha"><input type="checkbox" name="favoritos" value="1"{% if favoritos_contato %} checked{% endif %}><span>Favoritos</span></label>
   <div class="linha-botoes"><button class="botao" type="submit">Filtrar</button><a class="botao discreto" href="/m/contatos">Limpar</a></div>
 </form>
+<form class="contatos-filtros contatos-filtros-mobile" role="search" method="get" action="/m/contatos">
+  <label class="campo"><span class="somente-leitor">Buscar contato</span><input type="search" name="q" value="{{ busca_contato }}" placeholder="Buscar contatos" enterkeyhint="search"></label>
+</form>
+{% if linhas %}<div class="contatos-lote">{{ acoes_lote }}</div>{% endif %}
 {% endif %}
-{% if subpastas is defined and (subpastas or pasta_atual) %}
+{% if subpastas is defined and (subpastas or pasta_atual or midias_modulo) %}
 <div class="modulo-pastas">
-{% if pasta_atual %}<div class="modulo-navegacao"><a class="botao pequeno discreto modulo-voltar" href="/m/{{ modulo.id|urlencode }}?aba={{ aba }}{% if trilha_pastas|length > 1 %}&amp;pasta={{ trilha_pastas[-2].caminho|urlencode }}{% endif %}" aria-label="Voltar à pasta anterior">{{ icone('seta_esq', 15) }} Voltar</a><span class="modulo-pasta-atual">{{ trilha_pastas[-1].nome }}</span></div>{% endif %}
-{% if subpastas %}<nav class="modulo-subpastas" aria-label="Subpastas">{% for p in subpastas %}<a href="?aba={{ aba }}&amp;pasta={{ p.caminho|urlencode }}">{{ icone('pasta', 17) }}<span>{{ p.nome }}</span><small>{{ p.total }}</small>{{ icone('chevron_dir', 14) }}</a>{% endfor %}</nav>{% endif %}
+{% if pasta_atual %}<div class="modulo-navegacao"><a class="botao pequeno discreto modulo-voltar" href="/m/{{ modulo.id|urlencode }}{% if trilha_pastas|length > 1 %}?pasta={{ trilha_pastas[-2].caminho|urlencode }}{% endif %}" aria-label="Voltar à pasta anterior">{{ icone('seta_esq', 15) }} Voltar</a><h2>{{ ajustes_diretorio.titulo }}</h2></div>{{ pasta_ui.ajustes(ajustes_diretorio, modulo, true) }}{% endif %}
+{% if subpastas and modo_subpastas == 'lista' %}<nav class="modulo-subpastas" aria-label="Subpastas">{% for filha in subpastas %}<a href="?pasta={{ filha.caminho|urlencode }}">{{ icone('pasta', 17) }}<span>{{ filha.nome }}</span><small>{{ filha.total }}</small>{{ icone('chevron_dir', 14) }}</a>{% endfor %}</nav>
+{% elif subpastas %}{{ pasta_ui.grade(subpastas, modo_subpastas, 'Subpastas') }}{% endif %}
+{{ pasta_ui.midias(midias_modulo) }}
 </div>
 {% endif %}
 {% if modulo.avisos %}
@@ -76,9 +97,11 @@
 
 
 {# ---------------------------------------------------------------- Humano #}
-{% if aba == "humano" %}
+{% if aba == "referencias" %}
+<section class="lista-notas" aria-label="Notas de apoio">{% for n in referencias %}<a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><small>{{ n.pasta }}</small></a>{% else %}<p class="suave">Nenhuma referência nesta área.</p>{% endfor %}</section>{{ p.paginar(paginacao|default(none)) }}
+{% elif aba == "humano" %}
 <section class="lista-notas">
-  <p class="explica">{{ icone('pessoa', 15) }} <span>Suas orientações para esta pasta. Agentes podem ler e acrescentar contribuições identificadas. Tarefas e notas do dia a dia ficam nas outras visões.</span></p>
+  <p class="explica">{{ icone('pessoa', 15) }} <span>Suas orientações para os agentes nesta área.</span></p>
   {% for n in notas %}
   <a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><span>{{ n.trecho }}</span></a>
   {% else %}
@@ -89,7 +112,6 @@
 {# ---------------------------------------------------------------- Máquina #}
 {% elif aba == "maquina" %}
 <section class="lista-notas">
-  <p class="explica">{{ icone('chip', 15) }} O que faz o módulo funcionar: instruções para os agentes e as automações que trazem informação de fora. Você raramente precisa mexer aqui.</p>
 
   <h3 class="sub">Automações</h3>
   {% for c in coletores %}
@@ -131,7 +153,7 @@
   {% else %}
   <p class="suave">Nenhuma instrução em <code>{{ modulo.id }}/maquina/</code>.</p>
   {% endfor %}
-  {% if arquivadas %}<p class="suave">{{ arquivadas }} nota(s) arquivada(s) em <code>{{ modulo.id }}/arquivo/</code>.</p>{% endif %}
+  <a class="botao pequeno" href="{{ url_pasta(modulo.id ~ '/arquivo') }}"{% if not tem_arquivo %} hidden{% endif %}>{{ icone('caixa', 15) }} Abrir arquivo{% if arquivadas %} · {{ arquivadas }}{% endif %}</a>
 </section>
 
 {# ---------------------------------------------------------------- Gráfico #}
@@ -174,14 +196,46 @@
 </section>
 {% if quadros %}<p class="suave nota-grafico">Últimos {{ visao.dias }} dias. Os valores exatos de cada dia estão na aba de lista.</p>{% endif %}
 
+{# ------------------------------------------- Áreas organizadas em pastas #}
+{# Projetos (pastas) e Estudos (cartões): Pastas, Cartões e Lista mostram as
+   mesmas pastas; entrar numa delas mostra o item e suas notas. #}
+{% elif pasta_aberta is defined %}
+{% set pa = pasta_aberta %}
+<section class="pasta-dentro" aria-labelledby="pasta-dentro-titulo" data-chave="{{ pa.chave }}" data-subpasta="{{ pa.sub }}"{% if pa.vinculo %} data-vinculo="{{ pa.vinculo }}"{% endif %} data-diretorio="{{ pa.destino_nota }}" data-titulo="{{ pa.titulo }}">
+  <header class="pasta-dentro-cab">
+    <a class="botao pequeno so-icone" href="{{ pa.voltar or '?aba=' ~ visao_externa }}" aria-label="Voltar à pasta anterior" title="Voltar à pasta anterior">{{ icone('seta_esq', 16) }}</a>
+    <div><h2 id="pasta-dentro-titulo">{{ pa.titulo }}</h2><small>{{ pa.total }} nota{{ 's' if pa.total != 1 }}{% if pa.estado %} · {{ pa.estado }}{% endif %}</small></div>
+  </header>
+  <div class="pasta-conteudo">
+  {% if pa.subpastas %}{{ pasta_ui.grade(pa.subpastas, modo_subpastas, 'Subpastas') }}{% endif %}
+  {% if not pa.notas and not pa.midias and not pa.subpastas %}<p class="suave">Pasta vazia.</p>{% endif %}
+  {% if pa.notas and visao.tipo == 'tabela' %}
+  <ul class="lista-pasta">
+    {% for n in pa.notas %}
+    <li><a href="{{ n.url }}">{{ icone('nota', 15) }}<b>{{ n.titulo }}</b>{% if n.principal %}<small>{{ modulo.nome[:-1] if modulo.nome.endswith('s') else modulo.nome }}</small>{% elif n.data %}<small>{{ n.data[8:10] }}/{{ n.data[5:7] }}</small>{% endif %}</a></li>
+    {% endfor %}
+  </ul>
+  {% elif pa.notas %}
+  <div class="folhas" role="list">
+    {% for n in pa.notas %}
+    <div role="listitem"><a class="folha{% if n.imagem %} com-imagem{% endif %}{% if n.principal %} principal{% endif %}" href="{{ n.url }}">
+      {% if n.imagem %}<img src="{{ n.imagem }}" alt="" loading="lazy" draggable="false">{% else %}<span class="gf-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>{% endif %}
+      <span class="folha-cab"><b>{{ n.titulo }}</b>{% if n.principal %}<small>{{ modulo.nome[:-1] if modulo.nome.endswith('s') else modulo.nome }}</small>{% elif n.data %}<small>{{ n.data[8:10] }}/{{ n.data[5:7] }}</small>{% endif %}</span>
+    </a></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {{ pasta_ui.midias(pa.midias) }}
+  </div>
+  {{ pasta_ui.ajustes(pa, modulo, pastas_capas or modo_subpastas == "pastas" and pa.sub) }}
+</section>
+
+{% elif pastas is defined %}
+{{ pasta_ui.grade(pastas, visao.tipo, modulo.nome, modulo.icone) }}
+
 {# ---------------------------------------------------------------- Quadro #}
 {% elif visao.tipo == "kanban" %}
-{% if periodo_concluidas is defined %}
-<div class="tarefas-recorte">
-  <nav class="tarefas-periodos" aria-label="Período das tarefas concluídas"><span>Concluídas</span>{% for periodo in periodos_concluidas %}<a href="{{ periodo.url }}"{% if periodo.id == periodo_concluidas %} aria-current="page"{% endif %}>{{ periodo.nome }}</a>{% endfor %}</nav>
-  <p class="campo-ajuda">{% if periodo_concluidas == 'hoje' %}Conclusões de hoje.{% elif periodo_concluidas == 'semana' %}Conclusões desde segunda-feira.{% else %}Histórico completo, com as conclusões recentes primeiro.{% endif %} As tarefas abertas continuam no quadro.{% if concluidas_ocultas %} {{ concluidas_ocultas }} concluída{{ 's' if concluidas_ocultas != 1 else '' }} de outros dias ou sem data em <a class="link" href="{{ periodos_concluidas[-1].url }}">Todas</a>.{% endif %}</p>
-</div>
-{% endif %}
+
 <section class="quadro" data-campo="{{ visao.agrupar_por }}" data-campo-status="{{ modulo.campo_status }}">
   {% for col in colunas %}
   <div class="coluna{% if col.concluida %} concluida{% endif %}" data-valor="{{ col.valor }}" data-total="{{ col.total }}">
@@ -221,7 +275,7 @@
     </tbody>
   </table>
   {% else %}
-  {{ p.vazio("Abra uma subpasta" if subpastas|default([]) else "Nenhum item", "Suas notas continuam organizadas nas pastas acima." if subpastas|default([]) else "Crie o primeiro com o botão Novo, ou peça a um agente.") }}
+  {% if not subpastas|default([]) and not midias_modulo|default([]) %}{{ p.vazio("Nenhum item", "Crie o primeiro com o botão Novo, ou peça a um agente.") }}{% endif %}
   {% endif %}
 </section>
 {% endif %}
@@ -231,10 +285,11 @@
 
 {% block dialogos %}
 <div id="modulo-dialogos">
+{% set nova_pasta = (area_com_pastas) and aba != 'humano' %}
 <dialog id="dialogo-novo" class="dialogo" aria-labelledby="titulo-dialogo-novo" data-modulo="{{ modulo.id }}" data-subpasta="{{ pasta_atual|default('') }}" data-zona="{{ 'humano' if aba == 'humano' else 'itens' }}">
   <form class="dialogo-corpo" method="dialog">
-    <h2 id="titulo-dialogo-novo">{{ 'Nova nota sua' if aba == 'humano' else 'Novo em ' ~ modulo.nome }}</h2>
-    <label class="campo"><span>{{ "Nome" if modulo.id == "contatos" and aba != "humano" else "Título" }}</span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" autocomplete="off"></label>
+    <h2 id="titulo-dialogo-novo">{{ 'Nova nota sua' if aba == 'humano' else ('Nova pasta em ' if nova_pasta else 'Novo em ') ~ modulo.nome }}</h2>
+    <label class="campo"><span>{{ "Nome" if (modulo.id == "contatos" or nova_pasta) and aba != "humano" else "Título" }}</span><input type="text" name="titulo" id="novo-titulo" required maxlength="500" autocomplete="off"></label>
     {% if aba != 'humano' %}
     <div class="grade-campos">
       {% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') %}
@@ -244,7 +299,7 @@
       {% if modulo.id == 'clientes' %}<div data-extra-campo="contato_id" hidden>{{ p.seletor_contato(opcoes_contatos, '', 'data-novo') }}</div>{% endif %}
     </div>
     {% endif %}
-    <div data-extra-campo="__texto"{% if modulo.id not in ('tarefas', 'projetos') or aba == 'humano' %} hidden{% endif %}><label class="campo"><span>{{ 'Descrição' if modulo.id in ('tarefas', 'projetos') and aba != 'humano' else 'Texto' }} <small class="campo-opcional">Opcional</small></span><textarea name="corpo" id="novo-corpo" rows="3" maxlength="1000000"></textarea></label></div>
+    <div data-extra-campo="__texto"{% if not nova_pasta and (modulo.id not in ('tarefas', 'projetos') or aba == 'humano') %} hidden{% endif %}><label class="campo"><span>{{ 'Primeira nota' if nova_pasta else ('Descrição' if modulo.id in ('tarefas', 'projetos') and aba != 'humano' else 'Texto') }} <small class="campo-opcional">Opcional</small></span><textarea name="corpo" id="novo-corpo" rows="3" maxlength="1000000"{% if nova_pasta %} placeholder="A primeira linha vira o título da nota"{% endif %}></textarea></label></div>
     <label class="campo adicionar-campo"><span class="somente-leitor">Adicionar campo</span><select id="novo-adicionar-campo" aria-label="Adicionar campo">
       <option value="">Adicionar campo +</option>
       {% if aba != 'humano' %}{% for campo in modulo.campos.values() if campo.nome != 'origem' and campo.tipo not in ('imagem', 'link') and not (campo.obrigatorio and not campo.padrao) and not (modulo.id == "contatos" and campo.nome in ("telefone", "email")) %}<option value="{{ campo.nome }}">{{ campo.rotulo }}</option>{% endfor %}
@@ -253,7 +308,7 @@
     </select></label>
     <div class="dialogo-acoes">
       <button type="button" class="botao" data-fechar>Cancelar</button>
-      <button type="submit" class="botao principal" id="novo-salvar">Criar nota</button>
+      <button type="submit" class="botao principal" id="novo-salvar">{{ 'Criar pasta' if nova_pasta else 'Criar nota' }}</button>
     </div>
   </form>
 </dialog>

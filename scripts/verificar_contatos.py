@@ -28,6 +28,11 @@ def conferir(page):
 def jornada(page, base, largura, capturas):
     page.set_viewport_size({"width": largura, "height": 900})
     page.goto(base + "/m/contatos")
+    expect(page.locator(".abas-contatos").get_by_role("link", name="Lista", exact=True)).to_have_count(0)
+    if largura < 700:
+        topo = page.locator(".abas-contatos")
+        assert page.locator("#abrir-novo").bounding_box()["y"] == topo.locator(".abas-fim a").bounding_box()["y"]
+        assert abs(topo.locator(".abas-fim a").bounding_box()["y"] - topo.locator(".abas-visoes a").first.bounding_box()["y"]) < 6
     page.locator("#abrir-novo").click()
     page.locator("#novo-titulo").fill(f"Maria de exemplo {largura}")
     expect(page.locator('#novo-corpo')).not_to_be_visible()
@@ -60,15 +65,22 @@ def jornada(page, base, largura, capturas):
     if capturas:
         page.screenshot(path=str(capturas / f"cliente-{largura}.png"), full_page=True)
     page.goto(base + "/m/contatos")
-    page.get_by_role("searchbox", name="Buscar contato").fill(str(largura))
-    page.get_by_role("combobox", name="Grupo", exact=True).select_option("amigos")
-    page.get_by_role("button", name="Filtrar", exact=True).click()
+    busca = page.get_by_role("searchbox", name="Buscar contato")
+    busca.fill(str(largura))
+    if largura < 700:
+        expect(page.get_by_role("combobox", name="Grupo", exact=True)).to_have_count(0)
+        expect(page.get_by_role("button", name="Filtrar", exact=True)).to_have_count(0)
+        busca.press("Enter")
+    else:
+        page.get_by_role("combobox", name="Grupo", exact=True).select_option("amigos")
+        page.get_by_role("button", name="Filtrar", exact=True).click()
     expect(page.locator(".tabela tbody tr")).to_have_count(1)
     conferir(page)
     page.goto(contato_url)
     page.locator("#excluir-nota").click()
     confirmar(page, "Mover para a lixeira")
-    page.wait_for_url("**/lixeira")
+    page.wait_for_url("**/m/contatos")
+    page.goto(base + "/lixeira")
     conferir(page)
     if capturas:
         page.screenshot(path=str(capturas / f"lixeira-{largura}.png"), full_page=True)
@@ -77,7 +89,8 @@ def jornada(page, base, largura, capturas):
     expect(page.get_by_role("link", name=f"Abrir em Clientes: Maria de exemplo {largura}")).to_be_visible()
     page.locator("#excluir-nota").click()
     confirmar(page, "Mover para a lixeira")
-    page.wait_for_url("**/lixeira")
+    page.wait_for_url("**/m/contatos")
+    page.goto(base + "/lixeira")
     page.get_by_role("button", name="Excluir definitivamente", exact=True).click()
     confirmar(page, "Excluir definitivamente")
     expect(page.get_by_text("A lixeira está vazia.")).to_be_visible()

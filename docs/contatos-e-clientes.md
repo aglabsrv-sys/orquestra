@@ -55,3 +55,5 @@ Na lista, a coluna principal chama-se **Nome**. As outras colunas aparecem quand
 há valores preenchidos nos contatos do filtro atual; favoritos desmarcados e o
 tipo padrão Pessoa não abrem uma coluna sozinhos. As colunas respeitam a seleção
 da visualização e permanecem iguais entre páginas do mesmo filtro.
+No celular, digite na busca e confirme pelo teclado. No desktop, a busca também
+oferece grupo e favoritos.

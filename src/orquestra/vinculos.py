@@ -10,7 +10,7 @@ import unicodedata
 from collections import Counter
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
@@ -90,6 +90,7 @@ class Referencia:
     linha: int = 1
     tipo: str = "wiki"
     embutido: bool = False
+    campo: str = ""
 
 
 @dataclass(frozen=True)
@@ -319,7 +320,11 @@ def referencias_da_nota(indice: Indice, rel: str) -> list[Referencia]:
     cache = getattr(indice, "_referencias_vinculos", {})
     existente = cache.get(rel)
     if not existente or existente[0] != nota.versao:
-        existente = (nota.versao, extrair_referencias(nota.corpo))
+        referencias = extrair_referencias(nota.corpo)
+        for campo in ("projeto", "estudo", "habito"):
+            referencias.extend(replace(ref, linha=0, campo=campo)
+                               for ref in extrair_referencias(str(nota.campo(campo) or "")))
+        existente = (nota.versao, referencias)
         cache[rel] = existente
         indice._referencias_vinculos = cache
     return existente[1]

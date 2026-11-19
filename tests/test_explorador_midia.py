@@ -4,6 +4,19 @@ from urllib.parse import quote
 from orquestra import apresentacao as ap, temas
 
 
+def test_grafo_completo_nao_trunca_notas_apos_seiscentas(cliente, vault):
+    pasta = vault / "Acervo sintético"
+    pasta.mkdir()
+    for i in range(650):
+        (pasta / f"Nota {i:04}.md").write_text(f"[[Nota {(i + 1) % 650:04}]]\n", encoding="utf-8")
+    cliente.painel.indice.carregar()
+    resultado = cliente.get("/api/pastas/grafo").json()
+    assert not resultado["limitado"]
+    assert len([n for n in resultado["notas"] if n["id"].startswith("Acervo sintético/")]) == 650
+    assert len(resultado["ligacoes"]) >= 650
+    assert resultado["total"] == len(resultado["notas"])
+
+
 def test_imagens_relativas_e_obsidian_com_nomes_repetidos(cliente, vault):
     for pasta in ('A', 'B'):
         (vault / pasta).mkdir()

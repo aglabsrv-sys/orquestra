@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
-from orquestra import apresentacao as ap, preparo
+from orquestra import apoios, apresentacao as ap, preparo
 from orquestra.notas import ler_nota
 from orquestra.painel import NaoEncontrado, Recusado
 
@@ -63,6 +63,7 @@ def apresentar(nota, hoje: dt.date) -> dict:
     semana = sum(d.isoformat() in registros for d in dias_semana if d <= hoje)
     tags = nota.campo("tags") or []
     return {"rel": nota.rel, "versao": nota.versao, "titulo": nota.titulo, "url": ap.url_nota(nota.rel), "descricao": nota.corpo,
+            "dias_com_notas": [],
             "meta": meta, "semana": semana, "percentual": min(100, round(semana / meta * 100)),
             "marcado": hoje.isoformat() in registros, "registros": sorted(registros),
             "dias": [{"iso": d.isoformat(), "nome": "STQQSSD"[d.weekday()], "rotulo": ("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")[d.weekday()], "feito": d.isoformat() in registros, "futuro": d > hoje, "hoje": d == hoje} for d in dias_semana],
@@ -80,6 +81,10 @@ def montar(painel, aba="progresso", hoje: dt.date | None = None) -> dict:
     instalado = "habitos" in painel.indice.modulos
     modulo = painel.modulo("habitos") if instalado else preparo.catalogo()["habitos"]
     itens = [apresentar(n, hoje) for n in painel.indice.itens("habitos")] if instalado else []
+    execucoes = apoios.por_item(painel, "habitos", "execucoes") if instalado else {}
+    for item in itens:
+        notas = execucoes.get(item["rel"], [])
+        item["dias_com_notas"] = sorted({n["data"] for n in notas if n["data"]})
     itens.sort(key=lambda i: (i["marcado"], i["titulo"].casefold(), i["rel"]))
     segunda = hoje - dt.timedelta(days=hoje.weekday())
     inicio = segunda - dt.timedelta(weeks=12)

@@ -28,6 +28,8 @@
     e.preventDefault(); if (enviando) return;
     var escolha = form.querySelector('[name=escolha]:checked'); if (!escolha) { estado.textContent = 'Escolha uma capa.'; return; }
     var dados = {versao:raiz.dataset.versao}, valor = escolha.value;
+    var subpastas = document.getElementById('pagina-subpastas');
+    if (subpastas) dados.subpastas = subpastas.value;
     if (valor === 'tema') dados.padrao = true;
     else if (valor === 'ocultar') dados.ocultar = true;
     else if (valor.startsWith('cena:')) dados.cena = valor.slice(5);

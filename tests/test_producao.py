@@ -143,9 +143,10 @@ def test_lista_e_busca_paginam_antes_de_renderizar_cartoes(app_leve):
     for numero in range(181):
         (vault / "tarefas/itens" / f"Nota {numero:03}.md").write_text("Texto para encontrar.\n", encoding="utf-8")
     painel.recarregar_tudo()
-    primeira = cliente.get("/m/tarefas?aba=v1")
-    segunda = cliente.get("/m/tarefas?aba=v1&pagina=2")
-    ultima = cliente.get("/m/tarefas?aba=v1&pagina=3")
+    # Sem data, as tarefas ficam no período Todas.
+    primeira = cliente.get("/m/tarefas?aba=v1&concluidas=todas")
+    segunda = cliente.get("/m/tarefas?aba=v1&concluidas=todas&pagina=2")
+    ultima = cliente.get("/m/tarefas?aba=v1&concluidas=todas&pagina=3")
     assert [len(r.context["linhas"]) for r in (primeira, segunda, ultima)] == [80, 80, 21]
     assert segunda.context["paginacao"]["total"] == 181
     assert "aba=v1" in segunda.context["paginacao"]["proxima"]

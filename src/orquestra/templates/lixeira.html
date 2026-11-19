@@ -5,11 +5,11 @@
 <section class="pagina">
   <header class="pagina-topo"><h1>Lixeira</h1></header>
   <details class="nota-outros"><summary>Sobre a exclusão</summary><p class="campo-ajuda">Não há limpeza automática. A exclusão definitiva remove a cópia da lixeira; backups e versões anteriores de recuperação são independentes.</p></details>
-  {% if excluidas %}<div class="lixeira-lote"><label class="campo-linha"><input type="checkbox" id="lixeira-todos"> Selecionar todas</label><span id="lixeira-contagem">0 selecionadas</span><select id="lixeira-acao" aria-label="Ação nas notas selecionadas"><option value="restaurar">Restaurar selecionadas</option><option value="apagar">Excluir definitivamente</option></select><button class="botao pequeno" type="button" id="lixeira-executar" disabled>Aplicar</button></div><p id="lixeira-resultado" role="status" class="campo-ajuda"></p>{% endif %}
+  {% if excluidas %}<div class="lixeira-lote"><label class="campo-linha"><input type="checkbox" id="lixeira-todos"> Selecionar tudo</label><span id="lixeira-contagem">0 selecionados</span><select id="lixeira-acao" aria-label="Ação nos itens selecionados"><option value="restaurar">Restaurar selecionados</option><option value="apagar">Excluir definitivamente</option></select><button class="botao pequeno" type="button" id="lixeira-executar" disabled>Aplicar</button></div><p id="lixeira-resultado" role="status" class="campo-ajuda"></p>{% endif %}
   {% for item in excluidas %}
-  <article class="lixeira-linha" data-lixeira-id="{{ item.id }}" data-versao="{{ item.versao }}">
+  <article class="lixeira-linha" data-lixeira-id="{{ item.id }}" data-versao="{{ item.versao }}" data-tipo="{{ item.tipo|default('nota') }}">
     <input type="checkbox" data-lixeira-selecao aria-label="Selecionar {{ item.titulo }}">
-    <div class="lixeira-nota"><b>{{ item.titulo }}</b><small title="{{ item.rel }}">{{ item.rel }}</small></div>
+    <div class="lixeira-nota"><b>{% if item.tipo == 'pasta' %}{{ icone('pasta', 15) }} {% endif %}{{ item.titulo }}</b><small title="{{ item.rel }}">{{ item.rel }}</small></div>
     <div class="lixeira-acoes"><button class="botao pequeno so-icone" type="button" data-lixeira-acao="restaurar" aria-label="Restaurar" title="Restaurar">{{ icone('restaurar', 16) }}</button><button class="botao pequeno so-icone discreto" type="button" data-lixeira-acao="apagar" aria-label="Excluir definitivamente" title="Excluir definitivamente">{{ icone('lixeira', 16) }}</button></div>
   </article>
   {% else %}<p class="bloco">A lixeira está vazia.</p>{% endfor %}

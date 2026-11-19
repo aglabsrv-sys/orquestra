@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,12 @@ from orquestra.config import ler_yaml
 from orquestra.caminhos import CaminhoInseguro, caminho_no_vault
 
 TIPOS_DE_CAMPO = {"texto", "escolha", "data", "lista", "numero", "booleano", "link", "imagem"}
-TIPOS_DE_VISAO = ("kanban", "tabela", "grafico")
+TIPOS_DE_VISAO = ("kanban", "tabela", "grafico", "pastas", "cartoes")
+ESTILOS_DE_SUBPASTAS = {"cartoes": "Cartões", "pastas": "Pastas de vidro"}
+VISOES_DE_SUBPASTAS = {"lista": "Lista", **ESTILOS_DE_SUBPASTAS}
+# Artes nativas das pastas (geradas no navegador; ver static/js/pastas-vidro.js).
+ARTES_DE_PASTA = {"aurora": "Aurora", "brasa": "Brasa", "ametista": "Ametista", "oceano": "Oceano"}
+COR_DE_PASTA = re.compile(r"#[0-9a-fA-F]{6}")
 ARQUIVO_MODULO = "_modulo.yaml"
 # Um módulo desligado pelo painel: o arquivo muda de nome e a pasta continua intacta.
 ARQUIVO_DESLIGADO = "_modulo.desligado.yaml"
@@ -45,7 +51,7 @@ class Campo:
 
 @dataclass
 class Visao:
-    tipo: str  # kanban | tabela | grafico
+    tipo: str  # kanban | tabela | grafico | pastas | cartoes
     nome: str
     agrupar_por: str = "status"
     colunas: list[str] = field(default_factory=list)
@@ -91,6 +97,10 @@ class Modulo:
     acoes: list[Acao] = field(default_factory=list)
     coletores: list[ColetorDef] = field(default_factory=list)
     avisos: list[str] = field(default_factory=list)
+    # Ajustes das pastas na visão "pastas": chave (caminho do item ou grupo:<nome>)
+    # -> {arte, imagem, entrada_rapida}.
+    pastas: dict[str, dict] = field(default_factory=dict)
+    subpastas: str = ""
     # Onde ficam os registros. "itens" é o padrão dos módulos do Orquestra; "." diz
     # que as notas ficam soltas na própria pasta (e nas subpastas), que é como quase
     # todo vault do Obsidian já é organizado.
@@ -217,7 +227,7 @@ def _carregar_modulo(pasta: Path) -> Modulo:
             continue
         tipo = str(v.get("tipo") or "tabela")
         if tipo not in TIPOS_DE_VISAO:
-            avisos.append(f"Visão '{tipo}' não existe; use kanban, tabela ou grafico.")
+            avisos.append(f"Visão '{tipo}' não existe; use kanban, tabela, grafico, pastas ou cartoes.")
             continue
         try:
             dias = max(2, min(int(v.get("dias") or 30), 3660))
@@ -226,13 +236,30 @@ def _carregar_modulo(pasta: Path) -> Modulo:
         m.visoes.append(
             Visao(
                 tipo=tipo,
-                nome=str(v.get("nome") or {"grafico": "Gráfico"}.get(tipo, rotulo(tipo))),
+                nome=str(v.get("nome") or {"grafico": "Gráfico", "cartoes": "Cartões"}.get(tipo, rotulo(tipo))),
                 agrupar_por=str(v.get("agrupar_por") or m.campo_status),
                 colunas=_lista(v.get("colunas")),
                 campos=_lista(v.get("campos")),
                 dias=dias,
             )
         )
+    if str(bruto.get("subpastas")) in VISOES_DE_SUBPASTAS:
+        m.subpastas = bruto["subpastas"]
+    for chave, ajuste in (bruto.get("pastas") or {}).items() if isinstance(bruto.get("pastas"), dict) else ():
+        if not isinstance(ajuste, dict):
+            continue
+        limpo = {"entrada_rapida": ajuste.get("entrada_rapida") is True}
+        if str(ajuste.get("subpastas")) in VISOES_DE_SUBPASTAS:
+            limpo["subpastas"] = ajuste["subpastas"]
+        if isinstance(ajuste.get("titulo"), str) and ajuste["titulo"].strip():
+            limpo["titulo"] = " ".join(ajuste["titulo"].split())[:200]
+        if COR_DE_PASTA.fullmatch(str(ajuste.get("cor") or "")):
+            limpo["cor"] = ajuste["cor"].lower()
+        if str(ajuste.get("arte") or "") in ARTES_DE_PASTA:
+            limpo["arte"] = str(ajuste["arte"])
+        if isinstance(ajuste.get("imagem"), str) and ajuste["imagem"].strip():
+            limpo["imagem"] = ajuste["imagem"].strip()
+        m.pastas[str(chave)] = limpo
     if not m.visoes:
         if m.tem_status:
             m.visoes.append(Visao("kanban", "Quadro", m.campo_status))

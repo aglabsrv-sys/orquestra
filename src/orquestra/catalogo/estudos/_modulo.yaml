@@ -34,9 +34,8 @@ status:
   decidir: []
 
 visoes:
-  - tipo: kanban
-    nome: Quadro
-    agrupar_por: status
+  - tipo: cartoes
+    nome: Cartões
   - tipo: tabela
     nome: Lista
     colunas: [titulo, status, materia, revisar_em, dificuldade]

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "partes.html" as p %}
+{% import "componentes-pastas.html" as pasta_ui with context %}
 {% block titulo %}Personalizar {{ modulo.nome }}{% endblock %}
 {% block trilha %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a>{% endblock %}
 
@@ -67,17 +68,22 @@
   <section id="p-visoes" role="tabpanel" aria-labelledby="p-aba-visoes" hidden>
   <h2 class="grupo-titulo">{{ icone('grafico', 18) }} Visualizações</h2>
   <div class="bloco">
+    {% if modulo.itens_na_raiz or modulo.visoes|selectattr('tipo', 'in', ['pastas', 'cartoes'])|list %}
+    {{ pasta_ui.escolher_subpastas('p-subpastas', modulo.subpastas, opcoes_subpastas, estilo_subpastas_padrao) }}
+    {% endif %}
     {% if modulo.tem_status %}
     <label class="campo"><span id="rotulo-concluidos">Opções de “{{ modulo.campo_status }}” que contam como concluído</span>
       <input type="text" id="p-concluidos" value="{{ modulo.concluidos|join(', ') }}" placeholder="feito, cancelado" aria-labelledby="rotulo-concluidos" aria-describedby="ajuda-concluidos">
       <small class="campo-ajuda" id="ajuda-concluidos">Separe por vírgulas os nomes exatos das opções que encerram um item.</small>
     </label>
     {% endif %}
+    {% if modulo.id != 'contatos' %}
     <label class="campo campo-linha"><span>Quadro (colunas por {{ modulo.campo_status }}){% if not pode_quadro %} <small class="suave">· precisa de um campo “{{ modulo.campo_status }}” do tipo escolha</small>{% endif %}</span>
       <input type="checkbox" id="p-quadro"{% if tem_quadro %} checked{% endif %}{% if not pode_quadro and not tem_quadro %} disabled{% endif %}></label>
     <label class="campo campo-linha"><span>Gráfico (evolução dos campos de número){% if not pode_grafico %} <small class="suave">· precisa de pelo menos um campo do tipo numero</small>{% endif %}</span>
       <input type="checkbox" id="p-grafico"{% if tem_grafico %} checked{% endif %}></label>
     <p class="suave pequeno">A lista aparece sempre.</p>
+    {% else %}<p class="suave pequeno">Os contatos são exibidos em lista.</p>{% endif %}
   </div>
 
   </section>

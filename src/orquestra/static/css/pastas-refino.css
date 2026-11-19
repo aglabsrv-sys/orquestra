@@ -2,6 +2,8 @@
 .modulo-pastas { margin:8px var(--margem) 18px; min-width:0; }
 .modulo-navegacao { display:flex; align-items:center; gap:10px; margin-bottom:10px; min-width:0; }
 .modulo-navegacao:last-child { margin-bottom:0; }
+.modulo-navegacao h2 { margin:0; min-width:0; overflow-wrap:anywhere; font-size:1rem; }
+.modulo-pastas .arquivos-grade { padding-block:10px; }
 .modulo-voltar { flex:none; min-height:30px; padding:4px 7px; font-size:.72rem; }
 .modulo-pasta-atual { display:none; }
 .modulo-subpastas { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr)); gap:8px; margin:0; }

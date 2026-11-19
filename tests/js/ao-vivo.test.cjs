@@ -14,7 +14,7 @@ function pagina(responder) {
   const selo = { textContent: "", hidden: true };
   const item = { dataset: { seloDe: 'Pasta com "aspas"' }, querySelector: () => selo };
   const document = {
-    body: { dataset: { vaultId: "vault-a", observa: "tudo" } }, activeElement: null,
+    body: { dataset: { vaultId: "vault-a", observa: "tudo", eventos: "srv:1" } }, activeElement: null,
     querySelector: s => s === "#estado-conexao" ? estado : null,
     querySelectorAll: s => s === "[data-selo-de]" ? [item] : [],
     addEventListener: (nome, cb) => { eventos[nome] = cb; }
@@ -44,7 +44,10 @@ function pagina(responder) {
   }
   runInNewContext(fonte, { document, window, EventSource, fetch, setTimeout, clearTimeout: id => tarefas.delete(id), location: { reload() { recargas++; } } });
   eventos.DOMContentLoaded();
-  return { estado, selo, document, fontes, pedidos, avisos, avancar, janelas, get recargas() { return recargas; } };
+  return { estado, selo, document, fontes, pedidos, avisos, avancar, janelas,
+    servidor(marca, fonte = fontes.at(-1)) { fonte.onmessage({ data: JSON.stringify({ tipo: "estado", marca }) }); },
+    visibilidade(oculta) { document.hidden = oculta; eventos.visibilitychange(); },
+    get recargas() { return recargas; } };
 }
 
 test("rajada de 100 eventos agrupa a consulta de resumo e aceita nomes com aspas", async () => {
@@ -63,21 +66,27 @@ test("selos zerados ou ausentes somem e contagens altas ficam compactas", async 
   }
 });
 
-test("reconexão ressincroniza inclusive depois de falha na primeira abertura", async () => {
-  for (const abriuAntes of [false, true]) {
+test("reconexão recarrega só se perdeu eventos ou o servidor reiniciou", async () => {
+  for (const [marca, esperadas] of [["srv:1", 0], ["srv:4", 1], ["novo:0", 1]]) {
     const p = pagina();
-    if (abriuAntes) { p.fontes[0].onopen(); await p.avancar(180); }
     p.fontes[0].onerror(); assert.equal(p.estado.hidden, false);
     assert.match(p.estado.textContent, /Reconectando/);
-    p.fontes[0].onopen(); await p.avancar(450);
-    assert.equal(p.estado.hidden, true); assert.equal(p.recargas, 1);
+    p.fontes[0].onopen(); p.servidor(marca); await p.avancar(450);
+    assert.equal(p.estado.hidden, true); assert.equal(p.recargas, esperadas, marca);
   }
+});
+
+test("eventos recebidos ao vivo avançam a marca e não causam recarga ao reconectar", async () => {
+  const p = pagina(); p.fontes[0].onopen(); p.servidor("srv:1");
+  p.fontes[0].onmessage({ data: JSON.stringify({ tipo: "nota", rel: "x", marca: "srv:2" }) });
+  p.fontes[0].onerror(); p.fontes[0].onopen(); p.servidor("srv:2"); await p.avancar(700);
+  assert.equal(p.recargas, 0);
 });
 
 test("reconexão durante digitação oferece atualizar sem recarregar a tela", async () => {
   const p = pagina(); p.fontes[0].onopen(); await p.avancar(180);
   p.document.activeElement = { tagName: "INPUT" };
-  p.fontes[0].onerror(); p.fontes[0].onopen(); await p.avancar(450);
+  p.fontes[0].onerror(); p.fontes[0].onopen(); p.servidor("srv:9"); await p.avancar(450);
   assert.equal(p.recargas, 0); assert.equal(p.avisos.length, 1);
   assert.equal(p.avisos[0][2].rotulo, "Atualizar");
 });
@@ -105,4 +114,25 @@ test("voltar pelo cache do navegador reabre um único stream e remove a conexão
     p.janelas.pageshow.forEach(cb => cb({ persisted: true }));
   }
   assert.equal(p.fontes.length, 4); assert.equal(p.janelas.pageshow.length, 1);
+});
+
+test("aba oculta libera a conexão e só recarrega ao retornar se algo mudou", async () => {
+  const p = pagina();
+  p.visibilidade(true);
+  assert.equal(p.fontes[0].fechada, true);
+  p.visibilidade(false);
+  assert.equal(p.fontes.length, 2);
+  p.servidor("srv:1"); await p.avancar(700);
+  assert.equal(p.recargas, 0);
+  p.visibilidade(true); p.visibilidade(false); p.servidor("srv:3"); await p.avancar(700);
+  assert.equal(p.recargas, 1);
+});
+
+test("retorno à aba preserva digitação pendente", async () => {
+  const p = pagina();
+  p.document.activeElement = { tagName: "TEXTAREA" };
+  p.visibilidade(true); p.visibilidade(false); p.servidor("srv:2");
+  await p.avancar(700);
+  assert.equal(p.recargas, 0);
+  assert.equal(p.avisos.length, 1);
 });

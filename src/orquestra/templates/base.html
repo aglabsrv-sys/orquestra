@@ -16,7 +16,7 @@
   <style>{{ estilo|safe }}</style>
 {% if request.query_params.get('explorador') == '1' %}<link rel="stylesheet" href="/static/css/leitor.css?v={{ marca }}">{% endif %}
 </head>
-<body data-vault-id="{{ vault_id }}" data-pagina="{{ ativo }}" data-observa="{% block observa %}{% endblock %}">
+<body data-vault-id="{{ vault_id }}"{% if marca_eventos is defined %} data-eventos="{{ marca_eventos }}"{% endif %} data-pagina="{{ ativo }}" data-observa="{% block observa %}{% endblock %}">
   <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
   <canvas id="ambiente" width="48" height="27" aria-hidden="true"></canvas>
 
@@ -76,11 +76,11 @@
   </div>
   {% endif %}
 
-  {% if modulo_captura %}
+  {% if modulo_captura or pastas is defined or pasta_aberta is defined %}
   <dialog id="captura" class="dialogo" aria-labelledby="titulo-captura">
     <div class="dialogo-corpo">
       <h2 id="titulo-captura">Captura rápida</h2>
-      <p class="suave">Vai para “{{ modulo_captura.nome }}” como nota sua, do jeito que você escreveu. Um agente processa depois.</p>
+      {% if modulo_captura %}<p class="suave" id="captura-explica">Vai para “{{ modulo_captura.nome }}” como nota sua, do jeito que você escreveu. Um agente processa depois.</p>{% endif %}
       <textarea id="captura-texto" rows="6" aria-label="Texto da captura" placeholder="Uma ideia, um pedido, um lembrete..."></textarea>
       <div class="dialogo-acoes">
         <span class="suave dica-tecla">Ctrl + Enter para guardar</span>

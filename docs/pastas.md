@@ -1,15 +1,38 @@
 # Pastas e grafo
 
+No celular, a árvore inicia recolhida e o grafo ocupa a área principal. O botão
+de pasta expande a árvore; abrir uma nota recolhe a árvore e mostra o leitor na
+área principal. Escape recolhe a árvore. A aba Lista oferece a navegação compacta.
+O botão **Mostrar esta nota na pasta** destaca a nota no grafo completo e na árvore.
+A URL preserva o caminho, inclusive acentos, com `nota=`.
+
+## Visualizações de subpastas
+
+A aba **Lista** exibe subpastas e notas em lista. Em **Ajustes → Visualizações**,
+escolha **Cartões** ou **Pastas de vidro** para a aba visual. Cada pasta usa o
+estilo da área até receber uma escolha própria. Projetos usa Pastas de vidro por
+padrão e Estudos usa Cartões. No explorador, **Ajustes de Pastas** define o estilo
+da aba visual ao lado de **Lista** e **Grafo**.
+Subpastas, notas e mídias ficam acessíveis no mesmo nível, inclusive em pastas
+vazias ou que contêm apenas anexos.
+
 ## Arquivar e excluir notas
 
 **Arquivar** conserva a nota em `arquivo/` da sua área, para consulta futura.
 **Excluir**, no cabeçalho da nota, move o arquivo para a lixeira após confirmação.
+Depois da exclusão, o painel volta ao contexto de origem.
 Anexos e notas relacionadas não são excluídos junto. Instruções de agentes,
 configurações e arquivos de `maquina/` são protegidos contra exclusão pelo painel.
 
+Use os botões em **Ajustes da pasta** para arquivar ou mover uma pasta para
+a lixeira. A confirmação informa o que será movido. Uma pasta física pode ser
+restaurada inteira, com suas subpastas e anexos. Em uma pasta de projeto ou estudo
+organizada por vínculos, a ação move a nota principal e suas notas exclusivas.
+Anexos e notas compartilhadas ficam no local original.
+
 Abra **Pastas → Lixeira** para restaurar ou excluir definitivamente cada item.
-A lista mostra uma linha por nota, com os ícones Restaurar e Excluir definitivamente.
-A seleção permite marcar várias notas ou todas e escolher uma ação no menu.
+A lista mostra uma linha por nota ou pasta, com os ícones Restaurar e Excluir definitivamente.
+A seleção permite marcar vários itens e escolher uma ação no menu.
 Restaurar processa cada nota sem sobrescrever caminhos ocupados; falhas ficam
 selecionadas e aparecem no resultado. Excluir definitivamente em lote pede uma
 confirmação com a quantidade antes de iniciar.
@@ -32,8 +55,8 @@ atual, em formato `[[wikilink]]` ou link Markdown.
 
 ## Navegação
 
-- Em **Grafo**, expanda ou recolha pastas pela seta ou pelo nome. A árvore mantém
-  o grafo, o enquadramento e a pasta atual; clicar em uma nota abre a leitura.
+- Em **Grafo**, a seta expande ou recolhe um ramo. O nome abre a pasta e mantém
+  o grafo disponível. Clicar em uma nota abre a leitura.
 - Use **Notas** para ver a lista de subpastas, notas e anexos. Clicar numa pasta
   da lista ou no seu nome na árvore mostra o conteúdo mantendo o modo Notas;
   a seta da árvore apenas expande ou recolhe. Subir um nível e voltar ou avançar
@@ -60,8 +83,10 @@ atual, em formato `[[wikilink]]` ou link Markdown.
 - Passe sobre uma nota para destacar suas conexões. Pelo teclado, use as setas para escolher uma nota, Enter para abrir e `0` para centralizar.
 - Em uma pasta adotada no painel, as subpastas continuam navegáveis. O painel sugere Lista quando um quadro não teria uma distribuição útil de status e memoriza a visualização escolhida para cada área e cofre.
 
-O grafo mostra até 600 notas e 3.000 ligações por consulta. O indicador informa
-quando a visualização é parcial. A resolução considera o contexto da nota e
+O grafo mostra as notas e ligações de todo o cofre, mesmo ao navegar por uma pasta.
+**Mostrar esta nota na pasta**, no leitor, abre o grafo com a nota destacada e
+seus antecessores expandidos na árvore. O conteúdo só abre ao selecionar a nota.
+A resolução considera o contexto da nota e
 caminhos explícitos. Quando ainda houver mais de um destino possível, informe
 o caminho para tornar a ligação inequívoca.
 
@@ -99,6 +124,10 @@ A edição de HTML é feita no editor de sua preferência; a edição de notas M
 continua disponível no leitor do painel.
 
 ## Editar uma nota
+
+O botão **Voltar** junto às ações da nota retorna à tela anterior do painel.
+Na leitura interna de Pastas, volta ao grafo ou à lista sem perder a árvore.
+Uma nota aberta diretamente, sem histórico interno, retorna à sua área ou pasta.
 
 Dê dois cliques no texto (ou aperte Enter com a nota selecionada). A nota fica
 editável ali mesmo, com a mesma aparência: tabelas continuam tabelas e listas

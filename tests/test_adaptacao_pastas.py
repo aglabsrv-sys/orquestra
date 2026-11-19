@@ -29,7 +29,7 @@ def test_pasta_adotada_navega_sem_achatar_subpastas(cliente):
     assert raiz.status_code == 200
     assert [p["nome"] for p in raiz.context["subpastas"]] == ["Clientes", "Estudos"]
     assert [l["cartao"]["titulo"] for l in raiz.context["linhas"]] == ["Visão geral"]
-    assert f'href="?aba={raiz.context["aba"]}&amp;pasta=Clientes"' in raiz.text
+    assert 'href="?pasta=Clientes"' in raiz.text
     filha = cliente.get("/m/Biblioteca?pasta=Clientes")
     assert filha.status_code == 200
     assert [p["nome"] for p in filha.context["subpastas"]] == ["Projeto"]

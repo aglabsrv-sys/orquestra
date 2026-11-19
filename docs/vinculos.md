@@ -22,6 +22,8 @@ no diagnóstico.
 O relatório mostra a linha do **corpo Markdown**, sem contar o frontmatter YAML,
 correspondendo ao texto editável no painel. O processamento é atualizado quando
 as notas e os destinos mudam; não há uma tarefa agendada obrigatória.
+Wikilinks nas propriedades `projeto`, `estudo` e `habito` também entram nas
+conexões: o relatório informa o nome da propriedade em vez de uma linha do texto.
 
 Para integrações locais, `GET /api/vinculos` aceita `rel` (pasta relativa),
 `filtro=todos|revisao|futuro` e `limite` (até 5.000 ocorrências). Os totais sempre

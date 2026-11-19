@@ -172,6 +172,32 @@ def test_cli_mcp_stdio_executa_todas_as_ferramentas(vault, tmp_path):
         assert cliente.chamadas == set(FERRAMENTAS)
 
 
+@pytest.mark.parametrize("area,campo", [("projetos", "projeto"), ("estudos", "estudo")])
+def test_mcp_e_painel_compartilham_pastas_e_notas_de_apoio(cliente, tmp_path, area, campo):
+    painel = cliente.painel
+    if area not in painel.indice.modulos:
+        painel.adicionar_modulo(area)
+    with servidor_stdio(painel.vault, tmp_path) as mcp:
+        contexto = mcp.chamar("contexto_area", {"area": area})
+        assert contexto["organizacao"]["tipo"] == "pastas"
+        assert contexto["organizacao"]["campo_vinculo"] == campo
+        item = mcp.chamar("criar_item", {"area": area, "titulo": "Pasta via conector", "texto": "Texto do agente."})
+        painel.indice.sincronizar()
+        pagina = cliente.get(f"/m/{area}", params={"abrir": item["caminho"], "aba": "v1"})
+        assert pagina.status_code == 200
+        assert pagina.context["pasta_aberta"]["notas"][0]["rel"] == item["caminho"]
+        r = cliente.post("/api/captura", json={"texto": "Nota do painel\nConteúdo humano.", "vinculo": item["caminho"]})
+        assert r.status_code == 200
+        apoio = mcp.chamar("ler_nota", {"caminho": r.json()["rel"]})
+        assert apoio["e_da_pessoa"] and apoio["campos"][campo] == "[[Pasta via conector]]"
+        assert r.json()["rel"] not in {n["caminho"] for n in mcp.chamar("listar_itens", {"area": area})}
+        lido = mcp.chamar("ler_nota", {"caminho": item["caminho"]})
+        assert lido["texto"].strip() == "Texto do agente."
+        assert lido["campos"]["origem"] == "agente"
+        conexoes = mcp.chamar("conexoes_nota", {"caminho": item["caminho"]})
+        assert r.json()["rel"] in {n["caminho"] for n in conexoes["entradas"]["itens"]}
+
+
 def test_mcp_stdio_recusa_versao_obsoleta_e_permite_retomar(vault, tmp_path):
     with servidor_stdio(vault, tmp_path) as cliente:
         criado = cliente.chamar("criar_item", {"area": "tarefas", "titulo": "Concorrência", "texto": "Primeira versão"})

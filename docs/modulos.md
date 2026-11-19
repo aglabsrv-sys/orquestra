@@ -4,6 +4,16 @@ Um módulo (no painel, uma "área") é uma pasta na raiz do vault com um arquivo
 `_modulo.yaml`. O painel descobre sozinho: não há nada para registrar nem código
 para mexer.
 
+## Referências da área
+
+Notas em `nome-da-area/referencias/` ficam na aba **Referências**, separadas dos
+cartões e contagens de itens. O status original é preservado, mesmo que não faça
+parte das opções do módulo. Um link para um item da área, ou sua pasta de nome
+inequívoco, também permite consultar a referência dentro desse item como nota
+de apoio. A associação é de leitura: não move nem reescreve arquivos.
+Em Estudos não há aba separada: essas notas aparecem na própria área e, quando
+vinculadas por link ou pasta de nome inequívoco, dentro do estudo correspondente.
+
 ## Três jeitos de ter um módulo, sem escrever YAML
 
 - **Acrescentar um pronto.** Em Ajustes > Pastas, escolha no catálogo:
@@ -19,8 +29,21 @@ para mexer.
 
 ## Criar e organizar itens
 
-O botão **Novo** abre título e campos obrigatórios sem valor padrão. Em Tarefas e
-Projetos, a descrição opcional também aparece: é o texto da nota. Em
+Em Projetos e Estudos, **Novo** cria uma pasta: o título dá nome à pasta e a
+descrição opcional vira sua primeira nota, com a primeira linha como título.
+Dentro dela, **Nova nota** cria uma nota vinculada. Pastas, Cartões e Lista
+mantêm a pasta aberta ao trocar de visualização. A escolha é lembrada por área
+e cofre neste navegador, separando a visão externa da interna: por exemplo,
+Pastas por fora e Lista por dentro. **Voltar** restaura a visão externa.
+A troca interna mantém o título e os controles; só a apresentação das notas muda.
+Os ajustes internos de Projetos personalizam só aquela pasta (capa e entrada
+rápida), enquanto os ajustes na raiz são da área.
+O título nos ajustes nomeia a pasta no painel, sem renomear arquivos nem
+alterar os títulos das notas que estão dentro. Em Estudos, os ajustes internos
+oferecem esse título, mantendo os cartões simples.
+
+Nas demais áreas, **Novo** abre título e campos obrigatórios sem valor padrão.
+Em Tarefas, a descrição opcional é o texto da nota. Em
 **Adicionar campo +**, escolha propriedades adicionais ou Texto. Campos não
 adicionados conservam os padrões do módulo; não são enviados como valores vazios.
 
@@ -29,15 +52,16 @@ preenchido com um visto e o título riscado; clicar novamente reabre. O controle
 funciona por teclado e só muda depois da confirmação do servidor. Os estados
 intermediários continuam disponíveis nas propriedades da nota e no quadro.
 
-No quadro de Tarefas, **Concluídas → Hoje** é o padrão. **Semana** mostra desde
-segunda-feira e **Todas** abre o histórico, inclusive tarefas antigas sem data de
-conclusão. As tarefas abertas permanecem visíveis em qualquer recorte. Concluir
+Em Tarefas, **Hoje** é o padrão no quadro e na lista. As abertas aparecem pela
+data agendada: Hoje corresponde ao dia atual e Semana vai de segunda a domingo.
+Sem data ou fora do período, continuam disponíveis em **Todas**. As concluídas
+aparecem pela data de conclusão, até hoje, dentro do período selecionado. Concluir
 registra `concluido_em` na nota; reabrir remove essa data e uma nova conclusão a
 renova. Editar o texto de uma tarefa concluída conserva sua data. O prazo da tarefa
 e o horário de modificação do arquivo não são usados como data de conclusão.
 Notas antigas sem essa informação não recebem uma data estimada.
 
-A Lista conserva todo o histórico, com até 80 notas por página. O quadro mostra
+A Lista usa o mesmo período do quadro, com até 80 notas por página. O quadro mostra
 até 80 cartões por coluna e indica o restante na Lista. Nenhuma nota é apagada ou
 arquivada automaticamente por sair do recorte diário. Projetos e outras áreas
 conservam seu histórico no quadro, conforme o significado dos próprios status.
@@ -144,9 +168,25 @@ visoes:
     nome: Evolução
     campos: [valor]       # opcional: quais campos numero mostrar (padrão: todos)
     dias: 60              # opcional: quantos dias para trás (padrão: 30)
+  # - tipo: pastas        # cada item vira uma pasta com suas notas (padrão em Projetos)
+  # - tipo: cartoes       # cartões simples: ícone, título e um texto de apoio (padrão em Estudos)
 
 capa: {cena: cidade, paleta: brasa}   # opcional; veja docs/temas.md
+
+# Só na visão pastas, escrito pelo botão Ajustes dentro da pasta:
+# pastas:
+#   "projetos/itens/Meu projeto.md": {arte: oceano, entrada_rapida: true}
+#   "grupo:Arquivo antigo": {imagem: midia/capas/abc.png}
+#   "grupo:Notas soltas": {cor: '#7cc4ff'}
 ```
+
+Na visão `pastas`, as notas de apoio de um item ficam em `<area>/referencias/<item>/`
+e trazem `projeto: [[item]]` (ou `estudo:`). Capas nativas: `aurora`, `brasa`,
+`ametista` e `oceano`. **Cor lisa** usa a mesma paleta dos ajustes gerais ou uma
+cor personalizada no formato `#rrggbb`, tanto em projetos quanto em grupos de
+notas. Cor, imagem e arte são alternativas de capa; escolher uma substitui a anterior.
+No celular, as pastas e os cartões de Projetos e Estudos, inclusive as notas
+internas em grade, usam duas colunas. Lista continua como lista compacta.
 
 ## Tipos de campo
 

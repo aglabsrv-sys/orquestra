@@ -50,7 +50,7 @@ def test_campo_booleano_obrigatorio_permite_falso_e_ajuda_nao_depende_de_placeho
     elementos = Elementos(html).itens
     campo = next(attrs for tag, attrs in elementos if tag == "input")
     assert campo["aria-describedby"] == next(attrs["id"] for tag, attrs in elementos if tag == "small")
-    assert "Separe os itens por vírgulas" in html
+    assert "Separe por vírgulas" in html
 
     html = entrada(Campo("status", tipo="escolha", rotulo="Status", obrigatorio=True, opcoes=["feito"]), "")
     seletor = next(attrs for tag, attrs in Elementos(html).itens if tag == "select")

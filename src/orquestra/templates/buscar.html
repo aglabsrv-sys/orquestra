@@ -6,7 +6,7 @@
 {% block conteudo %}
 <section class="pagina">
   <header class="pagina-topo"><h1>Buscar notas</h1></header>
-  <p class="explica" id="busca-ajuda">Procure por palavras no título ou no texto das notas do seu vault.</p>
+  <p class="somente-leitor" id="busca-ajuda">Procure por palavras no título ou no texto das notas do seu vault.</p>
   <form class="busca" action="/buscar" method="get" role="search">
     {{ icone('busca', 18) }}
     <input type="search" name="q" value="{{ q }}" aria-label="Buscar em todas as notas" aria-describedby="busca-ajuda" placeholder="Título ou trecho da nota" autocomplete="off">

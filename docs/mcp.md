@@ -15,6 +15,16 @@ revisar inconsistências e consultar conexões entre notas. Essas consultas deri
 dos mesmos arquivos: não criam outro banco, não usam um modelo de IA no servidor
 e não reorganizam nada sozinhas.
 
+Em Projetos e Estudos, `contexto_area` também informa a organização por pastas,
+o destino das notas de apoio e o campo de vínculo (`projeto` ou `estudo`).
+`criar_item` cria a nota principal que representa a pasta no painel, preservando
+seu texto e status; notas vinculadas continuam separadas da lista de itens.
+`buscar`, `ler_nota` e `conexoes_nota` permitem consultar essas notas e suas ligações.
+Links nas propriedades `projeto`, `estudo` e `habito` também entram no grafo e
+nas conexões MCP. Nas saídas, `campo` identifica a propriedade e `linha: 0`
+indica que o vínculo não pertence ao corpo; nas entradas, `campos` lista essas
+propriedades separadamente das linhas do texto.
+
 As ferramentas deste conector não permitem:
 
 - reescrever o texto de uma nota sua (só acrescentar, sob "Notas do agente");

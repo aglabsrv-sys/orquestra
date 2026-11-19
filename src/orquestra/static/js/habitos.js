@@ -60,7 +60,7 @@
         marcar.title=item.marcado ? 'Desmarcar hoje' : 'Marcar hoje'; marcar.setAttribute('aria-label',marcar.title+' · '+item.titulo); $('[data-habito-check]',card).textContent=item.marcado ? '✓' : '+';
         $('[data-habito-semana]',card).textContent=item.semana; $('[data-habito-meta-estado]',card).textContent=item.semana>=item.meta ? 'Meta alcançada' : 'No seu ritmo';
         var dataHoje=r.hoje.slice(8,10)+'/'+r.hoje.slice(5,7)+'/'+r.hoje.slice(0,4), dica=dataHoje+' · '+(item.marcado?'realizado':'sem registro');
-        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.dataset.habitoTooltip=dica; ponto.setAttribute('aria-label',dica); }
+        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.dataset.habitoTooltip=dica; ponto.setAttribute('aria-label',dica+' · Ver notas do dia'); }
         var mapa=$('.habito-mapa',card); if (mapa) mapa.setAttribute('aria-label','Histórico de atividade de '+item.titulo+'. '+item.total_registros+' dias realizados ao todo.');
       } catch (erro) { estado.textContent=erro.message; }
       finally { marcar.disabled=false; }

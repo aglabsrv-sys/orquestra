@@ -30,6 +30,7 @@ def data_conclusao(nota: Nota) -> dt.date | None:
 
 def recortar_quadro(itens: list[Nota], modulo: Modulo, hoje: dt.date, periodo: str) -> tuple[list[Nota], int]:
     inicio = hoje - dt.timedelta(days=hoje.weekday()) if periodo == "semana" else hoje
+    fim = inicio + dt.timedelta(days=6) if periodo == "semana" else hoje
     abertos, concluidas = [], []
     for nota in itens:
         (concluidas if str(nota.campo(modulo.campo_status) or "") in modulo.concluidos else abertos).append(nota)
@@ -37,4 +38,14 @@ def recortar_quadro(itens: list[Nota], modulo: Modulo, hoje: dt.date, periodo: s
     # As conclusões recentes vêm antes do histórico sem data, inclusive quando
     # uma coluna excede o limite de cartões exibidos pelo painel.
     visiveis.sort(key=lambda n: data_conclusao(n) or dt.date.min, reverse=True)
+    if periodo != "todas":
+        # Abertas de dias futuros ou sem data ficam em Todas; atrasadas continuam
+        # visíveis, pois ainda precisam ser feitas.
+        def no_periodo(nota: Nota) -> bool:
+            try:
+                dia = dt.date.fromisoformat(str(nota.campo(modulo.campo_data or "data") or "")[:10])
+            except ValueError:
+                return False
+            return dia <= fim
+        abertos = [n for n in abertos if no_periodo(n)]
     return [*abertos, *visiveis], len(concluidas) - len(visiveis)
