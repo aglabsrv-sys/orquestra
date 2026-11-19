@@ -23,10 +23,13 @@
 .habito-mapa { display:grid; grid-template-rows:repeat(7,1fr); grid-template-columns:repeat(13,minmax(0,1fr)); grid-auto-flow:column; gap:4px; }
 .habito-dia { display:block; aspect-ratio:1; min-width:0; border-radius:3px; background:var(--superficie-alta); border:1px solid color-mix(in srgb,var(--borda) 70%,transparent); }
 .habito-dia.com-nota { box-shadow:inset 0 -2px var(--texto-suave); }
-.habito-dia.realizado { background:color-mix(in srgb,var(--destaque) 80%,var(--superficie)); border-color:var(--destaque); }
-.habito-dia.realizado:nth-child(5n+1) { background:color-mix(in srgb,var(--destaque) 58%,var(--superficie)); }
-.habito-dia.realizado:nth-child(7n+2) { background:color-mix(in srgb,var(--destaque) 70%,var(--superficie)); }
-.habito-dia.realizado:nth-child(11n+3) { background:color-mix(in srgb,var(--destaque) 82%,var(--texto)); }
+.habito-dia.realizado { --atividade:48%; background:color-mix(in srgb,var(--destaque) var(--atividade),var(--superficie-alta)); border-color:transparent; }
+.habito-mapa:not([data-mapa-intensidade]) .habito-dia.realizado:nth-child(5n+1) { --atividade:62%; }
+.habito-mapa:not([data-mapa-intensidade]) .habito-dia.realizado:nth-child(7n+2) { --atividade:78%; }
+.habito-mapa:not([data-mapa-intensidade]) .habito-dia.realizado:nth-child(11n+3) { --atividade:95%; }
+.habito-dia.realizado[data-intensidade="2"] { --atividade:66%; }
+.habito-dia.realizado[data-intensidade="3"] { --atividade:82%; }
+.habito-dia.realizado[data-intensidade="4"] { --atividade:100%; }
 .habito-dia.hoje { outline:1px solid var(--destaque); outline-offset:1px; }
 .habito-dia.futuro { background:transparent; border-style:dashed; opacity:.4; }
 .habito-dia:is(:hover,:focus-visible) { outline:2px solid var(--texto); outline-offset:1px; }
@@ -34,11 +37,14 @@
 .habito-dica[hidden] { display:none; }
 .habito-card-rodape { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .habito-card-rodape > span { font-size:9px; color:var(--texto-suave); }
-.habito-card-topo > .habito-acoes { display:grid; grid-auto-flow:column; grid-template-columns:repeat(2,32px); align-items:center; gap:3px; width:67px; }
+.habito-card-topo > .habito-acoes { display:grid; grid-auto-flow:column; grid-template-columns:32px 42px; align-items:center; gap:3px; }
 .habito-acoes > .botao.so-icone { width:32px; height:32px; min-height:32px; padding:0; margin:0; }
-.habito-acoes .habito-marcar { width:32px; min-height:32px; padding:0; border-color:transparent; background:transparent; color:var(--texto-suave); }
-.habito-acoes .habito-marcar:hover { border-color:var(--borda); color:var(--texto); }
-.habito-acoes .habito-marcar.feito { color:var(--destaque); background:color-mix(in srgb,var(--destaque) 8%,transparent); }
+.habito-acoes > .habito-marcar.so-icone { width:100%; padding:0 3px; gap:2px; border-color:transparent; background:var(--destaque); color:var(--sobre-destaque); }
+.habito-acoes > .habito-marcar:hover { filter:brightness(1.1); }
+.habito-acoes > .habito-marcar.feito { color:var(--destaque); background:color-mix(in srgb,var(--destaque) 18%,var(--superficie)); }
+.habito-marcar-texto { display:none; }
+.habito-marcar [data-habito-contagem] { font-size:.7rem; font-variant-numeric:tabular-nums; }
+.habito-marcar:has([data-habito-contagem]:not([hidden])) [data-habito-check] { display:none; }
 .habito-marcar [data-habito-check] { font-size:16px; line-height:1; }
 .habito-estado { font-size:10px; color:var(--alerta); margin:0; }
 .habito-estado:not(:empty) { margin-top:10px; }
@@ -81,9 +87,13 @@
 .habito-meta-opcoes input:checked + span { color:var(--sobre-destaque); background:var(--destaque); border-color:var(--destaque); }
 .habito-meta-opcoes input:focus-visible + span { outline:2px solid var(--destaque); outline-offset:3px; }
 .habitos-lista { grid-template-columns:1fr; }
-.habitos-lista .habito-card { display:grid; grid-template-columns:minmax(0,1fr) minmax(200px,272px); align-items:start; column-gap:24px; padding:14px 16px; }
+.habitos-lista .habito-card { display:grid; grid-template-columns:minmax(0,1fr) minmax(140px,190px); align-items:start; column-gap:24px; padding:14px 16px; }
 .habitos-lista .habito-card-topo { grid-column:1; grid-row:1; }
-.habitos-lista .habito-mapa-wrap { grid-column:2; grid-row:1/3; margin:0; }
+.habitos-lista .habito-mapa-wrap { grid-column:2; grid-row:1/3; margin:0; align-self:center; }
+.habitos-lista .habito-mapa { grid-template-columns:repeat(8,minmax(0,1fr)); }
+.habitos-lista .habito-dia:nth-child(-n+35) { display:none; }
+.habito-periodo-lista, .habitos-lista .habito-periodo-progresso { display:none; }
+.habitos-lista .habito-periodo-lista { display:inline; }
 .habitos-lista .habito-card-rodape { grid-column:1; grid-row:2; align-self:end; margin-top:12px; }
 .habitos-lista .habito-estado { grid-column:1/-1; }
 @media(max-width:600px) {
@@ -100,7 +110,8 @@
   .habito-card-topo > .habito-acoes { grid-template-columns:repeat(2,minmax(44px,2.15rem)); width:auto; }
   .habito-acoes > .botao.so-icone { width:100%; height:44px; min-height:44px; }
   .habito-mapa { gap:4px; }
-  .habito-dia { border:0; border-radius:calc(3px * var(--cantos,1)); background:color-mix(in srgb,var(--destaque) 8%,var(--superficie-alta)); }
+  .habito-dia { border:0; border-radius:calc(3px * var(--cantos,1)); }
+  .habito-dia:not(.realizado) { background:color-mix(in srgb,var(--destaque) 8%,var(--superficie-alta)); }
   .habito-dia.futuro { background:color-mix(in srgb,var(--borda) 35%,transparent); opacity:.3; }
   .habitos-grade:not(.habitos-lista) { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:stretch; }
   .habitos-grade:not(.habitos-lista) .habito-card { display:flex; flex-direction:column; position:relative; gap:10px; padding:10px; }
@@ -116,9 +127,9 @@
   .habitos-grade:not(.habitos-lista) .habito-card-rodape { display:none; }
   .habitos-grade:not(.habitos-lista) .campo-ajuda { order:2; }
   .habitos-grade:not(.habitos-lista) .habito-acoes > .habito-marcar { order:3; display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-width:0; min-height:44px; height:auto; margin-top:auto; padding:10px 4px; border:1px solid var(--destaque); border-radius:calc(23px * var(--cantos,1)); background:var(--destaque); color:var(--sobre-destaque); font-size:13px; line-height:1.4; }
-  .habitos-grade:not(.habitos-lista) .habito-marcar::after { content:'Marcar hoje'; }
+  .habitos-grade:not(.habitos-lista) .habito-marcar-texto { display:inline; }
+  .habitos-grade:not(.habitos-lista) [data-habito-contagem] { font-size:inherit; }
   .habitos-grade:not(.habitos-lista) .habito-acoes > .habito-marcar.feito { background:color-mix(in srgb,var(--destaque) 16%,var(--superficie)); color:var(--destaque); border-color:color-mix(in srgb,var(--destaque) 35%,var(--borda)); }
-  .habitos-grade:not(.habitos-lista) .habito-marcar.feito::after { content:'Feito hoje'; }
   .habitos-grade:not(.habitos-lista) .habito-estado { order:4; }
   .habitos-grade:not(.habitos-lista) .habito-estado:empty { display:none; }
   .habitos-lista .habito-card { --habito-mapa-largura:148px; grid-template-columns:minmax(0,1fr) minmax(0,var(--habito-mapa-largura)); column-gap:14px; padding:14px; }

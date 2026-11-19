@@ -6,6 +6,7 @@ import base64
 from fastapi.testclient import TestClient
 
 from orquestra import apresentacao, cli
+from orquestra.config import ler_yaml
 from orquestra.painel import Painel
 from orquestra.servidor import criar_app
 
@@ -38,6 +39,19 @@ def test_pasta_adotada_navega_sem_achatar_subpastas(cliente):
     assert cliente.get("/m/Biblioteca?pasta=../tarefas").status_code == 400
 
 
+def test_explorador_oculta_modulo_retirado_e_ajustes_permite_religar(cliente):
+    assert cliente.post("/api/modulos/tarefas/desligar", json={}).status_code == 200
+    pagina = cliente.get("/pastas")
+    assert "tarefas" not in {p["nome"] for p in pagina.context["pastas"]}
+    assert "Religar no painel" not in pagina.text
+    visiveis = cliente.get("/api/pastas/arvore?ocultar_desligadas=1").json()["pastas"]
+    assert "tarefas" not in {p["nome"] for p in visiveis}
+    destinos = cliente.get("/api/pastas/arvore").json()["pastas"]
+    assert "tarefas" in {p["nome"] for p in destinos}
+    assert 'data-religar="tarefas"' in cliente.get("/ajustes/areas").text
+    assert cliente.get("/pastas/tarefas").status_code == 200
+
+
 def test_colunas_da_pasta_nao_desaparecem_ao_paginar(cliente, vault):
     pasta = vault / "Referências fictícias"
     pasta.mkdir()
@@ -53,6 +67,22 @@ def test_colunas_da_pasta_nao_desaparecem_ao_paginar(cliente, vault):
         pagina = cliente.get(f"/m/Referências fictícias?aba=v0&pagina={numero}")
         assert pagina.status_code == 200
         assert [c["nome"] for c in pagina.context["colunas_tabela"]] == ["titulo", "assunto"]
+
+
+def test_renomear_coluna_preserva_o_schema_e_as_colunas(cliente, vault):
+    arquivo = vault / "tarefas" / "_modulo.yaml"
+    antes = ler_yaml(arquivo)
+    texto_anterior = arquivo.read_text(encoding="utf-8")
+    versao = cliente.painel.modulo("tarefas").versao
+    resposta = cliente.put("/api/modulos/tarefas", json={"versao": versao, "rotulos_colunas": {"data": "Data prevista"}})
+    assert resposta.status_code == 200
+    assert cliente.put("/api/modulos/tarefas", json={"versao": versao, "rotulos_colunas": {"data": "Outro nome"}}).status_code == 409
+    pagina = cliente.get("/m/tarefas?aba=v1")
+    assert {"nome": "data", "rotulo": "Data prevista"} in pagina.context["colunas_tabela"]
+    assert arquivo.read_text(encoding="utf-8").startswith(texto_anterior)
+    depois = ler_yaml(arquivo)
+    assert depois.pop("rotulos_colunas") == {"data": "Data prevista"}
+    assert depois == antes
 
 
 def test_explorador_mostra_subpastas_vazias_e_so_com_anexos(cliente, vault):

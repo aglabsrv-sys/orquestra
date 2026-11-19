@@ -200,12 +200,6 @@ body.bv { isolation:isolate; }
 .personalizar-previa { position:relative; height:140px; overflow:hidden; margin:-2px -2px 24px; border-radius:12px; }
 .personalizar-previa .capa { position:absolute; inset:0; width:100%; height:100%; }
 .personalizar-previa span { position:absolute; inset:auto 0 0; padding:22px; color:var(--texto); font-weight:700; background:linear-gradient(transparent,var(--fundo)); }
-.campos-editor { gap:16px; }
-.campo-editor { border:1px solid var(--borda); border-radius:12px; padding:16px; grid-template-columns:minmax(0,1fr) minmax(120px,.65fr); align-items:start; }
-.campo-editor:has([data-remover]:checked) { opacity:.55; }
-.campo-editor:has([data-remover]:checked) [data-nome] { text-decoration:line-through; }
-.campo-editor [data-nome][readonly] { background:transparent; border-color:transparent; padding-inline:0; font-weight:650; }
-.campo-editor .remover { margin-top:2px; min-height:28px; font-size:.7rem; }
 
 
 /* Explorador inspirado no cofre: árvore estável e espaço de trabalho amplo. */
@@ -246,7 +240,6 @@ body.bv { isolation:isolate; }
 #grafo-canvas { display:block; width:100%; height:52dvh; min-height:400px; touch-action:none; }
 .grafo-lista { font-size:.7rem; color:var(--texto-suave); }
 .grafo-lista ul { columns:2; }
-@media(min-width:1000px) { .campos-editor { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:780px) {
   .nota-cabecalho { flex-wrap:wrap; gap:8px; }
   .nota-cabecalho .nota-titulo { flex-basis:100%; }
@@ -321,14 +314,6 @@ body.bv { isolation:isolate; }
 .personalizar-previa { height:160px; margin:0 0 18px; border-radius:7px; }
 .personalizar-previa .capa { object-position:center; }
 .personalizar-identidade .grade-campos { display:grid; grid-template-columns:1fr 150px 1fr; gap:12px; }
-#personalizar .campos-editor { display:flex; flex-direction:column; gap:0; }
-#personalizar .campo-editor { display:grid; grid-template-columns:minmax(100px,1fr) 140px minmax(140px,1fr) 140px; gap:12px; align-items:center; padding:12px 0; border:0; border-bottom:1px solid var(--borda); border-radius:0; }
-#personalizar .campo-editor > * { grid-column:auto; }
-#personalizar .campo-editor .campo { margin:0; gap:4px; }
-#personalizar .campo-editor .remover { font-size:.65rem; }
-#personalizar .campo-editor-opcoes[hidden] { display:block!important; visibility:hidden; }
-#personalizar .campo-editor input:not([type=checkbox]),#personalizar .campo-editor select { min-height:36px; height:36px; padding:6px 10px; line-height:1.3; font-size:.75rem; }
-#personalizar .campo-editor input[readonly] { padding-left:0; }
 #personalizar .campo-linha { margin:0; padding:12px 0; border-bottom:1px solid var(--borda); font-size:.8rem; }
 #p-estado { margin-top:12px; }
 .cenas-grade { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -363,8 +348,6 @@ body.bv { isolation:isolate; }
 .trilho { padding-bottom:42px; }
 .slide.ativo { box-shadow:0 10px 24px -16px color-mix(in srgb,var(--sombra,#000) 45%,transparent); }
 @media(max-width:780px){
-  #personalizar .campo-editor { grid-template-columns:1fr 130px; }
-  #personalizar .campo-editor-opcoes[hidden] { display:none!important; }
   .personalizar-identidade .grade-campos { grid-template-columns:1fr 1fr; }
   .explorador-painel { padding:18px 16px 0; }
   .pasta-grafo,#pasta-leitor { margin-inline:-16px; }

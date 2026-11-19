@@ -87,7 +87,9 @@ def _interpretar_yaml(bruto: bytes | None, nome: str) -> CommentedMap:
         raise ConfigInvalida(f"{nome} precisa conter campos no formato chave: valor.")
     mapa = dados if isinstance(dados, CommentedMap) else CommentedMap()
     mapa._orq_original = bruto
-    mapa._orq_serializado = _serializar_yaml(mapa)
+    # O emissor marca tokens de comentário no objeto que recebe. A cópia
+    # mantém o modelo do cache pronto para leituras que ainda vão gravá-lo.
+    mapa._orq_serializado = _serializar_yaml(deepcopy(mapa))
     mapa._orq_prefixo = texto if dados is None else ""
     return mapa
 

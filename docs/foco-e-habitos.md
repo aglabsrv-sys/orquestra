@@ -48,12 +48,13 @@ Progresso mostra a meta semanal, histórico de atividade,
 registro de hoje e resumo geral. Lista oferece uma versão compacta dos mesmos
 hábitos. No celular, Progresso organiza cards compactos em duas colunas, com um
 botão grande de Marcar hoje na base de cada card; após marcar, ele mostra Feito
-hoje e permite desmarcar. A Lista mantém título e descrição à esquerda e o
+hoje e soma novas realizações a cada marcação. A Lista mantém título e descrição à esquerda e o
 histórico de atividade à direita. Cards, indicadores e botões respeitam a
 personalização de bordas. O dia atual fica contornado e os registros realizados
 usam a cor de destaque do tema.
-Os dias realizados variam suavemente entre tons dessa cor para dar textura ao
-mapa. A variação é visual: não representa quantidade ou intensidade de atividade.
+Para hábitos com realizações repetidas, a intensidade da cor acompanha a
+contagem de cada dia. Quando todas as marcações são únicas, os tons variam
+visualmente entre os dias.
 Não existe uma lista paralela fora do vault.
 
 Novo hábito e Editar abrem um formulário compacto com nome, descrição opcional,
@@ -61,7 +62,7 @@ meta de 1 a 7 dias por semana e tags. A descrição é o corpo da nota: aparece 
 Lista ou ao abrir o hábito pelo nome; fica oculta nos cards de Progresso.
 Os modelos Academia, Leitura e Caminhada apenas preenchem o formulário: você
 confirma a criação. Marcar hoje grava uma data ISO em `registros`; clicar novamente
-desmarca o dia. O resumo e o mapa atualizam sem recarregar a página inteira.
+registra mais uma realização no mesmo dia. O resumo e o mapa atualizam sem recarregar a página inteira.
 
 As metas contam dias da semana civil iniciada na segunda-feira; datas futuras
 não aumentam a realização desta semana. Registros inválidos não são descartados
@@ -69,8 +70,8 @@ silenciosamente: o painel avisa e exige correção no editor. Alterar nome ou me
 preserva as datas já realizadas e os outros metadados da nota. Toda gravação exige
 a versão atual, para evitar sobrepor uma alteração feita por um agente ou Obsidian.
 
-São hábitos de frequência semanal. Metas financeiras, subobjetivos e hábitos com
-múltiplas ocorrências por dia continuam fora deste modelo simples.
+As repetições no mesmo dia aumentam a contagem de realizações sem aumentar a meta
+semanal de dias.
 
 ## Interface
 
@@ -82,9 +83,9 @@ No celular: [Pomodoro](img/foco-390.png) e [Hábitos](img/habitos-390.png).
 
 No celular, Progresso mostra as dez semanas mais recentes, com título em uma
 linha e marcadores maiores. O nome completo continua acessível ao abrir o hábito
-ou editar. A Lista e o desktop mostram treze semanas, sem nomes dos dias.
+ou editar. A Lista mostra oito semanas. No desktop, Progresso mostra treze.
 Passe o mouse sobre um quadrado para consultar sua
 data e realização. Pelo teclado, Tab entra no mapa no dia atual e as setas
 percorrem os dias; Escape fecha a dica. No desktop e na Lista, o ícone + ao lado
-de Editar marca hoje; quando marcado, vira ✓ e permite desmarcar. Em Progresso
+de Editar marca hoje; quando marcado, mostra ✓ e passa a exibir a contagem a partir da segunda realização. Em Progresso
 no celular, essa mesma ação ocupa o botão na base do card.

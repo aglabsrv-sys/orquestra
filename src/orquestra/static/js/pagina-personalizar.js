@@ -28,14 +28,12 @@
     e.preventDefault(); if (enviando) return;
     var escolha = form.querySelector('[name=escolha]:checked'); if (!escolha) { estado.textContent = 'Escolha uma capa.'; return; }
     var dados = {versao:raiz.dataset.versao}, valor = escolha.value;
-    var subpastas = document.getElementById('pagina-subpastas');
-    if (subpastas) dados.subpastas = subpastas.value;
     if (valor === 'tema') dados.padrao = true;
     else if (valor === 'ocultar') dados.ocultar = true;
     else if (valor.startsWith('cena:')) dados.cena = valor.slice(5);
     else dados.capa = valor.slice(8);
     var botao = document.querySelector('[form=pagina-aparencia]'); botao.disabled = true; estado.textContent = 'Salvando…';
-    try { var r = await resposta(await fetch('/api/paginas/' + raiz.dataset.alvo + '/personalizar', {method:'POST', headers:await cabecalhos('application/json'), body:JSON.stringify(dados)})); pendente = false; location.assign(r.url); }
+    try { await resposta(await fetch('/api/paginas/' + raiz.dataset.alvo + '/personalizar', {method:'POST', headers:await cabecalhos('application/json'), body:JSON.stringify(dados)})); pendente = false; location.assign(raiz.dataset.retorno); }
     catch (erro) { estado.textContent = erro.message; botao.disabled = false; }
   });
 })();

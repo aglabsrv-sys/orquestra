@@ -56,12 +56,22 @@
         // Ao virar o dia, os sete dias e o mapa precisam do novo período inteiro.
         if (r.hoje !== raiz.dataset.hoje) { location.reload(); return; }
         card.dataset.versao=r.versao; itens.set(r.rel,item); atualizarResumo(r.resumo);
-        marcar.setAttribute('aria-pressed',String(item.marcado)); marcar.classList.toggle('feito',item.marcado); card.classList.toggle('habito-feito',item.marcado);
-        marcar.title=item.marcado ? 'Desmarcar hoje' : 'Marcar hoje'; marcar.setAttribute('aria-label',marcar.title+' · '+item.titulo); $('[data-habito-check]',card).textContent=item.marcado ? '✓' : '+';
+        var quantidade=item.contagem_hoje, contagem=$('[data-habito-contagem]',marcar);
+        marcar.classList.toggle('feito',item.marcado); card.classList.toggle('habito-feito',item.marcado);
+        marcar.title='Marcar mais uma realização';
+        marcar.setAttribute('aria-label',marcar.title+' · '+item.titulo+' · '+quantidade+' hoje');
+        $('[data-habito-check]',marcar).textContent='✓';
+        $('.habito-marcar-texto',marcar).textContent=quantidade>1?'Feito':'Feito hoje';
+        contagem.hidden=quantidade<2; contagem.textContent='x'+quantidade;
         $('[data-habito-semana]',card).textContent=item.semana; $('[data-habito-meta-estado]',card).textContent=item.semana>=item.meta ? 'Meta alcançada' : 'No seu ritmo';
-        var dataHoje=r.hoje.slice(8,10)+'/'+r.hoje.slice(5,7)+'/'+r.hoje.slice(0,4), dica=dataHoje+' · '+(item.marcado?'realizado':'sem registro');
-        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) { ponto.classList.toggle('realizado',item.marcado); ponto.dataset.habitoTooltip=dica; ponto.setAttribute('aria-label',dica+' · Ver notas do dia'); }
-        var mapa=$('.habito-mapa',card); if (mapa) mapa.setAttribute('aria-label','Histórico de atividade de '+item.titulo+'. '+item.total_registros+' dias realizados ao todo.');
+        var dataHoje=r.hoje.slice(8,10)+'/'+r.hoje.slice(5,7)+'/'+r.hoje.slice(0,4), dica=dataHoje+' · '+(quantidade>1?quantidade+' realizações':'realizado');
+        var ponto=$('[data-mapa-dia="'+r.hoje+'"]',card); if (ponto) {
+          ponto.classList.add('realizado'); ponto.dataset.intensidade=Math.min(quantidade,4);
+          ponto.dataset.habitoTooltip=dica; ponto.setAttribute('aria-label',dica+' · Ver notas do dia');
+        }
+        var mapa=$('.habito-mapa',card);
+        mapa.toggleAttribute('data-mapa-intensidade',item.tem_repeticoes);
+        mapa.setAttribute('aria-label','Histórico de atividade de '+item.titulo+'. '+item.total_registros+' dias realizados ao todo.');
       } catch (erro) { estado.textContent=erro.message; }
       finally { marcar.disabled=false; }
     }

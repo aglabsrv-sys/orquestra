@@ -253,9 +253,9 @@
 <section class="tabela-envolta"{% if not conclusao_tarefa %} data-lote{% endif %} data-campo-status="{{ modulo.campo_status }}">
   {% if linhas %}
   <p class="lote-resultado" role="status" data-lote-resultado hidden></p>
-  <table class="tabela">
+  <table class="tabela" data-modulo="{{ modulo.id }}" data-versao="{{ modulo.versao }}">
     <caption class="somente-leitor">Notas de {{ modulo.nome }}. Os botões no cabeçalho ordenam os itens desta página.</caption>
-    <thead><tr><th class="col-selecao" scope="col">{% if conclusao_tarefa %}<span class="somente-leitor">Conclusão</span>{% else %}<input type="checkbox" data-lote-todos aria-label="Selecionar todos desta página">{% endif %}</th>{% for col in colunas_tabela %}<th scope="col" data-ordenar aria-sort="none"><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ col.rotulo }}<span aria-hidden="true"> ↕</span></button></th>{% endfor %}</tr></thead>
+    <thead><tr><th class="col-selecao" scope="col">{% if conclusao_tarefa %}<span class="somente-leitor">Conclusão</span>{% else %}<input type="checkbox" data-lote-todos aria-label="Selecionar todos desta página">{% endif %}</th>{% for col in colunas_tabela %}<th scope="col" data-ordenar data-coluna="{{ col.nome }}" aria-sort="none"><div class="cab-coluna"><button type="button" class="nome-coluna" title="Clique duas vezes para renomear" aria-label="Renomear coluna {{ col.rotulo }}">{{ col.rotulo }}</button><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ icone('ordenar', 14) }}</button></div></th>{% endfor %}</tr></thead>
     <tbody>
       {% for l in linhas %}
       <tr{% if l.cartao.concluido %} class="concluido"{% endif %}>

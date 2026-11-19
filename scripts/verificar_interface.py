@@ -131,6 +131,13 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator('.abas').get_by_role('link', name='Lista', exact=True).click()
     expect(page.locator('.tabela-envolta')).to_be_visible()
     assert page.evaluate("window.__capaPersistente===document.querySelector('.cab-modulo canvas')")
+    coluna = page.locator('th[data-coluna="data"]')
+    coluna.locator('.nome-coluna').dblclick()
+    nome_coluna = coluna.get_by_label('Nome da coluna', exact=True)
+    nome_coluna.fill('Data prevista')
+    nome_coluna.press('Enter')
+    expect(coluna.locator('.nome-coluna')).to_have_text('Data prevista')
+    assert page.evaluate("window.__capaPersistente===document.querySelector('.cab-modulo canvas')")
     page.go_back()
     expect(page.locator('.quadro')).to_be_visible()
     assert page.evaluate("window.__capaPersistente===document.querySelector('.cab-modulo canvas')")
@@ -151,7 +158,13 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
         raise AssertionError('As notas de demonstração não chegaram ao índice.')
     page.goto(base + "/pastas/Est%C3%BAdio", wait_until="domcontentloaded")
     page.locator('[data-pasta-visao="grafo"]').click()
-    expect(page.locator('#grafo-estado')).to_contain_text('2 notas')
+    total = page.request.get(base + '/api/pastas/grafo').json()['total']
+    expect(page.locator('#grafo-estado')).to_contain_text(f'{total} de {total} notas')
+    page.locator('#abrir-config-pastas').click()
+    expect(page.locator('#config-pastas')).to_be_visible()
+    page.get_by_role('button', name='Ferramentas', exact=True).click()
+    expect(page.get_by_role('link', name='Verificar links', exact=True)).to_have_attribute('href', '/vinculos?rel=Est%C3%BAdio')
+    page.get_by_role('button', name='Fechar ajustes', exact=True).click()
     expect(page.locator('#pasta-grafo')).to_be_visible()
     page.locator('#arvore-pastas a.arvore-nota').filter(has_text='Projeto').click()
     leitor=page.frame_locator('#leitor-frame')
@@ -195,7 +208,7 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator('#area-nome').fill('Área de revisão')
     page.locator('#area-salvar').click()
     expect(page.locator('.area-linha').filter(has_text='Área de revisão')).to_be_visible()
-    expect(page.locator('#estado-config')).to_contain_text('Área adicionada')
+    expect(page.locator('#estado-config')).to_contain_text('adicionada ao painel')
     assert page.url.endswith('/ajustes/areas')
     assert page.evaluate('window.__paginaAjustesPreservada === true')
     expect(page.locator('#pronto-exemplos')).to_be_checked()
@@ -208,7 +221,17 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     id_pronto = pronto.get_attribute('data-pronto')
     pronto.click()
     expect(page.locator(f'.area-linha[data-modulo="{id_pronto}"]')).to_be_visible()
-    expect(pronto).to_be_disabled()
+    expect(page.locator(f'[data-pronto="{id_pronto}"]')).to_have_count(0)
+    linha = page.locator(f'.area-linha[data-modulo="{id_pronto}"]')
+    expect(linha.locator('.area-nome a')).to_have_attribute('href', f'/m/{id_pronto}')
+    linha.locator('[data-desligar]').click()
+    page.get_by_role('button', name='Retirar do painel', exact=True).click()
+    religar = page.locator(f'[data-religar="{id_pronto}"]')
+    expect(religar).to_be_visible()
+    expect(linha).to_have_count(0)
+    religar.click()
+    expect(linha).to_be_visible()
+    expect(religar).to_have_count(0)
     assert page.url.endswith('/ajustes/areas')
     assert page.evaluate('window.__paginaAjustesPreservada === true')
     expect(page.locator('#pronto-exemplos')).to_be_checked()
@@ -254,6 +277,30 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
                 if capturas:
                     page.screenshot(path=str(capturas / f'segredos-ajuda-{largura}.png'), full_page=True)
                 ajuda.click()
+            if rota == "/pastas":
+                page.locator("#abrir-config-pastas").click()
+                page.get_by_role("button", name="Ferramentas", exact=True).click()
+                expect(page.get_by_role("link", name="Automações", exact=True)).to_be_visible()
+                page.keyboard.press("Escape")
+                page.locator('[data-pasta-visao="colecao"]').click()
+                cartao_pasta = page.locator('#explorador-colecao .cartao-simples[href="/pastas/tarefas"]')
+                expect(cartao_pasta).to_be_visible()
+                assert page.locator(".cartoes-simples").evaluate("e => getComputedStyle(e).display") == "grid"
+                expect(page.get_by_text("Ver painel", exact=True)).to_have_count(0)
+            if rota == "/ajustes/coletores":
+                page.get_by_role("tab", name="Catálogo", exact=False).click()
+                page.locator('[data-auto-adicionar="tarefas/recorrentes.py"]').click()
+                lateral = page.locator("#automacao-dialogo")
+                expect(lateral).to_be_visible()
+                assert lateral.evaluate("e => {const r=e.getBoundingClientRect();return r.right>=innerWidth-1 && e.scrollWidth<=e.clientWidth+1;}")
+                expect(page.locator("#automacao-pasta-campo")).to_be_visible()
+                page.get_by_role("button", name="Mais opções", exact=True).click()
+                expect(page.locator("#automacao-opcoes")).to_be_visible()
+                expect(page.locator("#automacao-regras")).to_be_hidden()
+                page.get_by_role("button", name="Configuração", exact=True).click()
+                expect(page.locator(".auto-recorrencia")).to_be_visible()
+                page.keyboard.press("Escape")
+                expect(lateral).to_be_hidden()
             nomes_captura = {"/": "inicio", "/m/tarefas": "tarefas", "/m/conteudo": "conteudo", "/ajustes": "ajustes", "/pastas": "pastas", "/m/tarefas/personalizar": "personalizar", "/decidir": "decidir", "/diario": "diario", "/ajustes/variaveis": "segredos", "/ajustes/aparencia": "aparencia", "/personalizar/diario": "personalizar-diario"}
             if capturas and largura != 320 and rota in nomes_captura:
                 page.wait_for_timeout(220)
@@ -465,7 +512,12 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     with page.expect_response(lambda r: r.url.endswith("/api/habitos/marcar")) as marcado:
         card.locator("[data-habito-marcar]").click()
     assert marcado.value.status == 200
-    expect(card.locator("[data-habito-marcar]")).to_have_attribute("aria-pressed", "true")
+    expect(card.locator("[data-habito-marcar]")).to_have_class(re.compile(r"\bfeito\b"))
+    for quantidade in (2, 3):
+        card.locator("[data-habito-marcar]").click()
+        expect(card.locator("[data-habito-contagem]")).to_have_text(f"x{quantidade}")
+    expect(card.locator('.habito-dia.hoje')).to_have_attribute('data-intensidade', '3')
+    expect(card.locator("[data-habito-semana]")).to_have_text("1")
     registros = marcado.value.json()["item"]["registros"]
     assert registros and registros[0] in (vault / marcado.value.json()["rel"]).read_text(encoding="utf-8")
     card.locator("[data-habito-editar]").click()
@@ -475,6 +527,12 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     assert habito_editado.value.status == 200
     expect(page.locator("[data-habito]").filter(has_text="Leitura diária")).to_be_visible()
     assert habito_editado.value.json()["item"]["registros"] == registros
+    assert habito_editado.value.json()["item"]["contagem_hoje"] == 3
+    page.goto(base + "/m/habitos?aba=lista", wait_until="domcontentloaded")
+    card = page.locator("[data-habito]").filter(has_text="Leitura diária")
+    expect(card.locator(".habito-dia:visible")).to_have_count(56)
+    expect(card.locator("[data-habito-contagem]")).to_have_text("x3")
+    assert card.locator(".habito-acoes button").last.get_attribute("data-habito-marcar") is not None
 
     # Pomodoro conserva intenção e prazo ao navegar na mesma sessão.
     page.goto(base + "/foco", wait_until="domcontentloaded")

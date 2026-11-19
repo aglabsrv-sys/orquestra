@@ -1,16 +1,22 @@
 <article class="habito-card{% if item.marcado %} habito-feito{% endif %}" data-habito="{{ item.rel }}" data-versao="{{ item.versao }}">
-  <header class="habito-card-topo"><div><a class="habito-nome" href="{{ item.url }}">{{ item.titulo }}</a><p><b data-habito-semana>{{ item.semana }}</b> de <span data-habito-meta>{{ item.meta }}</span> dias nesta semana</p></div><div class="habito-acoes"><button type="button" class="habito-marcar botao so-icone pequeno{% if item.marcado %} feito{% endif %}" data-habito-marcar aria-pressed="{{ 'true' if item.marcado else 'false' }}" aria-label="{{ 'Desmarcar hoje' if item.marcado else 'Marcar hoje' }} · {{ item.titulo }}" title="{{ 'Desmarcar hoje' if item.marcado else 'Marcar hoje' }}"{% if not item.editavel or item.aviso %} disabled{% endif %}><span data-habito-check aria-hidden="true">{{ '✓' if item.marcado else '+' }}</span></button><button class="habito-editar botao so-icone pequeno" type="button" data-habito-editar aria-label="Editar {{ item.titulo }}">{{ icone('editar',15) }}</button></div></header>
+  <header class="habito-card-topo"><div><a class="habito-nome" href="{{ item.url }}">{{ item.titulo }}</a><p><b data-habito-semana>{{ item.semana }}</b> de <span data-habito-meta>{{ item.meta }}</span> dias nesta semana</p></div><div class="habito-acoes">
+    <button class="habito-editar botao so-icone pequeno" type="button" data-habito-editar aria-label="Editar {{ item.titulo }}">{{ icone('editar',15) }}</button>
+    {% set rotulo_acao = 'Marcar mais uma realização' if item.marcado else 'Marcar hoje' %}
+    <button type="button" class="habito-marcar botao so-icone pequeno{% if item.marcado %} feito{% endif %}" data-habito-marcar aria-label="{{ rotulo_acao }} · {{ item.titulo }}{% if item.marcado %} · {{ item.contagem_hoje }} hoje{% endif %}" title="{{ rotulo_acao }}"{% if not item.editavel or item.aviso %} disabled{% endif %}>
+      <span data-habito-check aria-hidden="true">{{ '✓' if item.marcado else '+' }}</span><span class="habito-marcar-texto" aria-hidden="true">{{ 'Feito' if item.contagem_hoje > 1 else 'Feito hoje' if item.marcado else 'Marcar hoje' }}</span><small data-habito-contagem aria-hidden="true"{% if item.contagem_hoje < 2 %} hidden{% endif %}>x{{ item.contagem_hoje }}</small>
+    </button>
+  </div></header>
   {% if item.descricao %}<p class="habito-descricao">{{ item.descricao }}</p>{% endif %}
   <div class="habito-mapa-wrap">
-    <div class="habito-mapa" role="group" aria-label="Histórico de atividade de {{ item.titulo }}. {{ item.total_registros }} dias realizados ao todo.">
+    <div class="habito-mapa"{% if item.tem_repeticoes %} data-mapa-intensidade{% endif %} role="group" aria-label="Histórico de atividade de {{ item.titulo }}. {{ item.total_registros }} dias realizados ao todo.">
       {% for d in dias_mapa %}
-      {% set iso = d.isoformat() %}{% set realizado = iso in item.registros %}{% set tem_nota = iso in item.dias_com_notas %}
+      {% set iso = d.isoformat() %}{% set quantidade = item.contagens.get(iso, 0) %}{% set realizado = quantidade > 0 and d <= hoje %}{% set tem_nota = iso in item.dias_com_notas %}
       {% set abre = d <= hoje and (realizado or tem_nota or d == hoje) %}{% set tag = 'a' if abre else 'span' %}
-      {% set dica = d.strftime('%d/%m/%Y') ~ ' · ' ~ ('realizado' if realizado else 'sem registro') %}
-      <{{ tag }}{% if abre %} href="{{ item.url }}?dia={{ iso }}"{% else %} role="img"{% endif %} class="habito-dia{% if realizado %} realizado{% endif %}{% if tem_nota %} com-nota{% endif %}{% if d == hoje %} hoje{% endif %}{% if d > hoje %} futuro{% endif %}" data-mapa-dia="{{ iso }}" data-habito-tooltip="{{ dica }}" aria-label="{{ dica }}{{ ' · Ver notas do dia' if abre else '' }}"></{{ tag }}>
+      {% set dica = d.strftime('%d/%m/%Y') ~ ' · ' ~ (quantidade ~ ' realizações' if realizado and quantidade > 1 else 'realizado' if realizado else 'sem registro') %}
+      <{{ tag }}{% if abre %} href="{{ item.url }}?dia={{ iso }}"{% else %} role="img"{% endif %} class="habito-dia{% if realizado %} realizado{% endif %}{% if tem_nota %} com-nota{% endif %}{% if d == hoje %} hoje{% endif %}{% if d > hoje %} futuro{% endif %}" data-mapa-dia="{{ iso }}"{% if realizado %} data-intensidade="{{ [quantidade, 4]|min }}"{% endif %} data-habito-tooltip="{{ dica }}" aria-label="{{ dica }}{{ ' · Ver notas do dia' if abre else '' }}"></{{ tag }}>
       {% endfor %}
     </div>
   </div>
   {% if item.aviso %}<p class="campo-ajuda erro-texto">{{ item.aviso }}</p>{% endif %}
-  <footer class="habito-card-rodape"><span data-habito-meta-estado>{{ 'Meta alcançada' if item.semana >= item.meta else 'No seu ritmo' }}</span><span>13 semanas</span></footer><p class="habito-estado" data-habito-estado role="status"></p>
+  <footer class="habito-card-rodape"><span data-habito-meta-estado>{{ 'Meta alcançada' if item.semana >= item.meta else 'No seu ritmo' }}</span><span class="habito-periodo-progresso">13 semanas</span><span class="habito-periodo-lista">8 semanas</span></footer><p class="habito-estado" data-habito-estado role="status"></p>
 </article>

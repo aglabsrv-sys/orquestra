@@ -902,7 +902,6 @@
         if (indice >= 0) { e.preventDefault(); mostrarAba(abas[indice].getAttribute('aria-controls'), true); }
       };
     });
-    var lista = $("#p-campos"), modelo = $("#p-modelo-campo");
     function retrato() {
       return JSON.stringify($$("input, select, textarea", raiz).map(function (el) {
         return el.type === "checkbox" ? el.checked : el.value;
@@ -955,42 +954,14 @@
       finally { controles.forEach(function (b, i) { b.disabled = anteriores[i]; }); }
     };
 
-    function ligar(linha) {
-      var tipo = $("[data-tipo]", linha), opcoes = $("[data-opcoes]", linha), tirar = $("[data-tirar]", linha);
-      var grupoOpcoes = $(".campo-editor-opcoes", linha) || opcoes;
-      function mostrarOpcoes() { grupoOpcoes.hidden = tipo.value !== "escolha"; opcoes.hidden = grupoOpcoes.hidden; opcoes.disabled = grupoOpcoes.hidden; }
-      tipo.onchange = function () { mostrarOpcoes(); if (!grupoOpcoes.hidden) opcoes.focus(); };
-      mostrarOpcoes();
-      if (tirar) tirar.onclick = function () { linha.remove(); atualizarPendencia(); };
-    }
-    $$(".campo-editor", lista).forEach(ligar);
-    $("#p-novo-campo").onclick = function () {
-      var linha = modelo.content.firstElementChild.cloneNode(true);
-      lista.appendChild(linha);
-      ligar(linha);
-      atualizarPendencia();
-      $("[data-nome]", linha).focus();
-    };
-
     $("#p-salvar").onclick = function () {
       if (this.disabled) return;
-      var invalido = $$("input, select, textarea", raiz).filter(function (campo) {
-        var linha = campo.closest(".campo-editor"), remover = linha && $("[data-remover]", linha);
-        return !campo.disabled && !(remover && remover.checked) && !campo.checkValidity();
-      })[0];
-      if (invalido) { var painelCampo = invalido.closest('[role=tabpanel]'); if (painelCampo) mostrarAba(painelCampo.id); invalido.reportValidity(); invalido.focus(); return; }
-      var campos = [], remover = [];
-      $$(".campo-editor", lista).forEach(function (linha) {
-        var nome = $("[data-nome]", linha).value.trim(), marcado = $("[data-remover]", linha);
-        if (marcado && marcado.checked) { remover.push(linha.dataset.original); return; }
-        if (!nome) return;
-        campos.push({ nome: nome, tipo: $("[data-tipo]", linha).value, opcoes: $("[data-opcoes]", linha).value });
-      });
+      var nome = $("#p-nome");
+      if (!nome.reportValidity()) { mostrarAba("p-identidade"); nome.focus(); return; }
       var dados = {
         versao: raiz.dataset.versao,
-        nome: $("#p-nome").value, descricao: $("#p-descricao").value, icone: $("#p-icone").value, cena: $("#p-cena").value,
-        capa: $("#p-capa").value || null,
-        campos: campos, remover: remover
+        nome: nome.value, descricao: $("#p-descricao").value, icone: $("#p-icone").value, cena: $("#p-cena").value,
+        capa: $("#p-capa").value || null
       };
       if ($("#p-quadro")) dados.quadro = $("#p-quadro").checked;
       if ($("#p-grafico")) dados.grafico = $("#p-grafico").checked;
@@ -1223,79 +1194,72 @@
       api("POST", "/api/backup/iniciar", { assinatura: conf.assinatura }).then(function () { location.reload(); }).catch(function (erro) { ligar.disabled = false; mostrarErro(erro); });
     };
 
-    // Áreas: acrescentar uma pronta, criar em branco, tirar do painel.
-    function ligarRetirada(b) {
-      b.onclick = async function () {
-        var linha = b.closest(".area-linha");
-        if (!await confirmar({ titulo: "Retirar esta área do painel?", texto: "“" + $("b", linha).textContent + "” deixará de aparecer na navegação. A pasta e as notas continuam no vault; você pode adicioná-la novamente aqui em Ajustes → Pastas.", confirmar: "Retirar do painel" })) return;
-        b.disabled = true;
-        api("POST", "/api/modulos/" + encodeURIComponent(linha.dataset.modulo) + "/desligar", {})
-          .then(function () { location.reload(); })
-          .catch(function (erro) { b.disabled = false; mostrarErro(erro); });
-      };
-    }
-    async function atualizarAreas(r) {
-      // Atualiza só a área criada e a navegação, preservando campos e posição.
+    // A lista e o catálogo mostram o mesmo estado confirmado pelo servidor.
+    var areas = $("#areas-ordem"), catalogoAreas = $("#areas-prontas");
+    async function atualizarAreas(mensagem) {
       try {
-        var resposta = await fetch('/ajustes/areas', { cache: 'no-store', credentials: 'same-origin' });
-        if (!resposta.ok) throw new Error('Falha ao atualizar a lista de pastas.');
-        var doc = new DOMParser().parseFromString(await resposta.text(), 'text/html');
-        if (doc.body.dataset.vaultId !== document.body.dataset.vaultId) throw new Error('O cofre mudou.');
-        var nova = $$('.area-linha', doc).find(function (l) { return l.dataset.modulo === r.id; });
-        var lista = $('#areas-ordem');
-        if (!nova || !lista || !$('.dock', doc)) throw new Error('Lista indisponível.');
-        if (!$$('.area-linha', lista).some(function (l) { return l.dataset.modulo === r.id; })) {
-          if (!$('.area-linha', lista)) { var vazio = $('p.suave', lista); if (vazio) vazio.remove(); }
-          var linha = document.importNode(nova, true);
-          lista.insertBefore(linha, lista.lastElementChild);
-          ligarRetirada($('[data-desligar]', linha));
-        }
-        $$('.dock, #gaveta').forEach(function (atual) {
-          var novo = $(atual.id ? '#' + atual.id : '.dock', doc);
+        var resposta = await fetch("/ajustes/areas", {cache:"no-store", credentials:"same-origin"});
+        if (!resposta.ok) throw new Error("Falha ao atualizar as pastas.");
+        var doc = new DOMParser().parseFromString(await resposta.text(), "text/html");
+        if (doc.body.dataset.vaultId !== document.body.dataset.vaultId || !$("#areas-ordem", doc) ||
+            !$("#areas-prontas", doc) || !$(".dock", doc)) throw new Error("Lista indisponível.");
+        areas.replaceChildren(...$("#areas-ordem", doc).children);
+        catalogoAreas.replaceChildren(...$("#areas-prontas", doc).children);
+        $$(".dock, #gaveta").forEach(function (atual) {
+          var novo = $(atual.id ? "#" + atual.id : ".dock", doc);
           if (novo) atual.replaceWith(document.importNode(novo, true)); else atual.remove();
         });
-        if ($('#gaveta', doc) && !$('#gaveta')) $('.dock').after(document.importNode($('#gaveta', doc), true));
+        if ($("#gaveta", doc) && !$("#gaveta")) $(".dock").after(document.importNode($("#gaveta", doc), true));
         gaveta();
-        document.dispatchEvent(new CustomEvent('orquestra:areas-atualizadas'));
-        $('#estado-config').textContent = 'Área adicionada. Continue seus ajustes ou abra pelo dock.';
-        avisar('Área adicionada ao painel.');
+        document.dispatchEvent(new CustomEvent("orquestra:areas-atualizadas"));
+        $("#estado-config").textContent = mensagem;
+        avisar(mensagem);
       } catch (erro) {
-        avisar('A área foi adicionada. Não foi possível atualizar a navegação; recarregue a página quando terminar seus ajustes.', 'erro');
+        location.reload();
       }
     }
-    $$("[data-pronto], [data-religar]").forEach(function (b) {
-      b.onclick = async function () {
-        b.disabled = true;
-        configPropriaAte = Date.now() + 10000;
-        try {
-          var r = b.dataset.religar
-            ? await api("POST", "/api/pastas/adotar", { pasta: b.dataset.religar })
-            : await api("POST", "/api/modulos", { pronto: b.dataset.pronto, exemplos: $("#pronto-exemplos").checked });
-          b.setAttribute('aria-label', 'Área adicionada');
-          b.title = 'Área já adicionada ao painel';
-          await atualizarAreas(r);
-          if (b.dataset.religar) b.remove();
-        } catch (erro) { b.disabled = false; mostrarErro(erro); }
-      };
+    var alterandoAreas = false;
+    async function mudarAreas(botao, operacao, mensagem) {
+      if (alterandoAreas) return;
+      alterandoAreas = true;
+      botao.disabled = true;
+      configPropriaAte = Date.now() + 10000;
+      try {
+        await operacao();
+        await atualizarAreas(mensagem);
+      } catch (erro) { mostrarErro(erro); }
+      finally { alterandoAreas = false; botao.disabled = false; }
+    }
+    if (areas) areas.addEventListener("click", async function (e) {
+      var b = e.target.closest("[data-desligar]");
+      if (!b || alterandoAreas) return;
+      var linha = b.closest(".area-linha");
+      if (!await confirmar({titulo:"Retirar do painel?", texto:"“" + $(".area-nome b", linha).textContent + "” ficará disponível para adição. A pasta e as notas continuam no cofre.", confirmar:"Retirar do painel"})) return;
+      await mudarAreas(b, function () {
+        return api("POST", "/api/modulos/" + encodeURIComponent(linha.dataset.modulo) + "/desligar", {});
+      }, "Pasta retirada do painel.");
     });
-    $$("[data-desligar]").forEach(ligarRetirada);
+    if (catalogoAreas) catalogoAreas.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-pronto], [data-religar]");
+      if (!b) return;
+      mudarAreas(b, function () {
+        return b.dataset.religar
+          ? api("POST", "/api/pastas/adotar", {pasta:b.dataset.religar})
+          : api("POST", "/api/modulos", {pronto:b.dataset.pronto, exemplos:$("#pronto-exemplos").checked});
+      }, "Pasta adicionada ao painel.");
+    });
     var dArea = $("#dialogo-area"), abrirArea = $("#abrir-area-branco");
     if (dArea && abrirArea) {
       abrirArea.onclick = function () { dArea.showModal(); $("#area-nome").focus(); };
       $("form", dArea).addEventListener("submit", function (e) {
         e.preventDefault();
         var salvar = $("#area-salvar");
-        salvar.disabled = true;
-        configPropriaAte = Date.now() + 10000;
-        api("POST", "/api/modulos", { nome: $("#area-nome").value, icone: $("#area-icone").value, quadro: $("#area-quadro").checked })
-          .then(async function (r) {
-            dArea.close();
-            $("form", dArea).reset();
-            salvar.disabled = false;
-            await atualizarAreas(r);
-            abrirArea.focus({ preventScroll: true });
-          })
-          .catch(function (erro) { salvar.disabled = false; mostrarErro(erro); });
+        mudarAreas(salvar, async function () {
+          await api("POST", "/api/modulos", {nome:$("#area-nome").value, icone:$("#area-icone").value, quadro:$("#area-quadro").checked});
+          dArea.close();
+          $("form", dArea).reset();
+          abrirArea.focus({preventScroll:true});
+        }, "Pasta criada e adicionada ao painel.");
       });
     }
   }
@@ -1385,10 +1349,46 @@
     $$(".tabela th[data-ordenar]").forEach(function (th) {
       var coluna = th.cellIndex;
       var crescente = true;
-      var botao = $("button", th);
+      var botao = $(".ordenar-coluna", th), nome = $(".nome-coluna", th), tabela = th.closest("table");
       if (!botao) return;
+      if (nome && tabela.dataset.modulo) {
+        function editarNome() {
+          if (tabela.hasAttribute("data-salvando-coluna") || $(".editar-coluna", th)) return;
+          var original = nome.textContent, campo = document.createElement("input");
+          campo.className = "editar-coluna"; campo.maxLength = 60; campo.value = original;
+          campo.setAttribute("aria-label", "Nome da coluna");
+          nome.hidden = true; nome.after(campo); campo.select(); campo.focus();
+          async function terminar(salvar, focar) {
+            if (!campo.isConnected || campo.disabled) return;
+            var novo = campo.value.trim();
+            if (salvar && novo && novo !== original) {
+              tabela.setAttribute("data-salvando-coluna", "");
+              campo.disabled = true;
+              configPropriaAte = Date.now() + 3000;
+              try {
+                var r = await api("PUT", "/api/modulos/" + encodeURIComponent(tabela.dataset.modulo), {
+                  versao:tabela.dataset.versao || undefined, rotulos_colunas:{[th.dataset.coluna]:novo}
+                });
+                tabela.dataset.versao = r.versao;
+                nome.textContent = novo;
+                nome.setAttribute("aria-label", "Renomear coluna " + novo);
+                botao.setAttribute("aria-label", "Ordenar esta página por " + novo);
+              } catch (erro) { mostrarErro(erro); }
+              finally { tabela.removeAttribute("data-salvando-coluna"); }
+            }
+            campo.remove(); nome.hidden = false;
+            if (focar && (!document.activeElement || document.activeElement === document.body)) nome.focus();
+          }
+          campo.onkeydown = function (e) {
+            if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); terminar(e.key === "Enter", true); }
+          };
+          campo.onblur = function () { terminar(true, false); };
+        }
+        nome.ondblclick = editarNome;
+        nome.onclick = function (e) { if (!e.detail || matchMedia("(pointer: coarse)").matches) editarNome(); };
+      }
       botao.onclick = function () {
-        var corpo = $("tbody", th.closest("table")), linhas = $$("tr", corpo);
+        var corpo = $("tbody", tabela), linhas = $$("tr", corpo);
         var chave = function (tr) { var td = tr.children[coluna]; return (td.dataset.ordem || td.textContent).trim().toLowerCase(); };
         linhas.sort(function (a, b) { return chave(a).localeCompare(chave(b), "pt-BR", { numeric: true }) * (crescente ? 1 : -1); });
         linhas.forEach(function (tr) { corpo.appendChild(tr); });

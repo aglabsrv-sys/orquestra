@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections import Counter
 from typing import Any
 
 from orquestra import apoios, apresentacao as ap, preparo
@@ -28,7 +29,7 @@ def meta_valida(valor: Any) -> int:
     return inteiro
 
 
-def _datas(nota) -> set[str]:
+def _datas(nota) -> Counter[str]:
     registros = nota.campo("registros")
     if registros is None:
         registros = []
@@ -36,7 +37,7 @@ def _datas(nota) -> set[str]:
         raise Recusado("Os registros deste hábito precisam ser uma lista de datas. Confira a nota no editor.")
     if len(registros) > 20000:
         raise Recusado("Este hábito contém registros demais para editar pelo painel.")
-    resultado = set()
+    resultado: Counter[str] = Counter()
     for valor in registros:
         if isinstance(valor, dt.datetime):
             raise Recusado("Use datas sem horário nos registros do hábito.")
@@ -44,7 +45,7 @@ def _datas(nota) -> set[str]:
             dia = dt.date.fromisoformat(str(valor))
         except (ValueError, TypeError):
             raise Recusado("Há um registro fora do formato AAAA-MM-DD. Confira a nota antes de marcar.") from None
-        resultado.add(dia.isoformat())
+        resultado[dia.isoformat()] += 1
     return resultado
 
 
@@ -57,7 +58,7 @@ def apresentar(nota, hoje: dt.date) -> dict:
     try:
         registros = _datas(nota)
     except Recusado as erro:
-        registros, aviso = set(), str(erro)
+        registros, aviso = Counter(), str(erro)
     segunda = hoje - dt.timedelta(days=hoje.weekday())
     dias_semana = [segunda + dt.timedelta(days=i) for i in range(7)]
     semana = sum(d.isoformat() in registros for d in dias_semana if d <= hoje)
@@ -66,6 +67,8 @@ def apresentar(nota, hoje: dt.date) -> dict:
             "dias_com_notas": [],
             "meta": meta, "semana": semana, "percentual": min(100, round(semana / meta * 100)),
             "marcado": hoje.isoformat() in registros, "registros": sorted(registros),
+            "contagens": dict(registros), "contagem_hoje": registros[hoje.isoformat()],
+            "tem_repeticoes": any(total > 1 and dia <= hoje.isoformat() for dia, total in registros.items()),
             "dias": [{"iso": d.isoformat(), "nome": "STQQSSD"[d.weekday()], "rotulo": ("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")[d.weekday()], "feito": d.isoformat() in registros, "futuro": d > hoje, "hoje": d == hoje} for d in dias_semana],
             "tags": [str(t) for t in tags] if isinstance(tags, list) else [], "aviso": aviso,
             "editavel": not bool(nota.erro), "total_registros": sum(d <= hoje.isoformat() for d in registros)}
@@ -107,7 +110,7 @@ def _modulo_compativel(painel):
     modulo = painel._modulo_para_escrita(painel.modulo("habitos"))
     tipos = {"meta_semanal": "numero", "registros": "lista", "tags": "lista"}
     if any(nome not in modulo.campos or modulo.campos[nome].tipo != tipo for nome, tipo in tipos.items()):
-        raise Recusado("A pasta habitos existente tem outro formato. Em Personalizar, use meta_semanal como número e registros e tags como listas.")
+        raise Recusado("A pasta habitos existente tem outro formato. Confira meta_semanal, registros e tags no _modulo.yaml.")
     return modulo
 
 
@@ -155,7 +158,7 @@ criar = salvar
 
 
 def marcar(painel, dados: dict, hoje: dt.date | None = None) -> dict:
-    """Alterna somente hoje, com a versão fornecida e a trava comum de notas."""
+    """Registra mais uma realização hoje, usando a trava e a versão da nota."""
     hoje = hoje or dt.date.today()
     rel, versao = str(dados.get("rel") or ""), str(dados.get("versao") or "")
     with painel._trava:
@@ -163,11 +166,10 @@ def marcar(painel, dados: dict, hoje: dt.date | None = None) -> dict:
         registros = _datas(nota)
         meta_valida(nota.campo("meta_semanal") if nota.campo("meta_semanal") is not None else 3)
         iso = hoje.isoformat()
-        if iso in registros:
-            registros.remove(iso)
-        else:
-            registros.add(iso)
-        atualizada = painel.editar_nota(rel, versao, campos={"registros": sorted(registros)})
+        if registros.total() >= 20000:
+            raise Recusado("Este hábito contém registros demais para editar pelo painel.")
+        registros[iso] += 1
+        atualizada = painel.editar_nota(rel, versao, campos={"registros": sorted(registros.elements())})
         item = apresentar(atualizada, hoje)
         itens = [apresentar(n, hoje) for n in painel.indice.itens("habitos")]
         return {"rel": atualizada.rel, "versao": atualizada.versao, "marcado": item["marcado"], "item": item, "resumo": resumo(itens), "hoje": iso}

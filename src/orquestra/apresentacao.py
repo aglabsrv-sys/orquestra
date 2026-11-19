@@ -41,6 +41,7 @@ ICONES = {
     "pulso": '<path d="M3 12h4l2.5-6 4 12 2.5-6h5"/>',
     "ajustes": '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
     "mais": '<path d="M12 5v14M5 12h14"/>',
+    "ordenar": '<path d="m8 7 4-4 4 4M8 17l4 4 4-4"/>',
     "seta_dir": '<path d="M5 12h14M13 6l6 6-6 6"/>',
     "seta_esq": '<path d="M19 12H5M11 6l-6 6 6 6"/>',
     "chevron_dir": '<path d="m9 6 6 6-6 6"/>',

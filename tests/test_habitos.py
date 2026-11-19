@@ -48,10 +48,17 @@ def test_marcar_atualiza_semana_total_e_versao_sem_perder_metadados(cliente,vaul
     dados=habitos.marcar(cliente.painel,{'rel':novo['rel'],'versao':novo['versao']},hoje)
     assert dados['item']['semana']==1 and dados['resumo']['hoje']==1 and dados['item']['percentual']==20
     assert dados['item']['registros']==['2026-11-12']
+    repetido = habitos.marcar(cliente.painel, {'rel': novo['rel'], 'versao': dados['versao']}, hoje)
+    assert repetido['item']['contagem_hoje'] == 2
+    assert repetido['item']['contagens'] == {'2026-11-12': 2}
+    assert repetido['item']['tem_repeticoes']
+    assert repetido['item']['semana'] == repetido['item']['total_registros'] == 1
     with pytest.raises(Exception,match='mudou'):
         habitos.marcar(cliente.painel,{'rel':novo['rel'],'versao':novo['versao']},hoje)
-    atualizado=habitos.salvar(cliente.painel,{'rel':novo['rel'],'versao':dados['versao'],'titulo':'Ler','meta_semanal':3,'tags':['livros']},hoje)
+    atualizado=habitos.salvar(cliente.painel,{'rel':novo['rel'],'versao':repetido['versao'],'titulo':'Ler','meta_semanal':3,'tags':['livros']},hoje)
     assert atualizado['item']['registros']==['2026-11-12']
+    assert atualizado['item']['contagem_hoje'] == 2
+    assert cliente.painel.indice.notas[novo['rel']].campo('registros') == ['2026-11-12'] * 2
     assert atualizado['item']['meta']==3
 
 
@@ -119,7 +126,7 @@ def test_schema_incompativel_nao_converte_nem_sobrescreve_historico(cliente, vau
         ('/api/habitos', {'titulo': 'Outro hábito', 'meta_semanal': 2}),
     ]:
         resposta = cliente.post(url, json=dados)
-        assert resposta.status_code == 400 and 'Personalizar' in resposta.json()['erro']
+        assert resposta.status_code == 400 and '_modulo.yaml' in resposta.json()['erro']
     assert (vault / novo['rel']).read_bytes() == antes
     assert len(list((vault / 'habitos/itens').glob('*.md'))) == 1
 

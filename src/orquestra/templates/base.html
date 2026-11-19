@@ -41,7 +41,7 @@
   {% for aviso in avisos_config|default([]) %}<div class="faixa alerta" role="status">{{ icone('aviso', 16) }} {{ aviso }}</div>{% endfor %}
   <main id="conteudo" tabindex="-1">{% block conteudo %}{% endblock %}</main>
 
-  {# Dock: só ícones. O nome aparece ao passar o mouse. Com muitas áreas, parte delas fica no botão "Áreas". #}
+  {# Dock: só ícones. O nome aparece ao passar o mouse. Com muitas áreas, parte delas fica no botão "Mais". #}
   <div class="navegacao-inferior">
   <button id="atualizar-app" class="botao so-icone atualizar-app" type="button" hidden aria-label="Atualização disponível · atualizar Orquestra" title="Atualização disponível · atualizar Orquestra">{{ icone("atualizar", 18) }}<i aria-hidden="true"></i></button>
   <nav class="dock" aria-label="Navegação">
@@ -52,7 +52,7 @@
     </a>
     {% endfor %}
     {% if dock.gaveta %}
-    <button class="dock-item{% if not dock.gaveta_desktop %} dock-so-mobile{% endif %}{% if dock.gaveta_ativa %} ativo-desktop{% endif %}{% if dock.gaveta_mobile_ativa %} ativo-mobile{% endif %}" type="button" id="abrir-gaveta" data-dica="Todas as áreas" aria-label="Todas as áreas" aria-expanded="false" aria-controls="gaveta" data-selo-de="_gaveta">
+    <button class="dock-item{% if not dock.gaveta_desktop %} dock-so-mobile{% endif %}{% if dock.gaveta_ativa %} ativo-desktop{% endif %}{% if dock.gaveta_mobile_ativa %} ativo-mobile{% endif %}" type="button" id="abrir-gaveta" data-dica="Mais atalhos" aria-label="Mais atalhos" aria-expanded="false" aria-controls="gaveta" data-selo-de="_gaveta">
       {{ icone('grade', 20) }}<b class="selo dock-so-desktop"{% if not dock.gaveta_selo %} hidden{% endif %}>{{ "99+" if dock.gaveta_selo > 99 else dock.gaveta_selo }}</b>
     </button>
     {% endif %}

@@ -39,8 +39,6 @@ html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-identidade-linha { flex-wrap:w
 html:is([data-tamanho=xl],[data-tamanho=xxl]) .bv-tema-miniatura { flex:none; }
 @media(max-width:900px) {
   html:is([data-tamanho=xl],[data-tamanho=xxl]) .habitos-lista .habito-card { grid-template-columns:minmax(0,1fr) minmax(0,var(--habito-mapa-largura,200px)); }
-  html:is([data-tamanho=xl],[data-tamanho=xxl]) #personalizar .campo-editor { grid-template-columns:minmax(0,1fr); gap:.6rem; }
-  html:is([data-tamanho=xl],[data-tamanho=xxl]) #personalizar .campo-editor-opcoes[hidden] { display:none!important; }
 }
 @media(max-width:600px) {
   html:is([data-tamanho=xl],[data-tamanho=xxl]) .topo { padding-inline:12px; gap:6px; }

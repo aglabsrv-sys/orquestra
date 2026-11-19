@@ -1,14 +1,12 @@
 {% extends "base.html" %}
 {% import "partes.html" as p %}
-{% import "componentes-pastas.html" as pasta_ui with context %}
 {% block titulo %}Personalizar {{ nome_pagina }}{% endblock %}
-{% block trilha %}<a href="/{{ alvo }}">{{ nome_pagina }}</a>{% endblock %}
+{% block trilha %}<a href="{{ retorno }}">{{ nome_pagina }}</a>{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="/static/css/pagina-personalizar.css?v={{ marca }}">{% endblock %}
 {% block conteudo %}
-<section class="pagina personalizar-pagina" data-alvo="{{ alvo }}" data-versao="{{ config_versao }}">
-  <header class="pagina-topo"><div><span class="sobretitulo">{{ nome_pagina }}</span><h1>Personalizar página</h1></div><div class="linha-botoes sem-topo"><a class="botao discreto" href="/{{ alvo }}">Cancelar</a><button class="botao principal" type="submit" form="pagina-aparencia">Salvar alterações</button></div></header>
+<section class="pagina personalizar-pagina" data-retorno="{{ retorno }}" data-alvo="{{ alvo }}" data-versao="{{ config_versao }}">
+  <header class="pagina-topo"><div><span class="sobretitulo">{{ nome_pagina }}</span><h1>Personalizar página</h1></div><div class="linha-botoes sem-topo"><a class="botao discreto" href="{{ retorno }}">Cancelar</a><button class="botao principal" type="submit" form="pagina-aparencia">Salvar alterações</button></div></header>
   <form id="pagina-aparencia">
-    {% if alvo == 'pastas' %}{{ pasta_ui.escolher_subpastas('pagina-subpastas', modo_subpastas, opcoes_subpastas, 'cartoes') }}{% endif %}
     <fieldset class="pagina-capa-opcoes"><legend>Capa</legend>
       <label><input type="radio" name="escolha" value="tema"{% if escolha is none %} checked{% endif %}><span>Do tema <small>{{ tema.nome }}</small></span></label>
       <label><input type="radio" name="escolha" value="ocultar"{% if escolha is sameas false %} checked{% endif %}><span>Sem capa</span></label>

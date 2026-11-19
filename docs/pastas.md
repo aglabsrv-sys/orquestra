@@ -8,13 +8,18 @@ A URL preserva o caminho, inclusive acentos, com `nota=`.
 
 ## Visualizações de subpastas
 
-A aba **Lista** exibe subpastas e notas em lista. Em **Ajustes → Visualizações**,
-escolha **Cartões** ou **Pastas de vidro** para a aba visual. Cada pasta usa o
-estilo da área até receber uma escolha própria. Projetos usa Pastas de vidro por
-padrão e Estudos usa Cartões. No explorador, **Ajustes de Pastas** define o estilo
-da aba visual ao lado de **Lista** e **Grafo**.
-Subpastas, notas e mídias ficam acessíveis no mesmo nível, inclusive em pastas
-vazias ou que contêm apenas anexos.
+O explorador oferece **Lista**, **Cartões** e **Grafo**. Lista e Cartões
+mantêm as notas abaixo das subpastas e mídias. A árvore, a lista e os cartões
+abrem os arquivos da pasta. Em **Ajustes → Pastas**, o nome de cada área abre
+seu painel. Módulos retirados ficam ocultos na árvore, na Lista e nos Cartões.
+Para reativá-los, use o catálogo em **Ajustes → Pastas**.
+
+Em **Ajustes de Pastas**, **Aparência** dá acesso à capa do explorador e
+**Ferramentas** reúne a verificação de links e Automações para a pasta aberta.
+
+Nos painéis das áreas, **Ajustes → Visualizações** permite escolher **Cartões**
+ou **Pastas de vidro** para a aba visual. Cada pasta usa o estilo da área até
+receber uma escolha própria. Projetos usa Pastas de vidro por padrão e Estudos usa Cartões.
 
 ## Arquivar e excluir notas
 
@@ -46,29 +51,25 @@ locais anteriores de recuperação são independentes e não são apagados por e
 ação. A lixeira é um recurso do painel; não há ferramenta MCP de exclusão.
 
 O explorador apresenta os arquivos do vault em uma árvore lateral persistente.
-A primeira visualização é o grafo. Cada pasta lembra sua escolha explícita entre
-Notas e Grafo neste navegador. No grafo, cada ponto representa uma
-nota e cada linha representa uma referência interna resolvida dentro da pasta
-atual, em formato `[[wikilink]]` ou link Markdown.
+A primeira visualização é o grafo. Cada pasta lembra sua escolha explícita
+neste navegador. No grafo, cada ponto representa uma nota do cofre. Cada linha
+representa uma referência interna em formato `[[wikilink]]` ou link Markdown.
 
 ![Explorador e grafo de notas](img/pastas.png)
 
 ## Navegação
 
-- Em **Grafo**, a seta expande ou recolhe um ramo. O nome abre a pasta e mantém
-  o grafo disponível. Clicar em uma nota abre a leitura.
-- Use **Notas** para ver a lista de subpastas, notas e anexos. Clicar numa pasta
-  da lista ou no seu nome na árvore mostra o conteúdo mantendo o modo Notas;
-  a seta da árvore apenas expande ou recolhe. Subir um nível e voltar ou avançar
-  pelo navegador também mantêm a visualização atual.
+- Em **Grafo**, a seta da árvore expande ou recolhe o ramo. Clicar no nome
+  destaca suas notas no grafo inteiro, preservando posições, zoom e filtros.
+- Clicar em uma subpasta mantém a visualização atual. O histórico do navegador
+  recupera a visualização daquela etapa.
 - Clique em uma nota da árvore, da lista ou do grafo para ler sem fechar o explorador.
 - A seta de voltar no leitor retorna à visualização escolhida. Nas pastas abertas pela lista, a seta ao lado do título sobe um nível.
 - Arraste uma nota para reposicioná-la ou o fundo para mover a vista. Use a roda do mouse ou `+` e `-` para aproximar.
 - **Centralizar** ajusta o conjunto de notas ao espaço disponível. O explorador ocupa a altura da janela; listas longas e documentos rolam dentro dos seus painéis.
 - Notas sem ligações ficam próximas do conjunto conectado, sem reduzir o miolo do grafo a um ponto distante.
-- O enquadramento acompanha a acomodação inicial e os ajustes das forças. Ao
-  aproximar ou arrastar, a vista passa ao seu controle; **Centralizar** retoma o
-  enquadramento. Os pontos conservam um tamanho legível mesmo ao afastar, e seu
+- A câmera permanece estável enquanto as forças acomodam o grafo.
+  **Centralizar** reenquadra o conjunto. Os pontos conservam um tamanho legível mesmo ao afastar, e seu
   tamanho varia com a quantidade de conexões. Notas sem links usam a cor de destaque.
 - Quando não há ligações no recorte, **Notas do grafo** explica como conectar notas.
   Compartilhar uma pasta não cria uma linha: ela representa uma referência real.

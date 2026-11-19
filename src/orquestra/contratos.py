@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -169,6 +169,7 @@ class Personalizacao(Pedido):
     cena: str | None = None
     capa: str | None = Field(default=None, max_length=300)
     campos: list[DefinicaoCampo] = Field(default_factory=list, max_length=200)
+    rotulos_colunas: dict[Annotated[str, Field(min_length=1, max_length=100)], Annotated[str, Field(max_length=60)]] = Field(default_factory=dict, max_length=200)
     remover: list[str] = Field(default_factory=list, max_length=200)
     concluidos: list[str] | str | None = None
     quadro: bool | None = None

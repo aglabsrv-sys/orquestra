@@ -41,8 +41,9 @@ def test_telas_compactas_e_entrada_persistente(cliente):
     assert 'id="novo-adicionar-campo"' in lista
     assert 'data-extra-campo="tags" hidden' in lista
     pagina = cliente.get("/m/tarefas/personalizar").text
-    assert pagina.count('role="tab"') == 3
-    assert pagina.count('role="tabpanel"') == 3
+    assert pagina.count('role="tab"') == 2
+    assert pagina.count('role="tabpanel"') == 2
+    assert 'id="p-aba-propriedades"' not in pagina
     assert 'href="#p-identidade"' not in pagina
     for rota in ("/", "/m/tarefas", "/ajustes"):
         html = cliente.get(rota).text

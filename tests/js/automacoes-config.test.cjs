@@ -49,7 +49,7 @@ function pagina({definicao,instancia,responder}={}) {
   const atual=instancia||{id:'legado:rss',definicao:catalogo.id,nome:'Fontes da equipe',destino:'Clientes/Pesquisa',config:{feeds:['https://equipe.test/artigos','https://cliente.test/feed'],maximo_por_feed:9},mapeamento:{},a_cada:'12h',diario_as:'',ativo:true,legado:{modulo:'radar',script:'rss.py'},codigo_nativo:true,confianca:{confiavel:true,assinatura:'hash'},versao:'versao-1'};
   entrada.textContent=JSON.stringify({catalogo:[catalogo],instancias:atual.legado?[]:[atual],legadas:atual.legado?[atual]:[]});
   const ids=['automacao-config','automacao-config-avancada','automacao-mapeamentos','automacao-previa','automacao-previa-destino','automacao-previa-texto','automacao-form-estado','automacao-titulo','automacao-descricao','automacao-segredos','automacao-pasta-nome','automacao-pasta-atual','automacao-pasta-estado','automacao-pasta-lista','automacao-pasta-picker','automacao-horario-campo'];
-  ids.forEach(n=>id(n,'div',form));
+  ids.concat(['automacao-abas','automacao-regras','automacao-opcoes','automacao-pasta-campo']).forEach(n=>id(n,'div',form));
   ['automacao-nome','automacao-destino','automacao-horario'].forEach(n=>id(n,'input',form));
   ['automacao-salvar','automacao-mapear','automacao-pasta-abrir','automacao-pasta-voltar','automacao-pasta-usar'].forEach(n=>id(n,'button',form));
   ['automacao-campos-avancados','automacao-parametros-avancados'].forEach(n=>{const d=id(n,'details',form);d.className='auto-campos-avancados';});
@@ -69,6 +69,7 @@ function pagina({definicao,instancia,responder}={}) {
 test('Configurar legado abre feeds realmente salvos e envia edição com versão atual',async()=>{
   const p=pagina();await p.editar.emitir('click');
   assert.equal(p.dialogo.open,true);assert.equal(p.get('automacao-nome').value,'Fontes da equipe');
+  assert.equal(p.get('automacao-pasta-campo').hidden,true);
   assert.equal(p.get('automacao-config').querySelector('textarea').value,'https://equipe.test/artigos\nhttps://cliente.test/feed');
   assert.equal(p.get('automacao-config-avancada').querySelector('input').value,'9');
   assert.equal(p.get('automacao-pasta-abrir').disabled,true);
@@ -124,7 +125,8 @@ test('filtro de títulos do YouTube fica em Mais opções e preserva os canais',
   ],requer:[]};
   const instancia={id:'youtube-1',definicao:definicao.id,nome:definicao.nome,destino:'radar/itens',config,mapeamento:{},a_cada:'6h',diario_as:'',ativo:false,confianca:{confiavel:true}};
   const p=pagina({definicao,instancia});await p.editar.emitir('click');
-  assert.equal(p.get('automacao-parametros-avancados').open,false);
+  assert.equal(p.get('automacao-opcoes').hidden,true);
+  assert.equal(p.get('automacao-parametros-avancados').hidden,false);
   assert.equal(p.get('automacao-config').querySelector('textarea').value,'@Canal');
   p.get('automacao-config-avancada').querySelector('textarea').value='Python\nInteligência artificial';
   await p.form.emitir('submit');

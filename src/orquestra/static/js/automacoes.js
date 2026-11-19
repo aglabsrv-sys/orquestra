@@ -125,6 +125,7 @@
         var caixa = criar('div','auto-config-item'), campos = {}, tirar = criar('button','botao pequeno discreto','Remover'); tirar.type = 'button';
         var ordem = ['titulo','quando','prioridade','nome','url','variavel','repo','campo_estrelas','campo_forks'];
         Object.keys(modelo).sort(function (a,b) { var ia = ordem.indexOf(a), ib = ordem.indexOf(b); return (ia < 0 ? 100 : ia) - (ib < 0 ? 100 : ib); }).forEach(function (k) { var c = p.nome==='tarefas'&&k==='quando'?recorrencia(v[k]):simples(k,v[k] == null ? '' : v[k]); campos[k] = c.ler; caixa.append(c.el); });
+        if (p.nome==='tarefas') caixa.className+=' auto-regra-tarefa';
         var registro = {caixa:caixa,campos:campos,original:Object.assign({},v)}; registros.push(registro);
         tirar.onclick = function () { caixa.remove(); registros = registros.filter(function (r) { return r !== registro; }); mudou(); };
         caixa.append(tirar); itens.append(caixa);
@@ -135,7 +136,20 @@
     }
     return simples(p.nome,valor,p.rotulo);
   }
-  function frequencia() { $('#automacao-horario-campo').hidden = $('#automacao-frequencia').value !== 'diaria'; }
+  function secaoFormulario(nome) {
+    var principal=$('#automacao-regras'), avancada=$('#automacao-opcoes');
+    if (!principal || !avancada) return;
+    principal.hidden=nome!=='regras'; avancada.hidden=nome!=='opcoes';
+    $$('[data-auto-form-aba]',form).forEach(function(b){
+      b.setAttribute('aria-pressed',String(b.dataset.autoFormAba===nome));
+    });
+  }
+  $$('[data-auto-form-aba]',form).forEach(function(b){b.onclick=function(){secaoFormulario(b.dataset.autoFormAba);};});
+  function frequencia() {
+    var horario=$('#automacao-horario-campo');
+    horario.hidden=$('#automacao-frequencia').value!=='diaria';
+    $('#automacao-horario').disabled=horario.hidden;
+  }
   $('#automacao-frequencia').addEventListener('change',frequencia);
   $('#automacao-mapear').onclick = function () { par($('#automacao-mapeamentos'),'','',true); mudou(); };
   form.addEventListener('input',mudou); form.addEventListener('change',mudou);
@@ -146,19 +160,20 @@
     $$('input,select,textarea',form).forEach(function(c){c.disabled=false;});$('#automacao-salvar').disabled=false;
     var valores = instancia || selecionada;
     revisao = null; leitores = {}; form.reset(); $('#automacao-config').replaceChildren(); $('#automacao-config-avancada').replaceChildren(); $('#automacao-mapeamentos').replaceChildren();
-    $$('.auto-campos-avancados',form).forEach(function(d){d.open=false;});
+    secaoFormulario('regras');
     $('#automacao-previa').hidden = true; $('#automacao-form-estado').textContent = ''; $('#automacao-salvar').textContent = 'Continuar';
     $('#automacao-titulo').textContent = (editando ? 'Configurar ' : '')+selecionada.nome; $('#automacao-descricao').textContent = selecionada.ajuda;
     $('#automacao-nome').value = valores.nome;
     definirPasta(copiar ? '' : editando ? editando.destino : raiz.dataset.destino || '');
     $('#automacao-pasta-abrir').disabled = !!(editando && editando.legado);
-    $('#automacao-pasta-abrir').title = editando && editando.legado ? 'Pasta da área. Use “Usar em outra pasta” para adicionar outra automação.' : 'Escolher uma pasta';
+    var campoPasta=$('#automacao-pasta-campo');
+    if(campoPasta)campoPasta.hidden=$('#automacao-pasta-abrir').disabled;
     fecharPastas();
     (selecionada.parametros || []).forEach(function (padrao) {
       var p = Object.assign({},padrao);
       if (Object.prototype.hasOwnProperty.call(valores.config,p.nome)) p.padrao = valores.config[p.nome];
       // Só o par de exemplos distribuído é reduzido; regras pessoais continuam intactas.
-      if(p.nome==='tarefas'&&p.padrao.length===2&&JSON.stringify(p.padrao)===JSON.stringify([{titulo:'Revisar a semana',quando:'sexta',prioridade:'media'},{titulo:'Conferir as contas do mês',quando:'dia 5'}]))p.padrao=p.padrao.slice(0,1);
+      if(!instancia&&p.nome==='tarefas'&&p.padrao.length===2&&JSON.stringify(p.padrao)===JSON.stringify([{titulo:'Revisar a semana',quando:'sexta',prioridade:'media'},{titulo:'Conferir as contas do mês',quando:'dia 5'}]))p.padrao=p.padrao.slice(0,1);
       if (p.tipo === 'registros') p.modelo = padrao.padrao[0];
       if (p.nome === 'agendas') { p.tipo = 'registros'; p.modelo = {nome:'',url:'',variavel:''}; p.padrao = p.padrao.map(function (v) { return typeof v === 'string' ? {nome:'',url:v,variavel:''} : v; }); }
       var primario = ['canais','feeds','termos','tarefas','agendas','canal','moedas','repositorios'].includes(p.nome) || selecionada.id.endsWith('google_trends.py') && p.nome === 'pais';
@@ -167,6 +182,8 @@
     if (editando) Object.keys(editando.mapeamento || {}).forEach(function (k) { par($('#automacao-mapeamentos'),k,editando.mapeamento[k],true); });
     $('#automacao-campos-avancados').hidden = !!(editando && editando.legado);
     $('#automacao-parametros-avancados').hidden = !$('#automacao-config-avancada').children.length;
+    var abasForm=$('#automacao-abas');
+    if(abasForm)abasForm.hidden=$('#automacao-campos-avancados').hidden&&$('#automacao-parametros-avancados').hidden;
     var segredos = selecionada.requer || []; $('#automacao-segredos').hidden = !segredos.length;
     $('#automacao-segredos').replaceChildren();
     if (segredos.length) { $('#automacao-segredos').append(document.createTextNode('Requer '+segredos.join(', ')+'. ')); var link = criar('a','link','Configurar segredos'); link.href = '/ajustes/variaveis'; $('#automacao-segredos').append(link); }
@@ -196,7 +213,10 @@
     $('#automacao-salvar').textContent = editando ? 'Salvar alterações' : $('#automacao-frequencia').value === 'manual' ? 'Adicionar' : 'Adicionar e ativar';
   }
   form.addEventListener('submit',async function (e) {
-    e.preventDefault(); if (ocupada || !form.reportValidity()) return;
+    e.preventDefault(); if (ocupada) return;
+    var invalido=$(':invalid',form);
+    if(invalido)secaoFormulario(invalido.closest('#automacao-opcoes')?'opcoes':'regras');
+    if(!form.reportValidity())return;
     ocupada = true; var fim = ui.ocupado($('#automacao-salvar'),revisao ? 'Adicionando…' : 'Revisando…');
     try {
       var atual = pedido();
@@ -247,7 +267,7 @@
       finally { fim(); }
     });
   });
-  if (raiz.dataset.destino) aba('catalogo');
+  if (raiz.dataset.destino || raiz.dataset.porPasta!==undefined) aba('catalogo');
   if(raiz.dataset.modulo&&raiz.dataset.script){var existente=dados.instancias.find(function(a){return a.legado&&a.legado.modulo===raiz.dataset.modulo&&a.legado.script===raiz.dataset.script;});if(existente)abrir(existente.definicao,existente);}
   try { var aviso = sessionStorage.getItem('orquestra-automacao-aviso'); if (aviso) { sessionStorage.removeItem('orquestra-automacao-aviso'); ui.avisar(aviso,aviso.includes('Autorize') ? 'alerta' : 'sucesso'); } } catch (_) { /* armazenamento opcional */ }
 })();

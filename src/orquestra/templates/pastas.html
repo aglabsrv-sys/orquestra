@@ -19,11 +19,8 @@
   <div id="pasta-painel" class="explorador-painel" data-rel="{{ rel }}">
     <header class="explorador-topo"><div class="explorador-titulo">{% if rel %}<a class="botao pequeno so-icone explorador-voltar" href="{{ trilha[-2].url if trilha|length > 1 else '/pastas' }}" aria-label="Voltar à pasta anterior" title="Voltar à pasta anterior">{{ icone('seta_esq', 17) }}</a>{% endif %}<h1>{{ trilha[-1].nome if trilha else cfg.nome }}</h1></div><div class="linha-botoes sem-topo">
       <div class="segmentos" role="group" aria-label="Visualização dos arquivos"><button type="button" data-pasta-visao="notas" aria-pressed="false">Lista</button><button type="button" data-pasta-visao="colecao" aria-pressed="false">{{ 'Pastas' if modo_subpastas == 'pastas' else 'Cartões' }}</button><button type="button" data-pasta-visao="grafo" aria-pressed="true">Grafo</button></div>
-      {% if modulo and trilha|length == 1 %}<a class="botao pequeno" href="/m/{{ modulo.id|urlencode }}">{{ icone(modulo.icone, 15) }} Ver painel</a>{% endif %}
       {% if pode_criar %}<button class="botao principal pequeno" type="button" id="abrir-nota-pasta" aria-label="Nova nota">{{ icone('mais', 16) }}<span>Nova nota</span></button>{% endif %}
-      <a class="botao pequeno so-icone" href="/vinculos?rel={{ rel|urlencode }}" title="Verificar links nesta pasta" aria-label="Verificar links nesta pasta">{{ icone('link', 16) }}</a>
-      <a class="botao pequeno so-icone" href="/ajustes/automacoes?destino={{ rel|urlencode }}" title="Adicionar automação nesta pasta" aria-label="Adicionar automação nesta pasta">{{ icone('raio', 16) }}</a>
-      <a class="botao pequeno so-icone" href="/personalizar/pastas" title="Ajustes de Pastas" aria-label="Ajustes de Pastas">{{ icone('ajustes', 16) }}</a>
+      <button class="botao pequeno so-icone" type="button" id="abrir-config-pastas" aria-label="Ajustes de Pastas" title="Ajustes de Pastas" aria-haspopup="dialog">{{ icone('ajustes', 16) }}</button>
     </div></header>
     {% if capa_pasta %}<div class="pagina-capa">{{ p.capa(capa_pasta) }}</div>{% endif %}
     <div id="pasta-notas" hidden>
@@ -34,13 +31,11 @@
     <div class="pasta-cartao pasta-linha{% if f.modulo %} e-area{% endif %}">
       <a class="pasta-link" href="{{ f.url }}">
         {{ icone(f.modulo.icone if f.modulo else 'pasta', 20) }}
-        <span class="pasta-nome">{{ f.nome }}</span>
+        <span class="pasta-nome">{{ f.titulo }}</span>
         <small>{{ f.notas }} nota{{ '' if f.notas == 1 else 's' }}</small>
       </a>
-      {% if f.modulo %}
-      <a class="et et-area" href="/m/{{ f.modulo.id|urlencode }}" title="Abrir a área {{ f.modulo.nome }}">área do painel</a>
-      {% elif f.pode_adotar %}
-      <button class="botao pequeno" type="button" data-adotar="{{ f.nome }}" aria-label="{{ 'Religar ' if f.desligada else 'Mostrar ' }}{{ f.nome }} no painel">{{ 'Religar no painel' if f.desligada else 'Mostrar no painel' }}</button>
+      {% if f.pode_adotar %}
+      <button class="botao pequeno" type="button" data-adotar="{{ f.nome }}" aria-label="Mostrar {{ f.nome }} no painel">Mostrar no painel</button>
       {% endif %}
     </div>
     {% endfor %}
@@ -95,6 +90,20 @@
 
 {% block dialogos %}
 <div id="pastas-dialogos">
+<dialog id="config-pastas" class="dialogo" aria-labelledby="config-pastas-titulo">
+  <div class="dialogo-corpo">
+    <header class="propriedades-cab"><h2 id="config-pastas-titulo">Ajustes de Pastas</h2><button type="button" class="botao pequeno so-icone" data-fechar-config aria-label="Fechar ajustes">{{ icone('x', 16) }}</button></header>
+    <div class="segmentos" role="group" aria-label="Seções dos ajustes">
+      <button type="button" data-config-pastas="aparencia" aria-pressed="true" aria-controls="config-pastas-aparencia">Aparência</button>
+      <button type="button" data-config-pastas="ferramentas" aria-pressed="false" aria-controls="config-pastas-ferramentas">Ferramentas</button>
+    </div>
+    <div class="config-pastas-opcoes" id="config-pastas-aparencia"><a class="botao" href="/personalizar/pastas?rel={{ rel|urlencode }}">{{ icone('paleta', 16) }} Personalizar capa</a></div>
+    <div class="config-pastas-opcoes" id="config-pastas-ferramentas" hidden>
+      <a class="botao" href="/vinculos?rel={{ rel|urlencode }}">{{ icone('link', 16) }} Verificar links</a>
+      <a class="botao" href="/ajustes/automacoes?destino={{ rel|urlencode }}">{{ icone('raio', 16) }} Automações</a>
+    </div>
+  </div>
+</dialog>
 <dialog id="dialogo-nota-pasta" class="dialogo" aria-labelledby="titulo-nota-pasta" aria-describedby="nota-pasta-ajuda" data-pasta="{{ rel }}">
   <form class="dialogo-corpo" method="dialog">
     <h2 id="titulo-nota-pasta">Nova nota{% if rel %} em {{ trilha[-1].nome }}{% endif %}</h2>

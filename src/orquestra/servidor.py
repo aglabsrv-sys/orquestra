@@ -32,7 +32,7 @@ from orquestra.caminhos import CaminhoInseguro, eh_link, ignorar
 from orquestra.config import ConfigInvalida, ler_yaml
 from orquestra import apresentacao as ap
 from orquestra.indice import EXT_MIDIA, data_de, deve_ignorar, espera_decisao
-from orquestra.modulos import ARQUIVO_DESLIGADO, ARTES_DE_PASTA, ESTILOS_DE_SUBPASTAS, TIPOS_DE_CAMPO, ValorInvalido, Visao, padroes, rotulo, validar
+from orquestra.modulos import ARQUIVO_DESLIGADO, ARTES_DE_PASTA, ESTILOS_DE_SUBPASTAS, ValorInvalido, Visao, padroes, rotulo, validar
 from orquestra.notas import Conflito, FrontmatterInvalido, simples
 from orquestra.painel import NaoEncontrado, Painel, Recusado
 from orquestra.recursos import marca_estaticos
@@ -581,7 +581,9 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     nomes = [n for n in nomes if n == "titulo" or any(nota.campo(n) not in (None, "", []) for nota in itens)]
                 itens, contexto["paginacao"] = paginar(request, itens)
                 contexto["colunas_tabela"] = [
-                    {"nome": n, "rotulo": ("Nome" if modulo.id == "contatos" else "Título") if n == "titulo" else (modulo.campos[n].rotulo if n in modulo.campos else rotulo(n))}
+                    {"nome": n, "rotulo": modulo.rotulos_colunas.get(n) or
+                     (("Nome" if modulo.id == "contatos" else "Título") if n == "titulo" else
+                      (modulo.campos[n].rotulo if n in modulo.campos else rotulo(n)))}
                     for n in nomes
                 ]
                 linhas = []
@@ -875,23 +877,26 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         elemento = f'<video src="{url}" controls muted playsinline></video>' if caminho.suffix.lower() in {".mp4", ".webm"} else f'<img src="{url}" alt="{escape(caminho.name, quote=True)}">'
         return HTMLResponse('<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#111318}img,video{max-width:100%;max-height:100vh;object-fit:contain}</style>' + elemento, headers={"Content-Security-Policy": "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'; sandbox"})
 
-    def conteudo_visivel_da_pasta(rel: str):
+    def conteudo_visivel_da_pasta(rel: str, *, ocultar_desligadas: bool = False):
         subpastas, notas = painel.indice.conteudo_da_pasta(rel)
         nomes = dict(subpastas)
         for filho in painel.caminho_seguro(rel).iterdir():
             caminho = (rel + "/" + filho.name).strip("/")
             if filho.is_dir() and not eh_link(filho) and not deve_ignorar(caminho + "/x.md"):
                 nomes.setdefault(filho.name, 0)
+        if ocultar_desligadas and not rel:
+            nomes = {nome: total for nome, total in nomes.items()
+                     if nome in painel.indice.modulos or not (painel.vault / nome / ARQUIVO_DESLIGADO).is_file()}
         return nomes, notas
 
     @app.get("/api/pastas/arvore")
     @leitura
-    def arvore_pastas(request: Request, rel: str = ""):
+    def arvore_pastas(request: Request, rel: str = "", ocultar_desligadas: bool = False):
         rel = rel.strip("/")
         pasta = painel.caminho_seguro(rel)
         if not pasta.is_dir() or (rel and deve_ignorar(rel + "/x.md")):
             raise NaoEncontrado(rel)
-        nomes, notas = conteudo_visivel_da_pasta(rel)
+        nomes, notas = conteudo_visivel_da_pasta(rel, ocultar_desligadas=ocultar_desligadas)
         return {
             "pastas": [{"nome": n, "rel": (rel + "/" + n).strip("/"), "url": ap.url_pasta((rel + "/" + n).strip("/")), "notas": nomes[n]} for n in sorted(nomes, key=str.casefold)],
             "notas": [{"titulo": n.titulo, "rel": n.rel, "url": ap.url_nota(n.rel)} for n in notas[:300]],
@@ -961,7 +966,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             if not caminho.is_dir() or deve_ignorar(rel + "/x.md"):
                 raise NaoEncontrado(rel)
         hoje = dt.date.today()
-        nomes, notas = conteudo_visivel_da_pasta(rel)
+        nomes, notas = conteudo_visivel_da_pasta(rel, ocultar_desligadas=True)
         notas, paginacao = paginar(request, notas)
         if not rel:
             for modulo in painel.indice.modulos.values():  # módulos vazios também aparecem
@@ -978,7 +983,6 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     "nome": nome,
                     "notas": nomes[nome],
                     "modulo": modulo,
-                    "desligada": not rel and (painel.vault / nome / ARQUIVO_DESLIGADO).is_file(),
                     "pode_adotar": not rel and modulo is None and nome != "diario" and not nome.startswith("_"),
                 }
             )
@@ -1014,9 +1018,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         nomes = {"diario": "Diário", "decidir": "Decidir", "pastas": "Pastas"}
         if alvo not in nomes:
             raise NaoEncontrado(alvo)
-        return pagina(request, "personalizar-pagina.html", alvo, alvo=alvo, nome_pagina=nomes[alvo],
+        rel = request.query_params.get("rel", "").strip("/") if alvo == "pastas" else ""
+        if rel:
+            conferir_pasta_vinculos(rel)
+        retorno = ap.url_pasta(rel) if alvo == "pastas" else "/" + alvo
+        return pagina(request, "personalizar-pagina.html", alvo, alvo=alvo, nome_pagina=nomes[alvo], retorno=retorno,
                       capa=ap.capa_de(painel, alvo), escolha=painel.config.capas.get(alvo),
-                      opcoes_subpastas=ESTILOS_DE_SUBPASTAS, modo_subpastas=painel.config.subpastas if painel.config.subpastas in ESTILOS_DE_SUBPASTAS else "cartoes",
                       config_versao=armazenamento.versao((painel.vault / "orquestra.yaml").read_bytes() if (painel.vault / "orquestra.yaml").is_file() else b""),
                       cenas=temas.previas_das_cenas(painel.tema, alvo), colecao=temas.colecao(painel.tema["id"]))
 
@@ -1038,8 +1045,6 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             opcoes_subpastas=ESTILOS_DE_SUBPASTAS,
             estilo_subpastas_padrao=next((v.tipo for v in modulo.visoes if v.tipo in ESTILOS_DE_SUBPASTAS), "cartoes"),
             capa=ap.capa_de(painel, modulo.id, modulo.capa),
-            campos=[c for c in modulo.campos.values() if c.nome != "origem"],
-            tipos=sorted(TIPOS_DE_CAMPO),
             icones=ap.ICONES_DE_MODULO,
             cenas=temas.previas_das_cenas(painel.tema, modulo.id),
             colecao=temas.colecao(painel.tema["id"]),

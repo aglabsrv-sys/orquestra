@@ -139,11 +139,10 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             page.set_default_timeout(10000)
             page.on("pageerror", lambda erro: erros.append(str(erro)))
             url = base + "/pastas/" + quote("Grafo QA", safe="")
+            total = page.request.get(base + "/api/pastas/grafo").json()["total"]
             page.goto(url, wait_until="domcontentloaded")
             aguardar_grafo(page)
-            expect(page.locator("#grafo-estado")).to_contain_text(
-                "4 de 4 notas · 3 ligações"
-            )
+            expect(page.locator("#grafo-estado")).to_contain_text(f"{total} de {total} notas")
             if capturas:
                 page.wait_for_timeout(160)
                 page.screenshot(path=str(capturas / f"grafo-{largura}{'-curto' if altura<700 else ''}.png"), full_page=True)
@@ -168,13 +167,28 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             ramo.locator(":scope > summary > a").click()
             expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Segunda")
             aguardar_grafo(page)
-            expect(page.locator("#grafo-estado")).to_contain_text("2 de 2 notas · 0 ligações")
+            expect(page.locator("#grafo-estado")).to_contain_text(f"{total} de {total} notas")
+            assert page.evaluate("window.__canvasPasta===document.querySelector('#grafo-canvas')")
+            depois = page.locator("#grafo-canvas").evaluate("e=>e.__nosDesenhados")
+            assert sum(n["opacidade"] == 1 for n in depois) == 2, "O realce deve seguir a pasta"
+            assert [(n["x"], n["y"]) for n in antes] == [(n["x"], n["y"]) for n in depois]
+
+            # Cada conjunto sintético isola uma distribuição para verificar as forças.
+            escopo = "Grafo QA"
+
+            def conjunto_de_teste(rota):
+                rota.fulfill(response=page.request.get(
+                    base + "/api/pastas/grafo?rel=" + quote(escopo, safe="")
+                ))
+
+            page.route("**/api/pastas/grafo", conjunto_de_teste)
             page.goto(url, wait_until="domcontentloaded")
             aguardar_grafo(page)
             conferir_viewport(page)
             # Regressão da captura real: 35 notas sem nenhuma ligação.
             # A animação precisa terminar enquadrada sem clicar em Centralizar.
             page.emulate_media(reduced_motion="no-preference")
+            escopo = "Sem links"
             page.goto(base + "/pastas/Sem links", wait_until="domcontentloaded")
             aguardar_grafo(page)
             page.wait_for_timeout(1800)
@@ -186,12 +200,14 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             page.locator("#grafo-centro").dispatch_event("input")
             page.locator("#grafo-repulsao").fill("20")
             page.locator("#grafo-repulsao").dispatch_event("input")
+            page.locator("#grafo-centralizar").click()
             conferir_legibilidade(page, 35)
             page.locator("#grafo-forcas-padrao").click()
             page.locator(".grafo-opcoes summary").click()
             if capturas:
                 page.screenshot(path=str(capturas / f"grafo-sem-links-{largura}{'-curto' if altura<700 else ''}.png"), full_page=True)
             # Conjunto próximo à referência: hubs, muitas linhas e poucos avulsos.
+            escopo = "Rede"
             page.goto(base + "/pastas/Rede", wait_until="domcontentloaded")
             aguardar_grafo(page)
             conferir_legibilidade(page, 100)
@@ -205,6 +221,7 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             if capturas:
                 page.screenshot(path=str(capturas / f"grafo-rede-{largura}{'-curto' if altura<700 else ''}.png"), full_page=True)
             conferir_viewport(page)
+            escopo = "Grafo QA"
             page.goto(url, wait_until="domcontentloaded")
             aguardar_grafo(page)
             assert page.locator("#grafo-canvas").evaluate("""e=>e.__rotulosDesenhados.every(r=>
@@ -326,6 +343,8 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
             page.locator('#arvore-pastas a[data-pasta="Grafo QA"]').click()
             expect(page.locator("#pasta-painel")).to_have_attribute("data-rel", "Grafo QA")
             expect(page.locator("#pasta-notas")).to_be_visible()
+            if alternar.is_visible():
+                alternar.click()
             page.locator('#arvore-pastas .arvore-nota').filter(has_text="Alpha").click()
             expect(page.locator("#pasta-leitor")).to_be_visible()
             expect(page.frame_locator("#leitor-frame").locator("#ver")).to_contain_text("Alpha")
@@ -351,6 +370,7 @@ def jornadas(browser, base: str, capturas: Path | None) -> dict:
                 "aria-pressed", "true"
             )
             # Muitos arquivos avulsos não afastam o grupo conectado nem deixam pontos fora da tela.
+            escopo = "Conjunto"
             page.goto(base + "/pastas/Conjunto", wait_until="domcontentloaded")
             page.locator("[data-pasta-visao=grafo]").click()
             aguardar_grafo(page)

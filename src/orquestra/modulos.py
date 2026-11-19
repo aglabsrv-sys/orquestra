@@ -101,6 +101,7 @@ class Modulo:
     # -> {arte, imagem, entrada_rapida}.
     pastas: dict[str, dict] = field(default_factory=dict)
     subpastas: str = ""
+    rotulos_colunas: dict[str, str] = field(default_factory=dict)
     # Onde ficam os registros. "itens" é o padrão dos módulos do Orquestra; "." diz
     # que as notas ficam soltas na própria pasta (e nas subpastas), que é como quase
     # todo vault do Obsidian já é organizado.
@@ -171,6 +172,9 @@ def _carregar_modulo(pasta: Path) -> Modulo:
             raise ValueError("'ativo' precisa ser true ou false, sem aspas.")
 
     m = Modulo(id=pasta.name, pasta=pasta, nome=str(bruto.get("nome") or rotulo(pasta.name)))
+    rotulos = bruto.get("rotulos_colunas")
+    if isinstance(rotulos, dict):
+        m.rotulos_colunas = {k: v.strip()[:60] for k, v in rotulos.items() if isinstance(k, str) and isinstance(v, str) and v.strip()}
     m.versao = versao(bruto._orq_original or b"")
     m.descricao = str(bruto.get("descricao") or "")
     m.icone = str(bruto.get("icone") or "pasta")

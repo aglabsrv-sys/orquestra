@@ -982,6 +982,18 @@ class Painel:
             else:
                 yaml["capa"] = CommentedMap(cena=cena)
 
+        if dados.get("rotulos_colunas"):
+            rotulos = yaml.get("rotulos_colunas")
+            if not isinstance(rotulos, dict):
+                rotulos = yaml["rotulos_colunas"] = CommentedMap()
+            for chave, valor in dados["rotulos_colunas"].items():
+                if any(c in chave for c in "\r\n\t"):
+                    raise Recusado("Coluna inválida.")
+                if valor.strip():
+                    rotulos[chave] = valor.strip()
+                else:
+                    rotulos.pop(chave, None)
+
         campos = yaml.get("campos")
         if not isinstance(campos, dict):
             campos = yaml["campos"] = CommentedMap()

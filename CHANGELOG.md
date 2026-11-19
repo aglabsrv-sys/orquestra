@@ -2,6 +2,18 @@
 
 ## Em desenvolvimento
 
+- Hábitos registra várias realizações por dia e mostra a contagem no marcador.
+  A meta continua em dias, e o mapa da Lista exibe oito semanas com intensidades
+  proporcionais quando há repetições.
+
+- Pastas reúne capa, links e automações num menu de ajustes. A árvore destaca
+  a pasta escolhida no grafo completo, e a simulação acomoda as notas sem empurrar
+  as isoladas para um lado. Lista e Cartões preservam a navegação pelos arquivos.
+- Ajustes de Pastas do painel sincroniza a lista e o catálogo ao adicionar ou
+  retirar uma área. Os nomes abrem seus painéis.
+- Automações usa um painel de edição lateral com regras compactas. Cabeçalhos
+  das tabelas podem ser renomeados sem mudar as propriedades das notas.
+
 - No celular, Contatos mantém a busca junto de uma barra compacta e o Início
   libera espaço junto ao dock. A aba Lista também organiza as subpastas em lista.
   Ajustes da pasta mostra as ações diretamente e abre a escolha da capa em uma

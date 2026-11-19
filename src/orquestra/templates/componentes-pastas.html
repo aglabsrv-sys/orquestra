@@ -1,7 +1,6 @@
 {% import "partes.html" as p %}
 {% macro acao(f) %}
-  {% if f.modulo %}<a class="et et-area pasta-atalho" href="/m/{{ f.modulo.id|urlencode }}" aria-label="Abrir a área {{ f.modulo.nome }}">Ver painel</a>
-  {% elif f.pode_adotar %}<button class="botao pequeno pasta-atalho" type="button" data-adotar="{{ f.nome }}">{{ 'Religar no painel' if f.desligada else 'Mostrar no painel' }}</button>{% endif %}
+  {% if f.pode_adotar %}<button class="botao pequeno pasta-atalho" type="button" data-adotar="{{ f.nome }}">Mostrar no painel</button>{% endif %}
 {% endmacro %}
 
 {% macro grade(pastas, modo, rotulo_grade, icone_item='pasta') %}

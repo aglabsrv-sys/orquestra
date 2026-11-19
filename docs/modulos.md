@@ -21,8 +21,7 @@ vinculadas por link ou pasta de nome inequívoco, dentro do estudo correspondent
   Estudos, Conteúdo, Radar, Números, Entrada e Hábitos e metas. Com ou sem notas de
   exemplo, conforme o módulo. Agenda e Hábitos preparam suas pastas ao
   criar o primeiro registro em suas próprias telas.
-- **Criar em branco.** No mesmo lugar: nome, ícone e se quer quadro. Depois ajuste
-  os campos em Personalizar.
+- **Criar em branco.** No mesmo lugar: nome, ícone e se quer quadro.
 - **Adicionar novamente.** Uma área retirada aparece no mesmo catálogo de
   **Ajustes → Pastas**, inclusive áreas criadas em branco. O botão religa
   a configuração preservada, com as mesmas notas e personalizações.
@@ -74,7 +73,7 @@ As ações aparecem junto às configurações, sem deslocar a tabela ao selecion
 Excluir exige autorização local ou um endereço Tailscale permitido; apagar
 definitivamente continua exigindo acesso local. Veja a [lixeira](pastas.md).
 
-Em **Personalizar**, Aparência, Propriedades e Visualizações têm painéis separados.
+Em **Personalizar**, Aparência e Visualizações têm painéis separados.
 Trocar de aba preserva as alterações pendentes; Salvar alterações considera todas
 as abas. A capa é a exceção: clicar numa cena ou imagem, ou enviar uma capa, já
 salva essa escolha. Outros ajustes ainda pendentes continuam no formulário.
@@ -82,7 +81,7 @@ O seletor de ícone mostra os desenhos, com o nome acessível no foco ou hover.
 O cabeçalho acompanha a rolagem normal da página.
 
 O dock mantém **Entrada**, quando instalada, à direita. No celular, uma área
-principal permanece ao lado dos atalhos fixos; as demais estão em Todas as áreas.
+principal permanece ao lado dos atalhos fixos. **Mais atalhos** abre a lista completa.
 As teclas **1 a 9** levam aos cards pela ordem da home; **0** abre o menu de áreas.
 Os atalhos ficam suspensos ao digitar ou com um diálogo aberto. **Início** volta
 à capa da última área acessada, inclusive pelo dock. Na home, outro clique em
@@ -93,8 +92,11 @@ Na home, arraste os cartões com o mouse ou use as setas. Arrastar não abre o c
   [vault-existente.md](vault-existente.md).
 
 O ícone ao lado das abas de cada área abre **Personalizar**: nome, descrição, ícone,
-cena da capa, campos (com tipo e opções), o que conta como concluído e se a área
-mostra quadro e gráfico. Tudo é gravado no `_modulo.yaml`, preservando os comentários.
+cena da capa, o que conta como concluído e se a área mostra quadro e gráfico.
+Na lista, clique duas vezes no nome de uma coluna para editar seu rótulo.
+Use Enter para salvar e Escape para cancelar. No celular, toque no nome.
+A seta ao lado ordena a página. Renomear só altera a apresentação da coluna.
+Os ajustes são gravados no `_modulo.yaml`, preservando os comentários.
 
 Agenda e Hábitos possuem telas próprias, com visões específicas de calendário e
 progresso semanal. Seus registros continuam em notas dos respectivos módulos.
@@ -219,7 +221,7 @@ painel mostra só a contagem.
 É o uso mais direto do gráfico: uma nota por dia (`numeros/itens/AAAA-MM-DD.md`) e
 um campo por número que você acompanha. O botão **Registrar** grava os números de
 hoje (ou de outro dia); se a nota do dia já existe, só os campos preenchidos mudam.
-Para acompanhar outro número, acrescente um campo do tipo `numero` em Personalizar.
+Para acompanhar outro número, acrescente um campo do tipo `numero` no `_modulo.yaml`.
 
 ## Ícones
 
@@ -240,7 +242,7 @@ Para acompanhar outro número, acrescente um campo do tipo `numero` em Personali
 - **O número no dock** é "para hoje" quando o módulo tem `campo_data`; senão, o que
   espera decisão; senão, o que está em aberto.
 - **O dock não cresce sem parar.** Com até nove itens, mostra tudo. Acima disso, mostra
-  cinco áreas, a área em que você está e o botão "Todas as áreas" (tecla `G`), que abre
+  cinco áreas, a área em que você está e o botão **Mais atalhos** (tecla `G`), que abre
   a lista completa com Diário, Pastas e Ajustes. Agenda e Decidir continuam na barra.
   Para escolher quais ficam sempre à mão,
   liste no `orquestra.yaml`: `dock: [tarefas, projetos, notas]`.

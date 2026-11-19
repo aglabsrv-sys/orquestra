@@ -24,7 +24,7 @@
 .grafo-lista ul { list-style:none; padding:0; line-height:1.7; columns:3; }
 .grafo-lista a { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 @media(max-width:780px) { .explorador { grid-template-columns:190px minmax(0,1fr); } }
-@media(max-width:600px) { .explorador { grid-template-columns:minmax(0,1fr); margin-inline:8px; } .com-grafo .explorador-busca { display:none; } .com-grafo #arvore-pastas { max-height:112px; } .com-grafo .explorador-lateral > header { margin-bottom:8px; } .explorador-topo .linha-botoes { width:100%; flex-wrap:wrap; } .explorador-topo .linha-botoes > a:last-child { margin-left:auto; } #grafo-canvas { height:max(520px,calc(100dvh - 280px)); min-height:520px; } .grafo-lista ul { columns:1; } #grafo-estado { max-width:calc(100% - 158px); } .grafo-opcoes > div { right:-104px; } }
+@media(max-width:600px) { .explorador { grid-template-columns:minmax(0,1fr); margin-inline:8px; } .com-grafo .explorador-busca { display:none; } .com-grafo #arvore-pastas { max-height:112px; } .com-grafo .explorador-lateral > header { margin-bottom:8px; } .explorador-topo .linha-botoes { width:100%; flex-wrap:wrap; } #grafo-canvas { height:max(520px,calc(100dvh - 280px)); min-height:520px; } .grafo-lista ul { columns:1; } #grafo-estado { max-width:calc(100% - 158px); } .grafo-opcoes > div { right:-104px; } }
 
 /* O explorador é uma superfície de trabalho: só seus painéis rolam. */
 html:has(.explorador) { height:100%; overflow:hidden; }
@@ -64,7 +64,8 @@ body:has(.explorador) > #conteudo { flex:1; min-height:0; display:flex; flex-dir
   .explorador-busca { display:none; }
   #arvore-pastas,.com-grafo #arvore-pastas { max-height:none; padding-bottom:4px; }
   .explorador-painel { padding:10px 12px 0; }
-  .explorador-topo { gap:7px; margin-bottom:8px; }
+  .explorador-topo { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; margin-bottom:8px; }
+  .explorador-topo .segmentos { margin-right:auto; }
   .explorador-topo .linha-botoes { flex-wrap:nowrap; gap:4px; }
   .explorador-topo .linha-botoes > .botao { width:32px; min-width:32px; min-height:36px; padding:0; }
   .explorador-topo #abrir-nota-pasta span { display:none; }
@@ -87,10 +88,13 @@ body:has(.explorador) > #conteudo { flex:1; min-height:0; display:flex; flex-dir
 #pasta-notas .explorador-notas-titulo { margin-top:18px; }
 @media(max-width:360px) {
   .explorador-topo .linha-botoes { flex-wrap:wrap; }
-  .explorador-topo .linha-botoes > a:last-child { margin-left:0; }
 }
 #pasta-notas .pasta-linha { border:0; border-bottom:1px solid var(--borda); border-radius:0; background:transparent; padding:6px 8px; }
 #pasta-notas .lista-notas { gap:0; }
+#config-pastas .segmentos { margin-block:16px; }
+.config-pastas-opcoes { display:grid; gap:8px; }
+.config-pastas-opcoes > a { justify-content:flex-start; }
+#grafo-canvas:focus-visible { outline-offset:-3px; }
 #pasta-notas .linha-nota { border:0; border-bottom:1px solid var(--borda); border-radius:0; padding:11px 8px; background:transparent; }
 #pasta-notas .linha-principal > span { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
 /* Celular baixo (ex.: 320x568): a árvore encolhe para o grafo manter uma área útil. */

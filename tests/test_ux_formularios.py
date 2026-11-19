@@ -61,6 +61,6 @@ def test_ajustes_e_personalizacao_preservam_navegacao_e_ajuda(cliente):
     personalizar.conferir_ajuda()
     assert "required" in personalizar.id("p-nome")
     assert personalizar.id("p-concluidos")["aria-labelledby"] == "rotulo-concluidos"
-    existentes = [a for tag, a in personalizar.itens if tag == "input" and "data-nome" in a and "value" in a]
-    assert existentes
-    assert all("readonly" in campo and "disabled" not in campo for campo in existentes)
+    assert personalizar.id("p-aba-identidade")["aria-controls"] == "p-identidade"
+    assert personalizar.id("p-aba-visoes")["aria-controls"] == "p-visoes"
+    assert not any("data-nome" in a for tag, a in personalizar.itens if tag == "input")

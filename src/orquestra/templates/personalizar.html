@@ -13,7 +13,7 @@
   <p class="faixa alerta" id="p-novidades" role="status" hidden>A configuração mudou no disco. Suas escolhas continuam nesta tela; copie-as e reabra Personalizar para revisar a versão atual antes de salvar.</p>
 
   <nav class="personalizar-nav" role="tablist" aria-label="Personalização da pasta">
-    {% for id, nome in [('identidade', 'Aparência'), ('propriedades', 'Propriedades'), ('visoes', 'Visualizações')] %}<button type="button" role="tab" id="p-aba-{{ id }}" aria-controls="p-{{ id }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}">{{ nome }}</button>{% endfor %}
+    {% for id, nome in [('identidade', 'Aparência'), ('visoes', 'Visualizações')] %}<button type="button" role="tab" id="p-aba-{{ id }}" aria-controls="p-{{ id }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}">{{ nome }}</button>{% endfor %}
   </nav>
   <section id="p-identidade" role="tabpanel" aria-labelledby="p-aba-identidade">
   <h2 class="grupo-titulo">{{ icone('editar', 18) }} Aparência</h2>
@@ -40,28 +40,6 @@
     <div class="capa-upload"><button class="botao pequeno" type="button" id="p-enviar-capa">{{ icone('mais', 14) }} Enviar imagem ou vídeo</button><small class="campo-ajuda">Até 2 MB · vídeo curto, sem áudio</small><input type="file" id="p-capa-arquivo" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" hidden aria-label="Arquivo para a capa"></div>
     <input type="hidden" id="p-capa" value="">
     <p id="p-capa-estado" role="status"></p>
-  </div>
-
-  </section>
-  <section id="p-propriedades" role="tabpanel" aria-labelledby="p-aba-propriedades" hidden>
-  <h2 class="grupo-titulo">{{ icone('check', 18) }} Propriedades das notas</h2>
-  <div class="bloco">
-    <p class="suave" id="ajuda-campos">Cada campo é uma propriedade da nota, também visível no Obsidian. Para o tipo <b>escolha</b>, separe as opções por vírgulas, na ordem das colunas do quadro.</p>
-    <div class="campos-editor" id="p-campos">
-      {% for c in campos if c.nome != 'origem' and c.tipo not in ('imagem', 'link') %}
-      <div class="campo-editor" data-original="{{ c.nome }}">
-        <label class="campo"><span>Nome do campo</span><input type="text" value="{{ c.nome }}" data-nome readonly aria-describedby="ajuda-nome-campo" aria-label="Nome do campo {{ c.nome }}"></label>
-        <label class="campo"><span>Tipo de {{ c.nome }}</span><select data-tipo>{% for t in tipos %}<option value="{{ t }}"{% if t == c.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
-        <label class="campo campo-editor-opcoes"{% if c.tipo != 'escolha' %} hidden{% endif %}><span>Opções de {{ c.nome }}</span><input type="text" value="{{ c.opcoes|join(', ') }}" data-opcoes placeholder="Ex.: a fazer, fazendo, feito" aria-describedby="ajuda-campos"{% if c.tipo != 'escolha' %} hidden{% endif %}></label>
-        <label class="remover"><input type="checkbox" data-remover aria-label="Remover o campo {{ c.nome }} da área"><span>Ocultar esta propriedade</span></label>
-      </div>
-      {% endfor %}
-    </div>
-    <div class="linha-botoes">
-      <button class="botao" type="button" id="p-novo-campo">{{ icone('mais', 15) }}<span>Novo campo</span></button>
-    </div>
-    <p class="campo-ajuda" id="ajuda-nome-campo">O nome de um campo existente é fixo para preservar a ligação com as notas. Você pode criar outro campo e remover o anterior da área.</p>
-    <p class="campo-ajuda">Mudar o nome de uma opção não altera as notas que já usam a antiga: elas aparecem com um aviso até você atualizar.</p>
   </div>
 
   </section>
@@ -106,13 +84,4 @@
   </div>
   <div class="dialogo-acoes"><button class="botao" type="button" data-fechar>Fechar</button></div>
 </div></dialog>
-
-<template id="p-modelo-campo">
-  <div class="campo-editor novo">
-    <label class="campo"><span>Nome do novo campo</span><input type="text" data-nome placeholder="nome_do_campo" required autocomplete="off" aria-describedby="ajuda-campos"></label>
-    <label class="campo"><span>Tipo</span><select data-tipo>{% for t in tipos %}<option value="{{ t }}"{% if t == 'texto' %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
-    <label class="campo campo-editor-opcoes" hidden><span>Opções</span><input type="text" data-opcoes placeholder="Ex.: a fazer, fazendo, feito" aria-describedby="ajuda-campos" hidden></label>
-    <button class="botao discreto pequeno" type="button" data-tirar>Remover novo campo</button>
-  </div>
-</template>
 {% endblock %}
