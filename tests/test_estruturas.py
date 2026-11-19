@@ -424,7 +424,9 @@ def test_api_de_areas_e_numeros(cliente):
     assert "numero-quadro" in pagina and "Primeiro registro" in pagina
     assert cliente.post("/api/modulos/treinos/desligar", json={}).status_code == 200
     assert cliente.get("/m/treinos").status_code == 404
-    assert "Religar no painel" in cliente.get("/pastas").text
+    explorador = cliente.get("/pastas")
+    assert "treinos" not in {p["nome"] for p in explorador.context["pastas"]}
+    assert 'data-religar="treinos"' in cliente.get("/ajustes/areas").text
     assert cliente.post("/api/config", json={"nome": "Estúdio"}).status_code == 200
     assert "Estúdio" in cliente.get("/").text
     assert cliente.put("/api/modulos/tarefas", json={"campos": [{"nome": "a:b", "tipo": "texto"}]}).status_code == 400
