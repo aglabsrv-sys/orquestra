@@ -444,6 +444,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 for n in notas
             ]
         elif aba == "maquina":
+            contexto.update(automacoes.contexto(painel, modulo))
             contexto["notas"] = [
                 {"url": ap.url_nota(n.rel), "titulo": n.titulo, "trecho": ap.trecho(n)}
                 for n in painel.indice.notas_em(modulo.id, "maquina")
@@ -1162,7 +1163,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     def ajustes(request: Request, secao: str = "painel"):
         if secao == "automacoes":
             secao = "coletores"
-        if secao not in {"painel", "areas", "aparencia", "backup", "coletores", "acesso", "vault", "variaveis"}:
+        if secao not in {"painel", "areas", "aparencia", "backup", "coletores", "humano", "acesso", "vault", "variaveis"}:
             raise NaoEncontrado(secao)
         # Cada seção é uma página independente: não ler catálogos, scripts ou Git
         # que não serão exibidos. Revisões de confiança continuam frescas na origem.
@@ -1170,6 +1171,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         if secao == "painel":
             contexto["areas"] = [{"modulo": m} for m in painel.indice.modulos.values()]
             contexto.update(vault=str(painel.vault), n_notas=len(painel.indice.notas))
+        elif secao == "humano":
+            contexto["preferencias"] = next((n for n in painel.indice.notas.values() if n.rel.casefold() == "preferencias.md"), None)
+            contexto["orientacoes_locais"] = [
+                {"nome": m.nome, "id": m.id, "total": len(painel.indice.notas_em(m.id, "humano"))}
+                for m in painel.indice.modulos.values() if painel.indice.notas_em(m.id, "humano")
+            ]
         elif secao == "areas":
             contexto["areas"] = [
                 {"modulo": m, "itens": len(painel.indice.notas_em(m.id, "itens")), "propria": m.itens_na_raiz}
@@ -1228,7 +1235,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 {"modulo": m, "def": c, "ultima": ultimas.get(f"{m.id}/{c.script}", {})}
                 for m in painel.indice.modulos.values() for c in m.coletores
             ]
-            contexto.update(catalogo_automacoes=automacoes.catalogo(), automacoes=automacoes.listar(painel), automacoes_legadas=automacoes.legadas(painel))
+            contexto.update(automacoes.contexto(painel))
         elif secao == "acesso":
             contexto["host"] = request.headers.get("host", "")
             contexto["pode_configurar_acesso"] = canal_local(request)
@@ -1820,6 +1827,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         dados = await corpo_json(request, contratos.NotaPasta)
         nota = await asyncio.to_thread(painel.criar_nota_em_pasta, dados.get("pasta", ""), dados.get("titulo", ""), dados.get("corpo", ""))
         return {"rel": nota.rel, "url": ap.url_nota(nota.rel), "versao": nota.versao}
+
+    @app.post("/api/preferencias/humanas")
+    async def api_preferencias_humanas(request: Request):
+        await corpo_json(request, contratos.Pedido)
+        nota = await asyncio.to_thread(painel.abrir_preferencias_humanas)
+        return {"url": ap.url_nota(nota.rel)}
 
     @app.post("/api/numeros")
     async def api_numeros(request: Request):

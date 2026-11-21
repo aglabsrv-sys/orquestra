@@ -58,8 +58,8 @@ def jornadas(browser, base, vault, capturas):
             expect(page.locator('#dialogo-novo')).not_to_be_visible()
 
         page.goto(base + '/ajustes/automacoes')
-        page.locator('[data-auto-ver-catalogo]').first.click() if page.locator('[data-auto-ver-catalogo]').count() else page.locator('[data-auto-aba=catalogo]').click()
         page.locator('[data-auto-adicionar="tarefas/recorrentes.py"]').click()
+        page.locator('#automacao-escolha-lista button').filter(has=page.get_by_text('tarefas/itens', exact=True)).click()
         expect(page.locator('.auto-config-item')).to_have_count(1)
         page.locator('.auto-config-item input').first.fill('Revisar clientes ' + str(largura))
         page.locator('.auto-recorrencia select').select_option('semana')

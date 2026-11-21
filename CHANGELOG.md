@@ -2,6 +2,17 @@
 
 ## Em desenvolvimento
 
+- Automações são adicionadas pela aba Máquina e configuradas na lateral, sem
+  sair da pasta. Ajustes reúne o catálogo com escolha da pasta e da instância;
+  a execução automática é controlada no formulário, sem chave duplicada no cartão.
+- Preferências para a IA podem ser escritas uma vez em `PREFERENCIAS.md`;
+  o contexto dos módulos reúne as preferências gerais e as orientações locais.
+- A lista mostra miniaturas quando disponíveis. Automações do catálogo no Radar
+  reconhecem vídeos arquivados e não os importam novamente. Esc fecha os ajustes
+  da pasta também durante a escolha da capa.
+- A importação iCal legada fica disponível apenas para configurações existentes;
+  novas conexões usam a leitura da Agenda, sem criar tarefas duplicadas.
+
 - Links antigos de Decidir abrem Entrada. Depois de responder pelo teclado, o
   foco segue para o próximo cartão. A capa do Diário no Início respeita a
   opção Sem capa, e cliques repetidos em Atualizar abrem uma só confirmação.

@@ -448,6 +448,12 @@ def importar(indice: Indice, modulo: Modulo, coletor: ColetorDef, itens: list[di
     conhecidos = ({str(n.meta["id_externo"]) for n in indice.notas.values()
                    if n.caminho.parent == modulo.pasta_itens and n.meta.get("id_externo")}
                   if escopo_pasta else indice.ids_externos(modulo.id))
+    if escopo_pasta:
+        # Instâncias do catálogo e coletores da área compartilham a identidade
+        # do vídeo. Arquivar no módulo não deve fazer o vídeo reaparecer.
+        for area in indice.modulos.values():
+            if area.pasta_itens == modulo.pasta_itens:
+                conhecidos.update(indice.ids_externos(area.id))
     criadas: list[Nota] = []
     repetidos = 0
     for item in itens:

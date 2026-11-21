@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from orquestra import armazenamento, coletores, confianca
-from orquestra.caminhos import caminho_no_vault, ignorar
+from orquestra.caminhos import arquivos_do_vault, caminho_no_vault, ignorar
 from orquestra.config import carregar_env, gravar_yaml, ler_yaml
 from orquestra.modulos import Campo, ColetorDef, Modulo, carregar_modulo
 from orquestra.notas import simples
@@ -120,11 +120,27 @@ def catalogo() -> list[dict[str, Any]]:
             "id": identificador, "nome": coletor.nome, "descricao": _DESCRICOES.get(coletor.script, ""),
             "icone": modulo.icone, "config": config, "parametros": parametros,
             "ajuda": _AJUDAS.get(coletor.script, ""),
+            "legada": coletor.script == "agenda_ics.py",
             "requer": list(coletor.requer), "rede": coletor.script != "recorrentes.py",
             "tipo": "nota_diaria" if modulo.id == "numeros" else "itens",
             "a_cada": coletor.a_cada, "diario_as": coletor.diario_as,
         })
     return saida
+
+
+def contexto(painel: Painel, modulo: Modulo | None = None) -> dict[str, Any]:
+    """O mesmo catálogo e as mesmas instâncias em Ajustes e na pasta de destino."""
+    instancias, antigas = listar(painel), legadas(painel, modulo)
+    destino = modulo.pasta_itens.relative_to(painel.vault).as_posix() if modulo else ""
+    if modulo:
+        instancias = [a for a in instancias if a["destino"].casefold() == destino.casefold()]
+        antigas = [a for a in antigas if a["legado"]["modulo"] == modulo.id]
+    return {"catalogo_automacoes": catalogo(), "automacoes": instancias,
+            "automacoes_legadas": antigas, "automacoes_na_pasta": modulo is not None,
+            "automacoes_destino": destino,
+            "automacoes_areas": [{"id": m.id, "nome": m.nome,
+                                  "destino": m.pasta_itens.relative_to(painel.vault).as_posix()}
+                                 for m in sorted(painel.indice.modulos.values(), key=lambda m: m.nome.casefold())]}
 
 
 def _arquivo(painel: Painel) -> Path:
@@ -579,10 +595,10 @@ def _publica_legada(painel: Painel, modulo_id: str, script: str) -> dict[str, An
     raise ErroAutomacao("A configuração da pasta está mudando. Aguarde e atualize a página antes de configurar.")
 
 
-def legadas(painel: Painel) -> list[dict[str, Any]]:
+def legadas(painel: Painel, area: Modulo | None = None) -> list[dict[str, Any]]:
     """Formulários das automações já presentes nas áreas, sem migrar suas notas."""
     saida = []
-    for modulo in painel.indice.modulos.values():
+    for modulo in [area] if area else painel.indice.modulos.values():
         for coletor in modulo.coletores:
             try:
                 saida.append(_publica_legada(painel, modulo.id, coletor.script))
@@ -799,9 +815,14 @@ def _mapear(instancia: dict, itens: list[dict]) -> list[dict]:
 
 
 def _sincronizar_destino(painel: Painel, pasta: Path) -> None:
-    """Atualiza só o destino antes de deduplicar resultados de outro processo."""
-    conhecidos = {n.caminho for n in list(painel.indice.notas.values()) if n.caminho.parent == pasta}
+    """Atualiza o destino e seu arquivo antes de deduplicar entre processos."""
+    arquivos = {caminho_no_vault(painel.vault, m.pasta / "arquivo")
+                for m in painel.indice.modulos.values() if m.pasta_itens == pasta}
+    conhecidos = {n.caminho for n in list(painel.indice.notas.values())
+                  if n.caminho.parent == pasta or any(n.caminho.is_relative_to(a) for a in arquivos)}
     caminhos = conhecidos | {p for p in pasta.iterdir() if p.suffix.lower() == ".md"}
+    for arquivo in arquivos:
+        caminhos.update(p for _, p, _ in arquivos_do_vault(painel.vault, pasta=arquivo) if p.suffix.lower() == ".md")
     for caminho in caminhos:
         try:
             seguro = caminho_no_vault(painel.vault, caminho)

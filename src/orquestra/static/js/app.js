@@ -230,6 +230,7 @@
 
   // ---------------------------------------------------------------- diálogos
 
+  var dialogosPreparados = new WeakSet();
   function dialogos(raizDialogos) {
     function pedirFechamento(d) {
       // Escape, botão e backdrop passam pela mesma proteção de alterações pendentes.
@@ -237,6 +238,8 @@
     }
     $$("[data-fechar]", raizDialogos).forEach(function (b) { b.onclick = function () { pedirFechamento(b.closest("dialog")); }; });
     $$("dialog", raizDialogos).forEach(function (d) {
+      if (dialogosPreparados.has(d)) return;
+      dialogosPreparados.add(d);
       d.addEventListener("click", function (e) {
         if (e.target !== d) return;
         var caixa = d.getBoundingClientRect();
@@ -1127,7 +1130,7 @@
   function maquina() {
     $$(".coletor").forEach(function (linha) {
       var dados = { modulo: linha.dataset.modulo, script: linha.dataset.script };
-      var rodar = $("[data-rodar]", linha), ativar = $("[data-ativar]", linha);
+      var rodar = $("[data-rodar]", linha);
       var revisao = $("[data-confianca]", linha), confiar = $("[data-confiar]", linha);
       if (revisao && confiar) {
         capacidadeLocal().then(function (token) {
@@ -1158,15 +1161,17 @@
           .catch(mostrarErro)
           .then(function () { texto.textContent = antes; rodar.disabled = false; });
       };
-      ativar.onchange = function () {
-        api("POST", "/api/coletores/ativo", { modulo: dados.modulo, script: dados.script, ativo: ativar.checked })
-          .then(function () { avisar(ativar.checked ? "Execução automática ligada." : "Execução automática desligada."); })
-          .catch(function (erro) { ativar.checked = !ativar.checked; mostrarErro(erro); });
-      };
     });
   }
 
   function ajustes() {
+    var preferencias = $("#abrir-preferencias-humanas");
+    if (preferencias) preferencias.onclick = async function () {
+      var fim = window.OrquestraInterface.ocupado(preferencias, "Abrindo…");
+      try { var resposta = await api("POST", "/api/preferencias/humanas", {}); location.href = resposta.url; }
+      catch (erro) { mostrarErro(erro); }
+      finally { fim(); }
+    };
     // Um único ponto de entrada no Tab; setas e Home/End seguem o padrão de rádio.
     $$("[role='radiogroup']").forEach(function (grupo) {
       var radios = $$("[role='radio']", grupo), escolhido = radios.filter(function (r) { return r.getAttribute("aria-checked") === "true"; })[0] || radios[0];
@@ -1600,8 +1605,9 @@
   window.Orquestra.estiloEscolhido = estiloEscolhido;
   window.Orquestra.prepararPastas = function (novos) { dialogos(novos); pastas(); };
   window.Orquestra.prepararModulo = function (dialogosNovos) {
-    dialogos(dialogosNovos); novoItem(); quadro(); maquina(); tabela(); numeros();
+    dialogos(dialogosNovos); dialogos($("#modulo-painel")); novoItem(); quadro(); maquina(); tabela(); numeros();
     if (window.Orquestra.prepararPastasModulo) window.Orquestra.prepararPastasModulo();
+    if (window.Orquestra.prepararAutomacoes) window.Orquestra.prepararAutomacoes();
   };
 
   document.addEventListener("DOMContentLoaded", function () {

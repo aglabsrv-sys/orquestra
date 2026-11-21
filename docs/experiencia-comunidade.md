@@ -3,8 +3,16 @@
 ## Onde cada coisa fica
 
 Tarefas e notas do cotidiano ficam em `itens/`: humanos, agentes e coletores podem
-criá-las, com origem identificada. `humano/` reúne suas orientações, preferências e
-decisões. `maquina/` contém instruções, aprendizados e scripts. A aba Máquina não é
+criá-las, com origem identificada. **Ajustes → Preferências da IA** abre uma única
+nota `PREFERENCIAS.md` na raiz, para tom, preferências e limites gerais. Ela é criada
+apenas ao usar o botão e pode ser editada no painel ou no seu editor de Markdown.
+O MCP `contexto_area` reúne essa nota e as orientações do módulo, com paginação.
+O contrato `AGENTS.md` continua contendo as regras dos agentes.
+
+`humano/` em cada módulo fica para orientações, decisões e exceções específicas.
+Você não precisa preencher uma pasta por módulo nem repetir preferências gerais.
+As notas anteriores são preservadas, sem migração ou resumo automático.
+`maquina/` contém instruções, aprendizados e scripts. A aba Máquina não é
 uma segunda lista de tarefas. Entrada é sua captura rápida; suas visões não precisam
 de uma aba Humano adicional. O arquivo continua no vault, mesmo sem a aba.
 
@@ -18,8 +26,8 @@ módulo. Veja [Pomodoro e Hábitos](foco-e-habitos.md) para uso e limites de per
 
 “Tarefas que se repetem” cria notas para rotinas configuradas no `_modulo.yaml`:
 sexta-feira para revisar a semana, dia 5 para conferir contas. A identificação evita
-duplicar a rotina na mesma data. Só roda automaticamente se você ligar a chave e
-mantiver o processo aberto.
+duplicar a rotina na mesma data. Só roda automaticamente com o agendamento ativo,
+enquanto o processo estiver aberto.
 
 **Conectar agenda** assina o iCal para leitura na Agenda, sem criar tarefas.
 O endereço fica nas variáveis locais, separado por vault, e a conexão é testada

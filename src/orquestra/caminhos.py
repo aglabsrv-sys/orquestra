@@ -75,14 +75,15 @@ def ignorar(rel: str, *, configuracao: bool = False) -> bool:
     return partes[:2] == ["diario", "registro"]
 
 
-def arquivos_do_vault(vault: Path) -> Iterator[tuple[str, Path, os.stat_result]]:
-    """scandir preserva o stat de cada entrada e poda árvores antes de descer."""
+def arquivos_do_vault(vault: Path, *, pasta: Path | None = None) -> Iterator[tuple[str, Path, os.stat_result]]:
+    """Percorre o vault ou uma subpasta, preservando a raiz e podando vínculos."""
     raiz = Path(os.path.abspath(vault))
     try:
         caminho_no_vault(raiz, raiz)
+        inicio = caminho_no_vault(raiz, pasta) if pasta is not None else raiz
     except (CaminhoInseguro, OSError):
         return
-    pendentes = [raiz]
+    pendentes = [inicio]
     while pendentes:
         pasta = pendentes.pop()
         try:

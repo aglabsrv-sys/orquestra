@@ -76,6 +76,21 @@ def test_execucao_previa_nao_grava_e_destinos_deduplicam_independentemente(paine
     assert executar(painel, c)["repetidos"] == 1
 
 
+def test_youtube_catalogo_reconhece_video_de_outro_coletor_e_arquivado(painel, monkeypatch):
+    monkeypatch.setenv("YOUTUBE_API_KEY", "chave-ficticia-do-teste")
+    primeira = instalar(painel, "radar/youtube_rss.py", destino="radar/itens")
+    busca = instalar(painel, "radar/youtube_api.py", destino="radar/itens")
+    simular(monkeypatch, [{"id": "youtube:video-ficticio", "titulo": "Vídeo de demonstração"}])
+    assert executar(painel, primeira)["novos"] == 1
+    assert executar(painel, busca)["repetidos"] == 1
+    nota = next(n for n in painel.indice.notas.values() if n.meta.get("id_externo") == "youtube:video-ficticio")
+    anterior = nota.caminho.read_bytes()
+    arquivada = painel.arquivar(nota.rel)
+    assert executar(painel, primeira)["novos"] == 0
+    assert executar(painel, busca)["repetidos"] == 1
+    assert (painel.vault / arquivada).read_bytes() == anterior
+
+
 def test_autorizacao_exige_versao_local_e_cobre_destino_config_e_mapeamento(painel):
     a = automacoes.criar(painel, "radar/rss.py", pasta(painel))
     assert not a["confianca"]["confiavel"]

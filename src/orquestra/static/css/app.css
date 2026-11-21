@@ -548,6 +548,8 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .et.e-hoje, .et.v-fazendo, .et.v-novo { background: color-mix(in srgb, var(--destaque) 20%, transparent); color: var(--destaque); }
 .et.v-feito, .et.v-publicado, .et.v-util, .et.v-processado { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
 .et.zona-humano { background: color-mix(in srgb, var(--destaque) 20%, transparent); color: var(--destaque); }
+.cel-titulo .titulo-com-previa { display:flex; align-items:center; gap:10px; }
+.lista-miniatura { width:72px; height:44px; flex:none; object-fit:cover; border-radius:calc(5px * var(--cantos,1)); }
 .et.zona-maquina { background: color-mix(in srgb, var(--texto) 12%, transparent); }
 .et-link:hover { color: var(--destaque); }
 .mudar-status {

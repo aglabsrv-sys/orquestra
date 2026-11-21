@@ -78,6 +78,20 @@ def test_contexto_reune_schema_memoria_e_contexto_humano_com_paginacao(organizad
     assert arquivos(vault) == antes
 
 
+def test_contexto_inclui_preferencias_globais_antes_das_excecoes_sem_copiar(organizado):
+    gravar(organizado, "PREFERENCIAS.md", "Responda em português, de forma breve.\n")
+    gravar(organizado, "trabalho/humano/Exceção.md", "Para relatórios, inclua as fontes.\n")
+    mcp = Ferramentas(organizado)
+    antes = arquivos(organizado)
+    primeiro = mcp.contexto_area("trabalho", limite=1)
+    assert primeiro["documentos"]["itens"][0]["zona"] == "humano_global"
+    assert primeiro["documentos"]["itens"][0]["caminho"] == "PREFERENCIAS.md"
+    segundo = mcp.contexto_area("trabalho", limite=1, deslocamento=1)
+    assert segundo["documentos"]["itens"][0]["zona"] == "humano"
+    assert "PREFERENCIAS.md" in mcp.regras()
+    assert arquivos(organizado) == antes
+
+
 def test_panorama_separa_pendencias_respeita_captura_e_recarrega_o_disco(organizado):
     vault = organizado
     hoje = dt.date.today()

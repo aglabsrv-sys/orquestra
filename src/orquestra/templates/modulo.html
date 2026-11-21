@@ -4,8 +4,8 @@
 {% block titulo %}{{ modulo.nome }}{% endblock %}
 {% block trilha %}{% if pasta_aberta is defined %}<a href="/m/{{ modulo.id|urlencode }}?aba={{ visao_externa }}">{{ modulo.nome }}</a><span> / {{ pasta_aberta.titulo }}</span>{% elif pasta_atual|default('') %}<a href="/m/{{ modulo.id|urlencode }}">{{ modulo.nome }}</a><span> / {{ ajustes_diretorio.titulo }}</span>{% elif modulo.id == 'contatos' and aba in ('humano', 'maquina') %}<a href="/m/contatos">Contatos</a>{% else %}{{ modulo.nome }}{% endif %}{% endblock %}
 {% block observa %}modulo:{{ modulo.id }}{% endblock %}
-{% block estilos %}<link rel="stylesheet" href="/static/css/pastas-refino.css?v={{ marca }}">{% if aba == 'maquina' %}<link rel="stylesheet" href="/static/css/automacoes.css?v={{ marca }}">{% endif %}{% if area_com_pastas or modulo.itens_na_raiz %}<link rel="stylesheet" href="/static/css/pastas-vidro.css?v={{ marca }}">{% endif %}{% endblock %}
-{% block scripts %}{% if area_com_pastas or modulo.itens_na_raiz %}<script src="/static/js/pastas-vidro.js?v={{ marca }}"></script>{% endif %}{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="/static/css/pastas-refino.css?v={{ marca }}"><link rel="stylesheet" href="/static/css/automacoes.css?v={{ marca }}">{% if area_com_pastas or modulo.itens_na_raiz %}<link rel="stylesheet" href="/static/css/pastas-vidro.css?v={{ marca }}">{% endif %}{% endblock %}
+{% block scripts %}{% if area_com_pastas or modulo.itens_na_raiz %}<script src="/static/js/pastas-vidro.js?v={{ marca }}"></script>{% endif %}<script src="/static/js/automacoes.js?v={{ marca }}"></script>{% endblock %}
 
 {% block conteudo %}
 {% if modulo.id == 'entrada' %}
@@ -106,11 +106,11 @@
 <section class="lista-notas" aria-label="Notas de apoio">{% for n in referencias %}<a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><small>{{ n.pasta }}</small></a>{% else %}<p class="suave">Nenhuma referência nesta área.</p>{% endfor %}</section>{{ p.paginar(paginacao|default(none)) }}
 {% elif aba == "humano" %}
 <section class="lista-notas">
-  <p class="explica">{{ icone('pessoa', 15) }} <span>Suas orientações para os agentes nesta área.</span></p>
+  <p class="explica">{{ icone('pessoa', 15) }} <span>Exceções e orientações específicas desta área. Suas <a class="link" href="/ajustes/humano">preferências gerais para a IA</a> valem em todos os módulos.</span></p>
   {% for n in notas %}
   <a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><span>{{ n.trecho }}</span></a>
   {% else %}
-  {{ p.vazio("Nada aqui ainda", "Escreva como você gosta de trabalhar neste módulo: seu tom, suas regras, o que não quer. Os agentes vão ler antes de agir.") }}
+  {{ p.vazio("Nenhuma exceção nesta área", "Registre aqui apenas o que for específico deste módulo. Você não precisa repetir suas preferências gerais.") }}
   {% endfor %}
 </section>
 
@@ -118,8 +118,9 @@
 {% elif aba == "maquina" %}
 <section class="lista-notas">
 
-  <h3 class="sub">Automações</h3>
-  {% for c in coletores %}
+  {% include 'automacoes.html' %}
+  {% set nativas = automacoes_legadas|selectattr('codigo_nativo')|map(attribute='legado.script')|list %}
+  {% for c in coletores if c.def.script not in nativas %}
   <div class="coletor" data-modulo="{{ modulo.id }}" data-script="{{ c.def.script }}">
     <div class="coletor-info">
       <b>{{ c.def.nome }} <button type="button" class="auto-pergunta" aria-label="Sobre {{ c.def.nome }}" title="{{ c.ajuda|default('Executa uma rotina definida nesta pasta. Use Configurar para escolher as opções.') }}">?</button></b>
@@ -132,8 +133,6 @@
       {% else %}<span class="suave">Ainda não rodou.</span>{% endif %}
     </div>
     {% set conf = c.confianca|default({}) %}
-    <a class="botao pequeno" href="/ajustes/automacoes?modulo={{ modulo.id|urlencode }}&script={{ c.def.script|urlencode }}">Configurar</a>
-    <label class="chave" title="Rodar sozinho no horário"><input type="checkbox" data-ativar aria-label="Execução automática de {{ c.def.nome }}"{% if c.def.ativo %} checked{% endif %}{% if not conf.confiavel %} disabled{% endif %}><i aria-hidden="true"></i><span>automático</span></label>
     <button class="botao" type="button" data-rodar{% if not conf.confiavel %} disabled{% endif %}>{{ icone('tocar', 14) }}<span>Rodar agora</span></button>
     <details class="coletor-confianca" data-confianca='{{ conf|tojson }}'>
       <summary>{{ 'Opções avançadas' if conf.confiavel else 'Permissão para executar' }}</summary>
@@ -148,8 +147,6 @@
       <button class="botao" type="button" data-confiar="{{ 'revogar' if conf.confiavel else 'confiar' }}" hidden{% if not conf.assinatura %} disabled{% endif %}>{{ 'Revogar permissão' if conf.confiavel else 'Permitir execução' }}</button>
     </details>
   </div>
-  {% else %}
-  <p class="suave">Esta pasta ainda não tem automações.</p>
   {% endfor %}
 
   <h3 class="sub">Instruções e arquivos da máquina</h3>
@@ -271,7 +268,7 @@
           <button type="button" class="tarefa-conclusao" data-tarefa-conclusao data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" data-campo="{{ modulo.campo_status }}" data-concluir="{{ status_concluir }}" data-reabrir="{{ reabrir }}" data-rotulo-concluir="{{ rotulo(status_concluir) }}" data-rotulo-reabrir="{{ rotulo(reabrir) }}" data-titulo="{{ l.cartao.titulo }}" aria-pressed="{{ 'true' if l.cartao.concluido else 'false' }}" aria-label="{{ 'Reabrir' if l.cartao.concluido else 'Concluir' }} {{ l.cartao.titulo }}" title="{{ 'Reabrir tarefa' if l.cartao.concluido else 'Concluir tarefa' }}">{{ icone('visto', 14) }}</button>
         {% else %}<input type="checkbox" data-lote-item data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" aria-label="Selecionar {{ l.cartao.titulo }}">{% endif %}</td>
         {% for c in l.celulas %}
-        {% if c.tipo == "titulo" %}<td class="cel-titulo"><a href="{{ l.cartao.url }}">{{ c.texto }}</a></td>
+        {% if c.tipo == "titulo" %}<td class="cel-titulo"><a{% if l.cartao.imagem %} class="titulo-com-previa"{% endif %} href="{{ l.cartao.url }}">{% if l.cartao.imagem %}<img class="lista-miniatura" src="{{ l.cartao.imagem }}" alt="" loading="lazy" draggable="false">{% endif %}<span>{{ c.texto }}</span></a></td>
         {% elif c.tipo == "escolha" %}<td data-coluna="{{ colunas_tabela[loop.index0].nome }}"><span class="et {{ c.classe }}">{{ c.texto }}</span></td>
         {% elif c.tipo == "data" %}<td data-ordem="{{ c.ordem }}">{{ c.texto }}</td>
         {% elif c.tipo == "link" %}<td><a class="link" href="{{ c.texto }}" target="_blank" rel="noopener noreferrer" aria-label="Abrir link de {{ l.cartao.titulo }} em nova aba">abrir {{ icone('externo', 12) }}</a></td>

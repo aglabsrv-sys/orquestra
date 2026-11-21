@@ -163,7 +163,7 @@ padrão é reservada ao protocolo; diagnósticos do processo vão para stderr.
 | `registrar_aprendizado` | Acrescenta uma linha aos aprendizados da área. |
 | `sessoes_recentes` | O relato das últimas sessões: a memória entre conversas. |
 | `registrar_sessao` | Registra no diário o que foi pedido e feito. |
-| `contexto_area` | Reúne schema, pasta real dos itens e documentos de `humano/` e `maquina/`, incluindo os aprendizados. |
+| `contexto_area` | Reúne schema, pasta real dos itens, preferências gerais de `PREFERENCIAS.md` e documentos locais de `humano/` e `maquina/`, incluindo os aprendizados. |
 | `panorama` | Agrupa respostas, decisões, atrasados, itens de hoje, próximos dias, capturas e itens sem data, com totais. |
 | `revisar_organizacao` | Aponta configurações inválidas, problemas de frontmatter/schema e títulos possivelmente duplicados na mesma área. |
 | `conexoes_nota` | Mostra referências locais de saída e backlinks, usando o mesmo resolvedor do painel. |

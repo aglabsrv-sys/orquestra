@@ -1,0 +1,18 @@
+{% macro ajuda(texto, id, nome) %}<span class="auto-ajuda"><button type="button" class="auto-pergunta" aria-label="Sobre {{ nome }}" aria-describedby="{{ id }}" data-auto-ajuda>?</button><span id="{{ id }}" class="auto-tooltip" role="tooltip">{{ texto }}</span></span>{% endmacro %}
+{% macro instancia(a, id) %}
+{% set info = (catalogo_automacoes|selectattr('id', 'equalto', a.definicao)|list)|first %}
+<article class="auto-instancia" data-auto-id="{{ a.id }}">
+  <div class="auto-linha"><span class="auto-simbolo">{{ icone(info.icone, 17) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(info.ajuda, 'ajuda-instancia-' ~ id, a.nome) }}</span><small>{{ a.destino or 'Raiz do cofre' }}</small></span><span class="auto-estado">{{ 'Manual' if not a.a_cada and not a.diario_as else 'Ativa' if a.ativo else 'Pausada' }}</span><button class="botao pequeno" type="button" data-auto-acao="editar" aria-label="Configurar {{ a.nome }} em {{ a.destino }}">{{ icone('ajustes', 14) }} Configurar</button></div>
+  <details class="auto-controles"><summary>Execução e opções {{ icone('chevron_dir', 12) }}</summary><div class="auto-instancia-corpo">
+    <p class="campo-ajuda" data-auto-resultado>{% if a.ultima.ultima %}Última execução: {{ a.ultima.ultima[:16]|replace('T', ' ') }}{% else %}{{ 'Todos os dias às ' ~ a.diario_as if a.diario_as else 'A cada ' ~ a.a_cada if a.a_cada else 'Execução manual' }}{% endif %}</p>
+    {% if a.ultima.erro %}<p class="erro-texto">{{ a.ultima.erro }}</p>{% endif %}
+    {% if a.definicao == 'tarefas/agenda_ics.py' %}<p class="campo-ajuda">Importação legada: cria cópias em notas. Para leitura sem tarefas, use <a class="link" href="/agenda">Agenda → Conectar agenda</a>.</p>{% endif %}
+    <div class="linha-botoes sem-topo">
+      {% if not a.legado %}<button class="botao pequeno" type="button" data-auto-acao="testar">Testar fonte</button>{% endif %}
+      <button class="botao pequeno" type="button" data-auto-acao="rodar">Executar</button>
+      <a class="botao pequeno discreto" href="/pastas{% if a.destino %}/{{ a.destino|urlencode }}{% endif %}">Abrir pasta</a>
+      {% if not a.legado %}<button class="botao pequeno discreto" type="button" data-auto-acao="remover">Remover</button>{% elif a.definicao != 'tarefas/agenda_ics.py' %}<button class="botao pequeno discreto" type="button" data-auto-acao="copiar">Usar em outra pasta</button>{% endif %}
+    </div><pre class="auto-amostra" data-auto-amostra hidden></pre>
+  </div></details>
+</article>
+{% endmacro %}

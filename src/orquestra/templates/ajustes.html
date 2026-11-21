@@ -9,16 +9,16 @@
   <div class="ajustes-layout">
   <header class="pagina-topo ajustes-cabecalho"><div><span class="sobretitulo">Seu espaço</span><h1>Ajustes</h1></div></header>
   <nav class="navega-ajustes" aria-label="Seções dos ajustes">
-    {% for id, nome, simbolo in [('painel', 'Painel', 'ajustes'), ('areas', 'Pastas', 'pasta'), ('aparencia', 'Aparência', 'paleta'), ('backup', 'Backup', 'nuvem'), ('coletores', 'Automações', 'raio'), ('acesso', 'Celular', 'celular'), ('vault', 'Cofres', 'caixa'), ('variaveis', 'Segredos', 'chip')] %}
+    {% for id, nome, simbolo in [('painel', 'Painel', 'ajustes'), ('areas', 'Pastas', 'pasta'), ('aparencia', 'Aparência', 'paleta'), ('backup', 'Backup', 'nuvem'), ('coletores', 'Automações', 'raio'), ('humano', 'Preferências da IA', 'pessoa'), ('acesso', 'Celular', 'celular'), ('vault', 'Cofres', 'caixa'), ('variaveis', 'Segredos', 'chip')] %}
     <a href="/ajustes/{{ id }}"{% if secao == id %} aria-current="page"{% endif %}>{{ icone(simbolo, 17) }}<span>{{ nome }}</span></a>
     {% endfor %}
   </nav>
   <div class="ajustes-conteudo">
-  {% set cabecalhos = {'painel': ('Painel', 'editar', 'painel'), 'areas': ('Pastas do painel', 'pasta', 'areas'), 'aparencia': ('Tema e aparência', 'paleta', 'aparencia-secao'), 'backup': ('Histórico e backup', 'nuvem', 'backup-secao'), 'coletores': ('Automações', 'raio', 'coletores-secao'), 'acesso': ('Acesso', 'celular', 'acesso-secao'), 'vault': ('Gerenciar cofres', 'pasta', 'vault-secao'), 'variaveis': ('Segredos', 'chip', 'segredos-secao')} %}
+  {% set cabecalhos = {'painel': ('Painel', 'editar', 'painel'), 'areas': ('Pastas do painel', 'pasta', 'areas'), 'aparencia': ('Tema e aparência', 'paleta', 'aparencia-secao'), 'backup': ('Histórico e backup', 'nuvem', 'backup-secao'), 'coletores': ('Automações', 'raio', 'coletores-secao'), 'humano': ('Preferências para a IA', 'pessoa', 'humano-secao'), 'acesso': ('Acesso', 'celular', 'acesso-secao'), 'vault': ('Gerenciar cofres', 'pasta', 'vault-secao'), 'variaveis': ('Segredos', 'chip', 'segredos-secao')} %}
   {% set cabecalho = cabecalhos[secao] %}
   <header class="ajustes-intro">
     <div class="ajustes-intro-linha"><h2 class="grupo-titulo" id="{{ cabecalho[2] }}">{{ icone(cabecalho[1], 18) }} {{ cabecalho[0] }}</h2>{% if secao == 'variaveis' %}<button type="button" class="botao pequeno principal" id="variavel-adicionar">{{ icone('mais', 16) }} Novo segredo</button>{% endif %}</div>
-    <p class="config-resumo suave" id="estado-config" role="status" aria-live="polite"{% if secao in ['coletores', 'variaveis', 'vault', 'acesso'] %} hidden{% endif %}>As preferências são salvas ao mudar.</p>
+    <p class="config-resumo suave" id="estado-config" role="status" aria-live="polite"{% if secao in ['coletores', 'variaveis', 'vault', 'acesso', 'humano'] %} hidden{% endif %}>As preferências são salvas ao mudar.</p>
     {% if secao == 'variaveis' %}<span class="campo-ajuda" id="variaveis-contagem"></span>{% endif %}
   </header>
   <div class="ajustes-corpo">
@@ -172,6 +172,16 @@
   </details>
 
   {% endif %}
+  {% if secao == "humano" %}
+  <div class="bloco">
+    <p>Escreva uma vez como você gosta de trabalhar, seu tom e seus limites. As preferências gerais são compartilhadas com todos os módulos e complementam as instruções dos agentes.</p>
+    {% if preferencias %}<a class="botao" href="{{ url_nota(preferencias.rel) }}">{{ icone('editar', 16) }} Editar preferências gerais</a>{% else %}<button class="botao" type="button" id="abrir-preferencias-humanas">{{ icone('mais', 16) }} Criar preferências gerais</button>{% endif %}
+    <p class="campo-ajuda">Guardadas em <code>PREFERENCIAS.md</code>, na raiz do cofre. A IA lê junto com as orientações da área; seu texto continua sendo seu.</p>
+    {% if orientacoes_locais %}<h3 class="sub">Orientações específicas</h3><p class="campo-ajuda">Use apenas para exceções de cada módulo. As notas existentes continuam nos seus lugares.</p>
+    {% for a in orientacoes_locais %}<a class="linha-nota" href="/m/{{ a.id|urlencode }}?aba=humano"><b>{{ a.nome }}</b><span>{{ a.total }} {{ 'nota' if a.total == 1 else 'notas' }}</span></a>{% endfor %}{% endif %}
+  </div>
+  {% endif %}
+
   {% if secao == "coletores" %}
   {% include 'automacoes.html' %}
 

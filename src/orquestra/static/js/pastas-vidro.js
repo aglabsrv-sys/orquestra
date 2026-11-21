@@ -310,9 +310,6 @@
       abrirCapas.addEventListener("click", function () { mostrarCapas(true, true); });
       capas.querySelector("[data-voltar-capas]").addEventListener("click", function () { mostrarCapas(false, true); });
       capas.querySelector("[data-usar-capa]").addEventListener("click", escolherCapa);
-      dialogo.addEventListener("cancel", function (e) {
-        if (!capas.hidden) { e.preventDefault(); mostrarCapas(false, true); }
-      });
     }
     abrir.addEventListener("click", function () {
       form.reset();

@@ -1,63 +1,33 @@
-{% macro ajuda(texto, id, nome) %}<span class="auto-ajuda"><button type="button" class="auto-pergunta" aria-label="Sobre {{ nome }}" aria-describedby="{{ id }}" data-auto-ajuda>?</button><span id="{{ id }}" class="auto-tooltip" role="tooltip">{{ texto }}</span></span>{% endmacro %}
-{% macro instancia(a, id) %}
-{% set info = (catalogo_automacoes|selectattr('id', 'equalto', a.definicao)|list)|first %}
-<article class="auto-instancia" data-auto-id="{{ a.id }}">
-  <div class="auto-linha"><span class="auto-simbolo">{{ icone(info.icone, 17) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(info.ajuda, 'ajuda-instancia-' ~ id, a.nome) }}</span><small>{{ a.destino or 'Raiz do cofre' }}</small></span><span class="auto-estado">{{ 'Manual' if not a.a_cada and not a.diario_as else 'Ativa' if a.ativo else 'Pausada' }}</span><button class="botao pequeno" type="button" data-auto-acao="editar" aria-label="Configurar {{ a.nome }}">Configurar</button></div>
-  <details class="auto-controles"><summary>Execução e opções {{ icone('chevron_dir', 12) }}</summary><div class="auto-instancia-corpo">
-    <p class="campo-ajuda" data-auto-resultado>{% if a.ultima.ultima %}Última execução: {{ a.ultima.ultima[:16]|replace('T', ' ') }}{% else %}{{ 'Todos os dias às ' ~ a.diario_as if a.diario_as else 'A cada ' ~ a.a_cada if a.a_cada else 'Execução manual' }}{% endif %}</p>
-    {% if a.definicao == 'tarefas/agenda_ics.py' %}<p class="campo-ajuda">Importação legada: cria cópias em notas. Para leitura sem tarefas, use <a class="link" href="/agenda">Agenda → Conectar agenda</a>.</p>{% endif %}
-    <div class="linha-botoes sem-topo">
-      {% if not a.legado %}<button class="botao pequeno" type="button" data-auto-acao="testar">Testar fonte</button>{% endif %}
-      <button class="botao pequeno" type="button" data-auto-acao="rodar">Executar</button>
-      {% if a.a_cada or a.diario_as %}<button class="botao pequeno" type="button" data-auto-acao="ativo" data-ativo="{{ 'false' if a.ativo else 'true' }}">{{ 'Pausar' if a.ativo else 'Ativar' }}</button>{% endif %}
-      <a class="botao pequeno discreto" href="/pastas{% if a.destino %}/{{ a.destino|urlencode }}{% endif %}">Abrir pasta</a>
-      {% if not a.legado %}<button class="botao pequeno discreto" type="button" data-auto-acao="remover">Remover</button>{% else %}<button class="botao pequeno discreto" type="button" data-auto-acao="copiar">Usar em outra pasta</button>{% endif %}
-    </div><pre class="auto-amostra" data-auto-amostra hidden></pre>
-  </div></details>
-</article>
-{% endmacro %}
-<section id="automacoes"{% if 'destino' in request.query_params %} data-por-pasta{% endif %} data-destino="{{ request.query_params.get('destino', '') }}" data-modulo="{{ request.query_params.get('modulo', '') }}" data-script="{{ request.query_params.get('script', '') }}">
+{% from 'automacoes_componentes.html' import ajuda, instancia with context %}
+<section id="automacoes" data-contexto="{{ 'pasta' if automacoes_na_pasta else 'catalogo' }}"{% if automacoes_na_pasta or 'destino' in request.query_params %} data-por-pasta{% endif %} data-destino="{{ automacoes_destino or request.query_params.get('destino', '') }}" data-modulo="{{ request.query_params.get('modulo', '') }}" data-script="{{ request.query_params.get('script', '') }}">
+  {% if automacoes_na_pasta %}
+  <header class="auto-cabecalho"><h3 class="sub">Automações</h3><button class="botao pequeno" type="button" data-auto-catalogo>{{ icone('mais', 14) }} Adicionar</button></header>
+  {% for a in automacoes %}{{ instancia(a, 'nova-' ~ loop.index) }}{% endfor %}
+  {% for a in automacoes_legadas if a.codigo_nativo %}{{ instancia(a, 'pasta-' ~ loop.index) }}{% endfor %}
+  {% if not automacoes and not automacoes_legadas %}<p class="campo-ajuda">Adicione uma automação do catálogo a esta pasta.</p>{% endif %}
+  {% else %}
   <div class="auto-nativas"><a href="/dia/{{ hoje.isoformat() }}">{{ icone('calendario', 16) }} Resumo do dia</a><a href="/vinculos">{{ icone('link', 16) }} Verificar links</a><a href="/ajustes/backup">{{ icone('nuvem', 16) }} Backup Git</a></div>
-  <div class="auto-abas" role="tablist" aria-label="Automações"><button type="button" role="tab" id="auto-tab-minhas" aria-controls="auto-minhas" aria-selected="true" tabindex="0" data-auto-aba="minhas">Minhas automações <small>{{ automacoes|length + coletores|length }}</small></button><button type="button" role="tab" id="auto-tab-catalogo" aria-controls="auto-catalogo" aria-selected="false" tabindex="-1" data-auto-aba="catalogo">Catálogo <small>{{ catalogo_automacoes|length }}</small></button></div>
-  <div id="auto-minhas" role="tabpanel" aria-labelledby="auto-tab-minhas" tabindex="0">
-    {% for a in automacoes %}{{ instancia(a, 'nova-' ~ loop.index) }}{% endfor %}
-    {% for a in automacoes_legadas|default([]) %}{% if a.codigo_nativo %}{{ instancia(a, 'pasta-' ~ loop.index) }}{% else %}<div class="auto-linha"><span class="auto-simbolo">{{ icone('raio', 17) }}</span><span class="auto-nome"><b>{{ a.nome }}</b><small>Personalizada · {{ a.legado.modulo }}</small></span><a class="botao pequeno" href="/m/{{ a.legado.modulo|urlencode }}?aba=maquina">Revisar na pasta</a></div>{% endif %}{% endfor %}
-    {% for c in coletores %}{% set conhecidos = automacoes_legadas|default([])|selectattr('legado.modulo', 'equalto', c.modulo.id)|selectattr('legado.script', 'equalto', c.def.script)|list %}{% if not conhecidos %}<div class="auto-linha"><span class="auto-simbolo">{{ icone(c.modulo.icone, 17) }}</span><span class="auto-nome"><b>{{ c.def.nome }}</b><small>{{ c.modulo.nome }}</small></span><a class="botao pequeno" href="/m/{{ c.modulo.id|urlencode }}?aba=maquina">Configurar</a></div>{% endif %}{% endfor %}
-    {% if not automacoes and not coletores %}<div class="auto-vazio"><p>Nenhuma automação adicionada.</p><button class="botao pequeno" type="button" data-auto-ver-catalogo>Explorar catálogo {{ icone('seta_dir', 14) }}</button></div>{% endif %}
+  <p class="campo-ajuda auto-intro">Adicione uma automação a uma pasta ou configure uma das instâncias existentes.</p>
+  {% endif %}
+  {% if automacoes_na_pasta %}<dialog id="automacao-catalogo-dialogo" class="dialogo" aria-labelledby="automacao-catalogo-titulo"><div class="dialogo-corpo"><div class="auto-dialogo-topo"><h2 id="automacao-catalogo-titulo">Adicionar automação</h2><button type="button" class="botao pequeno so-icone" data-fechar aria-label="Fechar">{{ icone('x', 16) }}</button></div>{% endif %}
+  <div id="auto-catalogo">
+    {% for a in catalogo_automacoes %}
+    {% set existentes = (automacoes|selectattr('definicao', 'equalto', a.id)|list) + (automacoes_legadas|selectattr('definicao', 'equalto', a.id)|list) %}
+    {% if not a.legada %}
+    <div class="auto-linha"><span class="auto-simbolo">{{ icone(a.icone, 18) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(a.ajuda, 'ajuda-catalogo-' ~ loop.index, a.nome) }}</span><small>{{ a.descricao }}</small>{% if existentes %}<small>{{ existentes|length }} {{ 'configuração' if existentes|length == 1 else 'configurações' }}</small>{% endif %}</span>
+      {% if existentes and not automacoes_na_pasta %}<button class="botao pequeno so-icone" type="button" data-auto-escolher="{{ a.id }}" aria-label="Escolher configuração de {{ a.nome }}" title="Configurar">{{ icone('ajustes', 16) }}</button>{% endif %}
+      <button class="botao pequeno" type="button" data-auto-adicionar="{{ a.id }}" aria-label="Adicionar {{ a.nome }}">{{ icone('mais', 14) }} Adicionar</button>
+    </div>
+    {% endif %}
+    {% endfor %}
   </div>
-  <div id="auto-catalogo" role="tabpanel" aria-labelledby="auto-tab-catalogo" tabindex="0" hidden>
-    <p class="campo-ajuda auto-intro">Escolha uma automação para a sua pasta.</p>
-    {% for a in catalogo_automacoes %}<div class="auto-linha"><span class="auto-simbolo">{{ icone(a.icone, 18) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(a.ajuda, 'ajuda-catalogo-' ~ loop.index, a.nome) }}</span></span><span class="auto-estado">{{ 'Local' if not a.rede else 'Requer chave' if a.requer else 'Sem chave' }}</span><button class="botao pequeno" type="button" data-auto-adicionar="{{ a.id }}" aria-label="Adicionar {{ a.nome }}">{{ icone('mais', 14) }} Adicionar</button></div>{% endfor %}
-  </div>
+  {% if not automacoes_na_pasta %}
+  {% set antigas = (automacoes|selectattr('definicao', 'equalto', 'tarefas/agenda_ics.py')|list) + (automacoes_legadas|selectattr('definicao', 'equalto', 'tarefas/agenda_ics.py')|list) %}
+  {% if antigas %}<details class="auto-legadas"><summary>Configurações antigas</summary><p class="campo-ajuda">A importação iCal antiga cria cópias de compromissos em notas. Para leitura sem duplicar tarefas, use <a class="link" href="/agenda">Agenda → Conectar agenda</a>.</p><div class="auto-linha"><span class="auto-nome"><b>Importação iCal legada</b><small>{{ antigas|length }} {{ 'configuração existente' if antigas|length == 1 else 'configurações existentes' }}</small></span><button class="botao pequeno" type="button" data-auto-escolher="tarefas/agenda_ics.py">Configurar</button></div></details>{% endif %}
+  {% endif %}
+  {% if automacoes_na_pasta %}</div></dialog>{% endif %}
   <p class="auto-agenda-nota campo-ajuda">As execuções agendadas funcionam enquanto o Orquestra estiver aberto.</p>
-  <script id="automacoes-dados" type="application/json">{{ {'catalogo': catalogo_automacoes, 'instancias': automacoes, 'legadas': automacoes_legadas|default([])}|tojson }}</script>
+  <script id="automacoes-dados" type="application/json">{{ {'catalogo': catalogo_automacoes, 'instancias': automacoes, 'legadas': automacoes_legadas, 'areas': automacoes_areas}|tojson }}</script>
 </section>
-<dialog id="automacao-dialogo" class="dialogo nota-propriedades" aria-labelledby="automacao-titulo">
-  <form class="dialogo-corpo" id="automacao-form" novalidate>
-    <div class="auto-dialogo-topo"><h2 id="automacao-titulo">Adicionar automação</h2><span class="auto-ajuda"><button type="button" class="auto-pergunta" aria-label="Sobre esta automação" aria-describedby="automacao-descricao" data-auto-ajuda>?</button><span id="automacao-descricao" role="tooltip" class="auto-tooltip"></span></span><button class="botao pequeno so-icone" type="button" data-fechar aria-label="Fechar">{{ icone('x', 16) }}</button></div>
-    <div class="segmentos auto-form-abas" id="automacao-abas" role="group" aria-label="Seções da automação" hidden>
-      <button type="button" data-auto-form-aba="regras" aria-pressed="true" aria-controls="automacao-regras">Configuração</button>
-      <button type="button" data-auto-form-aba="opcoes" aria-pressed="false" aria-controls="automacao-opcoes">Mais opções</button>
-    </div>
-    <div id="automacao-regras" class="auto-form-pagina">
-    <div class="auto-form-principal"><label class="campo"><span>Nome</span><input id="automacao-nome" maxlength="120" required></label>
-      <div class="campo auto-pasta-campo" id="automacao-pasta-campo"><span id="automacao-pasta-rotulo">Guardar em</span><input type="hidden" id="automacao-destino"><button class="auto-pasta-abrir" type="button" id="automacao-pasta-abrir" aria-labelledby="automacao-pasta-rotulo automacao-pasta-nome" aria-expanded="false" aria-controls="automacao-pasta-picker">{{ icone('pasta', 16) }}<span id="automacao-pasta-nome">Raiz do cofre</span>{{ icone('chevron_dir', 14) }}</button>
-        <div id="automacao-pasta-picker" class="auto-pasta-picker" hidden><div class="auto-pasta-topo"><button class="botao pequeno so-icone" id="automacao-pasta-voltar" type="button" aria-label="Pasta anterior">{{ icone('seta_esq', 15) }}</button><b id="automacao-pasta-atual">Raiz do cofre</b></div><div id="automacao-pasta-lista" class="auto-pasta-lista" aria-label="Subpastas"></div><p id="automacao-pasta-estado" class="campo-ajuda" role="status"></p><button id="automacao-pasta-usar" class="botao pequeno" type="button">Escolher esta pasta</button></div>
-      </div>
-    </div>
-    <div id="automacao-config"></div>
-    <p id="automacao-segredos" class="campo-ajuda" hidden></p>
-    <p id="automacao-recorrencia-ajuda" class="campo-ajuda" hidden>Use a verificação diária. As tarefas só são criadas nos dias escolhidos, com o Orquestra aberto.</p>
-    <div class="auto-form-principal auto-agendamento"><label class="campo"><span>Executar</span><select id="automacao-frequencia"><option value="manual">Manualmente</option><option value="diaria">Todos os dias</option><option value="1h">A cada hora</option><option value="6h">A cada 6 horas</option><option value="12h">A cada 12 horas</option><option value="24h">A cada 24 horas</option></select></label><label class="campo" id="automacao-horario-campo" hidden><span>Horário local</span><input id="automacao-horario" type="time" value="08:00"></label></div>
-    </div>
-    <div id="automacao-opcoes" class="auto-form-pagina" hidden>
-      <div id="automacao-parametros-avancados"><div id="automacao-config-avancada"></div></div>
-      <fieldset class="auto-lista-config" id="automacao-campos-avancados"><legend>Propriedades de saída</legend>
-        <p class="campo-ajuda">Use os nomes de campo da pasta de destino.</p><div id="automacao-mapeamentos"></div>
-        <button class="botao pequeno discreto" id="automacao-mapear" type="button">{{ icone('mais', 13) }} Adicionar correspondência</button>
-      </fieldset>
-    </div>
-    <div id="automacao-previa" class="auto-previa" hidden><b>Conferir configuração</b><p class="campo-ajuda" id="automacao-previa-destino"></p><pre id="automacao-previa-texto"></pre></div>
-    <p id="automacao-form-estado" role="status" class="campo-ajuda" aria-live="polite"></p><div class="dialogo-acoes"><button type="button" class="botao" data-fechar>Cancelar</button><button type="submit" class="botao principal" id="automacao-salvar">Continuar</button></div>
-  </form>
-</dialog>
+<dialog id="automacao-escolha" class="dialogo" aria-labelledby="automacao-escolha-titulo"><div class="dialogo-corpo"><div class="auto-dialogo-topo"><h2 id="automacao-escolha-titulo">Escolher pasta</h2><button class="botao pequeno so-icone" type="button" data-fechar aria-label="Fechar">{{ icone('x', 16) }}</button></div><p id="automacao-escolha-ajuda" class="campo-ajuda"></p><div id="automacao-escolha-lista" class="auto-escolha-lista"></div></div></dialog>
+{% include 'automacoes_formulario.html' %}

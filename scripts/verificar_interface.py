@@ -75,7 +75,146 @@ def aguardar_vigia(page, vault: Path) -> None:
             marcador.unlink()
 
 
-def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
+def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
+    """Adição por pasta, seleção da instância, agendamento e teclado, sem coletar na rede."""
+    def salvar():
+        page.locator('#automacao-salvar').click()
+        expect(page.locator('#automacao-previa')).to_be_visible()
+        with page.expect_navigation(wait_until='domcontentloaded'):
+            page.locator('#automacao-salvar').click()
+
+    erros = []
+    page.on('pageerror', lambda erro: erros.append(str(erro)))
+    page.route('https://preview.exemplo.test/**', lambda rota: rota.fulfill(
+        content_type='image/svg+xml', body='<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#285860"/><path d="M65 25L105 45L65 65Z" fill="#ffbbaa"/></svg>'))
+    resposta = page.request.post(base + '/api/notas', headers={'Origin': base}, data={
+        'modulo': 'radar', 'titulo': 'Vídeo de demonstração com miniatura',
+        'campos': {'miniatura': 'https://preview.exemplo.test/video.png', 'fonte': 'youtube'},
+    })
+    assert resposta.status == 200, resposta.text()
+    resposta = page.request.post(base + '/api/modulos', headers={'Origin': base}, data={'pronto': 'projetos', 'exemplos': True})
+    assert resposta.status == 200, resposta.text()
+    for largura in (1440, 390, 320):
+        page.set_viewport_size({'width': largura, 'height': 960})
+        page.goto(base + '/m/radar?aba=v1', wait_until='domcontentloaded')
+        previa = page.locator('.titulo-com-previa').filter(has_text='Vídeo de demonstração com miniatura')
+        expect(previa.locator('img')).to_be_visible()
+        conferir_layout(page)
+        if capturas:
+            page.screenshot(path=str(capturas / f'radar-lista-{largura}.png'), full_page=True)
+        page.locator('.abas .aba').filter(has_text='Máquina').click()
+        expect(page.locator('#automacoes')).to_be_visible()
+        conferir_layout(page)
+        expect(page.locator('[data-ativar]')).to_have_count(0)
+        page.locator('[data-auto-id="legado:radar:youtube_rss.py"] [data-auto-acao="editar"]').click()
+        lateral = page.locator('#automacao-dialogo')
+        expect(lateral).to_be_visible()
+        assert '/m/radar' in page.url
+        page.get_by_role('button', name='Mais opções', exact=True).click()
+        campos = page.locator('#automacao-config-avancada > *').all()
+        caixas = [c.bounding_box() for c in campos]
+        assert all(b['y'] >= a['y'] + a['height'] - 1 for a, b in zip(caixas, caixas[1:]))
+        assert lateral.evaluate('e => e.scrollWidth<=e.clientWidth+1')
+        if capturas:
+            page.screenshot(path=str(capturas / f'automacao-opcoes-{largura}.png'))
+        page.keyboard.press('Escape')
+        expect(lateral).to_be_hidden()
+        page.locator('.abas .aba').filter(has_text='Lista').click()
+        expect(page.locator('#automacoes')).to_have_count(0)
+        page.locator('.abas .aba').filter(has_text='Máquina').click()
+        page.locator('[data-auto-id="legado:radar:youtube_rss.py"] [data-auto-acao="editar"]').click()
+        expect(lateral).to_be_visible()
+        lateral.get_by_role('button', name='Fechar', exact=True).click()
+        expect(lateral).to_be_hidden()
+        if largura == 1440:
+            page.locator('[data-auto-id="legado:radar:youtube_rss.py"] [data-auto-acao="editar"]').click()
+            page.locator('#automacao-gerenciar > summary').click()
+            page.locator('#automacao-gerenciar [data-auto-acao="revogar"]').click()
+            confirmacao = page.get_by_role('dialog', name='Revogar permissão?', exact=True)
+            with page.expect_navigation(wait_until='domcontentloaded'):
+                confirmacao.get_by_role('button', name='Revogar permissão', exact=True).click()
+            dados = page.request.get(base + '/api/automacoes/catalogo').json()
+            assert not next(a for a in dados['legadas'] if a['id'] == 'legado:radar:youtube_rss.py')['confianca']['confiavel']
+            page.locator('[data-auto-id="legado:radar:youtube_rss.py"] [data-auto-acao="editar"]').click()
+            salvar()
+
+        page.locator('[data-auto-catalogo]').click()
+        expect(page.locator('[data-auto-adicionar="tarefas/agenda_ics.py"]')).to_have_count(0)
+        page.locator('[data-auto-adicionar="radar/youtube_rss.py"]').click()
+        expect(page.locator('#automacao-destino')).to_have_value('radar/itens')
+        nome = f'Vídeos de pesquisa {largura}'
+        page.locator('#automacao-nome').fill(nome)
+        page.locator('#automacao-config textarea').fill('@CanalDeDemonstracao')
+        page.locator('#automacao-frequencia').select_option('6h')
+        page.locator('#automacao-ativo').check()
+        salvar()
+        assert '/m/radar' in page.url
+        expect(page.get_by_text(nome, exact=True)).to_be_visible()
+        dados = page.request.get(base + '/api/automacoes/catalogo').json()
+        atual = next(a for a in dados['instancias'] if a['nome'] == nome)
+        assert atual['ativo'] and atual['destino'] == 'radar/itens'
+        cartao = page.locator('[data-auto-id="' + atual['id'] + '"]')
+        # A cópia também é oferecida no formulário, sempre com escolha explícita de destino.
+        cartao.locator('[data-auto-acao="editar"]').click()
+        page.locator('#automacao-gerenciar > summary').click()
+        page.locator('#automacao-gerenciar [data-auto-acao="copiar"]').click()
+        page.locator('#automacao-escolha-lista button').filter(has=page.get_by_text('Tarefas', exact=True)).click()
+        expect(page.locator('#automacao-destino')).to_have_value('tarefas/itens')
+        expect(page.locator('#automacao-config textarea')).to_have_value('@CanalDeDemonstracao')
+        page.locator('#automacao-pasta-abrir').click()
+        expect(page.locator('#automacao-pasta-picker')).to_be_visible()
+        page.keyboard.press('Escape')
+        expect(page.locator('#automacao-pasta-picker')).to_be_hidden()
+        expect(lateral).to_be_visible()
+        page.keyboard.press('Escape')
+        expect(lateral).to_be_hidden()
+
+        page.goto(base + '/ajustes/automacoes', wait_until='domcontentloaded')
+        conferir_layout(page)
+        if capturas:
+            page.screenshot(path=str(capturas / f'automacoes-catalogo-{largura}.png'), full_page=True)
+        expect(page.locator('[data-auto-aba]')).to_have_count(0)
+        page.locator('[data-auto-adicionar="radar/youtube_rss.py"]').click()
+        expect(page.locator('#automacao-escolha')).to_be_visible()
+        page.locator('#automacao-escolha-lista button').filter(has=page.get_by_text('Tarefas', exact=True)).click()
+        expect(page.locator('#automacao-destino')).to_have_value('tarefas/itens')
+        page.locator('#automacao-nome').fill(f'Vídeos de tarefas {largura}')
+        page.locator('#automacao-config textarea').fill('@OutroCanalDeDemonstracao')
+        page.locator('#automacao-frequencia').select_option('manual')
+        salvar()
+        page.locator('[data-auto-escolher="radar/youtube_rss.py"]').click()
+        escolhas = page.locator('#automacao-escolha-lista')
+        expect(escolhas.get_by_text('Vídeos de tarefas ' + str(largura), exact=True)).to_be_visible()
+        escolhas.get_by_text(nome, exact=True).click()
+        expect(page.locator('#automacao-nome')).to_have_value(nome)
+        expect(page.locator('#automacao-destino')).to_have_value('radar/itens')
+        page.locator('#automacao-ativo').uncheck()
+        salvar()
+        dados = page.request.get(base + '/api/automacoes/catalogo').json()
+        assert not next(a for a in dados['instancias'] if a['id'] == atual['id'])['ativo']
+
+        page.goto(base + '/m/projetos?aba=v0', wait_until='domcontentloaded')
+        pasta = page.locator('a[href*="abrir="]').first
+        pasta.click()
+        page.locator('[data-pasta-ajustes]').click()
+        expect(page.locator('#pasta-ajustes'), str(erros)).to_be_visible()
+        page.locator('[data-abrir-capas]').click()
+        page.keyboard.press('Escape')
+        expect(page.locator('#pasta-ajustes')).to_be_hidden()
+
+    page.goto(base + '/ajustes/humano', wait_until='domcontentloaded')
+    if capturas:
+        page.screenshot(path=str(capturas / 'preferencias-ia-mobile.png'), full_page=True)
+    page.locator('#abrir-preferencias-humanas').click()
+    page.wait_for_url('**/n/PREFERENCIAS.md')
+    expect(page.locator('h1')).to_contain_text('Preferências')
+    assert not erros, erros
+    return {'erros_js': erros, 'jornadas': ['configuração lateral', 'adição pela pasta e catálogo',
+            'seleção da instância', 'ativação e pausa', 'Esc nos ajustes e capas', 'preferências gerais'],
+            'larguras': [1440, 390, 320]}
+
+
+def jornadas(browser, base: str, raiz: Path, capturas: Path | None, somente_automacoes: bool = False) -> dict:
     contexto = browser.new_context(viewport={"width": 1440, "height": 960}, reduced_motion="reduce")
     contexto.set_default_timeout(8000)
     # Contar chamadas reais de RAF permite detectar animação ociosa no modo reduzido.
@@ -124,6 +263,10 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
     page.locator('#passo-pronto a[href="/"]').click(timeout=20000)
     page.wait_for_url(base + "/", timeout=20000)
     expect(page.locator(".carrossel")).to_be_visible()
+    if somente_automacoes:
+        resultado = jornada_automacoes(page, base, capturas)
+        contexto.close()
+        return resultado
 
     # A capa é a mesma instância ao alternar visões; o histórico continua navegável.
     page.goto(base + "/m/tarefas?aba=v0&concluidas=todas", wait_until="domcontentloaded")
@@ -302,8 +445,8 @@ def jornadas(browser, base: str, raiz: Path, capturas: Path | None) -> dict:
                 assert page.locator(".cartoes-simples").evaluate("e => getComputedStyle(e).display") == "grid"
                 expect(page.get_by_text("Ver painel", exact=True)).to_have_count(0)
             if rota == "/ajustes/coletores":
-                page.get_by_role("tab", name="Catálogo", exact=False).click()
                 page.locator('[data-auto-adicionar="tarefas/recorrentes.py"]').click()
+                page.locator('#automacao-escolha-lista button').filter(has=page.get_by_text('Tarefas', exact=True)).click()
                 lateral = page.locator("#automacao-dialogo")
                 expect(lateral).to_be_visible()
                 assert lateral.evaluate("e => {const r=e.getBoundingClientRect();return r.right>=innerWidth-1 && e.scrollWidth<=e.clientWidth+1;}")
@@ -683,6 +826,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--chromium")
     parser.add_argument("--capturas", type=Path)
+    parser.add_argument("--somente-automacoes", action="store_true")
     args = parser.parse_args()
     if args.capturas:
         args.capturas.mkdir(parents=True, exist_ok=True)
@@ -703,7 +847,7 @@ def main() -> None:
                 with sync_playwright() as p:
                     browser = p.chromium.launch(executable_path=args.chromium, headless=True)
                     try:
-                        print(json.dumps(jornadas(browser, base, raiz, args.capturas), ensure_ascii=False, indent=2))
+                        print(json.dumps(jornadas(browser, base, raiz, args.capturas, args.somente_automacoes), ensure_ascii=False, indent=2))
                     finally:
                         browser.close()
             except Exception:

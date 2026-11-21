@@ -84,6 +84,20 @@ def test_coletas_em_paineis_com_indices_distintos_nao_duplicam_o_mesmo_item(pain
     assert len(list(destino.glob("*.md"))) == 1
 
 
+def test_video_arquivado_em_outro_painel_nao_e_importado_novamente(painel):
+    instancia = automacoes.criar(painel, "radar/youtube_rss.py", "radar/itens")
+    instancia = automacoes.autorizar(painel, instancia["id"], instancia["confianca"]["assinatura"])
+    item = {"id": "youtube:video-ficticio", "titulo": "Vídeo para arquivar"}
+    assert automacoes._concluir(painel, instancia, instancia["confianca"]["assinatura"], [item], "")["novos"] == 1
+    outro = Painel(painel.vault)
+    nota = next(n for n in painel.indice.notas.values() if n.meta.get("id_externo") == item["id"])
+    arquivada = painel.arquivar(nota.rel)
+    antes = (painel.vault / arquivada).read_bytes()
+    segunda = automacoes._concluir(outro, instancia, instancia["confianca"]["assinatura"], [item], "")
+    assert segunda["novos"] == 0 and segunda["repetidos"] == 1
+    assert (painel.vault / arquivada).read_bytes() == antes
+
+
 @pytest.mark.parametrize("pasta", ["radar", "tarefas", "numeros"])
 def test_download_tem_limite_mesmo_sem_tamanho_confiavel(pasta, monkeypatch):
     monkeypatch.setenv("ORQUESTRA_CONFIG", "{}")

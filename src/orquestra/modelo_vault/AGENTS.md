@@ -17,7 +17,9 @@ ela; se não houver um, informe a pendência antes de criar esses registros aqui
 
 1. Leia este contrato e os dois ou três últimos dias de `diario/sessoes/`, quando
    esse registro for permitido no vault. Não crie um diário só para consultá-lo.
-2. Descubra as áreas e a captura configurada em `orquestra.yaml`. Leia o schema,
+2. Leia `PREFERENCIAS.md` na raiz, quando existir: são preferências gerais da pessoa,
+   compartilhadas entre os módulos. Não copie esse texto para cada área.
+   Descubra as áreas e a captura configurada em `orquestra.yaml`. Leia o schema,
    as instruções e os aprendizados das áreas em que vai trabalhar e o contexto
    humano necessário ao pedido.
 3. Confira perguntas já respondidas e pendências relacionadas ao pedido. Uma
@@ -39,6 +41,7 @@ seguir este contrato e não participa dos locks do aplicativo.
 
 ```
 AGENTS.md            este contrato
+PREFERENCIAS.md      preferências gerais da pessoa, quando ela as configurar
 orquestra.yaml       configuração do painel (nome, tema, backup)
 <modulo>/            uma área de trabalho. É módulo toda pasta da raiz com _modulo.yaml
   _modulo.yaml       schema do módulo: campos, status, visões, coletores
@@ -55,7 +58,9 @@ _orquestra/          temas e estado do painel
 
 Cada vault tem módulos diferentes: descubra quais existem listando as pastas da
 raiz que têm `_modulo.yaml`. Antes de trabalhar num módulo, leia o `_modulo.yaml`
-dele e tudo em `maquina/` e `humano/` desse módulo.
+dele e tudo em `maquina/` e `humano/` desse módulo. `humano/` contém orientações
+específicas e exceções; não precisa repetir as preferências gerais. Preserve as
+notas existentes e não resolva conflitos entre orientações inventando uma decisão.
 
 **Onde ficam os itens.** O padrão é `<modulo>/itens/`. Se o `_modulo.yaml` tiver
 `itens: .`, o módulo foi montado em cima de uma pasta que a pessoa já usava: os

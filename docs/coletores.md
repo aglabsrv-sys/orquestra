@@ -7,50 +7,43 @@ uma pasta comum não ganha um quadro ou um status por receber uma automação.
 
 ## Catálogo independente
 
-Abra **Ajustes → Automações → Catálogo**. As nove opções distribuídas aparecem
-mesmo sem Radar, Tarefas ou Números instalados. Em **Pastas**, o botão de raio
-abre o catálogo com a pasta atual selecionada.
+Abra **Ajustes → Automações**. O catálogo reúne oito opções para novas
+configurações, mesmo sem Radar, Tarefas ou Números instalados. A importação iCal
+legada aparece somente quando já estiver configurada; use **Agenda → Conectar
+agenda** para consultar compromissos sem criar tarefas.
 
-1. Escolha a automação e configure a fonte pelo formulário.
-2. Em **Guardar em**, navegue pelas pastas e confirme o destino. Escolha execução
-   manual, por intervalo ou horário diário.
-3. Use **Continuar** para conferir destino e política de gravação. Em
-   **Propriedades da pasta**, o mapeamento opcional permite usar nomes existentes.
-4. Confira a configuração e adicione. A autorização local cobre o código, a
-   configuração, os segredos declarados, o destino, o mapeamento e o horário.
-5. Em **Minhas automações → Execução e opções**, **Testar fonte** consulta a fonte
-   de uma automação independente e mostra uma amostra sem gravar notas.
-   **Executar** importa; **Pausar** interrompe o agendamento.
+1. Use **Adicionar** na automação e escolha o módulo de destino. **Outra pasta do
+   cofre** permite navegar até uma pasta existente, inclusive uma subpasta.
+2. Personalize fontes, nome e destino no painel lateral. Escolha execução manual,
+   por intervalo ou horário diário. **Execução agendada ativa** permite pausar ou
+   ativar o horário; não há uma segunda chave no cartão.
+3. Use **Continuar** para conferir destino e política de gravação. Em **Mais opções**,
+   o mapeamento de propriedades permite usar nomes existentes na pasta.
+4. Confira e salve. A autorização local cobre código, configuração, segredos
+   declarados, destino, mapeamento e horário.
+5. A engrenagem do catálogo pede qual instância configurar, mostrando nome, pasta e
+   estado. Em **Execução e opções**, **Testar fonte** mostra uma amostra sem gravar
+   notas; **Executar** usa a última configuração salva. **Remover** preserva as notas.
 
-É possível adicionar várias instâncias da mesma automação. As métricas podem
-completar uma nota diária; configurações que disputem o mesmo campo são recusadas.
-Valores alterados manualmente são preservados. **Configurar** mantém a identidade da
-instância e exige revisão da nova configuração. **Remover** preserva as notas.
+Na aba **Máquina** de cada módulo, **Adicionar** escolhe uma automação para aquela
+pasta. **Configurar** abre o mesmo painel lateral e salvar mantém você no módulo.
+Esc fecha o painel; se o seletor de pastas estiver aberto, primeiro fecha o seletor.
+Em **Pastas**, o botão de raio abre o catálogo com a pasta atual selecionada.
 
-As configurações ficam em `_orquestra/automacoes.json`; os aceites e os segredos
-ficam neste computador. Para um endereço iCal privado, guarde o endereço em
-**Segredos** e informe seu nome no formulário. As automações de módulos existentes
-aparecem na mesma lista com **Configurar**, também disponível na aba **Máquina**.
-Feeds RSS, canais e assuntos de busca podem ser alterados pelo formulário. O botão
-**?** explica cada opção. **Usar em outra pasta** cria outra instância explicitamente;
-a configuração da área mantém seu destino e as notas existentes.
+Cada instância tem nome, destino, fontes e horário próprios. É possível usar a
+mesma automação em várias pastas. Instâncias no mesmo destino reconhecem os itens
+já presentes pelo identificador externo. No destino de um módulo, o histórico
+inclui itens arquivados: um vídeo arquivado no Radar não reaparece na coleta.
+Canais e buscas do YouTube compartilham o mesmo identificador por vídeo. As notas
+repetidas que já existiam não são excluídas automaticamente.
 
-As correções dos coletores originais acompanham a atualização geral do Orquestra,
-pelo ícone discreto já existente. Ao abrir a versão nova, cópias antigas
-reconhecidas são atualizadas com recuperação da versão anterior. Configurações,
-notas, agendamentos e código personalizado são preservados. A atualização não
-concede novas permissões de execução.
-
-O agendador funciona enquanto o serviço está executando. Ao reabrir, uma rotina
-atrasada é consultada na situação atual; dias perdidos não são reproduzidos. A
-importação iCal ainda não expande `RRULE` nem acompanha cancelamentos e alterações.
-
-O [resumo do dia](../README.md) e a [verificação de links](vinculos.md) são recursos
-nativos disponíveis sem instalar uma automação.
-
-**Coletor não usa IA.** Buscar e guardar é trabalho mecânico: um script faz a
-coleta conforme sua configuração. Serviços externos podem ter custos e limites. A IA entra depois, na triagem, quando já
-existe o que avaliar.
+As métricas podem completar uma nota diária; configurações que disputem o mesmo
+campo são recusadas. Valores alterados manualmente são preservados.
+As configurações independentes ficam em `_orquestra/automacoes.json`; as automações
+originais da pasta mantêm sua identidade e seu destino no `_modulo.yaml`. Aceites e
+segredos ficam neste computador. Fontes, canais e assuntos podem ser alterados pelo
+formulário. **Usar em outra pasta** cria outra instância explicitamente. Código
+personalizado continua sujeito à revisão na pasta, sem ser substituído pelo catálogo.
 
 ## Antes de executar: revise o código
 
@@ -70,7 +63,9 @@ Na aba **Máquina**, abra a revisão do coletor, leia os arquivos indicados e co
 a configuração, as chaves declaradas e a assinatura. A aprovação só pode ser feita
 por acesso direto a localhost no computador que roda o painel. Pelo Tailscale,
 um coletor já aprovado pode executar, mas não receber aprovação nova. Para retirar
-permissão, use **Revogar aprovação**.
+permissão de uma automação da pasta, use **Configurar → Execução e opções →
+Revogar permissão**. Em scripts personalizados, o controle continua na revisão
+avançada da aba Máquina.
 
 A assinatura cobre os arquivos locais apresentados e a configuração. Uma mudança
 exige nova aprovação, mesmo se o coletor estava agendado. Dependências remotas
@@ -132,12 +127,14 @@ outro vault, acrescente `--vault "CAMINHO COMPLETO"`.
 
 ## Automações que vêm com os outros módulos
 
-Todas sem IA e com agendamento desligado. Ligue na aba **Máquina**; se personalizar, revise e aprove a nova assinatura. Serviços externos podem ter limites ou custos próprios.
+Todas sem IA e com agendamento desligado. Abra **Configurar** na aba **Máquina**
+para escolher o horário e ativar o agendamento; se personalizar, revise e aprove
+a nova assinatura. Serviços externos podem ter limites ou custos próprios.
 
 | Módulo | Script | O que faz | Precisa de chave? |
 |---|---|---|---|
 | Tarefas | `recorrentes.py` | Cria a tarefa do dia para cada rotina: "toda sexta", "dia útil", "dia 5" | não (nem de internet) |
-| Tarefas | `agenda_ics.py` | Traz os compromissos dos próximos dias da sua agenda (Google, Outlook, iCloud) | não: usa o endereço iCal da agenda |
+| Tarefas (legado) | `agenda_ics.py` | Mantém a importação antiga em notas; prefira Conectar agenda para leitura | não: usa o endereço iCal da agenda |
 | Números | `cotacoes.py` | Grava a cotação do dia (dólar, euro, bitcoin...) | não |
 | Números | `github_repo.py` | Grava estrelas e forks de um repositório público | não |
 | Números | `youtube_canal.py` | Grava inscritos e visualizações de um canal | sim: `YOUTUBE_API_KEY` |

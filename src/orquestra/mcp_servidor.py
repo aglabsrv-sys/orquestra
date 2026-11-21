@@ -154,6 +154,9 @@ class Ferramentas:
             )
             partes.append(f"- **{area['id']}** ({area['nome']}): {area['descricao']} Campos: {campos or 'nenhum'}.")
         partes.append(
+            "\n# Preferências da pessoa\nLeia PREFERENCIAS.md na raiz, quando existir, antes de agir. "
+            "contexto_area inclui essas preferências gerais e as exceções locais de humano/. "
+            "Mantenha o texto da pessoa intacto.\n"
             "\n# Agenda local\n" + calendario.conexoes(self.painel)["orientacao"] + "\n"
             "\n# Projetos, tarefas e decisões\n" + mcp_organizacao.ORIENTACAO_TRABALHO + "\n"
             "\nPor este conector, use as ferramentas em vez de editar arquivos: elas já aplicam as regras acima "

@@ -34,6 +34,19 @@ def test_rotina_existente_edita_fontes_sem_mover_notas(cliente, vault):
     assert pagina.status_code == 200 and "Pesquisa da equipe" in pagina.text
 
 
+def test_preferencias_humanas_criadas_uma_vez_sem_substituir_texto(cliente, vault):
+    assert cliente.get("/ajustes/humano").status_code == 200
+    assert not (vault / "PREFERENCIAS.md").exists()
+    primeira = cliente.post("/api/preferencias/humanas", json={})
+    assert primeira.status_code == 200
+    arquivo = vault / "PREFERENCIAS.md"
+    arquivo.write_text("Meu texto pessoal, preservado integralmente.\n", encoding="utf-8")
+    segunda = cliente.post("/api/preferencias/humanas", json={})
+    assert segunda.json() == primeira.json()
+    assert arquivo.read_text(encoding="utf-8") == "Meu texto pessoal, preservado integralmente.\n"
+    assert not (vault / "PREFERENCIAS (2).md").exists()
+
+
 def test_previa_existente_aceita_opcionais_sem_erro_interno(cliente):
     resposta = cliente.post("/api/automacoes/legado/prever", json={"modulo": "radar", "script": "rss.py"})
     assert resposta.status_code == 200
