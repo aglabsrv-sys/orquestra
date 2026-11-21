@@ -8,6 +8,7 @@ import pytest
 
 from orquestra import automacoes, confianca
 from orquestra.config import gravar_yaml, ler_yaml
+from orquestra.painel import Painel
 
 
 def legado(painel, modulo="radar", script="rss.py"):
@@ -20,6 +21,62 @@ def test_catalogo_explica_personalizacao_e_legados_estao_prontos(painel):
     assert "termos" in next(a["ajuda"] for a in catalogo if a["id"] == "radar/youtube_api.py")
     assert legado(painel)["confianca"]["confiavel"]
     assert not legado(painel)["atualizacao_disponivel"]
+
+
+@pytest.mark.parametrize("personalizado", [False, True])
+def test_remover_original_preserva_notas_codigo_e_demais_configuracoes(painel, personalizado):
+    modulo = painel.modulo("radar")
+    arquivo = modulo.pasta / "_modulo.yaml"
+    script = modulo.pasta / "maquina/coletores/rss.py"
+    if personalizado:
+        script.write_bytes(script.read_bytes() + b"\n# Personalizacao preservada\n")
+    atual = legado(painel)
+    original = ler_yaml(arquivo)
+    preservados = {p: p.read_bytes() for p in modulo.pasta.rglob("*") if p.is_file() and p != arquivo}
+    automacoes.remover_legada(painel, "radar", "rss.py", versao=atual["versao"])
+    depois = ler_yaml(arquivo)
+    assert depois["coletores"] == [c for c in original["coletores"] if c["script"] != "rss.py"]
+    assert {k: v for k, v in depois.items() if k != "coletores"} == {k: v for k, v in original.items() if k != "coletores"}
+    assert all(p.read_bytes() == conteudo for p, conteudo in preservados.items())
+    reaberto = Painel(painel.vault)
+    automacoes.sincronizar_catalogo(reaberto)
+    assert all(c.script != "rss.py" for c in reaberto.modulo("radar").coletores)
+    assert "radar/rss.py" not in {a["id"] for a in automacoes.contexto(reaberto, reaberto.modulo("radar"))["automacoes_instaladas"]}
+    adicionada = automacoes.criar(reaberto, "radar/rss.py", "radar/itens")
+    assert adicionada["destino"] == "radar/itens"
+
+
+def test_remocao_original_recusa_versao_antiga_e_execucao_em_andamento(painel):
+    atual = legado(painel)
+    arquivo = painel.modulo("radar").pasta / "_modulo.yaml"
+    arquivo.write_bytes(arquivo.read_bytes() + b"\n# Alteracao externa\n")
+    antes = arquivo.read_bytes()
+    with pytest.raises(automacoes.ErroAutomacao, match="mudaram"):
+        automacoes.remover_legada(painel, "radar", "rss.py", versao=atual["versao"])
+    atual = legado(painel)
+    painel.rodando.add("radar/rss.py")
+    try:
+        with pytest.raises(automacoes.ErroAutomacao, match="terminar"):
+            automacoes.remover_legada(painel, "radar", "rss.py", versao=atual["versao"])
+    finally:
+        painel.rodando.discard("radar/rss.py")
+    assert arquivo.read_bytes() == antes
+
+
+def test_remocao_recusa_alteracao_externa_antes_da_leitura(painel, monkeypatch):
+    atual = legado(painel)
+    arquivo = painel.modulo("radar").pasta / "_modulo.yaml"
+    conteudo = arquivo.read_bytes() + b"\n# Outra pessoa editou esta configuracao\n"
+    ler_original = automacoes.ler_yaml
+
+    def ler_apos_edicao(caminho):
+        arquivo.write_bytes(conteudo)
+        return ler_original(caminho)
+
+    monkeypatch.setattr(automacoes, "ler_yaml", ler_apos_edicao)
+    with pytest.raises(automacoes.ErroAutomacao, match="mudaram"):
+        automacoes.remover_legada(painel, "radar", "rss.py", versao=atual["versao"])
+    assert arquivo.read_bytes() == conteudo
 
 
 def test_editar_fontes_legadas_preserva_notas_codigo_e_demais_coletores(painel):

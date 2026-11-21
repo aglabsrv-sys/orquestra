@@ -60,14 +60,15 @@ function pagina({definicao,instancia,responder}={}) {
   const linha=new E();linha.dataset.autoId=atual.id;raiz.append(linha);
   const editar=new E('button');editar.dataset.autoAcao='editar';linha.append(editar);
   const copiar=new E('button');copiar.dataset.autoAcao='copiar';linha.append(copiar);
+  const remover=new E('button');remover.dataset.autoAcao='remover';linha.append(remover);
   const document={body:{dataset:{vaultId:'cofre-teste'}},querySelector:s=>elementos.get(s)||null,
-    querySelectorAll:s=>s==='[data-auto-acao]'?[editar,copiar]:[],createElement:tag=>new E(tag),createTextNode:text=>{const t=new E('text');t.textContent=text;return t;},addEventListener(){}};
+    querySelectorAll:s=>s==='[data-auto-acao]'?[editar,copiar,remover]:[],createElement:tag=>new E(tag),createTextNode:text=>{const t=new E('text');t.textContent=text;return t;},addEventListener(){}};
   const ui={mensagemErro:e=>e.message||'Falha',avisar:(texto,tipo)=>avisos.push({texto,tipo}),confirmar:async()=>true,ocupado:b=>{b.disabled=true;return ()=>{b.disabled=false;};}};
   const api=async(method,url,corpo)=>{chamadas.push({method,url,corpo:JSON.parse(JSON.stringify(corpo))});return responder?responder(url,corpo):{destino:corpo.destino,politica:'Uma nota por item.'};};
   const fetch=(url,opcoes)=>new Promise((resolve,reject)=>pastas.push({url,opcoes,resolve:d=>resolve({ok:true,json:async()=>d}),reject}));
   const orquestra={api};
   runInNewContext(fonte,{document,window:{Orquestra:orquestra,OrquestraInterface:ui},fetch,AbortController,innerWidth:1280,innerHeight:800,console,sessionStorage:{setItem(){},getItem(){return null;},removeItem(){}},location:{assign:u=>navegacoes.push(u),reload:()=>navegacoes.push('reload')}});
-  return {get:n=>elementos.get('#'+n),editar,copiar,form,dialogo,linha,chamadas,pastas,avisos,navegacoes,E,sair(){elementos.delete('#automacoes');orquestra.prepararAutomacoes();}};
+  return {get:n=>elementos.get('#'+n),editar,copiar,remover,form,dialogo,linha,chamadas,pastas,avisos,navegacoes,E,sair(){elementos.delete('#automacoes');orquestra.prepararAutomacoes();}};
 }
 
 test('Configurar legado abre feeds realmente salvos e envia edição com versão atual',async()=>{
@@ -179,4 +180,16 @@ test('sair da aba durante o salvamento impede autorização e recarga pela respo
   await salvamento;
   assert.deepEqual(p.chamadas.map(c=>c.url),['/api/automacoes/prever','/api/automacoes/editar']);
   assert.deepEqual(p.navegacoes,[]);
+});
+
+test('remover original envia o módulo, script e versão da configuração',async()=>{
+  const p=pagina();await p.remover.emitir('click');
+  assert.deepEqual(p.chamadas[0],{method:'POST',url:'/api/automacoes/legado/remover',corpo:{modulo:'radar',script:'rss.py',versao:'versao-1'}});
+  assert.deepEqual(p.navegacoes,['reload']);
+});
+
+test('remover configuração independente continua usando sua identidade',async()=>{
+  const instancia={id:'pesquisa',definicao:'radar/rss.py',nome:'Pesquisa',destino:'Clientes',config:{feeds:[]},mapeamento:{},a_cada:'',diario_as:'',ativo:false,confianca:{confiavel:true}};
+  const p=pagina({instancia});await p.remover.emitir('click');
+  assert.deepEqual(p.chamadas[0],{method:'POST',url:'/api/automacoes/remover',corpo:{id:'pesquisa'}});
 });

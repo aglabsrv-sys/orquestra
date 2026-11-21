@@ -76,12 +76,17 @@ def aguardar_vigia(page, vault: Path) -> None:
 
 
 def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
-    """Adição por pasta, seleção da instância, agendamento e teclado, sem coletar na rede."""
+    """Adição, remoção, seleção da configuração e teclado, sem coletar na rede."""
     def salvar():
         page.locator('#automacao-salvar').click()
         expect(page.locator('#automacao-previa')).to_be_visible()
         with page.expect_navigation(wait_until='domcontentloaded'):
             page.locator('#automacao-salvar').click()
+
+    def confirmar_remocao():
+        confirmacao = page.get_by_role('dialog', name='Remover automação?', exact=True)
+        with page.expect_navigation(wait_until='domcontentloaded'):
+            confirmacao.get_by_role('button', name='Remover', exact=True).click()
 
     erros = []
     page.on('pageerror', lambda erro: erros.append(str(erro)))
@@ -140,6 +145,11 @@ def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
 
         page.locator('[data-auto-catalogo]').click()
         expect(page.locator('[data-auto-adicionar="tarefas/agenda_ics.py"]')).to_have_count(0)
+        expect(page.locator('#auto-catalogo > .auto-linha [data-auto-adicionar="radar/youtube_rss.py"]')).to_have_count(0)
+        page.locator('.auto-instaladas > summary').click()
+        expect(page.get_by_role('button', name='Adicionar outra configuração de Canais do YouTube', exact=True)).to_be_visible()
+        if capturas:
+            page.screenshot(path=str(capturas / f'adicionar-automacao-{largura}.png'))
         page.locator('[data-auto-adicionar="radar/youtube_rss.py"]').click()
         expect(page.locator('#automacao-destino')).to_have_value('radar/itens')
         nome = f'Vídeos de pesquisa {largura}'
@@ -193,6 +203,29 @@ def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
         dados = page.request.get(base + '/api/automacoes/catalogo').json()
         assert not next(a for a in dados['instancias'] if a['id'] == atual['id'])['ativo']
 
+        page.goto(base + '/m/radar?aba=maquina', wait_until='domcontentloaded')
+        expect(page.locator('#automacoes').get_by_role('link', name='Abrir pasta', exact=True)).to_have_count(0)
+        cartao = page.locator('[data-auto-id="' + atual['id'] + '"]')
+        cartao.locator('.auto-controles > summary').click()
+        cartao.locator('[data-auto-acao="remover"]').click()
+        confirmar_remocao()
+        expect(page.locator('[data-auto-id="' + atual['id'] + '"]')).to_have_count(0)
+        page.locator('[data-auto-catalogo]').click()
+        expect(page.locator('#auto-catalogo > .auto-linha [data-auto-adicionar="radar/youtube_rss.py"]')).to_have_count(0)
+        page.keyboard.press('Escape')
+        if largura == 320:
+            original = page.locator('[data-auto-id="legado:radar:youtube_rss.py"]')
+            expect(original.locator('[data-auto-acao="remover"]')).to_have_count(1)
+            original.locator('[data-auto-acao="editar"]').click()
+            page.locator('#automacao-gerenciar > summary').click()
+            page.locator('#automacao-gerenciar [data-auto-acao="remover"]').click()
+            confirmar_remocao()
+            expect(page.locator('[data-auto-id="legado:radar:youtube_rss.py"]')).to_have_count(0)
+            page.locator('[data-auto-catalogo]').click()
+            expect(page.locator('#auto-catalogo > .auto-linha [data-auto-adicionar="radar/youtube_rss.py"]')).to_be_visible()
+            expect(page.get_by_role('button', name='Adicionar outra configuração de Canais do YouTube', exact=True)).to_have_count(0)
+            page.keyboard.press('Escape')
+
         page.goto(base + '/m/projetos?aba=v0', wait_until='domcontentloaded')
         pasta = page.locator('a[href*="abrir="]').first
         pasta.click()
@@ -209,7 +242,7 @@ def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
     page.wait_for_url('**/n/PREFERENCIAS.md')
     expect(page.locator('h1')).to_contain_text('Preferências')
     assert not erros, erros
-    return {'erros_js': erros, 'jornadas': ['configuração lateral', 'adição pela pasta e catálogo',
+    return {'erros_js': erros, 'jornadas': ['configuração lateral', 'adição pela pasta e catálogo', 'remoção e retorno ao catálogo',
             'seleção da instância', 'ativação e pausa', 'Esc nos ajustes e capas', 'preferências gerais'],
             'larguras': [1440, 390, 320]}
 

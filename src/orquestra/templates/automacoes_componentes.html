@@ -10,8 +10,8 @@
     <div class="linha-botoes sem-topo">
       {% if not a.legado %}<button class="botao pequeno" type="button" data-auto-acao="testar">Testar fonte</button>{% endif %}
       <button class="botao pequeno" type="button" data-auto-acao="rodar">Executar</button>
-      <a class="botao pequeno discreto" href="/pastas{% if a.destino %}/{{ a.destino|urlencode }}{% endif %}">Abrir pasta</a>
-      {% if not a.legado %}<button class="botao pequeno discreto" type="button" data-auto-acao="remover">Remover</button>{% elif a.definicao != 'tarefas/agenda_ics.py' %}<button class="botao pequeno discreto" type="button" data-auto-acao="copiar">Usar em outra pasta</button>{% endif %}
+      <button class="botao pequeno discreto" type="button" data-auto-acao="remover" aria-label="Remover {{ a.nome }} de {{ a.destino }}">Remover</button>
+      {% if a.legado and a.definicao != 'tarefas/agenda_ics.py' %}<button class="botao pequeno discreto" type="button" data-auto-acao="copiar">Usar em outra pasta</button>{% endif %}
     </div><pre class="auto-amostra" data-auto-amostra hidden></pre>
   </div></details>
 </article>

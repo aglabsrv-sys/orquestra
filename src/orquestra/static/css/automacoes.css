@@ -27,6 +27,11 @@
 .auto-agenda-nota { font-size:.67rem; margin-top:16px; }
 .auto-legadas { margin-top:18px; color:var(--texto-suave); font-size:.75rem; }
 .auto-legadas > summary { cursor:pointer; padding:8px 0; }
+.auto-instaladas { margin-top:18px; padding-top:8px; border-top:1px solid var(--borda); }
+.auto-instaladas > summary { display:flex; align-items:center; gap:8px; padding:8px 0; font-size:.8rem; cursor:pointer; }
+.auto-instaladas > summary small { color:var(--texto-suave); }
+.auto-instaladas[open] > summary .icone { transform:rotate(90deg); }
+.auto-instaladas > .campo-ajuda { margin-block:8px; }
 .auto-estado { font-size:.64rem; color:var(--texto-suave); white-space:nowrap; }
 .auto-linha > .botao { flex:none; font-size:.7rem; min-height:32px; padding:6px 9px; }
 .auto-instancia > summary { cursor:pointer; list-style:none; }

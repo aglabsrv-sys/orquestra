@@ -86,6 +86,10 @@ class ConfigurarColetor(Coletor):
     versao: str = Field(default="", max_length=128)
 
 
+class RemoverColetor(Coletor):
+    versao: str = Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
+
+
 class AtualizarColetor(Coletor):
     versao: str = Field(min_length=1, max_length=128)
     assinatura: str = Field(min_length=1, max_length=128)

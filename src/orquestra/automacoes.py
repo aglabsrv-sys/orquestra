@@ -135,7 +135,10 @@ def contexto(painel: Painel, modulo: Modulo | None = None) -> dict[str, Any]:
     if modulo:
         instancias = [a for a in instancias if a["destino"].casefold() == destino.casefold()]
         antigas = [a for a in antigas if a["legado"]["modulo"] == modulo.id]
-    return {"catalogo_automacoes": catalogo(), "automacoes": instancias,
+    definicoes_instaladas = {a["definicao"] for a in instancias + antigas}
+    definicoes = catalogo()
+    return {"catalogo_automacoes": definicoes, "automacoes": instancias,
+            "automacoes_instaladas": [a for a in definicoes if not a["legada"] and a["id"] in definicoes_instaladas],
             "automacoes_legadas": antigas, "automacoes_na_pasta": modulo is not None,
             "automacoes_destino": destino,
             "automacoes_areas": [{"id": m.id, "nome": m.nome,
@@ -671,6 +674,29 @@ def atualizar_legada(painel: Painel, modulo: str, script: str, config: dict | No
         painel.mudou_desde_o_backup = True
         painel.eventos.publicar({"tipo": "coletor", "modulo": modulo})
         return _publica_legada(painel, modulo, script)
+
+
+def remover_legada(painel: Painel, modulo: str, script: str, *, versao: str) -> None:
+    """Retira a configuração da pasta, preservando notas e arquivos do coletor."""
+    with painel._trava:
+        dono = painel.modulo(modulo)
+        if f"{modulo}/{script}" in painel.rodando:
+            raise ErroAutomacao("Aguarde a execução desta automação terminar para remover.")
+        caminho = caminho_no_vault(painel.vault, dono.pasta / "_modulo.yaml")
+        with armazenamento.trava(caminho):
+            dados = ler_yaml(caminho)
+            if not versao or not secrets.compare_digest(versao, hashlib.sha256(dados._orq_original or b"").hexdigest()):
+                raise ErroAutomacao("As configurações desta pasta mudaram. Atualize a página antes de remover.")
+            coletores_da_pasta = dados.get("coletores") or []
+            alvos = [i for i, c in enumerate(coletores_da_pasta) if isinstance(c, dict) and str(c.get("script")) == script]
+            if not alvos:
+                raise ErroAutomacao("Esta automação não está mais na pasta.")
+            for i in reversed(alvos):
+                del coletores_da_pasta[i]
+            gravar_yaml(caminho, dados)
+        painel.indice.recarregar_modulos()
+        painel.mudou_desde_o_backup = True
+        painel.eventos.publicar({"tipo": "coletor", "modulo": modulo})
 
 
 def destinos_tarefas(painel: Painel) -> list[dict[str, Any]]:

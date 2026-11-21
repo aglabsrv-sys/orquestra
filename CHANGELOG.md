@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- Automações originais e adicionadas podem ser removidas da pasta, com confirmação,
+  preservando notas e código. O seletor separa as opções disponíveis das já
+  instaladas; adicionar outra configuração para fontes ou horários diferentes
+  passa a ser uma escolha explícita.
+
 - Automações são adicionadas pela aba Máquina e configuradas na lateral, sem
   sair da pasta. Ajustes reúne o catálogo com escolha da pasta e da instância;
   a execução automática é controlada no formulário, sem chave duplicada no cartão.

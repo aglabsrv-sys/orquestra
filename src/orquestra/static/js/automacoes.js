@@ -162,7 +162,6 @@
     editando = copiar ? null : instancia || null;
     var gerenciar=$('#automacao-gerenciar');
     if(gerenciar){gerenciar.hidden=!editando;gerenciar.open=false;gerenciar.dataset.autoId=editando?editando.id:'';
-      $('[data-auto-acao="remover"]',gerenciar).hidden=!!(editando&&editando.legado);
       $('[data-auto-acao="testar"]',gerenciar).hidden=!!(editando&&editando.legado);
       $('[data-auto-acao="copiar"]',gerenciar).hidden=!!selecionada.legada;
       $('[data-auto-acao="revogar"]',gerenciar).hidden=!(editando&&editando.legado&&editando.confianca.confiavel);
@@ -303,8 +302,9 @@
       var fim = ui.ocupado(botao,'…'), acao = botao.dataset.autoAcao;
       try {
         if (acao === 'remover') {
-          if (!await ui.confirmar({titulo:'Remover automação?',texto:'As notas já produzidas serão preservadas.',confirmar:'Remover'})) return;
-          await api('POST','/api/automacoes/remover',{id:instancia.id});if(!ouvintes.signal.aborted)location.reload();
+          if (!await ui.confirmar({titulo:'Remover automação?',texto:'Remover “'+instancia.nome+'” de '+(instancia.destino||'Raiz do cofre')+' e encerrar seu agendamento. As notas já produzidas serão preservadas.',confirmar:'Remover'})) return;
+          if(ouvintes.signal.aborted)return;
+          await api('POST',instancia.legado?'/api/automacoes/legado/remover':'/api/automacoes/remover',instancia.legado?Object.assign({},instancia.legado,{versao:instancia.versao}):{id:instancia.id});if(!ouvintes.signal.aborted)location.reload();
         } else if (acao === 'revogar' && instancia.legado) {
           if (!await ui.confirmar({titulo:'Revogar permissão?',texto:'“'+instancia.nome+'” deixará de ter autorização para executar neste computador.',confirmar:'Revogar permissão'})) return;
           await api('POST','/api/coletores/confiar',Object.assign({},instancia.legado,{acao:'revogar',assinatura:instancia.confianca.assinatura}));if(!ouvintes.signal.aborted)location.reload();

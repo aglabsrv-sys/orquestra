@@ -1,4 +1,10 @@
 {% from 'automacoes_componentes.html' import ajuda, instancia with context %}
+{% macro opcao(a, existentes, identificador, outra=false) %}
+<div class="auto-linha"><span class="auto-simbolo">{{ icone(a.icone, 18) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(a.ajuda, 'ajuda-catalogo-' ~ identificador, a.nome) }}</span><small>{{ a.descricao }}</small>{% if existentes %}<small>{{ existentes|length }} {{ 'configuração' if existentes|length == 1 else 'configurações' }}</small>{% endif %}</span>
+  {% if existentes and not automacoes_na_pasta %}<button class="botao pequeno so-icone" type="button" data-auto-escolher="{{ a.id }}" aria-label="Escolher configuração de {{ a.nome }}" title="Configurar">{{ icone('ajustes', 16) }}</button>{% endif %}
+  <button class="botao pequeno" type="button" data-auto-adicionar="{{ a.id }}" aria-label="{{ 'Adicionar outra configuração de ' if outra else 'Adicionar ' }}{{ a.nome }}">{{ icone('mais', 14) }} {{ 'Adicionar outra configuração' if outra else 'Adicionar' }}</button>
+</div>
+{% endmacro %}
 <section id="automacoes" data-contexto="{{ 'pasta' if automacoes_na_pasta else 'catalogo' }}"{% if automacoes_na_pasta or 'destino' in request.query_params %} data-por-pasta{% endif %} data-destino="{{ automacoes_destino or request.query_params.get('destino', '') }}" data-modulo="{{ request.query_params.get('modulo', '') }}" data-script="{{ request.query_params.get('script', '') }}">
   {% if automacoes_na_pasta %}
   <header class="auto-cabecalho"><h3 class="sub">Automações</h3><button class="botao pequeno" type="button" data-auto-catalogo>{{ icone('mais', 14) }} Adicionar</button></header>
@@ -13,13 +19,17 @@
   <div id="auto-catalogo">
     {% for a in catalogo_automacoes %}
     {% set existentes = (automacoes|selectattr('definicao', 'equalto', a.id)|list) + (automacoes_legadas|selectattr('definicao', 'equalto', a.id)|list) %}
-    {% if not a.legada %}
-    <div class="auto-linha"><span class="auto-simbolo">{{ icone(a.icone, 18) }}</span><span class="auto-nome"><span class="auto-titulo"><b>{{ a.nome }}</b>{{ ajuda(a.ajuda, 'ajuda-catalogo-' ~ loop.index, a.nome) }}</span><small>{{ a.descricao }}</small>{% if existentes %}<small>{{ existentes|length }} {{ 'configuração' if existentes|length == 1 else 'configurações' }}</small>{% endif %}</span>
-      {% if existentes and not automacoes_na_pasta %}<button class="botao pequeno so-icone" type="button" data-auto-escolher="{{ a.id }}" aria-label="Escolher configuração de {{ a.nome }}" title="Configurar">{{ icone('ajustes', 16) }}</button>{% endif %}
-      <button class="botao pequeno" type="button" data-auto-adicionar="{{ a.id }}" aria-label="Adicionar {{ a.nome }}">{{ icone('mais', 14) }} Adicionar</button>
-    </div>
-    {% endif %}
+    {% if not a.legada and (not automacoes_na_pasta or not existentes) %}{{ opcao(a, existentes, 'disponivel-' ~ loop.index) }}{% endif %}
     {% endfor %}
+    {% if automacoes_na_pasta and automacoes_instaladas|length == catalogo_automacoes|rejectattr('legada')|list|length %}<p class="campo-ajuda auto-intro">As automações do catálogo já estão nesta pasta. Abra “Já nesta pasta” para adicionar uma configuração diferente.</p>{% endif %}
+    {% if automacoes_na_pasta and automacoes_instaladas %}
+    <details class="auto-instaladas"><summary>{{ icone('chevron_dir', 13) }} Já nesta pasta <small>{{ automacoes_instaladas|length }}</small></summary><p class="campo-ajuda">Para fontes ou horários diferentes, adicione outra configuração. As configurações atuais continuam separadas.</p>
+      {% for a in automacoes_instaladas %}
+      {% set existentes = (automacoes|selectattr('definicao', 'equalto', a.id)|list) + (automacoes_legadas|selectattr('definicao', 'equalto', a.id)|list) %}
+      {{ opcao(a, existentes, 'instalada-' ~ loop.index, true) }}
+      {% endfor %}
+    </details>
+    {% endif %}
   </div>
   {% if not automacoes_na_pasta %}
   {% set antigas = (automacoes|selectattr('definicao', 'equalto', 'tarefas/agenda_ics.py')|list) + (automacoes_legadas|selectattr('definicao', 'equalto', 'tarefas/agenda_ics.py')|list) %}

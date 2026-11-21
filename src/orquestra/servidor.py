@@ -1439,6 +1439,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         dados = await corpo_json(request, contratos.AtualizarColetor)
         return await asyncio.to_thread(automacoes.atualizar_codigo_legado, painel, **dados)
 
+    @app.post("/api/automacoes/legado/remover")
+    async def api_remover_automacao_legada(request: Request):
+        dados = await corpo_json(request, contratos.RemoverColetor)
+        await asyncio.to_thread(automacoes.remover_legada, painel, **dados)
+        return {"ok": True}
+
     @app.post("/api/automacoes/prever")
     async def api_prever_automacao(request: Request):
         dados = await corpo_json(request, contratos.PreviaAutomacao)

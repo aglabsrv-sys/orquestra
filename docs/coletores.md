@@ -27,6 +27,13 @@ agenda** para consultar compromissos sem criar tarefas.
 
 Na aba **Máquina** de cada módulo, **Adicionar** escolhe uma automação para aquela
 pasta. **Configurar** abre o mesmo painel lateral e salvar mantém você no módulo.
+As automações já instaladas ficam em **Já nesta pasta**, fora das opções disponíveis.
+Use **Adicionar outra configuração** nessa seção quando precisar de fontes ou
+horários diferentes; cada configuração continua identificada pelo nome.
+**Remover**, no cartão ou no formulário, encerra o agendamento e retira apenas a
+configuração escolhida, inclusive nas automações originais. As notas e o código
+continuam no vault. As opções atuais do catálogo voltam à lista disponível
+depois que sua última configuração for removida da pasta.
 Esc fecha o painel; se o seletor de pastas estiver aberto, primeiro fecha o seletor.
 Em **Pastas**, o botão de raio abre o catálogo com a pasta atual selecionada.
 

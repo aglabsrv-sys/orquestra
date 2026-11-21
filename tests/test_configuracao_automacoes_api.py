@@ -11,6 +11,23 @@ def local(cliente):
     return {"X-Orquestra-Local": cliente.get("/api/local/capacidade").json()["token"]}
 
 
+def test_remocao_original_por_api_retorna_ao_catalogo_sem_apagar_notas(cliente, vault):
+    dados = cliente.get("/api/automacoes/catalogo").json()
+    atual = next(a for a in dados["legadas"] if a["definicao"] == "radar/rss.py")
+    antes = {p: p.read_bytes() for p in (vault / "radar").rglob("*") if p.is_file() and p.name != "_modulo.yaml"}
+    pedido = {**atual["legado"], "versao": atual["versao"]}
+    for invalida in ("antiga", "á" * 64):
+        assert cliente.post("/api/automacoes/legado/remover", json={**pedido, "versao": invalida}).status_code == 400
+    assert cliente.post("/api/automacoes/legado/remover", json=pedido).status_code == 200
+    pagina = cliente.get("/m/radar?aba=maquina")
+    assert pagina.status_code == 200
+    assert 'data-auto-id="legado:radar:rss.py"' not in pagina.text
+    assert 'aria-label="Adicionar Blogs e newsletters"' in pagina.text
+    assert 'aria-label="Adicionar outra configuração de Blogs e newsletters"' not in pagina.text
+    assert 'Abrir pasta</a>' not in pagina.text
+    assert all(p.read_bytes() == conteudo for p, conteudo in antes.items())
+
+
 def test_rotina_existente_edita_fontes_sem_mover_notas(cliente, vault):
     dados = cliente.get("/api/automacoes/catalogo").json()
     existente = next(a for a in dados["legadas"] if a["definicao"] == "radar/rss.py")

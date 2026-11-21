@@ -121,7 +121,7 @@
   {% include 'automacoes.html' %}
   {% set nativas = automacoes_legadas|selectattr('codigo_nativo')|map(attribute='legado.script')|list %}
   {% for c in coletores if c.def.script not in nativas %}
-  <div class="coletor" data-modulo="{{ modulo.id }}" data-script="{{ c.def.script }}">
+  <div class="coletor" data-modulo="{{ modulo.id }}" data-script="{{ c.def.script }}" data-versao="{{ modulo.versao }}" data-nome="{{ c.def.nome }}">
     <div class="coletor-info">
       <b>{{ c.def.nome }} <button type="button" class="auto-pergunta" aria-label="Sobre {{ c.def.nome }}" title="{{ c.ajuda|default('Executa uma rotina definida nesta pasta. Use Configurar para escolher as opções.') }}">?</button></b>
       <span class="suave">{{ c.quando }}</span>
@@ -134,6 +134,7 @@
     </div>
     {% set conf = c.confianca|default({}) %}
     <button class="botao" type="button" data-rodar{% if not conf.confiavel %} disabled{% endif %}>{{ icone('tocar', 14) }}<span>Rodar agora</span></button>
+    <button class="botao pequeno discreto" type="button" data-remover-coletor>Remover</button>
     <details class="coletor-confianca" data-confianca='{{ conf|tojson }}'>
       <summary>{{ 'Opções avançadas' if conf.confiavel else 'Permissão para executar' }}</summary>
       {% if not conf.confiavel %}<p>Confira a configuração antes de permitir a execução neste computador.</p>{% endif %}

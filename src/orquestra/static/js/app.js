@@ -1131,6 +1131,15 @@
     $$(".coletor").forEach(function (linha) {
       var dados = { modulo: linha.dataset.modulo, script: linha.dataset.script };
       var rodar = $("[data-rodar]", linha);
+      var remover = $("[data-remover-coletor]", linha);
+      if (remover) remover.onclick = async function () {
+        if (!await confirmar({titulo:"Remover automação?",texto:"Remover “"+(linha.dataset.nome || dados.script)+"” de "+dados.modulo+" e encerrar seu agendamento. As notas e o código personalizado serão preservados.",confirmar:"Remover"})) return;
+        if (!linha.isConnected) return;
+        var fim = window.OrquestraInterface.ocupado(remover,"Removendo…");
+        try { await api("POST","/api/automacoes/legado/remover",Object.assign({},dados,{versao:linha.dataset.versao}));location.reload(); }
+        catch (erro) { mostrarErro(erro); }
+        finally { fim(); }
+      };
       var revisao = $("[data-confianca]", linha), confiar = $("[data-confiar]", linha);
       if (revisao && confiar) {
         capacidadeLocal().then(function (token) {
