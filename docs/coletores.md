@@ -105,7 +105,7 @@ coletores:
   - script: youtube_rss.py
     nome: Canais do YouTube
     ativo: true              # agenda depois da aprovação local desta versão
-    a_cada: 6h               # 30m, 6h, 1d...   ou   diario_as: "07:00"
+    a_cada: 6h               # 1h, 6h, 1d...   ou   diario_as: "07:00"
     config:
       canais:
         - "@NomeDoCanal"     # também aceita o link do canal ou o ID (UC...)
