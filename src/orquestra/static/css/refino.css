@@ -176,6 +176,26 @@ body.bv { isolation:isolate; }
 .fila { gap:14px; }
 .fila-item { grid-template-columns:minmax(0,1fr) !important; gap:0; border:1px solid var(--borda); border-radius:calc(14px * var(--cantos,1)); overflow:hidden; background:var(--superficie); padding:0; }
 .fila-item .cartao { margin:0; border:0; border-radius:0; background:transparent; box-shadow:none; padding:16px 18px 12px; }
+.cartao-compacto { display:flex; align-items:flex-start; gap:12px; --previa-largura:88px; }
+.cartao-compacto .cartao-conteudo { min-width:0; flex:1; }
+.cartao-compacto .cartao-img { flex:0 0 var(--previa-largura); width:var(--previa-largura); margin:0; border-radius:calc(8px * var(--cantos,1)); }
+.cartao-compacto .cartao-trecho, .radar-resumo { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+.cartao-compacto .cartao-titulo { font-size:14px; }
+.decidir-pagina .cartao-compacto { --previa-largura:144px; }
+.decidir-pagina .cartao-compacto .cartao-img img { object-fit:contain; }
+.radar-lista .cel-titulo { min-width:280px; }
+.radar-lista .radar-titulo { display:flex; align-items:flex-start; gap:12px; }
+.radar-lista .lista-miniatura { width:112px; height:63px; border-radius:calc(8px * var(--cantos,1)); }
+.radar-item-texto { display:grid; gap:4px; min-width:0; }
+.radar-item-texto > span { line-height:1.4; }
+.radar-resumo { font-size:12px; line-height:1.4; font-weight:400; color:var(--texto-suave); }
+@media (max-width:600px) {
+  .decidir-pagina .cartao-compacto { --previa-largura:88px; gap:10px; }
+  .decidir-pagina .fila-item .cartao { padding:12px; }
+  .radar-lista .cel-titulo { min-width:240px; }
+  .radar-lista .lista-miniatura { width:88px; height:50px; }
+  .radar-lista .radar-titulo { gap:10px; }
+}
 .fila-acoes { flex-direction:row; min-width:0; gap:6px; justify-content:flex-start; align-items:center; border-top:1px solid color-mix(in srgb,var(--borda) 60%,transparent); padding:10px 14px; background:color-mix(in srgb,var(--fundo) 30%,transparent); }
 .fila-acoes .botao { flex:0 0 auto; min-height:34px; padding:0 11px; font-size:.75rem; border-radius:calc(8px * var(--cantos,1)); }
 .fila-acoes > a:last-child { margin-left:auto; }

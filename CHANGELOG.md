@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- Entrada abre em Para decidir; clicar novamente no atalho do dock alterna entre
+  decisões e capturas. Prévias das decisões ficam menores, ao lado do texto.
+  Radar sugere a lista com miniaturas compactas, preserva a visão escolhida e
+  apresenta itens sem imagem ou com imagem indisponível como texto.
+
 - Automações limitam fontes, resultados e frequência, compartilham cotas por
   serviço entre pastas e processos e respeitam pausas por bloqueio da fonte.
   Execuções e testes aguardam 30 segundos entre tentativas, com até duas coletas

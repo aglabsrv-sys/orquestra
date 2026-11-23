@@ -75,6 +75,70 @@ def aguardar_vigia(page, vault: Path) -> None:
             marcador.unlink()
 
 
+def jornada_entrada_radar(page, base: str, capturas: Path | None) -> None:
+    """Entrada, miniaturas compactas e imagens indisponíveis, só com dados fictícios."""
+    page.route('https://preview.exemplo.test/indisponivel.png', lambda rota: rota.fulfill(status=404))
+    notas = []
+    for titulo, imagem in (("Vídeo para decidir com prévia compacta", "https://preview.exemplo.test/compacta.png"),
+                           ("Notícia para ler sem imagem", ""),
+                           ("Notícia com imagem indisponível", "https://preview.exemplo.test/indisponivel.png")):
+        resposta = page.request.post(base + '/api/notas', headers={'Origin': base}, data={
+            'modulo': 'radar', 'titulo': titulo,
+            'corpo': 'Resumo fictício para conferir a leitura de notícias e vídeos no Radar.',
+            'campos': {'status': 'novo', 'fonte': 'youtube' if imagem.endswith('compacta.png') else 'rss', 'miniatura': imagem},
+        })
+        assert resposta.status == 200, resposta.text()
+        notas.append({**resposta.json(), 'titulo': titulo})
+    for largura in (1440, 390, 320):
+        page.set_viewport_size({'width': largura, 'height': 960})
+        page.goto(base + '/', wait_until='domcontentloaded')
+        page.locator('.dock-entrada').click()
+        page.wait_for_url('**/entrada?aba=decisoes')
+        expect(page.locator('.entrada-abas [aria-current]')).to_contain_text('Para decidir')
+        page.locator('.dock-entrada').click()
+        page.wait_for_url('**/m/entrada')
+        expect(page.locator('.entrada-abas [aria-current]')).to_contain_text('Capturas')
+        page.locator('.dock-entrada').click()
+        page.wait_for_url('**/entrada?aba=decisoes')
+        page.goto(base + '/entrada?aba=decisoes&modulo=radar', wait_until='domcontentloaded')
+        imagem = page.locator(f'.fila-item[data-rel="{notas[0]["rel"]}"] .cartao-img')
+        imagem.scroll_into_view_if_needed()
+        expect(imagem.locator('img')).to_be_visible()
+        caixa = imagem.bounding_box()
+        assert caixa['width'] <= (144 if largura > 600 else 88) + 1
+        assert caixa['height'] <= 82
+        texto = page.locator(f'.fila-item[data-rel="{notas[0]["rel"]}"] .cartao-conteudo').bounding_box()
+        assert texto['x'] >= caixa['x'] + caixa['width']
+        expect(page.locator(f'.fila-item[data-rel="{notas[1]["rel"]}"] .cartao-img')).to_have_count(0)
+        indisponivel = page.locator(f'.fila-item[data-rel="{notas[2]["rel"]}"]')
+        indisponivel.scroll_into_view_if_needed()
+        expect(indisponivel.locator('.cartao-img')).to_have_count(0)
+        conferir_layout(page)
+        if capturas:
+            page.locator('.entrada-topo').scroll_into_view_if_needed()
+            page.screenshot(path=str(capturas / f'entrada-decidir-compacta-{largura}.png'), full_page=True)
+        page.goto(base + '/m/radar', wait_until='domcontentloaded')
+        expect(page.locator('.radar-lista')).to_be_visible()
+        expect(page.locator('.abas .aba[aria-current]')).to_contain_text('Lista')
+        linha = page.locator('.radar-lista tr').filter(has_text=notas[0]['titulo'])
+        expect(linha.locator('.lista-miniatura')).to_be_visible()
+        expect(linha.locator('.radar-resumo')).to_contain_text('Resumo fictício')
+        expect(page.locator('.radar-lista tr').filter(has_text=notas[1]['titulo']).locator('img')).to_have_count(0)
+        indisponivel = page.locator('.radar-lista tr').filter(has_text=notas[2]['titulo'])
+        indisponivel.scroll_into_view_if_needed()
+        expect(indisponivel.locator('img')).to_have_count(0)
+        conferir_layout(page)
+        if capturas:
+            page.locator('.cab-modulo').scroll_into_view_if_needed()
+            page.screenshot(path=str(capturas / f'radar-lista-compacta-{largura}.png'), full_page=True)
+        # A sugestão inicial não substitui a preferência explícita da pessoa.
+        page.goto(base + '/m/radar?aba=v0', wait_until='domcontentloaded')
+        expect(page.locator('.quadro .cartao-compacto').first).to_be_visible()
+        page.goto(base + '/m/radar', wait_until='domcontentloaded')
+        expect(page.locator('.quadro')).to_be_visible()
+        page.goto(base + '/m/radar?aba=v1', wait_until='domcontentloaded')
+
+
 def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
     """Adição, remoção, seleção da configuração e teclado, sem coletar na rede."""
     def salvar():
@@ -97,6 +161,7 @@ def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
         'campos': {'miniatura': 'https://preview.exemplo.test/video.png', 'fonte': 'youtube'},
     })
     assert resposta.status == 200, resposta.text()
+    jornada_entrada_radar(page, base, capturas)
     resposta = page.request.post(base + '/api/modulos', headers={'Origin': base}, data={'pronto': 'projetos', 'exemplos': True})
     assert resposta.status == 200, resposta.text()
     for largura in (1440, 390, 320):
@@ -232,6 +297,7 @@ def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
         page.goto(base + '/m/projetos?aba=v0', wait_until='domcontentloaded')
         pasta = page.locator('a[href*="abrir="]').first
         pasta.click()
+        expect(page.locator('.pasta-dentro')).to_be_visible()
         page.locator('[data-pasta-ajustes]').click()
         expect(page.locator('#pasta-ajustes'), str(erros)).to_be_visible()
         page.locator('[data-abrir-capas]').click()

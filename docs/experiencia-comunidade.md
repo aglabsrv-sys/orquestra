@@ -16,6 +16,16 @@ As notas anteriores são preservadas, sem migração ou resumo automático.
 uma segunda lista de tarefas. Entrada é sua captura rápida; suas visões não precisam
 de uma aba Humano adicional. O arquivo continua no vault, mesmo sem a aba.
 
+O atalho **Entrada** abre primeiro **Para decidir**, reunindo as pendências dos
+módulos. Clicar novamente no mesmo atalho alterna com **Capturas**, quando essa
+área estiver disponível. As duas seções também ficam nas abas da Entrada.
+As imagens das decisões aparecem como prévias pequenas ao lado do texto.
+
+O **Radar** sugere a lista para leitura de notícias e vídeos. Quando há imagem,
+ela aparece como miniatura lateral; sem imagem ou quando ela estiver indisponível,
+o item segue como texto. A Triagem continua disponível com cartões compactos,
+e a escolha da visão é lembrada sem alterar a configuração das suas pastas.
+
 Áreas é parte do método PARA: saúde, família, finanças, responsabilidades contínuas.
 Não é igual a um hábito. Para Academia 3×/semana, use Hábitos e metas, com exemplos
 opcionais e check-in diário. Um registro não marcado não é inventado pelo agente.
