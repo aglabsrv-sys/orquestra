@@ -9,6 +9,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
+from types import SimpleNamespace
 
 import pytest
 
@@ -119,11 +120,11 @@ def test_download_tem_limite_mesmo_sem_tamanho_confiavel(pasta, monkeypatch):
             leituras.append(tamanho)
             return super().read(tamanho)
 
-    monkeypatch.setattr(modulo.urllib.request, "urlopen", lambda *args, **kwargs: Resposta(b"a" * 32))
+    monkeypatch.setattr(modulo.limites.urllib.request, "build_opener", lambda *args: SimpleNamespace(open=lambda *a, **kw: Resposta(b"a" * 32)))
     with pytest.raises(ValueError, match="limite de 8 MB"):
         modulo.baixar("https://example.test/feed")
     assert leituras == [9]
-    monkeypatch.setattr(modulo.urllib.request, "urlopen", lambda *args, **kwargs: Resposta(b"a" * 8))
+    monkeypatch.setattr(modulo.limites.urllib.request, "build_opener", lambda *args: SimpleNamespace(open=lambda *a, **kw: Resposta(b"a" * 8)))
     assert modulo.baixar("https://example.test/feed") == b"a" * 8
 
 

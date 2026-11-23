@@ -13,11 +13,19 @@ import json
 import os
 import socket
 import sys
-import urllib.request
+
+try:
+    import _orquestra_limites as limites
+except ModuleNotFoundError:
+    from orquestra import limites_coleta as limites
 
 CONFIG = json.loads(os.environ.get("ORQUESTRA_CONFIG") or "{}")
 NAVEGADOR = {"User-Agent": "Mozilla/5.0 (compatible; coletor-rss)", "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"}
 LIMITE_DOWNLOAD = 8 * 1024 * 1024
+try:
+    limites.validar_config(CONFIG)
+except ValueError as erro:
+    raise SystemExit(str(erro)) from None
 
 # Em muitas redes o IPv6 está anunciado, mas não funciona. O Python tenta IPv6
 # primeiro e fica esperando até desistir (dezenas de segundos por endereço).
@@ -38,13 +46,11 @@ except (AttributeError, ValueError):
 
 
 def baixar(url: str, tempo: int = 20) -> bytes:
-    with urllib.request.urlopen(urllib.request.Request(url, headers=NAVEGADOR), timeout=tempo) as resposta:
-        # Não confiar no tamanho informado: respostas sem Content-Length ou
-        # com comprimento incorreto também precisam permanecer limitadas.
-        dados = resposta.read(LIMITE_DOWNLOAD + 1)
-        if len(dados) > LIMITE_DOWNLOAD:
-            raise ValueError("A resposta da fonte excede o limite de 8 MB.")
-        return dados
+    try:
+        return limites.baixar(url, tempo, headers=NAVEGADOR, limite=LIMITE_DOWNLOAD)
+    except limites.LimiteColeta as erro:
+        # Interrompe todas as fontes desta coleta, inclusive laços com except Exception.
+        raise SystemExit(str(erro)) from None
 
 
 def emitir(id: str, titulo: str, corpo: str = "", **campos) -> None:

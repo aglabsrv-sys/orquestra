@@ -18,9 +18,9 @@ import json
 import os
 import sys
 import urllib.parse
-import urllib.request
+from _comum import CONFIG, baixar
 
-config = json.loads(os.environ.get("ORQUESTRA_CONFIG") or "{}")
+config = CONFIG
 chave = os.environ.get("YOUTUBE_API_KEY", "")
 canal = str(config.get("canal") or "").strip()
 
@@ -33,8 +33,7 @@ filtro = {"forHandle": canal} if canal.startswith("@") else {"id": canal}
 url = "https://www.googleapis.com/youtube/v3/channels?" + urllib.parse.urlencode(
     {"part": "statistics", "key": chave, **filtro}
 )
-with urllib.request.urlopen(url, timeout=30) as resposta:
-    dados = json.load(resposta)
+dados = json.loads(baixar(url, tempo=30))
 
 if not dados.get("items"):
     sys.exit(f"Canal não encontrado: {canal}")

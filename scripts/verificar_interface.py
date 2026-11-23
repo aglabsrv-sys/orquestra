@@ -115,11 +115,14 @@ def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
         lateral = page.locator('#automacao-dialogo')
         expect(lateral).to_be_visible()
         assert '/m/radar' in page.url
+        expect(page.locator('#automacao-limites')).to_contain_text('Intervalo mínimo: 1h')
+        expect(page.locator('#automacao-limites')).to_contain_text('30 segundos')
         page.get_by_role('button', name='Mais opções', exact=True).click()
         campos = page.locator('#automacao-config-avancada > *').all()
         caixas = [c.bounding_box() for c in campos]
         assert all(b['y'] >= a['y'] + a['height'] - 1 for a, b in zip(caixas, caixas[1:]))
         assert lateral.evaluate('e => e.scrollWidth<=e.clientWidth+1')
+        expect(page.locator('#automacao-config-avancada input[type="number"]')).to_have_attribute('max', '100')
         if capturas:
             page.screenshot(path=str(capturas / f'automacao-opcoes-{largura}.png'))
         page.keyboard.press('Escape')

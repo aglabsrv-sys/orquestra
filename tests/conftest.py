@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +11,18 @@ from fastapi.testclient import TestClient
 from orquestra import backup, cli
 from orquestra.painel import Painel
 from orquestra.servidor import criar_app
+
+
+@pytest.fixture
+def avancar_coletas(monkeypatch):
+    """Avança somente o relógio das cotas em jornadas com execuções consecutivas."""
+    from orquestra import limites_coleta
+    agora = [time.time()]
+    monkeypatch.setattr(limites_coleta, "_agora", lambda: agora[0])
+
+    def avancar():
+        agora[0] += 31
+    return avancar
 
 
 @pytest.fixture(autouse=True)

@@ -217,7 +217,7 @@ def test_regra_recorrente_preserva_tipos_extras(painel, monkeypatch):
     assert nota.meta["tags"] == ["rotina"]
 
 
-def test_recorrencia_real_com_data_na_regra_deduplica_e_aparece_na_agenda(painel):
+def test_recorrencia_real_com_data_na_regra_deduplica_e_aparece_na_agenda(painel, avancar_coletas):
     from orquestra import calendario
 
     hoje = dt.date.today()
@@ -226,6 +226,7 @@ def test_recorrencia_real_com_data_na_regra_deduplica_e_aparece_na_agenda(painel
     ]})
     assert executar(painel, a, previa=True)["total"] == 1
     assert not any(n.meta.get("coletor") == "recorrentes" for n in painel.indice.notas.values())
+    avancar_coletas()
     assert executar(painel, a)["novos"] == 1
     nota = next(n for n in painel.indice.notas.values() if n.meta.get("coletor") == "recorrentes")
     assert str(nota.meta["data"]) == hoje.isoformat()
@@ -236,6 +237,7 @@ def test_recorrencia_real_com_data_na_regra_deduplica_e_aparece_na_agenda(painel
     gravar_nota(nota, versao_esperada=nota.versao)
     painel.apos_escrita(nota.caminho, "painel")
     antes = nota.caminho.read_bytes()
+    avancar_coletas()
     assert executar(painel, a)["repetidos"] == 1
     assert nota.caminho.read_bytes() == antes
     assert sum(e["rel"] == nota.rel for e in calendario.montar(painel, hoje)["eventos"]) == 1

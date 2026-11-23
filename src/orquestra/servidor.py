@@ -29,7 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException
 
-from orquestra import __version__, adocao, agenda, aparencia, armazenamento, automacoes, backup, coletores, confianca, contratos, diario, graficos, preparo, temas, segredos, vinculos
+from orquestra import __version__, adocao, agenda, aparencia, armazenamento, automacoes, backup, coletores, confianca, contratos, diario, graficos, limites_coleta, preparo, temas, segredos, vinculos
 from orquestra.caminhos import CaminhoInseguro, eh_link, ignorar
 from orquestra.config import ConfigInvalida, ler_yaml
 from orquestra import apresentacao as ap
@@ -1483,7 +1483,8 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_rodar_automacao(request: Request):
         dados = await corpo_json(request, contratos.ExecutarAutomacao)
         resultado = await automacoes.rodar(painel, dados["id"], previa=dados.get("previa", False))
-        return JSONResponse(resultado, status_code=200 if resultado.get("ok", True) else 502)
+        status = 200 if resultado.get("ok", True) else 429 if str(resultado.get("erro", "")).startswith(limites_coleta.PREFIXO) else 502
+        return JSONResponse(resultado, status_code=status)
 
     @app.post("/api/coletores/rodar")
     async def api_rodar_coletor(request: Request):
@@ -1491,7 +1492,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         modulo, coletor = painel.coletor(str(dados.get("modulo") or ""), str(dados.get("script") or ""))
         resultado = await painel.rodar_coletor(modulo, coletor)
         if not resultado.ok:
-            return JSONResponse({"erro": resultado.erro}, status_code=502)
+            return JSONResponse({"erro": resultado.erro}, status_code=429 if resultado.erro.startswith(limites_coleta.PREFIXO) else 502)
         return {"novos": resultado.novos, "repetidos": resultado.repetidos}
 
     @app.post("/api/coletores/ativo")

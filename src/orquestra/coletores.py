@@ -36,7 +36,7 @@ from typing import Any
 
 from ruamel.yaml.comments import CommentedMap
 
-from orquestra import confianca
+from orquestra import confianca, limites_coleta
 from orquestra.caminhos import caminho_no_vault
 from orquestra.config import carregar_env
 from orquestra.indice import Indice
@@ -203,6 +203,14 @@ def _job_windows(processo: subprocess.Popen):
 
 
 def _executar_limitado(comando: list[str], pasta: Path, ambiente: dict[str, str], cancelamento: threading.Event | None = None) -> tuple[bytes, bytes, int, str]:
+    try:
+        with limites_coleta.execucao(ambiente.get("ORQUESTRA_EXECUCAO") or str(pasta)):
+            return _executar_processo(comando, pasta, ambiente, cancelamento)
+    except limites_coleta.LimiteColeta as erro:
+        return b"", b"", 1, str(erro)
+
+
+def _executar_processo(comando: list[str], pasta: Path, ambiente: dict[str, str], cancelamento: threading.Event | None = None) -> tuple[bytes, bytes, int, str]:
     kwargs: dict[str, Any] = {"start_new_session": True} if os.name != "nt" else {
         "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
     }
@@ -333,6 +341,12 @@ def _rodar_autorizado(vault: Path, modulo: Modulo, coletor: ColetorDef, cancelam
                 destino.parent.mkdir(parents=True, exist_ok=True)
                 destino.write_bytes(dados)
             script = pasta / Path(estado["caminho"]).relative_to(Path(modulo.id) / "maquina" / "coletores")
+            limites_coleta.validar_config(estado["config"])
+            if coletor.a_cada and coletor.script in {"rss.py", "youtube_rss.py", "youtube_api.py", "google_trends.py", "youtube_canal.py", "cotacoes.py", "github_repo.py", "agenda_ics.py"}:
+                minimo = limites_coleta.minimo_intervalo(coletor.script)
+                if (intervalo_em_segundos(coletor.a_cada) or 0) < minimo:
+                    return [], f"Use um intervalo de pelo menos {minimo // 3600}h nesta automação."
+            limites_coleta.preparar_snapshot(script.parent, ambiente, str(vault.resolve()) + "/" + modulo.id + "/" + coletor.script)
             uv = shutil.which("uv")
             comando = [uv, "run", "--quiet", "--no-project", "--script", str(script)] if uv else [sys.executable, str(script)]
             if cancelamento.is_set():
