@@ -13,6 +13,30 @@ sem substituir as regras existentes. Notas anteriores de `humano/` e
 `PREFERENCIAS.md` ficam vinculadas nessa central, sem migração ou cópia do texto.
 Não é necessário manter preferências em arquivos diferentes para cada agente.
 
+### O que a IA lê em cada momento
+
+Em uma conversa nova, o agente lê as instruções gerais completas. Depois, lê o
+schema, as observações anteriores e os aprendizados somente das áreas envolvidas
+no pedido. Ao passar para outra área, consulta o contexto dela. Não precisa abrir
+todas as pastas, nem depender de uma lembrança de outra conversa.
+
+Pelo MCP, `regras` entrega os contratos e o texto de `PREFERENCIAS.md`, se esse
+arquivo anterior existir. `contexto_area` também entrega essas instruções no
+campo `instrucoes`, além do contexto local em `documentos`. Na mesma conversa,
+o agente pode informar `versao_instrucoes` já lida: o servidor confere os arquivos
+atuais e omite o texto geral se continuar igual. Se houver mudança, devolve as
+gerais completas. Observações e aprendizados locais vêm atualizados em cada
+consulta, com paginação quando necessário. Se o agente perder o texto do contexto,
+deve consultar de novo sem informar versão. O MCP fornece o conteúdo; cabe ao
+cliente e ao agente consultá-lo e segui-lo.
+
+Com acesso direto, o fluxo é o mesmo: ler `AGENTS.md` e seu suplemento quando
+existente, e então os arquivos relevantes da área. Clientes que não usam MCP
+precisam reler os arquivos para perceber mudanças. `CLAUDE.md` aponta para
+`AGENTS.md` no modelo distribuído; não é outra cópia das preferências. Contratos
+personalizados existentes continuam preservados. As observações específicas
+valem na área mencionada; se houver um conflito real, o agente pede esclarecimento.
+
 Você pode trocar de agente mantendo a mesma pasta. Ao usar mais de um, separe as
 notas em que cada um trabalha: editores e agentes externos não participam dos
 locks do Orquestra.

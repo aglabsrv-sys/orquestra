@@ -5,7 +5,8 @@ pessoa. O "banco de dados" são arquivos markdown com frontmatter YAML. Um paine
 web (Orquestra) lê e edita os mesmos arquivos, e a pessoa também os abre no
 Obsidian. Tudo que você grava aqui aparece para ela na hora.
 
-Leia este arquivo inteiro antes de alterar qualquer coisa.
+Leia este arquivo inteiro em cada conversa nova ou após perder o contexto, antes
+de alterar qualquer coisa. Não presuma lembrar as instruções de outra conversa.
 
 Se estas regras estiverem em `AGENTS.orquestra.md`, leia também o `AGENTS.md`
 original. Este complemento não substitui as políticas da pessoa: mantenha as
@@ -23,7 +24,10 @@ ela; se não houver um, informe a pendência antes de criar esses registros aqui
    relevante sem copiar seu conteúdo para outra nota. Não crie novas camadas de preferências.
    Descubra as áreas e a captura configurada em `orquestra.yaml`. Leia o schema,
    as instruções e os aprendizados das áreas em que vai trabalhar e o contexto
-   humano necessário ao pedido.
+   humano necessário ao pedido. Não abra todas as áreas sem necessidade. Ao
+   mudar de área, leia o contexto dela; na mesma conversa, confira mudanças antes
+   de reutilizar instruções já lidas. Uma observação específica vale na área
+   mencionada; diante de conflito real, peça esclarecimento.
 3. Confira perguntas já respondidas e pendências relacionadas ao pedido. Uma
    resposta vale para o item e a ação a que se refere; não amplia sua autorização.
 4. Antes de criar um item ou aprendizado, procure um equivalente existente.
@@ -38,6 +42,14 @@ Esses passos valem tanto para acesso direto aos arquivos quanto pelo MCP. Se
 alternar entre os dois, use o mesmo vault e registre uma única sessão ao terminar.
 As ferramentas do MCP validam suas operações; a escrita direta depende de você
 seguir este contrato e não participa dos locks do aplicativo.
+
+Pelo MCP, `regras` entrega os contratos e preferências gerais completos.
+`contexto_area` entrega essas gerais em `instrucoes` e somente os documentos
+locais da área escolhida em `documentos`. Para evitar repetir gerais já lidas
+nesta conversa, passe `versao_instrucoes`: se os arquivos mudarem, o texto volta
+completo. Use essa versão somente enquanto ainda tiver o texto no contexto;
+em uma conversa nova, consulte sem versão. Complete páginas e textos locais
+limitados antes de agir. Com acesso direto, confira os arquivos no disco.
 
 ## Mapa
 
@@ -75,7 +87,7 @@ Use `anotar_realizacao` no MCP. Preserve a descrição e as marcações do hábi
 
 ## Regras que não têm exceção
 
-1. **`humano/` é da pessoa.** Leia sempre, nunca reescreva, resuma nem "melhore" o
+1. **`humano/` é da pessoa.** Leia o contexto das áreas relevantes, nunca reescreva, resuma nem "melhore" o
    que está lá. Se precisar registrar algo novo que ela disse, acrescente ao final
    da nota um bloco iniciado por `> Acrescentado por agente em AAAA-MM-DD:`.
 2. **Nunca trate um resumo seu como fala dela.** O que você escreve vai em itens
@@ -243,8 +255,9 @@ sincronizada. A assinatura iCal da Agenda é somente leitura, não gera tarefas 
 deve ser copiada para itens por um agente sem pedido explícito.
 
 Coletores são scripts (sem IA) que buscam informação de fora e gravam itens com
-`origem: coletor`. O seu papel é o critério, não a coleta: leia o `humano/` do módulo
-para saber o que interessa à pessoa e faça a triagem como o `maquina/instrucoes.md`
+`origem: coletor`. O seu papel é o critério, não a coleta: leia as orientações gerais
+e o contexto anterior do módulo, quando existir, para saber o que interessa à pessoa.
+Faça a triagem como o `maquina/instrucoes.md`
 mandar. Não rode coletores por conta própria nem invente itens "coletados".
 
 Se o vault tiver o módulo `numeros`, cada dia é uma nota (`AAAA-MM-DD.md`) e cada
@@ -274,7 +287,7 @@ Ao usar `registrar_sessao` pelo MCP, não duplique o mesmo relato manualmente.
 ## Estender o sistema
 
 - **Novo módulo:** crie a pasta, um `_modulo.yaml` (copie o de outro módulo como base),
-  as subpastas `itens/`, `humano/`, `maquina/`, um `maquina/instrucoes.md` e um
+  as subpastas `itens/` e `maquina/`, um `maquina/instrucoes.md` e um
   `maquina/aprendizados.md`. O painel detecta sozinho. Ícones disponíveis: inicio,
   check, video, radar, entrada, sino, pulso, lampada, calendario, moeda, livro,
   grafico, estrela, relogio, pessoas, raio, coracao, nota, pasta, caixa, casa.

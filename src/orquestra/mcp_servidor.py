@@ -19,12 +19,13 @@ mudanças na hora, porque os dois trabalham nos mesmos arquivos.
 from __future__ import annotations
 
 import datetime as dt
+import json
 from dataclasses import asdict
 from functools import wraps
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
-from orquestra import calendario, diario
+from orquestra import armazenamento, calendario, diario, instrucoes
 from orquestra.caminhos import CaminhoInseguro, caminho_no_vault, ignorar
 from orquestra.indice import data_de, espera_decisao
 from orquestra.modulos import ValorInvalido, validar
@@ -35,8 +36,11 @@ from orquestra.painel import NaoEncontrado, Painel, Recusado
 AUTOR = "agente:mcp"
 INSTRUCOES = (
     "Este é o vault de trabalho de uma pessoa (notas markdown organizadas em áreas). "
-    "Antes de qualquer outra coisa, chame `regras` e siga o que estiver lá, inclusive a política local de registros. "
-    "Leia `sessoes_recentes` para retomar o trabalho e `contexto_area` antes de agir numa área. "
+    "Em cada conversa nova ou após perder o contexto, chame `regras` e siga o que estiver lá, inclusive a política local de registros. "
+    "Leia `sessoes_recentes` quando precisar retomar trabalho anterior e `contexto_area` antes de agir numa área. "
+    "As instruções gerais vêm completas em regras e contexto_area; na mesma conversa, informe versao_instrucoes "
+    "já lida para evitar repetições. Se mudarem no disco, o texto atualizado volta automaticamente. "
+    "Não dependa de memória entre conversas e não leia todas as pastas sem necessidade. "
     "Use `panorama` para organizar pendências, `revisar_organizacao` para conferir inconsistências e "
     "`conexoes_nota` para consultar referências e backlinks. Essas consultas não alteram arquivos nem decidem prioridades. "
     "A agenda local já reúne itens datados; `conexoes_agenda` explica as fontes. Uma tarefa com data não precisa de cópia em agenda. "
@@ -134,19 +138,46 @@ class Ferramentas:
 
     # ------------------------------------------------------------ leitura
 
-    @_sincronizado
-    def regras(self) -> str:
-        """Leia primeiro. Devolve o contrato do vault (AGENTS.md) e as áreas que existem, com os campos de cada uma."""
-        self._em_dia()
-        vault = self.painel.vault
-        partes = []
+    def _instrucoes(self, versao_lida: str = "") -> dict[str, Any]:
+        """Entrega as fontes gerais atuais, sem gravar cópias nem manter cache de sessão."""
+        documentos = []
         for nome in ("AGENTS.md", "AGENTS.orquestra.md"):
             try:
-                arquivo = caminho_no_vault(vault, nome)
+                arquivo = caminho_no_vault(self.painel.vault, nome)
+                with arquivo.open("rb") as entrada:
+                    dados = entrada.read(instrucoes.LIMITE + 1)
+            except FileNotFoundError:
+                continue
             except CaminhoInseguro:
                 raise ErroDeFerramenta("O contrato do vault não pode ser um link ou junction.") from None
-            if arquivo.is_file():
-                partes.append(arquivo.read_text(encoding="utf-8-sig", errors="replace"))
+            if len(dados) > instrucoes.LIMITE:
+                raise ErroDeFerramenta(f"{nome} excede 512 KB. Revise o contrato antes de continuar.")
+            try:
+                texto = dados.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                raise ErroDeFerramenta(f"Salve {nome} em UTF-8 antes de continuar.") from None
+            documentos.append({"caminho": nome, "versao": armazenamento.versao(dados), "texto": texto})
+        # A central reaproveita este arquivo em vaults antigos; ele também precisa vir na primeira leitura.
+        for nota in self.painel.indice.notas.values():
+            if nota.rel.casefold() == "preferencias.md":
+                self._conferir_nota(nota)
+                if nota.erro or len(nota.corpo.encode("utf-8")) > instrucoes.LIMITE:
+                    raise ErroDeFerramenta("Revise PREFERENCIAS.md: use Markdown válido em UTF-8, com até 512 KB de texto.")
+                documentos.append({"caminho": nota.rel, "versao": nota.versao, "texto": nota.corpo})
+        fontes = [{"caminho": d["caminho"], "versao": d["versao"]} for d in documentos]
+        versao = armazenamento.versao(json.dumps(
+            [str(self.painel.vault), fontes], ensure_ascii=False, sort_keys=True,
+        ).encode("utf-8"))
+        return {"versao": versao, "alteradas": versao != versao_lida, "fontes": fontes,
+                "documentos": documentos if versao != versao_lida else []}
+
+    @_sincronizado
+    def regras(self) -> str:
+        """Em cada conversa nova: contratos, preferências gerais e áreas. Retorna a versão para contexto_area."""
+        self._em_dia()
+        gerais = self._instrucoes()
+        partes = [f"# Fonte: {d['caminho']}\n\n{d['texto']}" for d in gerais["documentos"]]
+        partes.append(f"\n# Versão das instruções gerais\nversao_instrucoes: {gerais['versao']}\n")
         partes.append("# Áreas deste vault\n")
         for area in self.listar_areas(_ja_em_dia=True):
             campos = "; ".join(
@@ -155,8 +186,12 @@ class Ferramentas:
             partes.append(f"- **{area['id']}** ({area['nome']}): {area['descricao']} Campos: {campos or 'nenhum'}.")
         partes.append(
             "\n# Central de instruções\nAs orientações gerais e observações dos módulos ficam em AGENTS.md. "
-            "Notas anteriores de PREFERENCIAS.md e humano/ são fontes vinculadas, sem cópia de conteúdo; "
-            "contexto_area reúne as fontes gerais e da área quando existirem. Não crie novas camadas de preferências. "
+            "PREFERENCIAS.md, quando existente, já foi incluído acima; humano/ é contexto anterior vinculado à área. "
+            "Antes de agir numa área, consulte contexto_area para receber apenas o contexto local relevante e conferir as gerais. "
+            "Na mesma conversa, passe versao_instrucoes somente se o texto correspondente ainda estiver no contexto. "
+            "Uma versão diferente devolve as gerais completas; uma conversa nova começa sem versão. "
+            "As preferências específicas valem no seu escopo; diante de conflito real, peça esclarecimento, sem inventar precedência. "
+            "Não crie novas camadas de preferências nem leia as instruções de todas as pastas sem necessidade. "
             "Mantenha o texto da pessoa intacto.\n"
             "\n# Agenda local\n" + calendario.conexoes(self.painel)["orientacao"] + "\n"
             "\n# Projetos, tarefas e decisões\n" + mcp_organizacao.ORIENTACAO_TRABALHO + "\n"
@@ -283,14 +318,16 @@ class Ferramentas:
         return [self._resumo(n) for n in self.painel.indice.notas.values() if self._visivel(n) and str(n.meta.get("resposta") or "").strip()]
 
     @_sincronizado
-    def contexto_area(self, area: str, limite: int = 10, deslocamento: int = 0) -> dict[str, Any]:
-        """Antes de trabalhar: schema, pasta dos itens e contexto humano/máquina, incluindo aprendizados.
+    def contexto_area(self, area: str, limite: int = 10, deslocamento: int = 0,
+                      versao_instrucoes: str = "") -> dict[str, Any]:
+        """Antes de agir na área: instruções gerais, schema e contexto local, incluindo aprendizados.
 
-        Documentos paginados (até 20 por chamada), com até 4000 caracteres por texto.
-        Complete as páginas e use ler_nota para textos limitados; leia regras e sessoes_recentes também.
+        Gerais completas em instrucoes; passe versao_instrucoes já lida nesta conversa para omitir texto inalterado.
+        Nunca reutilize versão sem o texto correspondente no contexto. Mudanças devolvem as gerais completas.
+        Documentos locais paginados (até 20), com 4000 caracteres; complete com ler_nota se limitados.
         """
         self._em_dia()
-        return mcp_organizacao.contexto_area(self, area, limite, deslocamento)
+        return mcp_organizacao.contexto_area(self, area, limite, deslocamento, versao_instrucoes)
 
     @_sincronizado
     def panorama(self, area: str = "", dias: int = 7, limite: int = 20, deslocamento: int = 0) -> dict[str, Any]:
