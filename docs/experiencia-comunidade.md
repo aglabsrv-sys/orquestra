@@ -21,10 +21,10 @@ módulos. Clicar novamente no mesmo atalho alterna com **Capturas**, quando essa
 área estiver disponível. As duas seções também ficam nas abas da Entrada.
 As imagens das decisões aparecem como prévias pequenas ao lado do texto.
 
-O **Radar** sugere a lista para leitura de notícias e vídeos. Quando há imagem,
-ela aparece como miniatura lateral; sem imagem ou quando ela estiver indisponível,
-o item segue como texto. A Triagem continua disponível com cartões compactos,
-e a escolha da visão é lembrada sem alterar a configuração das suas pastas.
+A seção **Radar dentro de Para decidir** apresenta notícias e vídeos com uma
+prévia pequena ao lado do texto. Sem imagem ou quando ela estiver indisponível,
+o item segue como texto. O módulo **Radar** mantém sua apresentação habitual
+em Lista e Triagem (colunas), e a escolha da visão continua sendo lembrada.
 
 Áreas é parte do método PARA: saúde, família, finanças, responsabilidades contínuas.
 Não é igual a um hábito. Para Academia 3×/semana, use Hábitos e metas, com exemplos

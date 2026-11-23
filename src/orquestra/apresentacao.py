@@ -269,7 +269,6 @@ def cartao(nota: Nota, modulo: Modulo | None, hoje: dt.date, omitir: str | None 
         "concluido": False,
         "com_aviso": bool(nota.erro),
         "modulo": modulo.id if modulo else "",
-        "trecho": trecho(nota, 140) if modulo and modulo.id == "radar" else "",
     }
     if modulo is None:
         return c
