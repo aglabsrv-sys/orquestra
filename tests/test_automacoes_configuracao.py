@@ -87,8 +87,8 @@ def test_editar_fontes_legadas_preserva_notas_codigo_e_demais_coletores(painel):
     codigo = (modulo.pasta / "maquina/coletores/rss.py").read_bytes()
     notas = {n.rel: n.versao for n in painel.indice.notas.values()}
     config = {**atual["config"], "feeds": ["https://example.test/pesquisa.atom"]}
-    resultado = automacoes.atualizar_legada(painel, "radar", "rss.py", config, nome="Pesquisa do projeto", a_cada="30m", versao=atual["versao"])
-    assert resultado["config"]["feeds"] == config["feeds"] and resultado["a_cada"] == "30m"
+    resultado = automacoes.atualizar_legada(painel, "radar", "rss.py", config, nome="Pesquisa do projeto", a_cada="1h", versao=atual["versao"])
+    assert resultado["config"]["feeds"] == config["feeds"] and resultado["a_cada"] == "1h"
     assert resultado["destino"] == atual["destino"] and resultado["id"] == atual["id"]
     assert not resultado["ativo"] and not resultado["confianca"]["confiavel"]
     depois = ler_yaml(caminho)

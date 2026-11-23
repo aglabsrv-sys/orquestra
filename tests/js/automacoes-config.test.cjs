@@ -50,7 +50,7 @@ function pagina({definicao,instancia,responder}={}) {
   entrada.textContent=JSON.stringify({catalogo:[catalogo],instancias:atual.legado?[]:[atual],legadas:atual.legado?[atual]:[],areas:[{id:'outra',nome:'Outra área',destino:'Outro/Pesquisa'}]});
   id('automacao-escolha','dialog');
   ['automacao-escolha-titulo','automacao-escolha-ajuda','automacao-escolha-lista'].forEach(n=>id(n));
-  const ids=['automacao-config','automacao-config-avancada','automacao-mapeamentos','automacao-previa','automacao-previa-destino','automacao-previa-texto','automacao-form-estado','automacao-titulo','automacao-descricao','automacao-segredos','automacao-pasta-nome','automacao-pasta-atual','automacao-pasta-estado','automacao-pasta-lista','automacao-pasta-picker','automacao-horario-campo'];
+  const ids=['automacao-config','automacao-config-avancada','automacao-mapeamentos','automacao-previa','automacao-previa-destino','automacao-previa-texto','automacao-form-estado','automacao-titulo','automacao-descricao','automacao-limites','automacao-segredos','automacao-pasta-nome','automacao-pasta-atual','automacao-pasta-estado','automacao-pasta-lista','automacao-pasta-picker','automacao-horario-campo'];
   ids.concat(['automacao-abas','automacao-regras','automacao-opcoes','automacao-pasta-campo']).forEach(n=>id(n,'div',form));
   ['automacao-nome','automacao-destino','automacao-horario','automacao-ativo'].forEach(n=>id(n,'input',form));
   ['automacao-salvar','automacao-mapear','automacao-pasta-abrir','automacao-pasta-voltar','automacao-pasta-usar'].forEach(n=>id(n,'button',form));
@@ -192,4 +192,17 @@ test('remover configuração independente continua usando sua identidade',async(
   const instancia={id:'pesquisa',definicao:'radar/rss.py',nome:'Pesquisa',destino:'Clientes',config:{feeds:[]},mapeamento:{},a_cada:'',diario_as:'',ativo:false,confianca:{confiavel:true}};
   const p=pagina({instancia});await p.remover.emitir('click');
   assert.deepEqual(p.chamadas[0],{method:'POST',url:'/api/automacoes/remover',corpo:{id:'pesquisa'}});
+});
+
+
+test('limites do catálogo aparecem no formulário e impedem frequência incompatível',async()=>{
+  const definicao={id:'radar/youtube_api.py',nome:'Busca YouTube',ajuda:'Busca por assunto',requer:[],rede:true,intervalo_minimo:21600,config:{termos:['pesquisa'],maximo_por_termo:5},parametros:[{nome:'termos',rotulo:'Assuntos',tipo:'lista',padrao:['pesquisa']},{nome:'maximo_por_termo',rotulo:'Vídeos por busca',tipo:'numero',padrao:5,maximo:50}]};
+  const instancia={id:'auto-1',definicao:definicao.id,nome:'Pesquisa',destino:'Clientes',config:definicao.config,mapeamento:{},a_cada:'6h',diario_as:'',ativo:false,confianca:{confiavel:true}};
+  const p=pagina({definicao,instancia});await p.editar.emitir('click');
+  assert.equal(p.get('automacao-config-avancada').querySelector('input').max,'50');
+  const opcoes=p.get('automacao-frequencia').children;
+  assert.equal(opcoes.find(o=>o.value==='1h').disabled,true);
+  assert.equal(opcoes.find(o=>o.value==='6h').disabled,false);
+  assert.match(p.get('automacao-limites').textContent,/Intervalo mínimo: 6h/);
+  assert.match(p.get('automacao-limites').textContent,/30 segundos/);
 });

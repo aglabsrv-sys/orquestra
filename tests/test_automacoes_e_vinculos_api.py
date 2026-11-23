@@ -29,7 +29,7 @@ def test_catalogo_visivel_sem_areas_e_destinos_reais(cliente, vault):
         assert 'id="automacao-dialogo"' in pagina.text
 
 
-def test_fluxo_automacao_local_sem_escrever_na_previa(cliente, vault):
+def test_fluxo_automacao_local_sem_escrever_na_previa(cliente, vault, avancar_coletas):
     destino = vault / "Projeto" / "Rotinas"
     destino.mkdir(parents=True)
     pedido = {"definicao": "tarefas/recorrentes.py", "destino": "Projeto/Rotinas", "nome": "Rotina do projeto",
@@ -46,8 +46,11 @@ def test_fluxo_automacao_local_sem_escrever_na_previa(cliente, vault):
     teste = cliente.post("/api/automacoes/rodar", json={"id": instancia["id"], "previa": True})
     assert teste.status_code == 200 and teste.json()["total"] == 1, teste.text
     assert not list(destino.glob("*.md"))
+    assert cliente.post("/api/automacoes/rodar", json={"id": instancia["id"]}).status_code == 429
+    avancar_coletas()
     primeira = cliente.post("/api/automacoes/rodar", json={"id": instancia["id"]})
     assert primeira.status_code == 200 and primeira.json()["novos"] == 1
+    avancar_coletas()
     segunda = cliente.post("/api/automacoes/rodar", json={"id": instancia["id"]})
     assert segunda.status_code == 200 and segunda.json()["repetidos"] == 1
     assert len(list(destino.glob("*.md"))) == 1

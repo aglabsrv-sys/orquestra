@@ -109,7 +109,8 @@
     var valor = p.padrao, bloco = criar('fieldset','auto-lista-config');
     if (p.tipo === 'lista') {
       var label = criar('label','campo'), area = criar('textarea'); area.rows = 3; area.maxLength = 30000; area.value = valor.join('\n');
-      label.append(criar('span','',p.rotulo),area,criar('small','campo-ajuda','Um por linha')); bloco.append(label);
+      var maximoItens=p.nome==='termos'?25:50;
+      label.append(criar('span','',p.rotulo),area,criar('small','campo-ajuda','Um por linha. Até '+maximoItens+' itens, sem repetidos.')); bloco.append(label);
       return {el:bloco,ler:function () { return area.value.split('\n').map(function (v) { return v.trim(); }).filter(Boolean); }};
     }
     if (p.tipo === 'mapa') {
@@ -134,7 +135,9 @@
       bloco.append(criar('legend','',p.rotulo),itens,adicionarItem);
       return {el:bloco,ler:function () { return registros.map(function (r) { var obj = Object.assign({},r.original); Object.keys(r.campos).forEach(function (k) { obj[k] = r.campos[k](); }); return obj; }); }};
     }
-    return simples(p.nome,valor,p.rotulo);
+    var campo=simples(p.nome,valor,p.rotulo);
+    if(p.tipo==='numero')$('input',campo.el).max=String(p.maximo||10000);
+    return campo;
   }
   function secaoFormulario(nome) {
     var principal=$('#automacao-regras'), avancada=$('#automacao-opcoes');
@@ -202,6 +205,9 @@
     $('#automacao-frequencia').value = agenda.diario_as ? 'diaria' : agenda.a_cada || 'manual';
     if ($('#automacao-frequencia').selectedIndex < 0) { var opcao = criar('option','','A cada '+agenda.a_cada); opcao.value=agenda.a_cada; opcao.dataset.personalizada='1'; $('#automacao-frequencia').append(opcao); $('#automacao-frequencia').value=agenda.a_cada; }
     $('#automacao-horario').value = agenda.diario_as || '08:00'; frequencia();
+    $$('option',$('#automacao-frequencia')).forEach(function(o){var horas=/^(\d+)h$/.exec(o.value);o.disabled=!!(horas&&Number(horas[1])*3600<selecionada.intervalo_minimo);});
+    var ajudaLimites=$('#automacao-limites');
+    if(ajudaLimites)ajudaLimites.textContent=selecionada.rede?'Intervalo mínimo: '+(selecionada.intervalo_minimo/3600)+'h. As cotas são compartilhadas entre as pastas. Testar ou executar novamente exige uma espera de 30 segundos.':'Até 200 regras e 30 segundos entre execuções.';
     if($('#automacao-ativo'))$('#automacao-ativo').checked=editando?!!editando.ativo:true;
     var recorrente=selecionada.id.endsWith('/recorrentes.py');
     var rotuloAgendamento=$('.auto-agendamento label > span');if(rotuloAgendamento)rotuloAgendamento.textContent=recorrente?'Verificar regras':'Executar';

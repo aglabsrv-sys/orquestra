@@ -82,7 +82,7 @@ def test_devido_por_horario_recupera_o_que_perdeu():
 # ---------------------------------------------------------------- execução
 
 
-def test_coletor_vira_notas_e_nao_duplica(painel, monkeypatch):
+def test_coletor_vira_notas_e_nao_duplica(painel, monkeypatch, avancar_coletas):
     modulo, coletor = instalar_coletor_falso(painel, monkeypatch)
 
     primeira = painel.rodar_coletor_agora(modulo, coletor)
@@ -98,6 +98,7 @@ def test_coletor_vira_notas_e_nao_duplica(painel, monkeypatch):
     assert nota.campo("campo_livre") == "ok"
     assert nota.corpo.strip() == "Resumo 0"
 
+    avancar_coletas()
     segunda = painel.rodar_coletor_agora(modulo, coletor)
     assert (segunda.novos, segunda.repetidos) == (0, 3)
     assert painel.ultima_coleta("radar", "falso.py")["repetidos"] == 3

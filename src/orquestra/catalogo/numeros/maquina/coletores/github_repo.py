@@ -5,7 +5,7 @@
 """Coletor: estrelas e forks de um repositório público do GitHub nos seus Números.
 
 Usa a API pública do GitHub, sem chave (o limite é de 60 consultas por hora, e este
-coletor faz uma por repositório por dia).
+coletor faz uma por repositório por rodada).
 
 Configuração (em numeros/_modulo.yaml):
 

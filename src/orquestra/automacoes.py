@@ -28,7 +28,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from orquestra import armazenamento, coletores, confianca
+from orquestra import armazenamento, coletores, confianca, limites_coleta
 from orquestra.caminhos import arquivos_do_vault, caminho_no_vault, ignorar
 from orquestra.config import carregar_env, gravar_yaml, ler_yaml
 from orquestra.modulos import Campo, ColetorDef, Modulo, carregar_modulo
@@ -48,6 +48,9 @@ _CAMPO = re.compile(r"^[^\W\d][\w-]{0,99}$", re.UNICODE)
 _HELPER_DISTRIBUIDO_ANTERIOR = "bca7d7d4a1600bc082feeafb4c25f0b5157ab3e8c6796b7d24bb6b9708140d1e"
 _RECORRENTES_DISTRIBUIDO_ANTERIOR = "00b908e23fd3812258ac9f45ffd1beb0e1d0d05841f6924a54e73bfba726f7b5"
 _YOUTUBE_RSS_DISTRIBUIDO_ANTERIOR = "57c16eb66853af92cf49a92ecd2d1ae9c6768c6411726beac0df62104d4d8fd8"
+_HELPERS_DISTRIBUIDOS_ANTIGOS = {_HELPER_DISTRIBUIDO_ANTERIOR, "34b4041c8bd5d93fa4e0b4c843479b50d928fc4a932a3b180d2967aa4b3d4d96"}
+_GITHUB_REPO_DISTRIBUIDO_ANTERIOR = "27bf6690d8b9b81491d287870764a9905f15fe5b2bbac7bc464460b8eb385064"
+_YOUTUBE_CANAL_DISTRIBUIDO_ANTERIOR = "0029ac74c731e053a87e83a01a0221ce2f72b80e91fce30fa3d219f90148490c"
 _DESCRICOES = {
     "youtube_rss.py": "Guarda vídeos novos dos canais que você acompanha.",
     "rss.py": "Reúne publicações de feeds RSS e Atom na pasta escolhida.",
@@ -115,7 +118,8 @@ def catalogo() -> list[dict[str, Any]]:
                 "mapa" if isinstance(valor, dict) else "registros" if isinstance(valor, list) and valor and isinstance(valor[0], dict)
                 else "lista" if isinstance(valor, list) else "texto"
             )
-            parametros.append({"nome": nome, "rotulo": _ROTULOS.get(nome, nome.replace("_", " ").capitalize()), "tipo": tipo, "padrao": valor})
+            parametros.append({"nome": nome, "rotulo": _ROTULOS.get(nome, nome.replace("_", " ").capitalize()), "tipo": tipo, "padrao": valor,
+                               "maximo": limites_coleta.maximo_parametro(nome)})
         saida.append({
             "id": identificador, "nome": coletor.nome, "descricao": _DESCRICOES.get(coletor.script, ""),
             "icone": modulo.icone, "config": config, "parametros": parametros,
@@ -124,6 +128,7 @@ def catalogo() -> list[dict[str, Any]]:
             "requer": list(coletor.requer), "rede": coletor.script != "recorrentes.py",
             "tipo": "nota_diaria" if modulo.id == "numeros" else "itens",
             "a_cada": coletor.a_cada, "diario_as": coletor.diario_as,
+            "intervalo_minimo": limites_coleta.minimo_intervalo(identificador),
         })
     return saida
 
@@ -186,6 +191,8 @@ def _alterar(painel: Painel, operacao) -> None:
         instancias = _ler(painel)
         operacao(instancias)
         dados = json.dumps({"versao": 1, "instancias": instancias}, ensure_ascii=False, indent=2, allow_nan=False).encode("utf-8")
+        if len(dados) > LIMITE_CONFIGURACAO_BYTES:
+            raise ErroAutomacao("As configurações de automações excedem 32 MB. Reduza os dados antes de salvar.")
         armazenamento.gravar_bytes(_arquivo(painel), dados, esperado=anterior, validar=lambda: _arquivo(painel))
     painel.mudou_desde_o_backup = True
     painel.eventos.publicar({"tipo": "automacao"})
@@ -249,6 +256,10 @@ def _config(definicao: str, config: dict | None) -> dict:
         raise ErroAutomacao("A configuração contém um valor inválido.") from None
     if tamanho > 100_000:
         raise ErroAutomacao("A configuração está muito grande.")
+    try:
+        limites_coleta.validar_config(resultado)
+    except ValueError as erro:
+        raise ErroAutomacao(str(erro)) from None
     return resultado
 
 
@@ -391,7 +402,7 @@ def prever(painel: Painel, definicao: str, destino: str, config: dict | None = N
             "pasta": str(modulo.pasta.relative_to(painel.vault))}
 
 
-def _regra(a_cada: str | None, diario_as: str | None) -> tuple[str | None, str | None]:
+def _regra(a_cada: str | None, diario_as: str | None, definicao: str = "") -> tuple[str | None, str | None]:
     intervalo, hora = a_cada or None, diario_as or None
     if intervalo and (not coletores.intervalo_em_segundos(intervalo) or coletores.intervalo_em_segundos(intervalo) < 60):
         raise ErroAutomacao("Use um intervalo como 30m, 6h ou 1d.")
@@ -404,6 +415,8 @@ def _regra(a_cada: str | None, diario_as: str | None) -> tuple[str | None, str |
             raise ErroAutomacao("Use um horário válido, como 08:00.") from None
     if intervalo and hora:
         raise ErroAutomacao("Escolha um intervalo ou um horário diário.")
+    if intervalo and definicao and coletores.intervalo_em_segundos(intervalo) < limites_coleta.minimo_intervalo(definicao):
+        raise ErroAutomacao(f"Use um intervalo de pelo menos {limites_coleta.minimo_intervalo(definicao) // 3600}h nesta automação.")
     return intervalo, hora
 
 
@@ -412,7 +425,7 @@ def criar(painel: Painel, definicao: str, destino: str, config: dict | None = No
     _, coletor = _definicao(definicao)
     if a_cada is None and diario_as is None:
         a_cada, diario_as = coletor.a_cada, coletor.diario_as
-    intervalo, hora = _regra(a_cada, diario_as)
+    intervalo, hora = _regra(a_cada, diario_as, definicao)
     instancia = {k: previa[k] for k in ("definicao", "destino", "config", "mapeamento")}
     instancia.update({"id": uuid.uuid4().hex, "nome": str(nome or coletor.nome).strip()[:120], "a_cada": intervalo, "diario_as": hora, "ativo": False})
     def adicionar(instancias):
@@ -430,7 +443,7 @@ def atualizar(painel: Painel, identificador: str, definicao: str, destino: str, 
     _, coletor = _definicao(definicao)
     if a_cada is None and diario_as is None:
         a_cada, diario_as = coletor.a_cada, coletor.diario_as
-    intervalo, hora = _regra(a_cada, diario_as)
+    intervalo, hora = _regra(a_cada, diario_as, definicao)
     instancia = {k: previa[k] for k in ("definicao", "destino", "config", "mapeamento")}
     instancia.update({"id": identificador, "nome": str(nome or coletor.nome).strip()[:120], "a_cada": intervalo, "diario_as": hora, "ativo": False})
     def alterar(instancias):
@@ -511,12 +524,15 @@ def _atualizacoes_codigo(painel: Painel, modulo, definicao: str, *, arquivos_loc
         novo = desejados[nome]
         if atual == novo:
             continue
-        anteriores = {"_comum.py": _HELPER_DISTRIBUIDO_ANTERIOR}
+        anteriores = {"_comum.py": _HELPERS_DISTRIBUIDOS_ANTIGOS}
         if definicao.startswith("tarefas/"):
-            anteriores["recorrentes.py"] = _RECORRENTES_DISTRIBUIDO_ANTERIOR
+            anteriores["recorrentes.py"] = {_RECORRENTES_DISTRIBUIDO_ANTERIOR}
         if definicao.startswith("radar/"):
-            anteriores["youtube_rss.py"] = _YOUTUBE_RSS_DISTRIBUIDO_ANTERIOR
-        if hashlib.sha256(atual.replace(b"\r\n", b"\n")).hexdigest() != anteriores.get(nome):
+            anteriores["youtube_rss.py"] = {_YOUTUBE_RSS_DISTRIBUIDO_ANTERIOR}
+        if definicao.startswith("numeros/"):
+            anteriores["youtube_canal.py"] = {_YOUTUBE_CANAL_DISTRIBUIDO_ANTERIOR}
+            anteriores["github_repo.py"] = {_GITHUB_REPO_DISTRIBUIDO_ANTERIOR}
+        if hashlib.sha256(atual.replace(b"\r\n", b"\n")).hexdigest() not in anteriores.get(nome, set()):
             return None
         mudancas.append((base_local / nome, atual, novo))
     return mudancas
@@ -616,7 +632,7 @@ def prever_legada(painel: Painel, modulo: str, script: str, config: dict | None 
         raise ErroAutomacao("Esta automação contém código personalizado. Revise-a na área de origem antes de executar.")
     if versao and not secrets.compare_digest(versao, atual["versao"]):
         raise ErroAutomacao("As configurações desta pasta mudaram. Atualize a página antes de salvar.")
-    intervalo, hora = _regra(a_cada, diario_as)
+    intervalo, hora = _regra(a_cada, diario_as, atual["definicao"])
     _, original = _definicao(atual["definicao"])
     recebido = config if config is not None else atual["config"]
     if not isinstance(recebido, dict):
@@ -773,6 +789,7 @@ def _comando_catalogo(script: Path) -> list[str]:
 def _executar(painel: Painel, instancia: dict, estado: dict, arquivos: dict[str, bytes]) -> tuple[list[dict], str]:
     if not estado["confiavel"]:
         return [], "Autorize esta versão no próprio computador antes de executar."
+    _regra(instancia.get("a_cada"), instancia.get("diario_as"), instancia["definicao"])
     disponiveis = {**carregar_env(), **os.environ}
     faltam = [k for k in estado["requer"] if not disponiveis.get(k)]
     if faltam:
@@ -799,6 +816,7 @@ def _executar(painel: Painel, instancia: dict, estado: dict, arquivos: dict[str,
                 destino.parent.mkdir(parents=True, exist_ok=True)
                 destino.write_bytes(dados)
             script = pasta / estado["script"]
+            limites_coleta.preparar_snapshot(script.parent, ambiente, str(painel.vault.resolve()) + "/automacao/" + instancia["id"])
             comando = _comando_catalogo(script)
             stdout, stderr, codigo, erro = coletores._executar_limitado(comando, pasta, ambiente, evento)
         if erro or evento.is_set():

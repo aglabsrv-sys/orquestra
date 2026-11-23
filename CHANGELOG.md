@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- Automações limitam fontes, resultados e frequência, compartilham cotas por
+  serviço entre pastas e processos e respeitam pausas por bloqueio da fonte.
+  Execuções e testes aguardam 30 segundos entre tentativas, com até duas coletas
+  simultâneas. Os limites e as pausas ficam no computador, fora do vault.
+
 - Automações originais e adicionadas podem ser removidas da pasta, com confirmação,
   preservando notas e código. O seletor separa as opções disponíveis das já
   instaladas; adicionar outra configuração para fontes ou horários diferentes

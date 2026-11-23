@@ -51,7 +51,7 @@ visoes:
 
 # Coletores: scripts em radar/maquina/coletores/.
 #   ativo: true    roda sozinho no horário (o botão "Rodar agora" funciona sempre)
-#   a_cada: 6h     intervalo (30m, 6h, 1d)   OU   diario_as: "07:00"
+#   a_cada: 6h     intervalo (1h, 6h, 1d)   OU   diario_as: "07:00"
 #   config: ...    o que o script recebe
 coletores:
   - script: youtube_rss.py

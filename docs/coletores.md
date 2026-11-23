@@ -105,7 +105,7 @@ coletores:
   - script: youtube_rss.py
     nome: Canais do YouTube
     ativo: true              # agenda depois da aprovação local desta versão
-    a_cada: 6h               # 30m, 6h, 1d...   ou   diario_as: "07:00"
+    a_cada: 6h               # 1h, 6h, 1d...   ou   diario_as: "07:00"
     config:
       canais:
         - "@NomeDoCanal"     # também aceita o link do canal ou o ID (UC...)
@@ -356,6 +356,56 @@ O servidor limita JSON de entrada a 2 MB. Cada revisão de coletor aceita até
 até 4 MB de saída somada (stdout/stderr) e até 2.000 itens por rodada. Divida
 fontes muito grandes em lotes menores. Esses limites reduzem travamentos e consumo
 acidental; não restringem as permissões de um script aprovado no sistema.
+
+Os coletores do catálogo aceitam até 50 fontes por configuração (25 assuntos de
+busca no YouTube), 200 regras de tarefas e 2.000 resultados estimados por rodada.
+Listas com fontes repetidas são recusadas. Cada feed ou canal produz até 100
+resultados; a busca pela API do YouTube aceita até 50 por assunto. O período da
+importação iCal legada fica limitado a 90 dias à frente.
+Cada configuração aceita até 100 KB de JSON em UTF-8; o arquivo que reúne as
+automações aceita até 32 MB. Uma gravação excessiva é recusada e preserva o
+arquivo anterior.
+
+O intervalo mínimo das fontes de rede é uma hora, ou seis horas para buscas
+pela API do YouTube. Horários diários continuam disponíveis. Configurações antigas
+que excedam esses limites ficam disponíveis para edição, com a execução bloqueada
+até o ajuste; suas fontes e notas não são apagadas.
+
+Testar uma fonte também faz consultas reais. Tanto testes quanto execuções
+aguardam 30 segundos após a tentativa anterior da mesma configuração. Até duas
+coletas podem rodar simultaneamente, inclusive somando outros processos e vaults
+abertos pela mesma instalação no computador. Reservas de processos interrompidos
+são liberadas após 210 segundos; o prazo de execução permanece em 180 segundos.
+
+As cotas abaixo são compartilhadas por todas as pastas e chaves locais, com janela
+móvel e intervalo de pelo menos um segundo entre consultas ao mesmo serviço:
+
+| Serviço | Cota local |
+| --- | --- |
+| GitHub público | 55 consultas por hora |
+| Canais YouTube por RSS e páginas públicas | 120 consultas por hora |
+| Busca pela API do YouTube | 100 consultas em 24 horas |
+| Outros recursos da API do YouTube | 1.000 consultas em 24 horas |
+| Outros sites | 120 consultas por host e hora |
+| Total de todos os serviços | 1.000 consultas por hora |
+
+Cada processo coletor também limita suas consultas a 120, incluindo
+redirecionamentos. Downloads, inclusive métricas do YouTube, são limitados a 8 MB.
+Uma resposta 429 interrompe a rodada inteira, sem continuar consultando as demais
+fontes. O aplicativo respeita `Retry-After` em segundos ou data e, no GitHub, o
+horário de liberação informado por `X-RateLimit-Reset`. Sem prazo informado, a
+pausa cresce de um minuto até uma hora; cota diária esgotada do YouTube pausa as
+consultas afetadas por 24 horas. Não há repetição imediata de uma requisição bloqueada.
+
+Contadores e pausas ficam no registro local de limites, dentro de
+`~/.orquestra/limites-coleta` (ou `ORQUESTRA_HOME`), fora do vault. Reiniciar o painel
+ou adicionar a mesma automação em outra pasta não zera a cota. O registro não guarda
+URLs, termos de busca nem chaves. As cotas do provedor podem incluir outros
+aplicativos e ser menores; o tratamento de bloqueios continua necessário.
+
+Os controles de rede acompanham o ajudante distribuído dos coletores nativos.
+Código personalizado aprovado executa com as permissões da conta e pode usar
+outras bibliotecas de rede; esses controles não são uma sandbox do sistema.
 
 ## Revisar pelo terminal
 
