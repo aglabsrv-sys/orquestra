@@ -525,7 +525,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 lista = next((i for i, v in enumerate(modulo.visoes) if v.tipo == "tabela"), 0)
                 primeira = modulo.visoes[0]
                 valores = {str(n.campo(primeira.agrupar_por)) for n in itens if n.campo(primeira.agrupar_por) not in (None, "")}
-                aba = f"v{lista}" if modulo.id == "radar" or contexto.get("subpastas") or (primeira.tipo == "kanban" and itens and len(valores) < 2) else "v0"
+                aba = f"v{lista}" if contexto.get("subpastas") or (primeira.tipo == "kanban" and itens and len(valores) < 2) else "v0"
             try:
                 indice_visao = max(0, min(int(aba.lstrip("v") or 0), len(modulo.visoes) - 1))
             except ValueError:

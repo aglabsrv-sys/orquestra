@@ -122,23 +122,27 @@ def jornada_entrada_radar(page, base: str, capturas: Path | None) -> None:
         page.evaluate("document.documentElement.dataset.tamanho='xxl';document.documentElement.style.setProperty('--tamanho-fonte','24px')")
         assert titulo.evaluate('e => parseFloat(getComputedStyle(e).fontSize)') > tamanho_padrao
         conferir_layout(page)
-        page.goto(base + '/m/radar', wait_until='domcontentloaded')
-        expect(page.locator('.radar-lista')).to_be_visible()
+        page.goto(base + '/m/radar?aba=v1', wait_until='domcontentloaded')
+        expect(page.locator('.tabela-envolta')).to_be_visible()
         expect(page.locator('.abas .aba[aria-current]')).to_contain_text('Lista')
-        linha = page.locator('.radar-lista tr').filter(has_text=notas[0]['titulo'])
+        linha = page.locator('.tabela tr').filter(has_text=notas[0]['titulo'])
         expect(linha.locator('.lista-miniatura')).to_be_visible()
-        expect(linha.locator('.radar-resumo')).to_contain_text('Resumo fictício')
-        expect(page.locator('.radar-lista tr').filter(has_text=notas[1]['titulo']).locator('img')).to_have_count(0)
-        indisponivel = page.locator('.radar-lista tr').filter(has_text=notas[2]['titulo'])
-        indisponivel.scroll_into_view_if_needed()
-        expect(indisponivel.locator('img')).to_have_count(0)
+        assert linha.locator('.lista-miniatura').bounding_box()['width'] == 72
+        expect(page.locator('.radar-lista, .radar-resumo, .cartao-compacto')).to_have_count(0)
+        expect(page.locator('.tabela tr').filter(has_text=notas[1]['titulo']).locator('img')).to_have_count(0)
         conferir_layout(page)
         if capturas:
             page.locator('.cab-modulo').scroll_into_view_if_needed()
-            page.screenshot(path=str(capturas / f'radar-lista-compacta-{largura}.png'), full_page=True)
-        # A sugestão inicial não substitui a preferência explícita da pessoa.
+            page.screenshot(path=str(capturas / f'radar-modulo-lista-{largura}.png'), full_page=True)
+        # Lista e colunas mantêm o visual anterior e a preferência explícita.
         page.goto(base + '/m/radar?aba=v0', wait_until='domcontentloaded')
-        expect(page.locator('.quadro .cartao-compacto').first).to_be_visible()
+        expect(page.locator('.quadro .cartao').first).to_be_visible()
+        expect(page.locator('.quadro .cartao-compacto, .quadro .cartao-trecho')).to_have_count(0)
+        imagem_quadro = page.locator(f'.quadro .cartao[data-rel="{notas[0]["rel"]}"] .cartao-img')
+        imagem_quadro.scroll_into_view_if_needed()
+        assert imagem_quadro.bounding_box()['width'] > 180
+        if capturas:
+            page.screenshot(path=str(capturas / f'radar-modulo-colunas-{largura}.png'), full_page=True)
         page.goto(base + '/m/radar', wait_until='domcontentloaded')
         expect(page.locator('.quadro')).to_be_visible()
         page.goto(base + '/m/radar?aba=v1', wait_until='domcontentloaded')

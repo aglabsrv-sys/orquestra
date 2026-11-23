@@ -41,17 +41,19 @@ def test_entrada_sem_capturas_nao_alterna_para_area_desligada(cliente):
         assert atalho_entrada(pagina.text) == "/entrada?aba=decisoes"
 
 
-def test_radar_sugere_lista_e_preserva_escolha_de_triagem(cliente):
+def test_radar_mantem_visoes_habituais_e_preserva_escolha(cliente):
     painel = cliente.painel
     painel.criar_nota("radar", "Notícia nova", {"status": "novo"})
     painel.criar_nota("radar", "Referência útil", {"status": "util"})
     pagina = cliente.get("/m/radar")
-    assert pagina.context["visao"].tipo == "tabela"
+    assert pagina.context["visao"].tipo == "kanban"
+    assert cliente.get("/m/radar?aba=v1").context["visao"].tipo == "tabela"
+    assert cliente.get("/m/radar").context["visao"].tipo == "tabela"
     assert cliente.get("/m/radar?aba=v0").context["visao"].tipo == "kanban"
     assert cliente.get("/m/radar").context["visao"].tipo == "kanban"
 
 
-def test_preview_compacto_nas_decisoes_e_no_radar(cliente):
+def test_preview_compacto_fica_somente_nas_decisoes(cliente):
     painel = cliente.painel
     com_imagem = painel.criar_nota("radar", "Vídeo demonstrativo", {"miniatura": "https://example.test/video.jpg", "status": "novo"})
     sem_imagem = painel.criar_nota("radar", "Notícia somente em texto", {"status": "novo"})
@@ -60,8 +62,13 @@ def test_preview_compacto_nas_decisoes_e_no_radar(cliente):
     assert 'data-previa-compacta' in pagina.text
     assert com_imagem.titulo in pagina.text and sem_imagem.titulo in pagina.text
     lista = cliente.get("/m/radar?aba=v1")
-    assert 'radar-lista' in lista.text and 'radar-item-texto' in lista.text
+    assert 'radar-lista' not in lista.text and 'radar-item-texto' not in lista.text
+    assert 'cartao-compacto' not in lista.text and 'data-previa-compacta' not in lista.text
+    assert 'lista-miniatura' in lista.text
     assert com_imagem.titulo in lista.text and sem_imagem.titulo in lista.text
+    quadro = cliente.get("/m/radar?aba=v0")
+    assert 'cartao-compacto' not in quadro.text and 'data-previa-compacta' not in quadro.text
+    assert 'cartao-img' in quadro.text and 'cartao-trecho' not in quadro.text
 
 
 def test_itens_abertos_sem_prazo_nem_decisao_nao_viram_notificacao(painel):

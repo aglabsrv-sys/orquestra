@@ -246,7 +246,7 @@
   <div class="coluna{% if col.concluida %} concluida{% endif %}" data-valor="{{ col.valor }}" data-total="{{ col.total }}">
     <header><h3>{{ col.rotulo }}</h3><span class="conta">{{ col.total }}</span></header>
     <div class="cartoes" role="group" aria-label="Itens em {{ col.rotulo }}">
-      {% for c in col.cartoes %}{{ p.cartao(c, opcoes, visao.agrupar_por, arrastavel=True, compacto=modulo.id == 'radar') }}{% endfor %}
+      {% for c in col.cartoes %}{{ p.cartao(c, opcoes, visao.agrupar_por, arrastavel=True) }}{% endfor %}
     </div>
     <p class="suave mais"{% if col.total <= col.cartoes|length %} hidden{% endif %}>+{{ col.total - col.cartoes|length }} na lista</p>
   </div>
@@ -255,7 +255,7 @@
 
 {# ---------------------------------------------------------------- Lista #}
 {% else %}
-<section class="tabela-envolta{% if modulo.id == 'radar' %} radar-lista{% endif %}"{% if not conclusao_tarefa %} data-lote{% endif %} data-campo-status="{{ modulo.campo_status }}">
+<section class="tabela-envolta"{% if not conclusao_tarefa %} data-lote{% endif %} data-campo-status="{{ modulo.campo_status }}">
   {% if linhas %}
   <p class="lote-resultado" role="status" data-lote-resultado hidden></p>
   <table class="tabela" data-modulo="{{ modulo.id }}" data-versao="{{ modulo.versao }}">
@@ -269,7 +269,7 @@
           <button type="button" class="tarefa-conclusao" data-tarefa-conclusao data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" data-campo="{{ modulo.campo_status }}" data-concluir="{{ status_concluir }}" data-reabrir="{{ reabrir }}" data-rotulo-concluir="{{ rotulo(status_concluir) }}" data-rotulo-reabrir="{{ rotulo(reabrir) }}" data-titulo="{{ l.cartao.titulo }}" aria-pressed="{{ 'true' if l.cartao.concluido else 'false' }}" aria-label="{{ 'Reabrir' if l.cartao.concluido else 'Concluir' }} {{ l.cartao.titulo }}" title="{{ 'Reabrir tarefa' if l.cartao.concluido else 'Concluir tarefa' }}">{{ icone('visto', 14) }}</button>
         {% else %}<input type="checkbox" data-lote-item data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" aria-label="Selecionar {{ l.cartao.titulo }}">{% endif %}</td>
         {% for c in l.celulas %}
-        {% if c.tipo == "titulo" %}<td class="cel-titulo"><a class="{% if l.cartao.imagem %}titulo-com-previa {% endif %}{% if modulo.id == 'radar' %}radar-titulo{% endif %}" href="{{ l.cartao.url }}">{% if l.cartao.imagem %}<img class="lista-miniatura" src="{{ l.cartao.imagem }}" alt="" loading="lazy" draggable="false"{% if modulo.id == 'radar' %} data-previa-compacta{% endif %}>{% endif %}<span{% if modulo.id == 'radar' %} class="radar-item-texto"{% endif %}><span>{{ c.texto }}</span>{% if modulo.id == 'radar' and l.cartao.trecho %}<small class="radar-resumo">{{ l.cartao.trecho }}</small>{% endif %}</span></a></td>
+        {% if c.tipo == "titulo" %}<td class="cel-titulo"><a{% if l.cartao.imagem %} class="titulo-com-previa"{% endif %} href="{{ l.cartao.url }}">{% if l.cartao.imagem %}<img class="lista-miniatura" src="{{ l.cartao.imagem }}" alt="" loading="lazy" draggable="false">{% endif %}<span>{{ c.texto }}</span></a></td>
         {% elif c.tipo == "escolha" %}<td data-coluna="{{ colunas_tabela[loop.index0].nome }}"><span class="et {{ c.classe }}">{{ c.texto }}</span></td>
         {% elif c.tipo == "data" %}<td data-ordem="{{ c.ordem }}">{{ c.texto }}</td>
         {% elif c.tipo == "link" %}<td><a class="link" href="{{ c.texto }}" target="_blank" rel="noopener noreferrer" aria-label="Abrir link de {{ l.cartao.titulo }} em nova aba">abrir {{ icone('externo', 12) }}</a></td>
