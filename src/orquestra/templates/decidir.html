@@ -25,7 +25,8 @@
         {% endif %}
         {% if c.por_status %}
         {% for a in g.modulo.acoes %}
-        <button class="botao{% if a.estilo == 'principal' and not c.pergunta %} principal{% elif a.estilo == 'discreto' %} discreto{% endif %}" type="button" data-acao='{{ a.definir|tojson }}'>{{ a.rotulo }}</button>
+        {% set arquivar_radar = g.modulo.id == 'radar' and a.definir.get(g.modulo.campo_status) == 'descartado' %}
+        <button class="botao{% if a.estilo == 'principal' and not c.pergunta %} principal{% elif a.estilo == 'discreto' %} discreto{% endif %}" type="button" data-acao='{{ a.definir|tojson }}'{% if arquivar_radar %} data-arquivar-na-decisao title="Retirar da fila e guardar no arquivo do Radar"{% endif %}>{{ 'Arquivar' if arquivar_radar else a.rotulo }}</button>
         {% endfor %}
         {% endif %}
         <a class="botao discreto" href="{{ c.url }}" aria-label="Abrir {{ c.titulo }}">Abrir</a>

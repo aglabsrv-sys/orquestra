@@ -17,8 +17,10 @@ ela; se não houver um, informe a pendência antes de criar esses registros aqui
 
 1. Leia este contrato e os dois ou três últimos dias de `diario/sessoes/`, quando
    esse registro for permitido no vault. Não crie um diário só para consultá-lo.
-2. Leia `PREFERENCIAS.md` na raiz, quando existir: são preferências gerais da pessoa,
-   compartilhadas entre os módulos. Não copie esse texto para cada área.
+2. Leia as orientações gerais da pessoa neste arquivo, incluindo observações sobre
+   módulos e notas anteriores vinculadas. A central fica em Ajustes → Instruções da IA.
+   Se houver `PREFERENCIAS.md` ou notas em `humano/`, leia as gerais e as da área
+   relevante sem copiar seu conteúdo para outra nota. Não crie novas camadas de preferências.
    Descubra as áreas e a captura configurada em `orquestra.yaml`. Leia o schema,
    as instruções e os aprendizados das áreas em que vai trabalhar e o contexto
    humano necessário ao pedido.
@@ -40,13 +42,12 @@ seguir este contrato e não participa dos locks do aplicativo.
 ## Mapa
 
 ```
-AGENTS.md            este contrato
-PREFERENCIAS.md      preferências gerais da pessoa, quando ela as configurar
+AGENTS.md            contrato e central de orientações gerais da pessoa
 orquestra.yaml       configuração do painel (nome, tema, backup)
 <modulo>/            uma área de trabalho. É módulo toda pasta da raiz com _modulo.yaml
   _modulo.yaml       schema do módulo: campos, status, visões, coletores
   itens/             os registros (uma nota .md por item)
-  humano/            o que a pessoa disse, com as palavras dela
+  humano/            orientações anteriores, vinculadas à central quando existentes
   maquina/           instruções para você, aprendizados, coletores
   arquivo/           itens arquivados (não apague, não edite)
 <outras pastas>      notas da pessoa que não são módulo (veja "Pastas da pessoa")
@@ -58,8 +59,9 @@ _orquestra/          temas e estado do painel
 
 Cada vault tem módulos diferentes: descubra quais existem listando as pastas da
 raiz que têm `_modulo.yaml`. Antes de trabalhar num módulo, leia o `_modulo.yaml`
-dele e tudo em `maquina/` e `humano/` desse módulo. `humano/` contém orientações
-específicas e exceções; não precisa repetir as preferências gerais. Preserve as
+dele e o contexto técnico em `maquina/`. Quando existirem orientações anteriores
+em `humano/`, elas também fazem parte da central; não crie uma pasta dessas para
+repetir orientações. Preserve as
 notas existentes e não resolva conflitos entre orientações inventando uma decisão.
 
 **Onde ficam os itens.** O padrão é `<modulo>/itens/`. Se o `_modulo.yaml` tiver

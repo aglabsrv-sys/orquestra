@@ -2,6 +2,14 @@
 
 ## Em desenvolvimento
 
+- Na seção Radar de Para decidir, Arquivar retira o item da fila e o guarda no
+  arquivo do módulo, preservando seu conteúdo e a possibilidade de recuperação.
+
+- Ajustes reúne uma central de Instruções da IA: orientações gerais e observações
+  dos módulos são administradas juntas. Notas antigas de Humano e preferências
+  aparecem na central sem cópias; as abas Humano saem dos módulos e os links
+  antigos abrem a central. Salvar preserva o restante do contrato e detecta conflitos.
+
 - Entrada abre em Para decidir; clicar novamente no atalho do dock alterna entre
   decisões e capturas. Prévias das decisões ficam menores, ao lado do texto.
   A seção Radar dentro de Para decidir usa prévias compactas e apresenta itens

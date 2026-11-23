@@ -319,21 +319,6 @@ class Painel:
         return self.indice.notas.get(nota.rel, nota)
 
     @_sincronizado
-    def abrir_preferencias_humanas(self) -> Nota:
-        """Abre a preferência geral existente ou cria a nota por ação da pessoa."""
-        caminho = self.caminho_seguro("PREFERENCIAS.md")
-        if caminho.exists():
-            return ler_nota(caminho, self.vault)
-        nota = Nota(caminho=caminho, rel="PREFERENCIAS.md", meta=CommentedMap(titulo="Preferências para a IA", origem="humano"),
-                    corpo="\n## Como gosto de trabalhar\n\n## Limites e cuidados\n", vault=self.vault)
-        try:
-            gravar_nota(nota, criar=True)
-        except FileExistsError:
-            return ler_nota(caminho, self.vault)
-        self.apos_escrita(caminho, "painel")
-        return self.indice.notas.get(nota.rel, nota)
-
-    @_sincronizado
     def criar_nota_em_pasta(self, pasta: str, titulo: str, corpo: str = "", origem: str = "humano", autor: str = "painel",
                             campos: dict[str, str] | None = None, *, data: dt.date | None = None) -> Nota:
         """Cria uma nota numa pasta qualquer do vault (não precisa ser módulo).
@@ -937,13 +922,13 @@ class Painel:
         definicao["visoes"] = ([{"tipo": "kanban", "nome": "Quadro", "agrupar_por": "status"}] if com_quadro else []) + [
             {"tipo": "tabela", "nome": "Lista"}
         ]
-        for zona in ("itens", "humano", "maquina"):
+        for zona in ("itens", "maquina"):
             caminho_no_vault(self.vault, pasta / zona).mkdir(parents=True, exist_ok=True)
         gravar_yaml(caminho_no_vault(self.vault, pasta / ARQUIVO_MODULO), definicao)
         instrucoes = caminho_no_vault(self.vault, pasta / "maquina" / "instrucoes.md")
         texto = (
             f"# Instruções para agentes: {nome}\n\n"
-            f"Leia antes `{pasta_id}/_modulo.yaml`, `{pasta_id}/humano/` e `{pasta_id}/maquina/aprendizados.md`.\n\n"
+            f"Leia antes `AGENTS.md`, `{pasta_id}/_modulo.yaml` e `{pasta_id}/maquina/aprendizados.md`.\n\n"
             "Este módulo foi criado pela pessoa no painel e ainda não tem regras próprias.\n"
             "Valem as regras gerais do AGENTS.md. Em caso de dúvida sobre o que fazer aqui, use `pergunta`.\n"
         )

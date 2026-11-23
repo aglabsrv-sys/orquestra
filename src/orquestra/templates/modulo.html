@@ -50,9 +50,6 @@
   {% for v in modulo.visoes if modulo.id != 'contatos' %}
   <a class="aba{% if aba == 'v' ~ loop.index0 %} ativa{% endif %}" href="?aba=v{{ loop.index0 }}{% if periodo_concluidas is defined %}&amp;concluidas={{ periodo_concluidas }}{% endif %}{% if pasta_atual|default('') %}&amp;pasta={{ pasta_atual|urlencode }}{% endif %}{% if pasta_aberta is defined and v.tipo in ('pastas', 'cartoes', 'tabela') %}&amp;abrir={{ pasta_aberta.chave|urlencode }}{% if pasta_aberta.sub %}&amp;pasta={{ pasta_aberta.sub|urlencode }}{% endif %}{% endif %}"{% if aba == 'v' ~ loop.index0 %} aria-current="page"{% endif %}>{{ v.nome }}</a>
   {% endfor %}
-  {% if modulo.id != "entrada" %}
-  <a class="aba{% if aba == 'humano' %} ativa{% endif %}" href="?aba=humano"{% if aba == 'humano' %} aria-current="page"{% endif %}>{{ icone('pessoa', 15) }} Humano{% if n_humano %} <small>{{ n_humano }}</small>{% endif %}</a>
-  {% endif %}
   <a class="aba{% if aba == 'maquina' %} ativa{% endif %}" href="?aba=maquina"{% if aba == 'maquina' %} aria-current="page"{% endif %}>{{ icone('chip', 15) }} Máquina</a>
   </div>
   <span class="abas-fim">
@@ -104,16 +101,6 @@
 {# ---------------------------------------------------------------- Humano #}
 {% if aba == "referencias" %}
 <section class="lista-notas" aria-label="Notas de apoio">{% for n in referencias %}<a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><small>{{ n.pasta }}</small></a>{% else %}<p class="suave">Nenhuma referência nesta área.</p>{% endfor %}</section>{{ p.paginar(paginacao|default(none)) }}
-{% elif aba == "humano" %}
-<section class="lista-notas">
-  <p class="explica">{{ icone('pessoa', 15) }} <span>Exceções e orientações específicas desta área. Suas <a class="link" href="/ajustes/humano">preferências gerais para a IA</a> valem em todos os módulos.</span></p>
-  {% for n in notas %}
-  <a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><span>{{ n.trecho }}</span></a>
-  {% else %}
-  {{ p.vazio("Nenhuma exceção nesta área", "Registre aqui apenas o que for específico deste módulo. Você não precisa repetir suas preferências gerais.") }}
-  {% endfor %}
-</section>
-
 {# ---------------------------------------------------------------- Máquina #}
 {% elif aba == "maquina" %}
 <section class="lista-notas">
@@ -151,11 +138,14 @@
   {% endfor %}
 
   <h3 class="sub">Instruções e arquivos da máquina</h3>
+  <p><a class="link" href="/ajustes/instrucoes">Instruções gerais da IA</a></p>
+  <details class="bloco"><summary>Contexto técnico e aprendizados</summary>
   {% for n in notas %}
   <a class="linha-nota" href="{{ n.url }}"><b>{{ n.titulo }}</b><span>{{ n.trecho }}</span></a>
   {% else %}
   <p class="suave">Nenhuma instrução em <code>{{ modulo.id }}/maquina/</code>.</p>
   {% endfor %}
+  </details>
   <a class="botao pequeno" href="{{ url_pasta(modulo.id ~ '/arquivo') }}"{% if not tem_arquivo %} hidden{% endif %}>{{ icone('caixa', 15) }} Abrir arquivo{% if arquivadas %} · {{ arquivadas }}{% endif %}</a>
 </section>
 

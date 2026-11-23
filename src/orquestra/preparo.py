@@ -223,7 +223,7 @@ def adicionar_modulo(vault: Path, modulo_id: str, exemplos: bool = True, relator
         return False
     destino = caminho_no_vault(vault, modulo_id)
     _copiar(origem, destino, vault, dt.date.today(), relatorio, pular=() if exemplos else ("itens", "midia"))
-    for zona in ("itens", "humano", "maquina"):
+    for zona in ("itens", "maquina"):
         caminho_no_vault(vault, destino / zona).mkdir(parents=True, exist_ok=True)
     garantir_aprendizados(destino, catalogo()[modulo_id].nome)
     relatorio.criados.append(f"{modulo_id}/maquina/{ARQUIVO_APRENDIZADOS}")

@@ -154,8 +154,9 @@ class Ferramentas:
             )
             partes.append(f"- **{area['id']}** ({area['nome']}): {area['descricao']} Campos: {campos or 'nenhum'}.")
         partes.append(
-            "\n# Preferências da pessoa\nLeia PREFERENCIAS.md na raiz, quando existir, antes de agir. "
-            "contexto_area inclui essas preferências gerais e as exceções locais de humano/. "
+            "\n# Central de instruções\nAs orientações gerais e observações dos módulos ficam em AGENTS.md. "
+            "Notas anteriores de PREFERENCIAS.md e humano/ são fontes vinculadas, sem cópia de conteúdo; "
+            "contexto_area reúne as fontes gerais e da área quando existirem. Não crie novas camadas de preferências. "
             "Mantenha o texto da pessoa intacto.\n"
             "\n# Agenda local\n" + calendario.conexoes(self.painel)["orientacao"] + "\n"
             "\n# Projetos, tarefas e decisões\n" + mcp_organizacao.ORIENTACAO_TRABALHO + "\n"

@@ -51,11 +51,12 @@ def test_rotina_existente_edita_fontes_sem_mover_notas(cliente, vault):
     assert pagina.status_code == 200 and "Pesquisa da equipe" in pagina.text
 
 
-def test_preferencias_humanas_criadas_uma_vez_sem_substituir_texto(cliente, vault):
+def test_atalho_antigo_abre_central_sem_criar_preferencias_paralelas(cliente, vault):
     assert cliente.get("/ajustes/humano").status_code == 200
     assert not (vault / "PREFERENCIAS.md").exists()
     primeira = cliente.post("/api/preferencias/humanas", json={})
-    assert primeira.status_code == 200
+    assert primeira.status_code == 200 and primeira.json()["url"] == "/ajustes/instrucoes"
+    assert not (vault / "PREFERENCIAS.md").exists()
     arquivo = vault / "PREFERENCIAS.md"
     arquivo.write_text("Meu texto pessoal, preservado integralmente.\n", encoding="utf-8")
     segunda = cliente.post("/api/preferencias/humanas", json={})

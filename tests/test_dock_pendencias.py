@@ -71,6 +71,31 @@ def test_preview_compacto_fica_somente_nas_decisoes(cliente):
     assert 'cartao-img' in quadro.text and 'cartao-trecho' not in quadro.text
 
 
+def test_radar_em_decidir_oferece_arquivo_e_preserva_conteudo(cliente, vault):
+    nota = cliente.painel.criar_nota("radar", "Vídeo para arquivar", {"status": "novo", "link": "https://example.test/video"}, corpo="Resumo original do vídeo.")
+    original = nota.caminho.read_bytes()
+    pagina = cliente.get("/entrada?modulo=radar")
+    assert 'data-arquivar-na-decisao' in pagina.text
+    assert '>Arquivar</button>' in pagina.text
+    resultado = cliente.post("/api/arquivar/" + nota.rel, json={"versao": nota.versao})
+    assert resultado.status_code == 200, resultado.text
+    arquivada = resultado.json()["rel"]
+    assert arquivada.startswith("radar/arquivo/")
+    assert (vault / arquivada).read_bytes() == original
+    assert not nota.caminho.exists()
+    assert nota.titulo not in cliente.get("/entrada?modulo=radar").text
+
+
+def test_arquivar_no_radar_recusa_versao_antiga(cliente):
+    nota = cliente.painel.criar_nota("radar", "Vídeo editado", {"status": "novo"})
+    versao = nota.versao
+    cliente.painel.editar_nota(nota.rel, versao, corpo="Informação nova da pessoa.")
+    atual = nota.caminho.read_bytes()
+    resultado = cliente.post("/api/arquivar/" + nota.rel, json={"versao": versao})
+    assert resultado.status_code == 409
+    assert nota.caminho.read_bytes() == atual
+
+
 def test_itens_abertos_sem_prazo_nem_decisao_nao_viram_notificacao(painel):
     modulo = painel.criar_modulo("Referências", "nota", com_quadro=True)
     painel.criar_nota(modulo.id, "Uma referência para consultar", campos={"status": "a_fazer"})

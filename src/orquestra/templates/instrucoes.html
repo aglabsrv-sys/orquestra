@@ -1,0 +1,26 @@
+{% set central = central_instrucoes %}
+<section class="central-instrucoes" aria-label="Central de instruções da IA">
+  <form data-instrucoes-form data-versao="{{ central.geral_versao }}"{% if central.geral_rel %} data-rel="{{ central.geral_rel }}"{% endif %}>
+    <label class="campo"><span>Como a IA deve trabalhar com você?</span><textarea name="texto" rows="4" maxlength="100000" placeholder="Suas preferências e, se precisar, observações como: No Radar, priorize…">{{ central.texto }}</textarea></label>
+    <p class="campo-ajuda">Vale para todo o cofre. Para uma observação específica, mencione a pasta no mesmo texto.</p>
+    <div class="linha-botoes"><button class="botao pequeno principal" type="submit">Salvar</button><span class="campo-ajuda" role="status" aria-live="polite" data-instrucoes-estado></span></div>
+  </form>
+  {% if central.fontes %}
+  <details class="instrucoes-anteriores">
+    <summary>Orientações anteriores vinculadas <small>{{ central.fontes|length }}</small></summary>
+    <p class="campo-ajuda">Continuam valendo nos arquivos originais. Não é preciso repetir esse texto acima.</p>
+    {% for grupo in central.fontes|groupby('area') %}
+    <div id="area-{{ grupo.grouper }}" class="instrucoes-grupo">
+      <h4>{{ grupo.list[0].nome_area }}</h4>
+      {% for fonte in grupo.list %}
+      <details class="bloco instrucao-existente">
+        <summary>{{ fonte.titulo }}</summary>
+        <pre>{{ fonte.texto }}</pre>
+        <a class="link" href="{{ url_nota(fonte.rel) }}">Abrir nota original</a>
+      </details>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </details>
+  {% endif %}
+</section>

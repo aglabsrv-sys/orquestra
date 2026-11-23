@@ -24,7 +24,7 @@ def test_progresso_substitui_preferencia_lista_e_funciona_apos_humano(cliente):
     assert lista.context['aba'] == 'lista'
     assert cliente.get('/m/habitos').context['aba'] == 'lista'
     assert 'href="/m/habitos?aba=progresso"' in lista.text
-    assert 'href="/m/habitos?aba=progresso"' in cliente.get('/m/habitos?aba=humano').text
+    assert cliente.get('/m/habitos?aba=humano', follow_redirects=False).headers['location'] == '/ajustes/instrucoes#area-habitos'
     assert cliente.get('/m/habitos?aba=progresso').context['aba'] == 'progresso'
     assert cliente.get('/m/habitos').context['aba'] == 'progresso'
 
