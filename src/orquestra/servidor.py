@@ -29,7 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException
 
-from orquestra import __version__, adocao, agenda, aparencia, armazenamento, automacoes, backup, coletores, confianca, contratos, diario, graficos, limites_coleta, preparo, temas, segredos, vinculos
+from orquestra import __version__, adocao, agenda, aparencia, armazenamento, automacoes, backup, coletores, confianca, contratos, diario, graficos, instrucoes, limites_coleta, preparo, temas, segredos, vinculos
 from orquestra.caminhos import CaminhoInseguro, eh_link, ignorar
 from orquestra.config import ConfigInvalida, ler_yaml
 from orquestra import apresentacao as ap
@@ -373,8 +373,11 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         if request.query_params.get("abrir"):
             preferencia += "-dentro"
         escolha_explicita = aba
+        if aba == "humano":
+            return RedirectResponse("/ajustes/instrucoes#area-" + quote(modulo_id), status_code=303)
         abriu_item = request.query_params.get("abrir", "")
-        aba = aba or request.cookies.get(preferencia, "")
+        salva = request.cookies.get(preferencia, "")
+        aba = aba or ("" if salva == "humano" else salva)
         if modulo_id == "habitos" and aba in ("v0", "progresso", "lista", "v1"):
             from orquestra import habitos
             resposta = pagina(request, "habitos.html", "m:habitos", **habitos.montar(painel, aba))
@@ -437,13 +440,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
             from orquestra.contatos import contexto as contexto_contatos
             contexto.update(contexto_contatos(painel))
 
-        if aba == "humano":
-            notas, contexto["paginacao"] = paginar(request, painel.indice.notas_em(modulo.id, "humano"))
-            contexto["notas"] = [
-                {"url": ap.url_nota(n.rel), "titulo": n.titulo, "trecho": ap.trecho(n)}
-                for n in notas
-            ]
-        elif aba == "maquina":
+        if aba == "maquina":
             contexto.update(automacoes.contexto(painel, modulo))
             contexto["notas"] = [
                 {"url": ap.url_nota(n.rel), "titulo": n.titulo, "trecho": ap.trecho(n)}
@@ -1161,9 +1158,11 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.get("/ajustes/{secao}", response_class=HTMLResponse)
     @leitura
     def ajustes(request: Request, secao: str = "painel"):
+        if secao == "humano":
+            return RedirectResponse("/ajustes/instrucoes", status_code=303)
         if secao == "automacoes":
             secao = "coletores"
-        if secao not in {"painel", "areas", "aparencia", "backup", "coletores", "humano", "acesso", "vault", "variaveis"}:
+        if secao not in {"painel", "areas", "aparencia", "backup", "coletores", "instrucoes", "acesso", "vault", "variaveis"}:
             raise NaoEncontrado(secao)
         # Cada seção é uma página independente: não ler catálogos, scripts ou Git
         # que não serão exibidos. Revisões de confiança continuam frescas na origem.
@@ -1171,12 +1170,11 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         if secao == "painel":
             contexto["areas"] = [{"modulo": m} for m in painel.indice.modulos.values()]
             contexto.update(vault=str(painel.vault), n_notas=len(painel.indice.notas))
-        elif secao == "humano":
-            contexto["preferencias"] = next((n for n in painel.indice.notas.values() if n.rel.casefold() == "preferencias.md"), None)
-            contexto["orientacoes_locais"] = [
-                {"nome": m.nome, "id": m.id, "total": len(painel.indice.notas_em(m.id, "humano"))}
-                for m in painel.indice.modulos.values() if painel.indice.notas_em(m.id, "humano")
-            ]
+        elif secao == "instrucoes":
+            try:
+                contexto["central_instrucoes"] = instrucoes.contexto(painel)
+            except ValueError as erro:
+                raise Recusado(str(erro)) from None
         elif secao == "areas":
             contexto["areas"] = [
                 {"modulo": m, "itens": len(painel.indice.notas_em(m.id, "itens")), "propria": m.itens_na_raiz}
@@ -1838,8 +1836,27 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @app.post("/api/preferencias/humanas")
     async def api_preferencias_humanas(request: Request):
         await corpo_json(request, contratos.Pedido)
-        nota = await asyncio.to_thread(painel.abrir_preferencias_humanas)
-        return {"url": ap.url_nota(nota.rel)}
+        return {"url": "/ajustes/instrucoes"}
+
+    @app.put("/api/instrucoes")
+    async def api_salvar_instrucoes(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        dados = await corpo_json(request, contratos.SalvarInstrucoes)
+        try:
+            return await asyncio.to_thread(instrucoes.salvar, painel, dados["texto"], dados["versao"])
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
+
+    @app.put("/api/instrucoes/nota")
+    async def api_salvar_instrucao_existente(request: Request):
+        if erro := exigir_local(request):
+            return erro
+        dados = await corpo_json(request, contratos.SalvarInstrucaoExistente)
+        try:
+            return await asyncio.to_thread(instrucoes.salvar_fonte, painel, dados["rel"], dados["texto"], dados["versao"])
+        except ValueError as erro:
+            raise Recusado(str(erro)) from None
 
     @app.post("/api/numeros")
     async def api_numeros(request: Request):

@@ -3,18 +3,28 @@
 ## Onde cada coisa fica
 
 Tarefas e notas do cotidiano ficam em `itens/`: humanos, agentes e coletores podem
-criá-las, com origem identificada. **Ajustes → Preferências da IA** abre uma única
-nota `PREFERENCIAS.md` na raiz, para tom, preferências e limites gerais. Ela é criada
-apenas ao usar o botão e pode ser editada no painel ou no seu editor de Markdown.
-O MCP `contexto_area` reúne essa nota e as orientações do módulo, com paginação.
-O contrato `AGENTS.md` continua contendo as regras dos agentes.
+criá-las, com origem identificada. **Ajustes → Instruções da IA** é a central única
+para orientar a IA. Escreva as preferências gerais e, se necessário, observações
+sobre os módulos no mesmo texto: “No Radar…” ou “Na Entrada…”.
 
-`humano/` em cada módulo fica para orientações, decisões e exceções específicas.
-Você não precisa preencher uma pasta por módulo nem repetir preferências gerais.
-As notas anteriores são preservadas, sem migração ou resumo automático.
-`maquina/` contém instruções, aprendizados e scripts. A aba Máquina não é
-uma segunda lista de tarefas. Entrada é sua captura rápida; suas visões não precisam
-de uma aba Humano adicional. O arquivo continua no vault, mesmo sem a aba.
+As orientações gerais ficam num bloco do `AGENTS.md`. Salvar pela central altera
+somente esse bloco e a lista de notas vinculadas; o restante do contrato é
+preservado. O texto não é salvo automaticamente, e alterações feitas em outra
+janela são detectadas antes da gravação. `CLAUDE.md` continua sendo a ponte para
+as regras, sem outra cópia das preferências.
+Se já houver um `PREFERENCIAS.md` e nenhum bloco geral no contrato, a central
+aproveita esse arquivo como editor geral, sem abrir uma segunda cópia do texto.
+
+Notas anteriores em `humano/` e `PREFERENCIAS.md` aparecem na mesma tela, com a
+origem identificada, recolhidas como contexto vinculado e com acesso à nota original.
+A central tem apenas um campo compacto de edição. Seus arquivos não são movidos,
+apagados nem copiados. Ao salvar as instruções gerais, elas ficam vinculadas no
+contrato; pelo MCP, `contexto_area` também reúne as fontes relevantes. A central
+não cria novos `PREFERENCIAS.md` nem exige uma pasta Humano para cada módulo.
+
+Os módulos ficam sem a aba Humano; links antigos abrem a central. `maquina/`
+continua contendo automações e contexto técnico, apresentado em uma seção
+recolhida. Essa área não é outro lugar para configurar preferências da pessoa.
 
 O atalho **Entrada** abre primeiro **Para decidir**, reunindo as pendências dos
 módulos. Clicar novamente no mesmo atalho alterna com **Capturas**, quando essa
@@ -25,6 +35,9 @@ A seção **Radar dentro de Para decidir** apresenta notícias e vídeos com uma
 prévia pequena ao lado do texto. Sem imagem ou quando ela estiver indisponível,
 o item segue como texto. O módulo **Radar** mantém sua apresentação habitual
 em Lista e Triagem (colunas), e a escolha da visão continua sendo lembrada.
+Dentro de Para decidir, a ação **Arquivar** guarda o item no arquivo do Radar e
+o retira da fila. O conteúdo é preservado, e vídeos arquivados continuam sendo
+reconhecidos pelas automações para evitar uma nova importação do mesmo vídeo.
 
 Áreas é parte do método PARA: saúde, família, finanças, responsabilidades contínuas.
 Não é igual a um hábito. Para Academia 3×/semana, use Hábitos e metas, com exemplos

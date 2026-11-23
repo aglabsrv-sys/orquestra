@@ -7,6 +7,12 @@ pasta que já tinha instruções próprias, as regras do Orquestra podem estar e
 `AGENTS.orquestra.md`: nesse caso, leia os dois. O arquivo original é preservado
 e o suplemento não é carregado automaticamente por todos os clientes.
 
+**Ajustes → Instruções da IA** reúne as orientações gerais e observações sobre
+módulos. O painel grava um bloco identificado no `AGENTS.md`, somente ao salvar,
+sem substituir as regras existentes. Notas anteriores de `humano/` e
+`PREFERENCIAS.md` ficam vinculadas nessa central, sem migração ou cópia do texto.
+Não é necessário manter preferências em arquivos diferentes para cada agente.
+
 Você pode trocar de agente mantendo a mesma pasta. Ao usar mais de um, separe as
 notas em que cada um trabalha: editores e agentes externos não participam dos
 locks do Orquestra.

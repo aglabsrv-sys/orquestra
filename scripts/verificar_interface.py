@@ -123,6 +123,7 @@ def jornada_entrada_radar(page, base: str, capturas: Path | None) -> None:
         assert titulo.evaluate('e => parseFloat(getComputedStyle(e).fontSize)') > tamanho_padrao
         conferir_layout(page)
         page.goto(base + '/m/radar?aba=v1', wait_until='domcontentloaded')
+
         expect(page.locator('.tabela-envolta')).to_be_visible()
         expect(page.locator('.abas .aba[aria-current]')).to_contain_text('Lista')
         linha = page.locator('.tabela tr').filter(has_text=notas[0]['titulo'])
@@ -146,6 +147,16 @@ def jornada_entrada_radar(page, base: str, capturas: Path | None) -> None:
         page.goto(base + '/m/radar', wait_until='domcontentloaded')
         expect(page.locator('.quadro')).to_be_visible()
         page.goto(base + '/m/radar?aba=v1', wait_until='domcontentloaded')
+
+    page.goto(base + '/entrada?aba=decisoes&modulo=radar', wait_until='domcontentloaded')
+    item = page.locator(f'.fila-item[data-rel="{notas[0]["rel"]}"]')
+    with page.expect_response(lambda r: '/api/arquivar/' in r.url and r.request.method == 'POST') as arquivamento:
+        item.get_by_role('button', name='Arquivar', exact=True).click()
+    assert arquivamento.value.status == 200
+    arquivada = arquivamento.value.json()['rel']
+    assert arquivada.startswith('radar/arquivo/')
+    expect(item).to_have_count(0)
+    assert page.request.get(base + '/n/' + arquivada).status == 200
 
 
 def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
@@ -314,14 +325,49 @@ def jornada_automacoes(page, base: str, capturas: Path | None) -> dict:
         expect(page.locator('#pasta-ajustes')).to_be_hidden()
 
     page.goto(base + '/ajustes/humano', wait_until='domcontentloaded')
-    if capturas:
-        page.screenshot(path=str(capturas / 'preferencias-ia-mobile.png'), full_page=True)
-    page.locator('#abrir-preferencias-humanas').click()
-    page.wait_for_url('**/n/PREFERENCIAS.md')
-    expect(page.locator('h1')).to_contain_text('Preferências')
+    page.wait_for_url('**/ajustes/instrucoes')
+    geral = page.locator('[data-instrucoes-form]').first
+    texto = 'Responda em português, com objetividade.\n\n## Radar\nPriorize ferramentas locais e exemplos práticos.'
+    for largura in (1440, 390, 320):
+        page.set_viewport_size({'width': largura, 'height': 960})
+        conferir_layout(page)
+        if capturas:
+            page.screenshot(path=str(capturas / f'instrucoes-central-{largura}.png'), full_page=True)
+    geral.locator('textarea').fill(texto)
+    geral.get_by_role('button', name='Salvar', exact=True).click()
+    expect(geral.locator('[data-instrucoes-estado]')).to_have_text('Instruções salvas.')
+    page.reload(wait_until='domcontentloaded')
+    expect(page.locator('[data-instrucoes-form]').first.locator('textarea')).to_have_value(texto)
+    outra = page.context.new_page()
+    try:
+        outra.goto(base + '/ajustes/instrucoes', wait_until='domcontentloaded')
+        outra.locator('.central-instrucoes textarea').fill(texto + '\nInclua fontes quando necessário.')
+        outra.get_by_role('button', name='Salvar', exact=True).click()
+        expect(outra.locator('[data-instrucoes-estado]')).to_have_text('Instruções salvas.')
+        geral.locator('textarea').fill('Minha proposta ainda não salva.')
+        geral.get_by_role('button', name='Salvar', exact=True).click()
+        expect(geral.locator('[data-instrucoes-estado]')).to_contain_text('mudaram')
+        expect(geral.locator('textarea')).to_have_value('Minha proposta ainda não salva.')
+        page.once('dialog', lambda dialogo: dialogo.accept())
+        page.reload(wait_until='domcontentloaded')
+        expect(page.locator('.central-instrucoes textarea')).to_have_value(texto + '\nInclua fontes quando necessário.')
+    finally:
+        outra.close()
+    # Contexto anterior fica vinculado e recolhido, sem outros campos de edição.
+    expect(page.locator('.central-instrucoes textarea, .central-instrucoes input')).to_have_count(1)
+    page.goto(base + '/m/radar?aba=humano', wait_until='domcontentloaded')
+    page.wait_for_url('**/ajustes/instrucoes#area-radar')
+    local = page.locator('#area-radar .instrucao-existente').first
+    expect(local).to_have_attribute('open', '')
+    expect(local.locator('pre')).to_be_visible()
+    expect(local.get_by_role('link', name='Abrir nota original', exact=True)).to_be_visible()
+    expect(page.locator('.central-instrucoes textarea, .central-instrucoes input')).to_have_count(1)
+    for rota in ('/m/radar', '/m/tarefas', '/m/habitos'):
+        page.goto(base + rota, wait_until='domcontentloaded')
+        expect(page.get_by_role('link', name='Humano', exact=True)).to_have_count(0)
     assert not erros, erros
     return {'erros_js': erros, 'jornadas': ['configuração lateral', 'adição pela pasta e catálogo', 'remoção e retorno ao catálogo',
-            'seleção da instância', 'ativação e pausa', 'Esc nos ajustes e capas', 'preferências gerais'],
+            'seleção da instância', 'ativação e pausa', 'Esc nos ajustes e capas', 'central de instruções'],
             'larguras': [1440, 390, 320]}
 
 

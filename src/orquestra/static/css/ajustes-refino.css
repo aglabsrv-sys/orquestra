@@ -132,3 +132,13 @@
 .segredo-olho[aria-pressed=true] .segredo-olho-risco { display:block; }
 #variaveis-form .campo > label { font-size:.76rem; color:var(--texto-suave); }
 @media(max-width:520px) { .segredos-lista li > div.segredo-identidade { position:relative; } .segredo-ajuda { position:static; } .segredo-dica { left:0; right:auto; } }
+/* Orientações gerais e notas antigas são administradas na mesma central. */
+.central-instrucoes { display:grid; gap:20px; max-width:760px; }
+.central-instrucoes textarea { width:100%; resize:vertical; min-height:96px; }
+.central-instrucoes .campo { margin-bottom:0; }
+.instrucoes-grupo { display:grid; gap:8px; margin-top:16px; scroll-margin-top:24px; }
+.instrucoes-grupo h4 { font-size:.9rem; }
+.instrucao-existente summary, .instrucoes-anteriores > summary { cursor:pointer; font-weight:600; }
+.instrucoes-anteriores > summary { font-size:.8rem; color:var(--texto-suave); }
+.instrucao-existente[open] summary { margin-bottom:14px; }
+.instrucao-existente pre { max-height:240px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:.8rem; margin-bottom:12px; }

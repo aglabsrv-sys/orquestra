@@ -31,6 +31,14 @@ class Versao(Pedido):
     versao: str = Field(min_length=1, max_length=128)
 
 
+class SalvarInstrucoes(Versao):
+    texto: str = Field(max_length=100_000)
+
+
+class SalvarInstrucaoExistente(SalvarInstrucoes):
+    rel: str = Field(min_length=1, max_length=2000)
+
+
 class ItemLote(Versao):
     rel: str = Field(min_length=1, max_length=1000)
 

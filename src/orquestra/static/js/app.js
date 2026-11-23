@@ -431,7 +431,8 @@
 
     function resolver(item, campos, acao) {
       $$("button", item).forEach(function (b) { b.disabled = true; });
-      return api("PUT", "/api/notas/" + caminho(item.dataset.rel), { versao: item.dataset.versao, campos: campos })
+      var arquivar = acao && acao.dataset.arquivarNaDecisao !== undefined;
+      return api(arquivar ? "POST" : "PUT", (arquivar ? "/api/arquivar/" : "/api/notas/") + caminho(item.dataset.rel), arquivar ? { versao: item.dataset.versao } : { versao: item.dataset.versao, campos: campos })
         .then(function (nota) {
           if (nota.decisao_pendente || $(".decidir-pagina .paginacao")) {
             location.reload();
@@ -1174,13 +1175,6 @@
   }
 
   function ajustes() {
-    var preferencias = $("#abrir-preferencias-humanas");
-    if (preferencias) preferencias.onclick = async function () {
-      var fim = window.OrquestraInterface.ocupado(preferencias, "Abrindo…");
-      try { var resposta = await api("POST", "/api/preferencias/humanas", {}); location.href = resposta.url; }
-      catch (erro) { mostrarErro(erro); }
-      finally { fim(); }
-    };
     // Um único ponto de entrada no Tab; setas e Home/End seguem o padrão de rádio.
     $$("[role='radiogroup']").forEach(function (grupo) {
       var radios = $$("[role='radio']", grupo), escolhido = radios.filter(function (r) { return r.getAttribute("aria-checked") === "true"; })[0] || radios[0];
@@ -1537,7 +1531,7 @@
   }
 
   var temporizador = 0, avisouNovidade = false;
-  function ocupado() { return notaSuja || personalizacaoPendente() || !!arrastando || !!$("dialog[open]") || (document.activeElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable)); }
+  function ocupado() { return notaSuja || personalizacaoPendente() || (window.Orquestra.instrucoesPendentes && window.Orquestra.instrucoesPendentes()) || !!arrastando || !!$("dialog[open]") || (document.activeElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable)); }
   function recarregarLogo(resumoJaSolicitado, reconexao) {
     if (!resumoJaSolicitado) atualizarSelos();
     clearTimeout(temporizador);

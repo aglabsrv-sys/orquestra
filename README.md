@@ -38,7 +38,7 @@ As capturas usam um vault de demonstração com notas fictícias.
 - **Com agentes de IA, ou sem nenhum.** Claude, Codex, Gemini ou qualquer agente que
   leia uma pasta. As regras ficam num `AGENTS.md`; quem só quer se organizar não precisa de IA.
 - **O que é seu fica separado do que a IA escreveu.** Cada nota diz quem a criou, e a
-  pasta `humano/` guarda as suas decisões, que os agentes leem e não reescrevem.
+  central em Ajustes → Instruções da IA reúne suas orientações, que os agentes leem e não reescrevem. Notas anteriores de `humano/` continuam vinculadas nela.
 - **Do seu jeito, pela tela.** Áreas, campos, sete temas com capas animadas em pixel
   art, modo claro ou escuro, cor de destaque, cantos e letra.
 
@@ -143,7 +143,7 @@ seu vault/
   tarefas/             uma área
     _modulo.yaml       campos, status e visões
     itens/             uma nota .md por tarefa
-    humano/            o que você disse (agentes leem, não reescrevem)
+    humano/            orientações anteriores vinculadas à central, quando existentes
     maquina/           instruções, aprendizados e automações
   diario/              o que mudou e quem mudou
   _orquestra/temas/    cores e capas

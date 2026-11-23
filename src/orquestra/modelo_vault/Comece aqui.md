@@ -22,19 +22,18 @@ clique, sem mudar nenhuma nota de lugar.
 
 As notas de exemplo podem ser apagadas quando quiser.
 
-## Humano e máquina
+## Instruções para a IA
 
-Cada módulo tem duas pastas com papéis bem diferentes:
+Em **Ajustes → Instruções da IA**, há um único campo para seu jeito de trabalhar.
+Quando precisar, inclua observações sobre uma pasta nesse mesmo texto.
+Orientações antigas em `humano/` continuam vinculadas à central, sem copiar
+seu conteúdo. O texto que você escreveu continua sendo seu.
 
-- `humano/` guarda o que **você** disse: seu jeito de priorizar, sua voz, o que te
-  interessa. Os agentes leem antes de agir e não podem reescrever.
-- `maquina/` guarda o que faz o sistema andar: instruções para os agentes, os
-  aprendizados deles e os coletores. Você raramente precisa abrir.
-
-Assim, um resumo feito pela IA nunca vira "algo que você disse".
+`maquina/` guarda o contexto técnico, os aprendizados e as automações. Você
+raramente precisa abrir. Cada nota continua identificando quem a criou.
 
 ## Primeiros passos
 
-1. Em cada módulo, abra a aba **Humano** e reescreva a nota de exemplo com as suas regras.
+1. Se usar IA, registre suas orientações uma vez em **Ajustes → Instruções da IA**.
 2. Use **Capturar** (tecla `C`) para guardar a primeira ideia.
 3. Se usa um agente, abra-o nesta pasta e peça: "leia o AGENTS.md e me diga o que entendeu".

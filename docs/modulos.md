@@ -119,7 +119,7 @@ Também dá para pedir a um agente ("crie um módulo de receitas") ou editar o a
 financas/
   _modulo.yaml       o contrato do módulo
   itens/             uma nota .md por registro
-  humano/            o que você disse sobre este assunto
+  humano/            orientações anteriores vinculadas à central, quando existentes
   maquina/
     instrucoes.md    regras para os agentes
     coletores/       scripts que trazem dados (opcional)
