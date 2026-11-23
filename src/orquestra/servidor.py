@@ -322,7 +322,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                     "id": modulo.id,
                     "titulo": modulo.nome,
                     "sobre": "Capturas rápidas e decisões pendentes." if modulo.id == "entrada" else modulo.descricao,
-                    "url": f"/m/{quote(modulo.id)}",
+                    "url": "/entrada?aba=decisoes" if modulo.id == "entrada" else f"/m/{quote(modulo.id)}",
                     "capa": ap.capa_de(painel, modulo.id, modulo.capa),
                     "selo": ap.texto_selo(resumo, modulo),
                 }
@@ -525,7 +525,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 lista = next((i for i, v in enumerate(modulo.visoes) if v.tipo == "tabela"), 0)
                 primeira = modulo.visoes[0]
                 valores = {str(n.campo(primeira.agrupar_por)) for n in itens if n.campo(primeira.agrupar_por) not in (None, "")}
-                aba = f"v{lista}" if contexto.get("subpastas") or (primeira.tipo == "kanban" and itens and len(valores) < 2) else "v0"
+                aba = f"v{lista}" if modulo.id == "radar" or contexto.get("subpastas") or (primeira.tipo == "kanban" and itens and len(valores) < 2) else "v0"
             try:
                 indice_visao = max(0, min(int(aba.lstrip("v") or 0), len(modulo.visoes) - 1))
             except ValueError:
@@ -723,7 +723,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     @leitura
     def entrada(request: Request, aba: str = "", modulo: str = "", caminho: str = Query("", alias="nota")):
         tem_capturas = "entrada" in painel.indice.modulos
-        if aba != "decisoes" and not (modulo or caminho) and tem_capturas:
+        if aba == "capturas" and not (modulo or caminho) and tem_capturas:
             return RedirectResponse("/m/entrada", status_code=303)
         hoje = dt.date.today()
         aprovacao = modulo == "conteudo"

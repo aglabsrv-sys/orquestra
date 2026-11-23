@@ -17,7 +17,7 @@
   <div class="fila">
     {% for c in g.cartoes %}
     <div class="fila-item" data-rel="{{ c.rel }}" data-versao="{{ c.versao }}">
-      {{ p.cartao(c) }}
+      {{ p.cartao(c, compacto=True) }}
       {{ p.projetos_vinculados(c.projetos_vinculados) }}
       <div class="fila-acoes">
         {% if c.pergunta %}

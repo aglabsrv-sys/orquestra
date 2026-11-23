@@ -3,6 +3,18 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.from((r || document).querySelectorAll(s)); };
+  function retirarPreviaQueFalhou(img) {
+    if (!img.matches('img[data-previa-compacta]')) return;
+    var capa = img.closest('.cartao-img'), titulo = img.closest('.titulo-com-previa');
+    if (capa) capa.remove();
+    else { img.remove(); if (titulo) titulo.classList.remove('titulo-com-previa'); }
+  }
+  document.addEventListener('error', function (e) {
+    if (e.target instanceof HTMLImageElement) retirarPreviaQueFalhou(e.target);
+  }, true);
+  $$('img[data-previa-compacta]').forEach(function (img) {
+    if (img.complete && !img.naturalWidth) retirarPreviaQueFalhou(img);
+  });
   var chaveRetornoNota = 'orq-nota-retorno:' + document.body.dataset.vaultId;
   var chaveRetornoDiario = 'orq-diario-retorno:' + document.body.dataset.vaultId;
   function guardarRetorno(url) {
@@ -170,6 +182,7 @@
         document.dispatchEvent(new CustomEvent('orquestra:nota-salva',{detail:nota}));
         var img = $('.cartao-img img',alvo);
         if (!img) { var link = document.createElement('a'); link.className='cartao-img'; link.href=$('.cartao-titulo',alvo).href; img=document.createElement('img'); img.alt=''; link.appendChild(img); alvo.prepend(link); }
+        if (alvo.classList.contains('cartao-compacto')) img.setAttribute('data-previa-compacta','');
         img.src='/arquivo/'+dados.caminho;
       }
     } catch (e) { if (estado) estado.textContent=e.message; erro(e); }

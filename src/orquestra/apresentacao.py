@@ -269,6 +269,7 @@ def cartao(nota: Nota, modulo: Modulo | None, hoje: dt.date, omitir: str | None 
         "concluido": False,
         "com_aviso": bool(nota.erro),
         "modulo": modulo.id if modulo else "",
+        "trecho": trecho(nota, 140) if modulo and modulo.id == "radar" else "",
     }
     if modulo is None:
         return c
@@ -383,7 +384,7 @@ def montar_dock(painel: Painel, ativo: str, hoje: dt.date) -> dict[str, Any]:
     # mais a área em que a pessoa está, e o resto fica a um clique, no botão "Áreas".
     capturas = next((m for m in modulos if m["id"] == "entrada"), None)
     entrada = {"id": "entrada", "nome": "Entrada", "icone": "entrada",
-               "url": "/m/entrada" if capturas else "/entrada?aba=decisoes",
+               "url": "/entrada?aba=decisoes",
                "ativo": ativo == "m:entrada", "selo": total_decidir}
     areas = [m for m in modulos if m is not capturas]
     barra, sistema_barra, gaveta = areas, sistema, []

@@ -1,9 +1,67 @@
 """O dock chama atenção para pendências, sem contar o estoque de arquivos."""
 
 import datetime as dt
+from html.parser import HTMLParser
 
 from orquestra.apresentacao import montar_dock
 from orquestra.indice import espera_decisao
+
+
+def atalho_entrada(html):
+    class Atalho(HTMLParser):
+        destino = None
+
+        def handle_starttag(self, tag, attrs):
+            atributos = dict(attrs)
+            if tag == "a" and "dock-entrada" in atributos.get("class", "").split():
+                self.destino = atributos["href"]
+    leitor = Atalho()
+    leitor.feed(html)
+    return leitor.destino
+
+
+def test_entrada_abre_decisoes_e_dock_alterna_com_capturas(cliente):
+    inicio = cliente.get("/")
+    assert next(s for s in inicio.context["slides"] if s["id"] == "entrada")["url"] == "/entrada?aba=decisoes"
+    for origem in ("/", "/m/tarefas", "/m/entrada"):
+        assert atalho_entrada(cliente.get(origem).text) == "/entrada?aba=decisoes"
+    decisoes = cliente.get("/entrada", follow_redirects=False)
+    assert decisoes.status_code == 200
+    assert decisoes.template.name == "decidir.html"
+    assert atalho_entrada(decisoes.text) == "/m/entrada"
+    capturas = cliente.get("/entrada?aba=capturas", follow_redirects=False)
+    assert capturas.status_code == 303 and capturas.headers["location"] == "/m/entrada"
+
+
+def test_entrada_sem_capturas_nao_alterna_para_area_desligada(cliente):
+    cliente.painel.desligar_modulo("entrada")
+    for url in ("/entrada", "/entrada?aba=decisoes", "/entrada?aba=capturas"):
+        pagina = cliente.get(url)
+        assert pagina.status_code == 200
+        assert atalho_entrada(pagina.text) == "/entrada?aba=decisoes"
+
+
+def test_radar_sugere_lista_e_preserva_escolha_de_triagem(cliente):
+    painel = cliente.painel
+    painel.criar_nota("radar", "Notícia nova", {"status": "novo"})
+    painel.criar_nota("radar", "Referência útil", {"status": "util"})
+    pagina = cliente.get("/m/radar")
+    assert pagina.context["visao"].tipo == "tabela"
+    assert cliente.get("/m/radar?aba=v0").context["visao"].tipo == "kanban"
+    assert cliente.get("/m/radar").context["visao"].tipo == "kanban"
+
+
+def test_preview_compacto_nas_decisoes_e_no_radar(cliente):
+    painel = cliente.painel
+    com_imagem = painel.criar_nota("radar", "Vídeo demonstrativo", {"miniatura": "https://example.test/video.jpg", "status": "novo"})
+    sem_imagem = painel.criar_nota("radar", "Notícia somente em texto", {"status": "novo"})
+    pagina = cliente.get("/entrada")
+    assert 'cartao-compacto' in pagina.text
+    assert 'data-previa-compacta' in pagina.text
+    assert com_imagem.titulo in pagina.text and sem_imagem.titulo in pagina.text
+    lista = cliente.get("/m/radar?aba=v1")
+    assert 'radar-lista' in lista.text and 'radar-item-texto' in lista.text
+    assert com_imagem.titulo in lista.text and sem_imagem.titulo in lista.text
 
 
 def test_itens_abertos_sem_prazo_nem_decisao_nao_viram_notificacao(painel):

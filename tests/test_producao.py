@@ -255,7 +255,7 @@ def test_dock_mobile_mantem_area_atual_e_acesso_a_todas_as_telas(app_leve):
     assert not any(m["id"] == "entrada" for m in dock["barra"] + dock["gaveta"])
     assert {i["id"] for i in dock["gaveta"]} | {dock["entrada"]["id"]} == set(painel.indice.modulos) | {"ajustes", "diario", "pastas"}
     html_dock = resposta.text.split('<nav class="dock"', 1)[1].split('</nav>', 1)[0]
-    assert html_dock.count('href="/m/entrada"') == 1
+    assert html_dock.count('href="/entrada?aba=decisoes"') == 1
     assert 'href="/decidir"' not in html_dock
 
 

@@ -48,9 +48,9 @@ def test_telas_compactas_e_entrada_persistente(cliente):
     for rota in ("/", "/m/tarefas", "/ajustes"):
         html = cliente.get(rota).text
         assert 'dock-entrada' in html
-        assert html.count('href="/m/entrada"') >= 1
+        assert html.count('href="/entrada?aba=decisoes"') >= 1
         dock = html.split('<nav class="dock"')[1].split('</nav>')[0]
-        assert dock.count('href="/m/entrada"') == 1
+        assert dock.count('href="/entrada?aba=decisoes"') == 1
 
 
 def test_tailscale_sincroniza_painel_bootstrap_releitura_e_reinicio(vault):
