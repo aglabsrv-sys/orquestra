@@ -117,6 +117,11 @@ def jornada_entrada_radar(page, base: str, capturas: Path | None) -> None:
         if capturas:
             page.locator('.entrada-topo').scroll_into_view_if_needed()
             page.screenshot(path=str(capturas / f'entrada-decidir-compacta-{largura}.png'), full_page=True)
+        titulo = page.locator(f'.fila-item[data-rel="{notas[0]["rel"]}"] .cartao-titulo')
+        tamanho_padrao = titulo.evaluate('e => parseFloat(getComputedStyle(e).fontSize)')
+        page.evaluate("document.documentElement.dataset.tamanho='xxl';document.documentElement.style.setProperty('--tamanho-fonte','24px')")
+        assert titulo.evaluate('e => parseFloat(getComputedStyle(e).fontSize)') > tamanho_padrao
+        conferir_layout(page)
         page.goto(base + '/m/radar', wait_until='domcontentloaded')
         expect(page.locator('.radar-lista')).to_be_visible()
         expect(page.locator('.abas .aba[aria-current]')).to_contain_text('Lista')
