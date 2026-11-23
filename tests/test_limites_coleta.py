@@ -309,3 +309,15 @@ def test_atualizacao_dos_limites_preserva_configuracao_notas_e_codigo_proprio(pa
         assert automacoes._publica_legada(painel, pasta, script)["codigo_nativo"]
     assert (modulo.pasta / "_modulo.yaml").read_bytes() == yaml
     assert {n.rel: n.versao for n in painel.indice.notas.values()} == notas
+
+
+def test_configuracao_conta_bytes_utf8_e_arquivo_excessivo_preserva_anterior(painel, monkeypatch):
+    with pytest.raises(ValueError, match="muito grande"):
+        limites.validar_config({"tarefas": [{"titulo": "🌱" * 26000}]})
+    automacoes.criar(painel, "radar/rss.py", "radar/itens")
+    caminho = painel.vault / automacoes.ARQUIVO
+    anterior = caminho.read_bytes()
+    monkeypatch.setattr(automacoes, "LIMITE_CONFIGURACAO_BYTES", len(anterior) + 1)
+    with pytest.raises(ValueError, match="excedem 32 MB"):
+        automacoes.criar(painel, "radar/rss.py", "radar/itens")
+    assert caminho.read_bytes() == anterior

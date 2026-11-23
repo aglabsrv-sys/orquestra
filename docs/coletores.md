@@ -362,6 +362,9 @@ busca no YouTube), 200 regras de tarefas e 2.000 resultados estimados por rodada
 Listas com fontes repetidas são recusadas. Cada feed ou canal produz até 100
 resultados; a busca pela API do YouTube aceita até 50 por assunto. O período da
 importação iCal legada fica limitado a 90 dias à frente.
+Cada configuração aceita até 100 KB de JSON em UTF-8; o arquivo que reúne as
+automações aceita até 32 MB. Uma gravação excessiva é recusada e preserva o
+arquivo anterior.
 
 O intervalo mínimo das fontes de rede é uma hora, ou seis horas para buscas
 pela API do YouTube. Horários diários continuam disponíveis. Configurações antigas

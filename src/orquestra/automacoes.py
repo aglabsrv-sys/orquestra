@@ -191,6 +191,8 @@ def _alterar(painel: Painel, operacao) -> None:
         instancias = _ler(painel)
         operacao(instancias)
         dados = json.dumps({"versao": 1, "instancias": instancias}, ensure_ascii=False, indent=2, allow_nan=False).encode("utf-8")
+        if len(dados) > LIMITE_CONFIGURACAO_BYTES:
+            raise ErroAutomacao("As configurações de automações excedem 32 MB. Reduza os dados antes de salvar.")
         armazenamento.gravar_bytes(_arquivo(painel), dados, esperado=anterior, validar=lambda: _arquivo(painel))
     painel.mudou_desde_o_backup = True
     painel.eventos.publicar({"tipo": "automacao"})

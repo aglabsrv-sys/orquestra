@@ -48,7 +48,7 @@ def maximo_parametro(nome: str) -> int:
 
 def validar_config(config: dict) -> None:
     """Também valida configurações existentes antes de qualquer acesso à rede."""
-    if len(json.dumps(config, ensure_ascii=False, allow_nan=False)) > 100_000:
+    if len(json.dumps(config, ensure_ascii=False, allow_nan=False).encode("utf-8")) > 100_000:
         raise ValueError("A configuração está muito grande.")
     for nome, valor in config.items():
         if nome in {"canais", "feeds", "termos", "agendas", "repositorios", "moedas", "tarefas", "titulos_contem"}:
