@@ -143,7 +143,7 @@ padrão é reservada ao protocolo; diagnósticos do processo vão para stderr.
 
 | Ferramenta | O que faz |
 |---|---|
-| `regras` | Devolve o `AGENTS.md` e as áreas do vault. O agente deve chamar primeiro. |
+| `regras` | Entrega os contratos, preferências gerais existentes, versão das instruções e áreas do vault. O agente deve chamar em cada conversa nova. |
 | `listar_areas` | Áreas, campos, opções de status e contagens. |
 | `listar_itens` | Itens de uma área, com filtro por status e limite de resultados. |
 | `ler_nota` | Campos e texto de uma nota. |
@@ -163,7 +163,7 @@ padrão é reservada ao protocolo; diagnósticos do processo vão para stderr.
 | `registrar_aprendizado` | Acrescenta uma linha aos aprendizados da área. |
 | `sessoes_recentes` | O relato das últimas sessões: a memória entre conversas. |
 | `registrar_sessao` | Registra no diário o que foi pedido e feito. |
-| `contexto_area` | Reúne schema, pasta real dos itens e fontes anteriores vinculadas à central de instruções, além do contexto técnico e aprendizados de `maquina/`. As orientações gerais de `AGENTS.md` vêm de `regras`. |
+| `contexto_area` | Entrega instruções gerais atuais, schema e pasta real dos itens, com observações anteriores, contexto técnico e aprendizados apenas da área escolhida. |
 | `panorama` | Agrupa respostas, decisões, atrasados, itens de hoje, próximos dias, capturas e itens sem data, com totais. |
 | `revisar_organizacao` | Aponta configurações inválidas, problemas de frontmatter/schema e títulos possivelmente duplicados na mesma área. |
 | `conexoes_nota` | Mostra referências locais de saída e backlinks, usando o mesmo resolvedor do painel. |
@@ -182,12 +182,26 @@ As quatro consultas novas são somente leitura. O cliente recebe essa indicaçã
 também nas anotações das ferramentas; ela descreve o comportamento, não substitui
 as permissões do cliente.
 
-- `contexto_area(area, limite=10, deslocamento=0)`: devolve os campos, opções,
+- `contexto_area(area, limite=10, deslocamento=0, versao_instrucoes="")`: devolve os campos, opções,
   obrigatoriedade, valores padrão e os status de conclusão/decisão. Os documentos
-  de contexto são paginados (máximo de 20 por chamada), com 4000 caracteres por
+  locais de contexto são paginados (máximo de 20 por chamada), com 4000 caracteres por
   corpo. `proximo_deslocamento` indica a próxima página; `texto_limitado` pede
   leitura completa com `ler_nota`. Complete o contexto relevante antes de agir.
   Scripts e outros arquivos que não sejam notas Markdown não entram nessa lista.
+  O campo separado `instrucoes` entrega `AGENTS.md`, `AGENTS.orquestra.md` e
+  `PREFERENCIAS.md` quando existentes, sem repetir as preferências em `documentos`.
+  Informa `versao`, `alteradas`, `fontes` (caminhos e versões) e `documentos`
+  (caminho, versão e texto completo). Contratos inválidos ou acima de 512 KB são
+  recusados com uma mensagem; suas regras não são truncadas silenciosamente.
+  Na mesma conversa, passe a versão que veio de `regras` ou `instrucoes.versao`
+  para não repetir o texto geral já lido. Se ela coincidir com os arquivos atuais,
+  `alteradas` é falso e `instrucoes.documentos` fica vazio; o contexto local
+  continua atualizado. Uma mudança, inclusão ou remoção de fonte geral devolve
+  o conjunto completo. Sem versão, o texto geral sempre volta. Não reutilize uma
+  versão sem ainda ter seu texto no contexto: após conversa nova ou perda de
+  contexto, consulte sem versão. Não existe cache de sessão nem gravação de cópias
+  no vault. A atualização é percebida na próxima consulta, sem envio espontâneo
+  de conteúdo ao cliente.
 - `panorama(area="", dias=7, limite=20, deslocamento=0)`: considera os itens das áreas, com uma
   janela de 1 a 30 dias incluindo hoje. Cada grupo informa `total`, `itens` e
   `limitado` e `proximo_deslocamento` (máximo de 100 itens por grupo). O deslocamento

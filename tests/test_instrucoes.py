@@ -66,7 +66,9 @@ def test_salvar_acrescenta_bloco_e_vinculos_sem_reescrever_fontes(cliente, vault
     contexto = mcp.contexto_area("radar", limite=20)
     caminhos = [d["caminho"] for d in contexto["documentos"]["itens"]]
     assert len(caminhos) == len(set(caminhos))
-    assert "PREFERENCIAS.md" in caminhos
+    assert "PREFERENCIAS.md" not in caminhos
+    gerais = contexto["instrucoes"]["documentos"]
+    assert next(d for d in gerais if d["caminho"] == "PREFERENCIAS.md")["texto"] == "Preferências anteriores da pessoa.\n"
     assert contexto["central_instrucoes"] == "AGENTS.md"
 
 

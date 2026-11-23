@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from orquestra.mcp_servidor import Ferramentas
+from orquestra.mcp_servidor import ErroDeFerramenta, Ferramentas
 
 
 STATUS = """nome: Trabalho
@@ -78,17 +78,92 @@ def test_contexto_reune_schema_memoria_e_contexto_humano_com_paginacao(organizad
     assert arquivos(vault) == antes
 
 
-def test_contexto_inclui_preferencias_globais_antes_das_excecoes_sem_copiar(organizado):
+def test_contexto_inclui_gerais_completas_e_apenas_contexto_da_area_sem_copiar(organizado):
+    gravar(organizado, "AGENTS.md", "Política original da pessoa.\n")
+    gravar(organizado, "AGENTS.orquestra.md", "Contrato complementar.\n")
     gravar(organizado, "PREFERENCIAS.md", "Responda em português, de forma breve.\n")
     gravar(organizado, "trabalho/humano/Exceção.md", "Para relatórios, inclua as fontes.\n")
+    gravar(organizado, "outra/_modulo.yaml", STATUS)
+    gravar(organizado, "outra/humano/Privado.md", "Contexto de outra pasta, fora deste pedido.\n")
     mcp = Ferramentas(organizado)
     antes = arquivos(organizado)
     primeiro = mcp.contexto_area("trabalho", limite=1)
-    assert primeiro["documentos"]["itens"][0]["zona"] == "humano_global"
-    assert primeiro["documentos"]["itens"][0]["caminho"] == "PREFERENCIAS.md"
-    segundo = mcp.contexto_area("trabalho", limite=1, deslocamento=1)
-    assert segundo["documentos"]["itens"][0]["zona"] == "humano"
-    assert "PREFERENCIAS.md" in mcp.regras()
+    assert primeiro["documentos"]["total"] == 1
+    assert primeiro["documentos"]["itens"][0]["zona"] == "humano"
+    gerais = primeiro["instrucoes"]
+    assert gerais["alteradas"]
+    assert [d["caminho"] for d in gerais["documentos"]] == ["AGENTS.md", "AGENTS.orquestra.md", "PREFERENCIAS.md"]
+    assert gerais["documentos"][-1]["texto"] == "Responda em português, de forma breve.\n"
+    regras = mcp.regras()
+    assert f"versao_instrucoes: {gerais['versao']}" in regras
+    assert "Política original da pessoa." in regras and "Contrato complementar." in regras
+    assert regras.count("Responda em português, de forma breve.") == 1
+    assert "Contexto de outra pasta" not in str(primeiro) and "Para relatórios" not in regras
+    assert arquivos(organizado) == antes
+
+
+def test_contexto_reutiliza_gerais_so_com_versao_explicita_e_confere_disco(organizado):
+    contrato = gravar(organizado, "AGENTS.md", "Não publique sem autorização.\n")
+    preferencias = gravar(organizado, "PREFERENCIAS.md", "Respostas breves.\n")
+    local = gravar(organizado, "trabalho/humano/Critério.md", "Use fontes primárias.\n")
+    mcp = Ferramentas(organizado)
+    inicial = mcp.contexto_area("trabalho")
+    versao = inicial["instrucoes"]["versao"]
+    repetido = mcp.contexto_area("trabalho", versao_instrucoes=versao)
+    assert repetido["instrucoes"] == {**inicial["instrucoes"], "alteradas": False, "documentos": []}
+    assert repetido["documentos"]["itens"] == inicial["documentos"]["itens"]
+
+    # Reaproveitar as gerais não esconde novas observações da pasta nem novos aprendizados.
+    local.write_text("Inclua também a data das fontes.\n", encoding="utf-8")
+    gravar(organizado, "trabalho/maquina/aprendizados.md", "Correção nova, comprovada.\n")
+    atual = mcp.contexto_area("trabalho", versao_instrucoes=versao)
+    assert not atual["instrucoes"]["alteradas"]
+    assert {d["texto"] for d in atual["documentos"]["itens"]} == {"Inclua também a data das fontes.\n", "Correção nova, comprovada.\n"}
+
+    preferencias.write_text("Inclua explicações detalhadas.\n", encoding="utf-8")
+    atualizado = mcp.contexto_area("trabalho", versao_instrucoes=versao)["instrucoes"]
+    assert atualizado["alteradas"] and atualizado["versao"] != versao
+    assert atualizado["documentos"][-1]["texto"] == "Inclua explicações detalhadas.\n"
+    contrato.write_text("Confirme os números antes de publicar.\n", encoding="utf-8")
+    assert mcp.contexto_area("trabalho", versao_instrucoes=atualizado["versao"])["instrucoes"]["alteradas"]
+
+    # O servidor não pressupõe que uma conversa nova herdou a leitura anterior.
+    assert mcp.contexto_area("trabalho")["instrucoes"]["documentos"]
+    assert Ferramentas(organizado).contexto_area("trabalho")["instrucoes"]["documentos"]
+
+
+def test_instrucoes_detectam_adicao_remocao_e_troca_de_vault(organizado, tmp_path):
+    gravar(organizado, "AGENTS.md", "Política original.\n")
+    mcp = Ferramentas(organizado)
+    inicial = mcp.contexto_area("trabalho")["instrucoes"]["versao"]
+    suplemento = gravar(organizado, "AGENTS.orquestra.md", "Restrições adicionais.\n")
+    adicional = mcp.contexto_area("trabalho", versao_instrucoes=inicial)["instrucoes"]
+    assert adicional["alteradas"] and len(adicional["documentos"]) == 2
+    suplemento.unlink()
+    removido = mcp.contexto_area("trabalho", versao_instrucoes=adicional["versao"])["instrucoes"]
+    assert removido["alteradas"] and removido["versao"] == inicial
+    outro = tmp_path / "outro"
+    gravar(outro, "AGENTS.md", "Política original.\n")
+    gravar(outro, "trabalho/_modulo.yaml", STATUS)
+    assert Ferramentas(outro).contexto_area("trabalho", versao_instrucoes=inicial)["instrucoes"]["alteradas"]
+
+
+@pytest.mark.parametrize("dados,mensagem", [(b"\xff", "UTF-8"), (b"x" * (512 * 1024 + 1), "512 KB")])
+def test_instrucoes_nao_truncam_nem_ignoram_contrato_invalido(organizado, dados, mensagem):
+    contrato = organizado / "AGENTS.md"
+    contrato.write_bytes(dados)
+    mcp = Ferramentas(organizado)
+    for consultar in (mcp.regras, lambda: mcp.contexto_area("trabalho")):
+        with pytest.raises(ErroDeFerramenta, match=mensagem):
+            consultar()
+    assert contrato.read_bytes() == dados
+
+
+def test_gerais_nao_geram_arquivo_quando_contrato_ausente(organizado):
+    mcp = Ferramentas(organizado)
+    antes = arquivos(organizado)
+    assert mcp.contexto_area("trabalho")["instrucoes"]["documentos"] == []
+    assert "Áreas deste vault" in mcp.regras()
     assert arquivos(organizado) == antes
 
 

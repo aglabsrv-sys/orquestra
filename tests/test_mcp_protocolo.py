@@ -231,6 +231,22 @@ def test_mcp_stdio_recusa_versao_obsoleta_e_permite_retomar(vault, tmp_path):
         })["campos"]["pergunta"] == "Pode revisar?"
 
 
+def test_mcp_stdio_entrega_instrucoes_e_atualiza_sem_depender_de_memoria(vault, tmp_path):
+    preferencias = vault / "PREFERENCIAS.md"
+    preferencias.write_text("Preferência sintética: respostas curtas.\n", encoding="utf-8")
+    with servidor_stdio(vault, tmp_path) as cliente:
+        regras = cliente.chamar("regras")
+        assert "Preferência sintética: respostas curtas." in regras
+        versao = regras.split("versao_instrucoes: ", 1)[1].splitlines()[0]
+        repetido = cliente.chamar("contexto_area", {"area": "tarefas", "versao_instrucoes": versao})
+        assert not repetido["instrucoes"]["alteradas"] and repetido["instrucoes"]["documentos"] == []
+        preferencias.write_text("Preferência atualizada: explique com exemplos.\n", encoding="utf-8")
+        novo = cliente.chamar("contexto_area", {"area": "tarefas", "versao_instrucoes": versao})
+        assert novo["instrucoes"]["alteradas"] and novo["instrucoes"]["versao"] != versao
+        assert novo["instrucoes"]["documentos"][-1]["texto"] == "Preferência atualizada: explique com exemplos.\n"
+        assert cliente.chamar("contexto_area", {"area": "tarefas"})["instrucoes"]["documentos"]
+
+
 def test_mcp_stdio_preserva_notas_humanas_e_recusa_pedidos_invalidos(vault, tmp_path):
     humana = vault / "tarefas/itens/Nota humana.md"
     original = b"---\r\norigem: humano\r\nstatus: a_fazer\r\n---\r\nTexto original da pessoa.\r\n\r\n\r\n"

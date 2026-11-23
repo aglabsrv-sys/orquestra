@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- O MCP entrega contratos e preferências gerais completos no início e confere
+  sua versão ao consultar uma área. Na mesma conversa, instruções inalteradas
+  podem ser reaproveitadas; observações e aprendizados locais vêm atualizados,
+  sem carregar outras áreas nem criar cópias ou novas camadas de preferências.
+
 - Na seção Radar de Para decidir, Arquivar retira o item da fila e o guarda no
   arquivo do módulo, preservando seu conteúdo e a possibilidade de recuperação.
 
@@ -29,8 +34,6 @@
 - Automações são adicionadas pela aba Máquina e configuradas na lateral, sem
   sair da pasta. Ajustes reúne o catálogo com escolha da pasta e da instância;
   a execução automática é controlada no formulário, sem chave duplicada no cartão.
-- Preferências para a IA podem ser escritas uma vez em `PREFERENCIAS.md`;
-  o contexto dos módulos reúne as preferências gerais e as orientações locais.
 - A lista mostra miniaturas quando disponíveis. Automações do catálogo no Radar
   reconhecem vídeos arquivados e não os importam novamente. Esc fecha os ajustes
   da pasta também durante a escolha da capa.
