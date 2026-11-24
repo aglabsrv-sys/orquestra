@@ -39,8 +39,8 @@ Dentro de Para decidir, a ação **Arquivar** guarda o item no arquivo do Radar 
 o retira da fila. O conteúdo é preservado, e vídeos arquivados continuam sendo
 reconhecidos pelas automações para evitar uma nova importação do mesmo vídeo.
 
-Áreas é parte do método PARA: saúde, família, finanças, responsabilidades contínuas.
-Não é igual a um hábito. Para Academia 3×/semana, use Hábitos e metas, com exemplos
+Responsabilidades contínuas, como saúde e família, podem ser organizadas em pastas
+próprias e mostradas no painel. Para Academia 3×/semana, use Hábitos e metas, com exemplos
 opcionais e check-in diário. Um registro não marcado não é inventado pelo agente.
 Pomodoro tem tela própria pelo ícone ao lado da busca; Hábitos abre pela pasta do
 módulo. Veja [Pomodoro e Hábitos](foco-e-habitos.md) para uso e limites de persistência.

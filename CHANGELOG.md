@@ -2,6 +2,12 @@
 
 ## Em desenvolvimento
 
+- O catálogo de instalação e de Ajustes deixa de oferecer Áreas, Recursos e
+  Arquivos. Essas organizações podem ser criadas como pastas e mostradas no
+  painel; módulos existentes, suas capas, o arquivamento e a Lixeira continuam
+  disponíveis. O perfil PARA sai das opções da linha de comando, e o perfil
+  Estudos passa a usar Notas para referências.
+
 - O MCP entrega contratos e preferências gerais completos no início e confere
   sua versão ao consultar uma área. Na mesma conversa, instruções inalteradas
   podem ser reaproveitadas; observações e aprendizados locais vêm atualizados,

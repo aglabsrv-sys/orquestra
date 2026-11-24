@@ -17,7 +17,7 @@ vinculadas por link ou pasta de nome inequívoco, dentro do estudo correspondent
 ## Três jeitos de ter um módulo, sem escrever YAML
 
 - **Acrescentar um pronto.** Em Ajustes > Pastas, escolha no catálogo:
-  Tarefas, Notas, Projetos, Áreas, Recursos, Arquivos, Contatos, Clientes, Finanças,
+  Tarefas, Notas, Projetos, Contatos, Clientes, Finanças,
   Estudos, Conteúdo, Radar, Números, Entrada e Hábitos e metas. Com ou sem notas de
   exemplo, conforme o módulo. Agenda e Hábitos preparam suas pastas ao
   criar o primeiro registro em suas próprias telas.
@@ -25,6 +25,13 @@ vinculadas por link ou pasta de nome inequívoco, dentro do estudo correspondent
 - **Adicionar novamente.** Uma área retirada aparece no mesmo catálogo de
   **Ajustes → Pastas**, inclusive áreas criadas em branco. O botão religa
   a configuração preservada, com as mesmas notas e personalizações.
+
+Áreas, Recursos e Arquivos não fazem parte do catálogo pronto. Para organizar
+responsabilidades ou referências dessa forma, crie uma pasta em **Pastas**;
+ela já fica navegável no explorador. Use **Mostrar no painel** para acrescentar
+campos e visualizações, com o mesmo visual das demais áreas. Pastas e módulos
+com esses nomes em cofres existentes continuam funcionando e são preservados.
+O arquivamento continua em `arquivo/` de cada área, separado da Lixeira.
 
 ## Criar e organizar itens
 
