@@ -2,6 +2,17 @@
 
 ## Em desenvolvimento
 
+- Notas e pastas oferecem um menu de clique direito com Abrir, Propriedades,
+  Arquivar e Excluir, também acessível por Shift+F10. As ações mantêm confirmações,
+  conferência de versão, proteção das configurações e restauração pela Lixeira.
+- Arrastar arquivos sobre uma pasta aberta mostra um alvo central com o fundo
+  desfocado. A importação copia até 20 arquivos de 20 MB cada, preserva os
+  originais e usa outro nome quando já existe um arquivo igual. PDFs, documentos
+  e textos também ficam disponíveis para baixar nas pastas.
+- Hábitos podem ser reordenados pela alça de arraste ou pelas setas do teclado,
+  com ordem persistente. Os avisos de pasta vazia em Estudos e Projetos ficam
+  centralizados nas visualizações e dentro das pastas.
+
 - O catálogo de instalação e de Ajustes deixa de oferecer Áreas, Recursos e
   Arquivos. Essas organizações podem ser criadas como pastas e mostradas no
   painel; módulos existentes, suas capas, o arquivamento e a Lixeira continuam

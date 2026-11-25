@@ -14,6 +14,8 @@ test('marcar após virar a semana remonta o período em vez de pintar os dias an
     '#habitos-dados':{textContent:JSON.stringify({itens:[],modelos:[]})},
     '#habito-editor':{addEventListener(){}},
     '#habito-form':{},
+    '#habitos-grade':{addEventListener(){}},
+    '#habitos-ordem-estado':{textContent:''},
   };
   let recargas=0,pedido;
   const document={body:{dataset:{vaultId:'vault-teste'},appendChild(){}},createElement(){return {};},getElementById(){return root;},querySelector(s){return elementos[s];},addEventListener(n,f){listeners[n]=f;},dispatchEvent(){}};

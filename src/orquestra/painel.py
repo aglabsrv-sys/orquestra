@@ -479,17 +479,20 @@ class Painel:
 
     @_sincronizado
     def arquivar(self, rel: str, autor: str = "painel", versao: str | None = None) -> str:
-        """Move a nota para a pasta arquivo/ do módulo. Nada é apagado."""
+        """Move a nota para arquivo/ da área ou da pasta pessoal. Nada é apagado."""
+        from orquestra import lixeira
         caminho = self.caminho_seguro(rel)
         modulo = self.indice.modulo_de(rel)
-        if not caminho.is_file() or modulo is None:
+        if not caminho.is_file():
             raise NaoEncontrado(rel)
-        if self.indice.zona_de(rel) == "arquivo":
+        if not lixeira.pode_excluir(self, rel):
+            raise Recusado("Instruções e configurações são protegidas contra arquivamento.")
+        if self.indice.zona_de(rel) == "arquivo" or "arquivo" in rel.casefold().split("/"):
             raise Recusado("Esta nota já está arquivada.")
         nota = ler_nota(caminho, self.vault)
         if versao is not None and versao != nota.versao:
             raise Conflito("A nota mudou no disco. Reabra a versão atual antes de arquivar.")
-        pasta = caminho_no_vault(self.vault, modulo.pasta / "arquivo")
+        pasta = caminho_no_vault(self.vault, (modulo.pasta if modulo else caminho.parent) / "arquivo")
         destino = caminho_no_vault(self.vault, caminho_livre(pasta, caminho.stem))
         armazenamento.mover_seguro(caminho, destino, esperado=nota.versao,
                                    validar=lambda: (caminho_no_vault(self.vault, caminho), caminho_no_vault(self.vault, destino)))
@@ -500,7 +503,7 @@ class Painel:
             diario.registrar(self.vault, "arquivado", rel, f"movido para {novo_rel}", autor)
         except (OSError, ValueError):
             registro.warning("Nota arquivada, mas não foi possível registrar no diário.")
-        self.eventos.publicar({"tipo": "nota", "acao": "removido", "rel": rel, "modulo": modulo.id, "versao": ""})
+        self.eventos.publicar({"tipo": "nota", "acao": "removido", "rel": rel, "modulo": modulo.id if modulo else "", "versao": ""})
         self.mudou_desde_o_backup = True
         return novo_rel
 

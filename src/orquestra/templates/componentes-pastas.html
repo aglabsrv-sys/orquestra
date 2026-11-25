@@ -3,6 +3,10 @@
   {% if f.pode_adotar %}<button class="botao pequeno pasta-atalho" type="button" data-adotar="{{ f.nome }}">Mostrar no painel</button>{% endif %}
 {% endmacro %}
 
+{% macro contexto(f) -%}
+data-contexto-pasta="{{ f.chave }}"{% if modulo and (f.chave.startswith(('grupo:', 'diretorio:')) or f.item) %} data-contexto-modulo="{{ modulo.id }}"{% endif %} data-contexto-url="{{ f.href|default(f.url) }}"
+{%- endmacro %}
+
 {% macro grade(pastas, modo, rotulo_grade, icone_item='pasta') %}
 {% if modo == 'pastas' %}
 {% set frente = "M0 22A22 22 0 0 1 22 0L118 0C144 0 146 32 172 32L318 32A22 22 0 0 1 340 54L340 176A22 22 0 0 1 318 198L22 198A22 22 0 0 1 0 176Z" %}
@@ -11,7 +15,7 @@
 <section class="pastas-vidro" aria-label="{{ rotulo_grade }}">
   {% for f in pastas %}
   {% set visiveis = f.arquivos[:4]|reverse|list %}
-  <div class="gf-root{% if f.concluido %} gf-concluido{% endif %}" data-tone="dark" data-titulo="{{ f.titulo }}"{% if f.item %} data-vinculo="{{ f.rel }}"{% endif %}{% if f.arte %} data-arte="{{ f.arte }}"{% endif %} data-total="{{ f.total }}">
+  <div class="gf-root{% if f.concluido %} gf-concluido{% endif %}" {{ contexto(f) }} data-tone="dark" data-titulo="{{ f.titulo }}"{% if f.item %} data-vinculo="{{ f.rel }}"{% endif %}{% if f.arte %} data-arte="{{ f.arte }}"{% endif %} data-total="{{ f.total }}">
     <div class="gf-stage"><div class="gf-tilt">
       <div class="gf-shadow" aria-hidden="true"></div>
       <div class="gf-back"{% if f.cor %} style="background:{{ f.cor }}"{% endif %} aria-hidden="true">{% if f.imagem %}<img class="gf-art" src="{{ f.imagem }}" alt="" loading="lazy" draggable="false">{% elif f.arte %}<canvas class="gf-art"></canvas>{% endif %}<div class="gf-back-sheen"></div></div>
@@ -46,7 +50,7 @@
 {% elif modo == 'cartoes' %}
 <section class="cartoes-simples" aria-label="{{ rotulo_grade }}">
   {% for f in pastas %}
-  <div class="cartao-pasta"><a class="cartao-simples{% if f.concluido %} concluido{% endif %}" href="{{ f.href|default(f.url) }}">
+  <div class="cartao-pasta" {{ contexto(f) }}><a class="cartao-simples{% if f.concluido %} concluido{% endif %}" href="{{ f.href|default(f.url) }}">
     <span class="cartao-simples-icone" aria-hidden="true">{{ icone(f.modulo.icone if f.modulo else (icone_item if f.item else 'pasta'), 20) }}</span>
     <b>{{ f.titulo }}</b>
     <small>{% if f.apoio or f.estado %}{{ f.apoio or f.estado }} · {% endif %}{{ f.total }} nota{{ 's' if f.total != 1 }}</small>
@@ -59,7 +63,7 @@
 {% else %}
 <ul class="lista-pasta lista-pastas" aria-label="{{ rotulo_grade }}">
   {% for f in pastas %}
-  <li{% if f.concluido %} class="concluido"{% endif %}><a href="{{ f.href|default(f.url) }}">{{ icone('pasta', 15) }}<b>{{ f.titulo }}</b>{% if f.estado %}<span class="et">{{ f.estado }}</span>{% endif %}{% if f.quando %}<span class="suave">{{ f.quando }}</span>{% endif %}<small>{{ f.total }} nota{{ 's' if f.total != 1 }}</small></a></li>
+  <li {{ contexto(f) }}{% if f.concluido %} class="concluido"{% endif %}><a href="{{ f.href|default(f.url) }}">{{ icone('pasta', 15) }}<b>{{ f.titulo }}</b>{% if f.estado %}<span class="et">{{ f.estado }}</span>{% endif %}{% if f.quando %}<span class="suave">{{ f.quando }}</span>{% endif %}<small>{{ f.total }} nota{{ 's' if f.total != 1 }}</small></a></li>
   {% else %}
   <li>{{ p.vazio("Nada aqui ainda", "Crie o primeiro com o botão Novo.") }}</li>
   {% endfor %}
@@ -71,7 +75,7 @@
 {% macro midias(arquivos) %}
 {% if arquivos %}<div class="arquivos-grade" aria-label="Arquivos">
 {% for a in arquivos %}
-<a class="arquivo-item" href="{{ a.url }}">{% if a.imagem %}<img src="{{ a.imagem }}" alt="" loading="lazy">{% else %}<span>{{ icone('nota' if a.tipo == 'html' else 'imagem', 18) }}</span>{% endif %}<b>{{ a.nome }}</b><small>{{ 'HTML' if a.tipo == 'html' else 'Mídia' }}</small></a>
+<a class="arquivo-item" href="{{ a.url }}"{% if a.tipo == 'arquivo' %} download{% endif %}>{% if a.imagem %}<img src="{{ a.imagem }}" alt="" loading="lazy">{% else %}<span>{{ icone('nota' if a.tipo in ('html', 'arquivo') else 'imagem', 18) }}</span>{% endif %}<b>{{ a.nome }}</b><small>{{ 'Baixar' if a.tipo == 'arquivo' else 'HTML' if a.tipo == 'html' else 'Mídia' }}</small></a>
 {% endfor %}
 </div>{% endif %}
 {% endmacro %}

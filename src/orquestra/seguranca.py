@@ -135,7 +135,8 @@ class Protecao:
                 return await _negar(send, 403, "Requisição vinda de outro site foi bloqueada.")
             tipo_corpo = cabecalhos.get("content-type", "").split(";", 1)[0].strip().lower()
             upload_capa = scope.get("path") == "/api/capas" and scope["method"] == "POST" and tipo_corpo == "application/octet-stream"
-            if tipo_corpo != "application/json" and not upload_capa:
+            upload_arquivo = scope.get("path") == "/api/pastas/importar" and scope["method"] == "POST" and tipo_corpo == "application/octet-stream"
+            if tipo_corpo != "application/json" and not upload_capa and not upload_arquivo:
                 return await _negar(send, 415, "Este painel só aceita alterações em JSON.")
             mensagens = []
             tamanho = 0
@@ -144,8 +145,8 @@ class Protecao:
                 if mensagem["type"] != "http.request":
                     return await _negar(send, 400, "A conexão terminou antes de receber o pedido.")
                 tamanho += len(mensagem.get("body", b""))
-                if tamanho > LIMITE_CORPO:
-                    return await _negar(send, 413, "O pedido excede 2 MB. Divida o conteúdo em notas menores.")
+                if tamanho > (20 * 1024 * 1024 if upload_arquivo else LIMITE_CORPO):
+                    return await _negar(send, 413, "Cada arquivo pode ter até 20 MB." if upload_arquivo else "O pedido excede 2 MB. Divida o conteúdo em notas menores.")
                 mensagens.append(mensagem)
                 if not mensagem.get("more_body"):
                     break

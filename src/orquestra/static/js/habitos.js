@@ -4,6 +4,51 @@
   var $ = function (s,r) { return (r || document).querySelector(s); };
   var dados = JSON.parse($('#habitos-dados').textContent), itens = new Map(dados.itens.map(function (i) { return [i.rel,i]; }));
   var editor = $('#habito-editor'), form = $('#habito-form'), atual = null, ocupado = false, sujo = false, foco = null;
+  var grade=$('#habitos-grade'), arraste=null, versaoOrdem=dados.versao_ordem, estadoOrdem=$('#habitos-ordem-estado');
+  function cartoes(){return Array.from(grade.querySelectorAll('[data-habito]'));}
+  function restaurarOrdem(antes){antes.forEach(function(card){grade.appendChild(card);});}
+  async function guardarOrdem(antes,alca){
+    var ordem=cartoes().map(function(card){return card.dataset.habito;});
+    if(ordem.join('\n')===antes.map(function(card){return card.dataset.habito;}).join('\n'))return;
+    ocupado=true;estadoOrdem.textContent='Salvando ordem…';
+    document.dispatchEvent(new CustomEvent('orquestra:config-salva'));
+    try{var r=await api('/api/habitos/ordem',{ordem:ordem,versao:versaoOrdem});versaoOrdem=r.versao;estadoOrdem.textContent='Ordem salva.';}
+    catch(erro){restaurarOrdem(antes);estadoOrdem.textContent=erro.message;}
+    finally{ocupado=false;if(alca.isConnected)alca.focus({preventScroll:true});}
+  }
+  grade.addEventListener('pointerdown',function(e){
+    var alca=e.target.closest('[data-habito-arrastar]');if(!alca||e.button!==0||ocupado)return;
+    e.preventDefault();alca.focus({preventScroll:true});alca.setPointerCapture(e.pointerId);
+    arraste={alca:alca,card:alca.closest('[data-habito]'),antes:cartoes(),x:e.clientX,y:e.clientY,id:e.pointerId,moveu:false};
+  });
+  window.addEventListener('pointermove',function(e){
+    if(!arraste||e.pointerId!==arraste.id)return;
+    if(!arraste.moveu&&Math.hypot(e.clientX-arraste.x,e.clientY-arraste.y)<6)return;
+    arraste.moveu=true;arraste.card.classList.add('habito-ordenando');grade.classList.add('reordenando');
+    var sobre=document.elementFromPoint(e.clientX,e.clientY),alvo=sobre&&sobre.closest('[data-habito]');
+    if(alvo&&alvo!==arraste.card&&alvo.parentElement===grade){
+      var lista=cartoes();if(lista.indexOf(arraste.card)<lista.indexOf(alvo))alvo.after(arraste.card);else alvo.before(arraste.card);
+    }
+    if(e.clientY<70)window.scrollBy(0,-12);else if(e.clientY>innerHeight-70)window.scrollBy(0,12);
+  });
+  function terminarOrdem(e,cancelar){
+    if(!arraste||e.pointerId!==arraste.id)return;
+    var gesto=arraste;arraste=null;gesto.card.classList.remove('habito-ordenando');grade.classList.remove('reordenando');
+    if(gesto.alca.hasPointerCapture(e.pointerId))gesto.alca.releasePointerCapture(e.pointerId);
+    if(cancelar)restaurarOrdem(gesto.antes);else guardarOrdem(gesto.antes,gesto.alca);
+  }
+  window.addEventListener('pointerup',function(e){terminarOrdem(e,false);});
+  window.addEventListener('pointercancel',function(e){terminarOrdem(e,true);});
+  window.addEventListener('blur',function(){if(arraste)terminarOrdem({pointerId:arraste.id},true);});
+  grade.addEventListener('keydown',function(e){
+    var alca=e.target.closest('[data-habito-arrastar]');if(!alca)return;
+    if(e.key==='Escape'&&arraste){terminarOrdem({pointerId:arraste.id},true);return;}
+    var passo={ArrowUp:-1,ArrowLeft:-1,ArrowDown:1,ArrowRight:1}[e.key];if(!passo||ocupado||arraste)return;
+    e.preventDefault();var antes=cartoes(),card=alca.closest('[data-habito]'),indice=antes.indexOf(card),alvo=antes[indice+passo];
+    if(!alvo)return;if(passo>0)alvo.after(card);else alvo.before(card);guardarOrdem(antes,alca);
+  });
+  window.Orquestra=window.Orquestra||{};
+  window.Orquestra.habitosOcupados=function(){return ocupado||!!arraste;};
   async function api(url,corpo) {
     var r; try { r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-Orquestra-Vault':document.body.dataset.vaultId},body:JSON.stringify(corpo)}); }
     catch (_) { throw new Error('Sem conexão. Mantenha o formulário aberto e tente novamente.'); }

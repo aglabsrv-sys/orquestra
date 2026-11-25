@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import re
 import shutil
@@ -29,13 +30,33 @@ def pode_excluir(painel, rel: str) -> bool:
 
 def _pasta_permitida(rel: str) -> bool:
     partes = rel.split("/")
-    return (len(partes) > 1 and "\\" not in rel and not ignorar(rel + "/x.md")
+    return (bool(rel) and rel.casefold() != "diario" and "\\" not in rel and not ignorar(rel + "/x.md")
             and not any(not p or p.startswith((".", "_")) or ":" in p or p.casefold() == "maquina" for p in partes))
 
 
+def pode_excluir_pasta(vault: Path, rel: str) -> tuple[bool, str]:
+    if not _pasta_permitida(rel):
+        return False, "Esta pasta é protegida."
+    try:
+        conferir_pasta(caminho_no_vault(vault, rel))
+    except ValueError as erro:
+        return False, str(erro)
+    return True, ""
+
+
 def versao_pasta(pasta: Path) -> str:
-    info = pasta.stat()
-    return armazenamento.versao(f"{info.st_dev}:{info.st_ino}:{info.st_mtime_ns}".encode())
+    """Inclui alterações em notas e subpastas, sem ler anexos inteiros ou seguir links."""
+    resumo = hashlib.sha256()
+    pendentes = [pasta]
+    while pendentes:
+        atual = pendentes.pop()
+        link = eh_link(atual)
+        info = atual.lstat()
+        resumo.update(json.dumps((atual.relative_to(pasta).as_posix(), info.st_mode, info.st_dev, info.st_ino,
+                                 info.st_size, info.st_mtime_ns, info.st_ctime_ns, link), ensure_ascii=False).encode("utf-8"))
+        if not link and atual.is_dir():
+            pendentes.extend(sorted(atual.iterdir(), key=lambda p: p.name))
+    return resumo.hexdigest()
 
 
 def conferir_pasta(pasta: Path) -> None:
@@ -45,7 +66,7 @@ def conferir_pasta(pasta: Path) -> None:
     while pilha:
         atual = pilha.pop()
         for filho in atual.iterdir():
-            if eh_link(filho) or filho.name.startswith((".", "_")) or filho.name.casefold() in protegidos:
+            if eh_link(filho) or filho.name.startswith((".", "_")) or filho.name.casefold() in protegidos | {"maquina"}:
                 raise ValueError("Esta pasta contém configurações, instruções ou links protegidos.")
             if filho.is_dir():
                 pilha.append(filho)

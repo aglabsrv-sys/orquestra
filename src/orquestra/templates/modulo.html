@@ -71,7 +71,8 @@
   </span>
 </nav>
 
-<div id="modulo-painel" tabindex="-1">
+<div id="modulo-painel" tabindex="-1" data-importar-nome="{{ pasta_aberta.titulo if pasta_aberta is defined else modulo.nome }}" data-importar-pasta="{{ pasta_aberta.destino_nota if pasta_aberta is defined else (modulo.id ~ '/referencias' if aba == 'referencias' else (modulo.id ~ ('/' ~ pasta_atual if pasta_atual else '') if modulo.itens_na_raiz else modulo.id ~ '/itens')) }}"{% if pasta_aberta is defined and pasta_aberta.vinculo %} data-importar-vinculo="{{ pasta_aberta.vinculo }}"{% endif %}>
+{% if anexos_raiz and pasta_aberta is not defined and aba not in ('maquina', 'referencias') %}{{ pasta_ui.midias(anexos_raiz) }}{% endif %}
 {% if modulo.id == 'contatos' and aba not in ('humano', 'maquina') %}
 <form class="contatos-filtros contatos-filtros-desktop" role="search" method="get" action="/m/contatos">
   <label class="campo"><span>Buscar contato</span><input type="search" name="q" value="{{ busca_contato }}" placeholder="Nome, telefone, e-mail ou organização"></label>
@@ -87,7 +88,7 @@
 {% if subpastas is defined and (subpastas or pasta_atual or midias_modulo) %}
 <div class="modulo-pastas">
 {% if pasta_atual %}<div class="modulo-navegacao"><a class="botao pequeno discreto modulo-voltar" href="/m/{{ modulo.id|urlencode }}{% if trilha_pastas|length > 1 %}?pasta={{ trilha_pastas[-2].caminho|urlencode }}{% endif %}" aria-label="Voltar à pasta anterior">{{ icone('seta_esq', 15) }} Voltar</a><h2>{{ ajustes_diretorio.titulo }}</h2></div>{{ pasta_ui.ajustes(ajustes_diretorio, modulo, true) }}{% endif %}
-{% if subpastas and modo_subpastas == 'lista' %}<nav class="modulo-subpastas" aria-label="Subpastas">{% for filha in subpastas %}<a href="?pasta={{ filha.caminho|urlencode }}">{{ icone('pasta', 17) }}<span>{{ filha.nome }}</span><small>{{ filha.total }}</small>{{ icone('chevron_dir', 14) }}</a>{% endfor %}</nav>
+{% if subpastas and modo_subpastas == 'lista' %}<nav class="modulo-subpastas" aria-label="Subpastas">{% for filha in subpastas %}<a data-contexto-pasta="{{ modulo.id }}/{{ filha.caminho }}" href="?pasta={{ filha.caminho|urlencode }}">{{ icone('pasta', 17) }}<span>{{ filha.nome }}</span><small>{{ filha.total }}</small>{{ icone('chevron_dir', 14) }}</a>{% endfor %}</nav>
 {% elif subpastas %}{{ pasta_ui.grade(subpastas, modo_subpastas, 'Subpastas') }}{% endif %}
 {{ pasta_ui.midias(midias_modulo) }}
 </div>
@@ -201,7 +202,7 @@
   </header>
   <div class="pasta-conteudo">
   {% if pa.subpastas %}{{ pasta_ui.grade(pa.subpastas, modo_subpastas, 'Subpastas') }}{% endif %}
-  {% if not pa.notas and not pa.midias and not pa.subpastas %}<p class="suave">Pasta vazia.</p>{% endif %}
+  {% if not pa.notas and not pa.midias and not pa.subpastas %}{{ p.vazio('Pasta vazia', 'Crie uma nota ou arraste arquivos para esta pasta.') }}{% endif %}
   {% if pa.notas and visao.tipo == 'tabela' %}
   <ul class="lista-pasta">
     {% for n in pa.notas %}
@@ -253,7 +254,7 @@
     <thead><tr><th class="col-selecao" scope="col">{% if conclusao_tarefa %}<span class="somente-leitor">Conclusão</span>{% else %}<input type="checkbox" data-lote-todos aria-label="Selecionar todos desta página">{% endif %}</th>{% for col in colunas_tabela %}<th scope="col" data-ordenar data-coluna="{{ col.nome }}" aria-sort="none"><div class="cab-coluna"><button type="button" class="nome-coluna" title="Clique duas vezes para renomear" aria-label="Renomear coluna {{ col.rotulo }}">{{ col.rotulo }}</button><button type="button" class="ordenar-coluna" aria-label="Ordenar esta página por {{ col.rotulo }}">{{ icone('ordenar', 14) }}</button></div></th>{% endfor %}</tr></thead>
     <tbody>
       {% for l in linhas %}
-      <tr{% if l.cartao.concluido %} class="concluido"{% endif %}>
+      <tr data-contexto-nota="{{ l.cartao.rel }}"{% if l.cartao.concluido %} class="concluido"{% endif %}>
         <td class="col-selecao">{% if conclusao_tarefa %}
           {% set reabrir = l.cartao.status if not l.cartao.concluido and l.cartao.status in opcoes_status else status_reabrir %}
           <button type="button" class="tarefa-conclusao" data-tarefa-conclusao data-rel="{{ l.cartao.rel }}" data-versao="{{ l.cartao.versao }}" data-campo="{{ modulo.campo_status }}" data-concluir="{{ status_concluir }}" data-reabrir="{{ reabrir }}" data-rotulo-concluir="{{ rotulo(status_concluir) }}" data-rotulo-reabrir="{{ rotulo(reabrir) }}" data-titulo="{{ l.cartao.titulo }}" aria-pressed="{{ 'true' if l.cartao.concluido else 'false' }}" aria-label="{{ 'Reabrir' if l.cartao.concluido else 'Concluir' }} {{ l.cartao.titulo }}" title="{{ 'Reabrir tarefa' if l.cartao.concluido else 'Concluir tarefa' }}">{{ icone('visto', 14) }}</button>

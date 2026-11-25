@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 from collections import Counter
 from typing import Any
 
-from orquestra import apoios, apresentacao as ap, preparo
-from orquestra.notas import ler_nota
+from orquestra import apoios, armazenamento, apresentacao as ap, preparo
+from orquestra.notas import Conflito, ler_nota
 from orquestra.painel import NaoEncontrado, Recusado
 
 MODELOS = (
@@ -79,6 +80,28 @@ def resumo(itens: list[dict]) -> dict:
             "metas": sum(i["semana"] >= i["meta"] for i in itens), "semana": sum(i["semana"] for i in itens)}
 
 
+def _ordem(painel) -> list[str]:
+    secao = painel.ler_estado().get("habitos", {})
+    ordem = secao.get("ordem", []) if isinstance(secao, dict) else []
+    return list(dict.fromkeys(ordem)) if isinstance(ordem, list) and all(isinstance(r, str) for r in ordem) else []
+
+
+def _versao_ordem(ordem: list[str]) -> str:
+    return armazenamento.versao(json.dumps(ordem, ensure_ascii=False).encode("utf-8"))
+
+
+def reordenar(painel, ordem: list[str], versao: str) -> dict:
+    with painel._trava:
+        if versao != _versao_ordem(_ordem(painel)):
+            raise Conflito("A ordem mudou em outra janela. Atualize o painel antes de reorganizar.")
+        existentes = {n.rel for n in painel.indice.itens("habitos")}
+        if len(ordem) != len(set(ordem)) or set(ordem) != existentes:
+            raise Conflito("A lista de hábitos mudou. Atualize o painel antes de reorganizar.")
+        painel.gravar_estado("habitos", "ordem", ordem)
+        painel.eventos.publicar({"tipo": "config"})
+        return {"ordem": ordem, "versao": _versao_ordem(ordem)}
+
+
 def montar(painel, aba="progresso", hoje: dt.date | None = None) -> dict:
     hoje = hoje or dt.date.today()
     instalado = "habitos" in painel.indice.modulos
@@ -88,7 +111,9 @@ def montar(painel, aba="progresso", hoje: dt.date | None = None) -> dict:
     for item in itens:
         notas = execucoes.get(item["rel"], [])
         item["dias_com_notas"] = sorted({n["data"] for n in notas if n["data"]})
-    itens.sort(key=lambda i: (i["marcado"], i["titulo"].casefold(), i["rel"]))
+    ordem = _ordem(painel)
+    posicoes = {rel: i for i, rel in enumerate(ordem)}
+    itens.sort(key=lambda i: (posicoes.get(i["rel"], len(ordem)), i["titulo"].casefold(), i["rel"]) if ordem else (i["marcado"], i["titulo"].casefold(), i["rel"]))
     segunda = hoje - dt.timedelta(days=hoje.weekday())
     inicio = segunda - dt.timedelta(weeks=12)
     dias = [inicio + dt.timedelta(days=i) for i in range(91)]
@@ -99,7 +124,7 @@ def montar(painel, aba="progresso", hoje: dt.date | None = None) -> dict:
         nome = ap.MESES[dia.month - 1]
         meses.append(nome if nome != anterior else "")
         anterior = nome
-    return {"modulo": modulo,
+    return {"modulo": modulo, "versao_ordem": _versao_ordem(ordem),
             "aba": "lista" if aba in ("lista", "v1") else "progresso", "itens": itens,
             "resumo_habitos": resumo(itens), "modelos": MODELOS, "dias_mapa": dias,
             "meses_mapa": meses, "n_humano": len(painel.indice.notas_em("habitos", "humano")) if instalado else 0,
