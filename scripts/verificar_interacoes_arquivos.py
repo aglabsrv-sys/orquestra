@@ -176,42 +176,24 @@ def jornadas(browser, base, vault, capturas):
     def responder_atualizacao(rota):
         if rota.request.method == "POST":
             pedidos_atualizacao.append(rota.request.post_data_json)
-            rota.fulfill(status=400, json={"erro": "Falha demonstrativa. A cópia permanece guardada."})
+            rota.fulfill(status=400, json={"erro": "Falha demonstrativa. Tente novamente."})
         else:
-            rota.fulfill(json={"disponivel": True, "local": True, "alteracoes_locais": 2, "pid": 1, "revisao": "nova"})
+            rota.fulfill(json={"disponivel": True, "local": True, "pid": 1, "revisao": "nova"})
     pagina.route("**/api/atualizacao", responder_atualizacao)
     for largura in (1440, 390):
         pagina.set_viewport_size({"width": largura, "height": 844})
         pagina.goto(base + "/m/habitos")
-        pagina.locator("#atualizar-app").click()
-        confirmar = pagina.get_by_role("button", name="Guardar cópia e atualizar", exact=True)
-        expect(confirmar).to_be_visible()
-        expect(pagina.locator("dialog[open]")).to_contain_text("Você poderá baixar a cópia")
-        assert pagina.evaluate("document.documentElement.scrollWidth<=innerWidth")
-        captura(f"atualizacao-com-copia-{largura}.png")
-        pagina.get_by_role("button", name="Cancelar", exact=True).last.click()
         antes = len(pedidos_atualizacao)
         pagina.locator("#atualizar-app").click()
-        confirmar.click()
-        expect(pagina.locator("#avisos")).to_contain_text("A cópia permanece guardada")
+        expect(pagina.locator("#avisos")).to_contain_text("Falha demonstrativa. Tente novamente.")
+        expect(pagina.locator("dialog[open]")).to_have_count(0)
         assert len(pedidos_atualizacao) == antes + 1
-        assert pedidos_atualizacao[-1] == {"modo": "baixar", "preservar": True}
+        assert pedidos_atualizacao[-1] == {}
+        assert pagina.evaluate("document.documentElement.scrollWidth<=innerWidth")
     pagina.unroute("**/api/atualizacao")
-    pagina.route("**/api/atualizacao", lambda rota: rota.fulfill(json={"disponivel": False, "local": True, "copia": {"id": "copia-demonstrativa"}}))
-    pedidos_copia = []
-    def responder_copia(rota):
-        pedidos_copia.append(rota.request.all_headers())
-        rota.fulfill(content_type="application/zip", body=b"PK demonstrativo")
-    pagina.route("**/api/atualizacao/copia", responder_copia)
-    pagina.goto(base + "/m/habitos")
-    with pagina.expect_download() as download:
-        pagina.get_by_role("button", name="Baixar cópia", exact=True).click()
-    assert download.value.suggested_filename == "alteracoes-orquestra.zip"
-    assert pedidos_copia[-1]["x-orquestra-local"]
-    assert pedidos_copia[-1]["x-orquestra-vault"]
     assert not erros, erros
     pagina.close()
-    return {"jornadas": ["vazios centralizados desktop/mobile", "menu, teclado e propriedades", "cancelar e arquivar", "soltar Markdown e PDF", "ordem de hábitos por teclado e arraste", "atualização com cópia desktop/mobile"], "erros_js": erros}
+    return {"jornadas": ["vazios centralizados desktop/mobile", "menu, teclado e propriedades", "cancelar e arquivar", "soltar Markdown e PDF", "ordem de hábitos por teclado e arraste", "atualização direta desktop/mobile"], "erros_js": erros}
 
 
 def main():

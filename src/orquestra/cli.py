@@ -242,7 +242,7 @@ def reiniciar(args: argparse.Namespace) -> None:
 
 
 def atualizar(args: argparse.Namespace) -> None:
-    """Instala a versão oficial guardando as alterações antes de reabrir o painel."""
+    """Sincroniza a versão oficial antes de reabrir o painel."""
     import shutil
 
     from orquestra import processo
@@ -254,13 +254,11 @@ def atualizar(args: argparse.Namespace) -> None:
         sys.exit("Instale Git e uv para atualizar esta cópia do Orquestra.")
     aberto = processo.localizar()
     vault = Path(aberto["vault"]) if aberto and aberto.get("vault") else localizar_vault()
-    print("Procurando a versão nova. Alterações do aplicativo serão guardadas em uma cópia antes da instalação…")
+    print("Sincronizando e atualizando o Orquestra…")
     try:
-        resultado = instalacao.atualizar(preservar=True, vault=vault)
-        dependencias = Dependencias(instalacao.raiz, uv, instalacao.copias)
+        resultado = instalacao.atualizar(vault=vault)
+        dependencias = Dependencias(instalacao.raiz, uv, instalacao.pasta)
         dependencias.preparar()
-        if resultado["copia"]:
-            print(f"Cópia das alterações: {instalacao.copias}")
         print("Orquestra atualizado. Veja as novidades no CHANGELOG.md." if resultado["mudou"] else "Você já está na versão mais recente.")
         if aberto:
             info = processo.consultar(aberto["porta"])

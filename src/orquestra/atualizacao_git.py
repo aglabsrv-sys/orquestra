@@ -1,4 +1,4 @@
-"""Atualização Git com cópia local; também funciona fora do pacote para recuperação."""
+"""Sincroniza a instalação com a versão oficial, sem alterar o vault."""
 from __future__ import annotations
 
 import argparse
@@ -10,7 +10,6 @@ import subprocess
 import sys
 import tempfile
 import uuid
-import zipfile
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -19,8 +18,8 @@ REMOTOS = {"https://github.com/aglabsrv-sys/orquestra.git", "https://github.com/
 
 class Dependencias:
     """No Windows, prepara sem tocar nos executáveis que o painel mantém abertos."""
-    def __init__(self, raiz: Path, uv: str, copias: Path, *, preparado: Path | None = None, ambiente: dict | None = None):
-        self.raiz, self.uv, self.copias = raiz, uv, copias
+    def __init__(self, raiz: Path, uv: str, pasta: Path, *, preparado: Path | None = None, ambiente: dict | None = None):
+        self.raiz, self.uv, self.pasta = raiz, uv, pasta
         self.ambiente = dict(os.environ if ambiente is None else ambiente)
         self.ambiente.pop("VIRTUAL_ENV", None)
         self.preparado = preparado
@@ -36,8 +35,8 @@ class Dependencias:
     def preparar(self) -> None:
         ambiente = self.ambiente
         if os.name == "nt":
-            self.copias.mkdir(parents=True, exist_ok=True, mode=0o700)
-            self.preparado = Path(tempfile.mkdtemp(prefix="ambiente-", dir=self.copias))
+            self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
+            self.preparado = Path(tempfile.mkdtemp(prefix="ambiente-", dir=self.pasta))
             ambiente = {**ambiente, "UV_PROJECT_ENVIRONMENT": str(self.preparado)}
         self.sincronizar(ambiente)
 
@@ -57,7 +56,7 @@ class Dependencias:
         if not self.preparado or self.usando_preparado or self.preparado.resolve() == Path(sys.prefix).resolve():
             return
         alvo = self.preparado.resolve()
-        if alvo.parent != self.copias.resolve() or not alvo.name.startswith("ambiente-") or self.preparado.is_symlink():
+        if alvo.parent != self.pasta.resolve() or not alvo.name.startswith("ambiente-") or self.preparado.is_symlink():
             return
         try:
             shutil.rmtree(alvo)
@@ -69,7 +68,7 @@ class Instalacao:
     def __init__(self, raiz: Path):
         self.raiz = raiz.resolve()
         identificador = hashlib.sha256(os.fsencode(str(self.raiz))).hexdigest()[:16]
-        self.copias = (Path(os.environ.get("ORQUESTRA_HOME") or Path.home() / ".orquestra") / "atualizacoes" / identificador).resolve()
+        self.pasta = (Path(os.environ.get("ORQUESTRA_HOME") or Path.home() / ".orquestra") / "atualizacoes" / identificador).resolve()
 
     def git(self, *args: str, entrada: bytes | None = None) -> bytes:
         resultado = subprocess.run(
@@ -106,21 +105,21 @@ class Instalacao:
 
     def ler_estado(self) -> dict:
         try:
-            dados = json.loads((self.copias / "estado.json").read_text(encoding="utf-8"))
+            dados = json.loads((self.pasta / "estado.json").read_text(encoding="utf-8"))
             return dados if isinstance(dados, dict) else {}
         except (OSError, ValueError):
             return {}
 
     def registrar(self, **dados) -> None:
-        self.copias.mkdir(parents=True, exist_ok=True, mode=0o700)
-        temporario = self.copias / f"{uuid.uuid4().hex}.tmp"
+        self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
+        temporario = self.pasta / f"{uuid.uuid4().hex}.tmp"
         temporario.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
-        temporario.replace(self.copias / "estado.json")
+        temporario.replace(self.pasta / "estado.json")
 
     @contextmanager
     def trava(self):
-        self.copias.mkdir(parents=True, exist_ok=True, mode=0o700)
-        with (self.copias / "operacao.lock").open("a+b") as arquivo:
+        self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with (self.pasta / "operacao.lock").open("a+b") as arquivo:
             arquivo.seek(0)
             if os.name == "nt":
                 import msvcrt
@@ -157,12 +156,13 @@ class Instalacao:
             if (pasta / "orquestra.yaml").is_file():
                 raise RuntimeError("Um vault ocupa um caminho usado pelo aplicativo. Mova-o para uma pasta separada antes de atualizar.")
 
-    def caminhos_para_copia(self, revisao: str, vault: Path | None = None) -> list[str]:
+    def caminhos_da_sincronizacao(self, revisao: str, vault: Path | None = None) -> list[str]:
         caminhos = set(self.alterados())
+        caminhos.update(os.fsdecode(p) for p in self.git("diff", "--no-renames", "--name-only", "-z", "HEAD", revisao).split(b"\0") if p)
         atuais = {os.fsdecode(p) for p in self.git("ls-files", "-z").split(b"\0") if p}
         novos = {os.fsdecode(p) for p in self.git("ls-tree", "-r", "--name-only", "-z", revisao).split(b"\0") if p}
         for nome in novos:
-            # Só extras que ocupariam o lugar de arquivos da nova versão entram na cópia.
+            # Identifica extras que ocupam caminhos da versão oficial.
             caminho = self.raiz / nome
             for pai in [*reversed(caminho.relative_to(self.raiz).parents)][1:]:
                 candidato = self.raiz / pai
@@ -186,103 +186,43 @@ class Instalacao:
                         caminhos.update((Path(pasta) / f).relative_to(self.raiz).as_posix() for f in arquivos)
         return sorted(caminhos)
 
-    def guardar(self, caminhos: list[str], revisao: str, vault: Path | None) -> dict:
-        identificador = uuid.uuid4().hex
-        destino = self.copias / f"{identificador}.zip"
-        registros = []
-        conteudos = {}
-        for nome in caminhos:
-            caminho = self.raiz / nome
-            # Não atravessa links de diretório nem move um vault usado dentro da instalação.
-            if caminho.parent.resolve() != caminho.parent.absolute():
-                raise RuntimeError("Há um link de pasta entre os arquivos alterados. A atualização foi cancelada para preservar seus dados.")
-            self.proteger_vault(caminho, vault)
-            if caminho.is_symlink():
-                dados = os.fsencode(os.readlink(caminho))
-                tipo = "link"
-            elif caminho.is_file():
-                dados = caminho.read_bytes()
-                tipo = "arquivo"
-            elif not caminho.exists():
-                dados, tipo = b"", "excluido"
-            else:
-                raise RuntimeError("Há uma pasta ou submódulo alterado. A atualização foi cancelada para preservar seu conteúdo.")
-            registros.append({"caminho": nome, "tipo": tipo, "sha256": hashlib.sha256(dados).hexdigest()})
-            conteudos[nome] = dados
-        # A cópia legível inclui também os patches do índice e do diretório de trabalho.
-        with zipfile.ZipFile(destino, "x", compression=zipfile.ZIP_DEFLATED) as copia:
-            copia.writestr("manifesto.json", json.dumps({"revisao": revisao, "arquivos": registros}, ensure_ascii=False, indent=2))
-            copia.writestr("alteracoes.patch", self.git("diff", "--binary", "HEAD"))
-            copia.writestr("preparadas.patch", self.git("diff", "--binary", "--cached"))
-            for registro in registros:
-                if registro["tipo"] != "excluido":
-                    copia.writestr("arquivos/" + registro["caminho"], conteudos[registro["caminho"]])
-        with zipfile.ZipFile(destino) as copia:
-            if copia.testzip() is not None:
-                raise RuntimeError("A cópia das alterações não pôde ser verificada. Nenhum arquivo foi movido.")
-        for registro in registros:
-            caminho = self.raiz / registro["caminho"]
-            tipo = registro["tipo"]
-            if tipo == "excluido":
-                igual = not caminho.exists() and not caminho.is_symlink()
-            elif tipo == "link":
-                igual = caminho.is_symlink() and os.fsencode(os.readlink(caminho)) == conteudos[registro["caminho"]]
-            else:
-                igual = caminho.is_file() and not caminho.is_symlink() and caminho.read_bytes() == conteudos[registro["caminho"]]
-            if not igual:
-                raise RuntimeError("Um arquivo mudou durante a cópia. Salve as edições e tente atualizar novamente.")
-        copia = {"id": identificador, "quantidade": len(caminhos)}
-        self.registrar(estado="preparando", copia=copia)
-        # Primeiro o índice e os rastreados, incluindo renomeações e exclusões.
-        rastreados = set(self.alterados())
-        comando = ("-c", "user.name=Orquestra", "-c", "user.email=atualizacao@localhost", "stash", "push", "--message", f"Orquestra: cópia {identificador}")
-        if rastreados:
-            self.git(*comando)
-            self.git("update-ref", f"refs/orquestra/atualizacoes/{identificador}", self.texto("rev-parse", "refs/stash"))
-        # Só extras conflitantes entram no segundo stash; outros arquivos ficam no lugar.
-        extras = sorted(set(caminhos) - rastreados)
-        if extras:
-            self.git(*comando, "--all", "--pathspec-from-file=-", "--pathspec-file-nul",
-                     entrada=b"".join(os.fsencode(p) + b"\0" for p in extras))
-            self.git("update-ref", f"refs/orquestra/atualizacoes/{identificador}-extras", self.texto("rev-parse", "refs/stash"))
-        return copia
-
-    def atualizar(self, revisao: str | None = None, *, preservar: bool = False, vault: Path | None = None) -> dict:
-        if self.copias.is_relative_to(self.raiz) or (vault and self.copias.is_relative_to(vault.resolve())):
-            raise RuntimeError("A pasta de dados ORQUESTRA_HOME precisa ficar fora do aplicativo e do vault para guardar as cópias de atualização.")
+    def atualizar(self, revisao: str | None = None, *, vault: Path | None = None) -> dict:
+        if self.pasta.is_relative_to(self.raiz) or (vault and self.pasta.is_relative_to(vault.resolve())):
+            raise RuntimeError("Os dados do Orquestra precisam ficar fora do aplicativo e do vault para atualizar.")
         with self.trava():
             antes = self.conferir()
             self.git("fetch", "--quiet", "origin", "main")
             nova = self.texto("rev-parse", "FETCH_HEAD")
             if revisao and nova != revisao:
-                raise RuntimeError("Uma nova revisão foi publicada. Verifique novamente.")
+                raise RuntimeError("Uma nova revisão foi publicada. Tente atualizar novamente.")
             try:
                 self.git("merge-base", "--is-ancestor", antes, nova)
             except RuntimeError:
-                raise RuntimeError("Esta instalação tem commits próprios. Eles foram preservados; a atualização automática exige a main oficial sem divergências.") from None
-            caminhos = self.caminhos_para_copia(nova, vault)
-            if caminhos and not preservar:
-                raise RuntimeError("Há alterações no aplicativo. Confirme Guardar cópia e atualizar para continuar sem perdê-las.")
-            copia = self.guardar(caminhos, antes, vault) if caminhos else self.ler_estado().get("copia")
-            try:
-                self.git("merge", "--ff-only", nova)
-            except (OSError, RuntimeError, subprocess.TimeoutExpired):
-                if copia:
-                    raise RuntimeError(f"A atualização não terminou. Suas alterações estão guardadas em {self.copias}. Tente novamente.") from None
-                raise
-            self.registrar(estado="preparado", revisao=nova, copia=copia)
-            return {"revisao": nova, "copia": copia, "mudou": nova != antes}
+                raise RuntimeError("Esta instalação tem commits próprios. A atualização exige a main oficial sem divergências.") from None
+            # A ação sincroniza somente a instalação. Extras sem conflito ficam no lugar.
+            # Confira todos os caminhos afetados antes de o Git substituir qualquer arquivo.
+            for nome in self.caminhos_da_sincronizacao(nova, vault):
+                caminho = self.raiz / nome
+                if not caminho.is_relative_to(self.raiz) or caminho.parent.resolve() != caminho.parent.absolute():
+                    raise RuntimeError("Há um link de pasta nos arquivos do aplicativo. Confira a instalação antes de atualizar.")
+                self.proteger_vault(caminho, vault)
+                if caminho.is_dir() and not caminho.is_symlink():
+                    for pasta, _, _ in os.walk(caminho, followlinks=False):
+                        self.proteger_vault(Path(pasta), vault)
+            self.git("reset", "--hard", nova)
+            self.registrar(estado="preparado", revisao=nova)
+            return {"revisao": nova, "mudou": nova != antes}
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Recupera uma atualização mantendo cópia das alterações do aplicativo.")
+    parser = argparse.ArgumentParser(description="Sincroniza e atualiza o Orquestra.")
     parser.add_argument("--aplicativo", type=Path, required=True)
     parser.add_argument("--confirmar", action="store_true")
     args = parser.parse_args()
     instalacao = Instalacao(args.aplicativo)
     uv = shutil.which("uv")
     if not args.confirmar or not uv:
-        parser.error("Confirme a cópia com --confirmar e mantenha o uv instalado.")
+        parser.error("Use --confirmar e mantenha o uv instalado.")
     try:
         # Mesmo a versão antiga registra o vault em uso; preserve-o durante a recuperação.
         casa = Path(os.environ.get("ORQUESTRA_HOME") or Path.home() / ".orquestra")
@@ -291,11 +231,9 @@ def main() -> None:
             vault = Path(painel["vault"]) if painel.get("vault") else None
         except (OSError, ValueError, TypeError, AttributeError):
             vault = None
-        resultado = instalacao.atualizar(preservar=True, vault=vault)
-        dependencias = Dependencias(instalacao.raiz, uv, instalacao.copias)
+        instalacao.atualizar(vault=vault)
+        dependencias = Dependencias(instalacao.raiz, uv, instalacao.pasta)
         dependencias.preparar()
-        if resultado["copia"]:
-            print(f"Cópia das alterações: {instalacao.copias}")
         # O pacote atualizado localiza e reabre o painel usando o mesmo vault e porta.
         codigo = ("import json; from orquestra.atualizacao import retomar_recuperacao; r = retomar_recuperacao("
                   + repr(str(dependencias.preparado) if dependencias.preparado else "") + ", "

@@ -23,9 +23,10 @@ do seu terminal não chega até ele. Estes comandos encontram o painel onde ele 
 | `uv run --frozen orquestra atualizar` | Baixa a versão nova do GitHub e, se o painel estava aberto, reabre atualizado |
 
 **Para pegar uma atualização,** use `atualizar`. Ele prepara o código e as
-dependências antes de parar o painel e reabrir com a versão nova. Alterações do
-aplicativo são guardadas em uma cópia ZIP, cuja pasta aparece no terminal, e a
-versão oficial passa a ser usada. Arquivos extras sem conflito ficam no lugar.
+dependências antes de parar o painel e reabrir com a versão nova. Os arquivos do
+aplicativo são sincronizados com a versão oficial, substituindo as alterações
+locais sem gerar cópias. Arquivos extras sem conflito ficam no lugar; as notas
+do vault são preservadas.
 Se você mesmo fez o `git pull`, basta `reiniciar`. Veja as proteções e a recuperação
 de instalações antigas em [atualização](atualizacao.md).
 

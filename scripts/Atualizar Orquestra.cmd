@@ -21,7 +21,7 @@ try {
         $seletor.Dispose()
     }
     $confirmacao = [System.Windows.Forms.MessageBox]::Show(
-        "Instalar a versao oficial do Orquestra nesta pasta?`n`n$aplicativo`n`nAs alteracoes do aplicativo serao guardadas em uma copia antes da atualizacao. Suas notas serao mantidas. Salve as edicoes abertas antes de continuar.",
+        "Sincronizar e atualizar o Orquestra?`n`n$aplicativo",
         'Atualizar Orquestra', 'OKCancel', 'Information')
     if ($confirmacao -ne [System.Windows.Forms.DialogResult]::OK) { exit }
     $uv = (Get-Command uv -ErrorAction Stop).Source

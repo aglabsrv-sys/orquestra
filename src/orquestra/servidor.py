@@ -14,7 +14,6 @@ import hashlib
 import os
 import logging
 import math
-import re
 import subprocess
 from functools import wraps
 from contextlib import asynccontextmanager
@@ -241,30 +240,14 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_atualizar(request: Request):
         if erro := exigir_local(request):
             return erro
-        dados = await corpo_json(request)
+        await corpo_json(request)
         if hospedeiro is None or hospedeiro.servidor is None:
             raise Recusado("Inicie o painel pelo comando orquestra para atualizar por aqui.")
         try:
             porta = hospedeiro.servidor.config.port
-            return await asyncio.to_thread(atualizador.iniciar, painel.vault, porta, os.getpid(), dados.get("modo"), dados.get("preservar") is True)
+            return await asyncio.to_thread(atualizador.iniciar, painel.vault, porta, os.getpid())
         except (OSError, RuntimeError, subprocess.TimeoutExpired) as erro:
             raise Recusado(str(erro) if isinstance(erro, RuntimeError) else "Não foi possível iniciar a atualização.") from None
-
-    @app.post("/api/atualizacao/copia")
-    async def api_copia_atualizacao(request: Request):
-        if erro := exigir_local(request):
-            return erro
-        from orquestra.atualizacao import RAIZ
-        from orquestra.atualizacao_git import Instalacao
-
-        instalacao = Instalacao(RAIZ)
-        identificador = (instalacao.ler_estado().get("copia") or {}).get("id", "")
-        if not isinstance(identificador, str) or not re.fullmatch(r"[a-f0-9]{32}", identificador):
-            raise Recusado("Não há cópia de atualização disponível.")
-        caminho = instalacao.copias / f"{identificador}.zip"
-        if not caminho.is_file() or caminho.is_symlink():
-            raise Recusado("A cópia não foi encontrada. Confira a pasta de atualizações do Orquestra.")
-        return FileResponse(caminho, media_type="application/zip", filename="alteracoes-orquestra.zip", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/local/capacidade")
     async def capacidade_local(request: Request):
