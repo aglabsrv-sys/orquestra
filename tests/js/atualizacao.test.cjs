@@ -6,7 +6,7 @@ const {join}=require('node:path');
 const {runInNewContext}=require('node:vm');
 const fonte=readFileSync(join(__dirname,'../../src/orquestra/static/js/atualizacao.js'),'utf8');
 
-function ambiente({disponivel=false,local=true,confirmar=true,modo}={}) {
+function ambiente({disponivel=false,local=true,confirmar=true,modo,alteracoes_locais=0}={}) {
   const eventos={},pedidos=[],confirmacoes=[],avisos=[];
   let automatico,posts=0,recargas=0;
   const botao={hidden:true,classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(n,f){eventos[n]=f;}};
@@ -16,7 +16,7 @@ function ambiente({disponivel=false,local=true,confirmar=true,modo}={}) {
     pedidos.push({url,opcoes});
     if(url==='/api/local/capacidade') return {ok:true,json:async()=>({token:'capacidade-ficticia'})};
     if(opcoes.method==='POST') { posts++;return {ok:true,json:async()=>modo ? {modo} : {revisao:'nova'}}; }
-    return {ok:true,json:async()=>({disponivel,local,modo,pid:posts?2:1,instalada:posts&&!modo?'nova':'antiga',revisao:'nova'})};
+    return {ok:true,json:async()=>({disponivel,local,modo,alteracoes_locais,pid:posts?2:1,instalada:posts&&!modo?'nova':'antiga',revisao:'nova'})};
   };
   runInNewContext(fonte,{document,window,fetch,AbortController,Date,location:{reload(){recargas++;}},setInterval(f){automatico=f;},
     setTimeout(f,tempo){if(tempo!==25000)f();},clearTimeout(){}});
@@ -74,6 +74,15 @@ test('cancelar ou acessar remotamente não inicia atualização nem reinício',a
     assert.equal(p.pedidos.some(p=>p.opcoes.method==='POST'),false);
     assert.equal(p.recargas(),0);
   }
+});
+
+test('alterações locais oferecem guardar cópia e atualizar com confirmação explícita',async()=>{
+  const p=ambiente({disponivel:true,alteracoes_locais:2});await p.clicar();
+  assert.equal(p.confirmacoes[0].confirmar,'Guardar cópia e atualizar');
+  assert.match(p.confirmacoes[0].detalhes,/2 arquivo/);
+  const post=p.pedidos.find(p=>p.opcoes.method==='POST');
+  assert.equal(JSON.parse(post.opcoes.body).preservar,true);
+  assert.equal(p.recargas(),1);
 });
 
 test('dois cliques durante a consulta abrem uma confirmação e iniciam uma atualização', async () => {

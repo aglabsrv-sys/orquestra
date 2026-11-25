@@ -10,8 +10,9 @@ import threading
 import time
 from pathlib import Path
 
+from orquestra.atualizacao_git import Dependencias, Instalacao, REMOTOS
+
 RAIZ = Path(__file__).resolve().parents[2]
-REMOTOS = {"https://github.com/aglabsrv-sys/orquestra.git", "https://github.com/aglabsrv-sys/orquestra", "git@github.com:aglabsrv-sys/orquestra.git"}
 
 
 def marca_codigo() -> str:
@@ -49,9 +50,8 @@ def conferir_instalacao() -> str:
     return executar("git", "rev-parse", "HEAD")
 
 
-def conferir_limpa() -> None:
-    if executar("git", "status", "--porcelain"):
-        raise RuntimeError("Há alterações locais no aplicativo. Guarde essas mudanças antes de atualizar.")
+def alteracoes_locais() -> list[str]:
+    return Instalacao(RAIZ).alterados()
 
 
 class Atualizador:
@@ -73,11 +73,12 @@ class Atualizador:
                 if codigo is not None:
                     self.processo = None
                     self.verificado = None
-                return {**self.cache, "estado": "atualizando" if codigo is None else "falhou", "mensagem": "A atualização não terminou. Confira a instalação e tente novamente." if codigo is not None else "Atualizando o aplicativo…"}
+                resultado = Instalacao(RAIZ).ler_estado()
+                return {**self.cache, "estado": "atualizando" if codigo is None else "falhou", "mensagem": resultado.get("mensagem", "A atualização não terminou. Confira a instalação e tente novamente.") if codigo is not None else "Atualizando o aplicativo…"}
             if self.codigo_em_uso and (codigo := marca_codigo()) and codigo != self.codigo_em_uso:
                 return {"disponivel": True, "estado": "disponivel", "modo": "reiniciar"}
             if self.verificado is not None and time.monotonic() - self.verificado < 1800:
-                return dict(self.cache)
+                return self.com_alteracoes()
             try:
                 atual = conferir_instalacao()
                 remoto = executar("git", "ls-remote", "--exit-code", "origin", "refs/heads/main").split()[0]
@@ -93,9 +94,21 @@ class Atualizador:
             except (OSError, RuntimeError, subprocess.TimeoutExpired, IndexError):
                 self.cache = {"disponivel": False, "estado": "indisponivel"}
             self.verificado = time.monotonic()
-            return dict(self.cache)
+            return self.com_alteracoes()
 
-    def iniciar(self, vault: Path, porta: int, pid: int, modo: str | None = None) -> dict:
+    def com_alteracoes(self) -> dict:
+        estado = dict(self.cache)
+        try:
+            if estado.get("disponivel"):
+                estado["alteracoes_locais"] = len(alteracoes_locais())
+            resultado = Instalacao(RAIZ).ler_estado()
+            if resultado.get("revisao") == self.revisao_iniciada and resultado.get("copia"):
+                estado["copia"] = resultado["copia"]
+        except (OSError, RuntimeError, subprocess.TimeoutExpired):
+            pass
+        return estado
+
+    def iniciar(self, vault: Path, porta: int, pid: int, modo: str | None = None, preservar: bool = False) -> dict:
         estado = self.consultar()
         with self.trava:
             if self.processo is not None and self.processo.poll() is None:
@@ -105,7 +118,8 @@ class Atualizador:
                 raise RuntimeError("A atualização disponível mudou. Confira o aviso e tente novamente.")
             if not reinicio:
                 conferir_instalacao()
-                conferir_limpa()
+                if alteracoes_locais() and not preservar:
+                    raise RuntimeError("Há alterações no aplicativo. Confirme Guardar cópia e atualizar para continuar sem perdê-las.")
             uv = shutil.which("uv")
             if not uv:
                 raise RuntimeError("Instale o uv para atualizar pelo painel.")
@@ -116,13 +130,19 @@ class Atualizador:
             if os.name == "nt" and executavel.with_name("pythonw.exe").is_file():
                 executavel = executavel.with_name("pythonw.exe")
             revisao = "--local" if reinicio else estado["revisao"]
-            self.processo = subprocess.Popen([str(executavel), "-m", "orquestra.atualizacao", str(vault), str(porta), str(pid), revisao, uv], cwd=RAIZ,
+            comando = [str(executavel), "-m", "orquestra.atualizacao", str(vault), str(porta), str(pid), revisao, uv]
+            if preservar and not reinicio:
+                comando.append("--preservar")
+            instalacao = Instalacao(RAIZ)
+            anterior = instalacao.ler_estado()
+            instalacao.registrar(estado="iniciando", copia=anterior.get("copia"))
+            self.processo = subprocess.Popen(comando, cwd=RAIZ,
                                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True,
                                              env={**os.environ, "ORQUESTRA_EM_SEGUNDO_PLANO": "1"}, **opcoes)
             return {"estado": "atualizando", **({"modo": "reiniciar"} if reinicio else {"revisao": revisao})}
 
 
-def aplicar(vault: Path, porta: int, pid: int, revisao: str, uv: str) -> None:
+def aplicar(vault: Path, porta: int, pid: int, revisao: str, uv: str, preservar: bool = False) -> None:
     from orquestra import processo
 
     def conferir_painel():
@@ -133,19 +153,53 @@ def aplicar(vault: Path, porta: int, pid: int, revisao: str, uv: str) -> None:
     time.sleep(1)  # deixa a resposta HTTP chegar antes de reiniciar
     conferir_painel()
     if revisao != "--local":
-        conferir_instalacao()
-        conferir_limpa()
-        executar("git", "fetch", "--quiet", "origin", "main", timeout=120)
-        if executar("git", "rev-parse", "FETCH_HEAD") != revisao:
-            raise RuntimeError("Uma nova revisão foi publicada. Verifique novamente.")
-        executar("git", "merge", "--ff-only", revisao, timeout=120)
-    executar(uv, "sync", "--locked", timeout=300)
+        Instalacao(RAIZ).atualizar(revisao, preservar=preservar, vault=vault)
+    dependencias = Dependencias(RAIZ, uv, Instalacao(RAIZ).copias)
+    dependencias.preparar()
     conferir_painel()
     processo.parar(porta, pid_esperado=pid)
+    ambiente = dependencias.concluir()
+    dependencias.limpar()
     # Um interpretador novo carrega o código e as dependências recém instalados.
-    subprocess.check_call([uv, "run", "--frozen", "orquestra", "iniciar", "--vault", str(vault), "--porta", str(porta)], cwd=RAIZ,
+    subprocess.check_call([uv, "run", "--frozen", "orquestra", "iniciar", "--vault", str(vault), "--porta", str(porta)], cwd=RAIZ, env=ambiente,
                           **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
 
 
+def retomar_recuperacao(preparado: str = "", ambiente_anterior: str | None = None) -> bool:
+    """Usado pelo recuperador independente, já com o pacote atualizado."""
+    from orquestra import processo
+
+    aberto = processo.localizar()
+    ambiente = dict(os.environ)
+    ambiente.pop("UV_PROJECT_ENVIRONMENT", None)
+    if ambiente_anterior is not None:
+        ambiente["UV_PROJECT_ENVIRONMENT"] = ambiente_anterior
+    if aberto:
+        processo.parar(aberto["porta"], pid_esperado=aberto["pid"])
+    uv = shutil.which("uv")
+    if not uv:
+        raise RuntimeError("O uv não foi encontrado para concluir a retomada.")
+    dependencias = Dependencias(RAIZ, uv, Instalacao(RAIZ).copias, preparado=Path(preparado) if preparado else None, ambiente=ambiente)
+    ambiente = dependencias.concluir()
+    if not aberto:
+        return dependencias.usando_preparado
+    codigo = ("from pathlib import Path; from orquestra import processo; processo.destacar(Path("
+              + repr(aberto["vault"]) + "), " + str(aberto["porta"]) + ", 0)")
+    subprocess.run([uv, "run", "--frozen", "python", "-c", codigo], cwd=RAIZ, env=ambiente, check=True, timeout=30)
+    prazo = time.monotonic() + 60
+    while time.monotonic() < prazo:
+        time.sleep(1)
+        novo = processo.consultar(aberto["porta"])
+        if novo and novo.get("pid") != aberto["pid"] and novo.get("vault") == aberto["vault"]:
+            return dependencias.usando_preparado
+    raise RuntimeError("O código foi atualizado, mas a retomada não foi confirmada. Abra o painel pelo atalho habitual.")
+
+
 if __name__ == "__main__":
-    aplicar(Path(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), sys.argv[4], sys.argv[5])
+    instalacao = Instalacao(RAIZ)
+    try:
+        aplicar(Path(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), sys.argv[4], sys.argv[5], "--preservar" in sys.argv[6:])
+    except (OSError, RuntimeError, subprocess.SubprocessError) as erro:
+        resultado = instalacao.ler_estado()
+        instalacao.registrar(**{**resultado, "estado": "falhou", "mensagem": str(erro) if isinstance(erro, RuntimeError) else "A atualização não terminou. Confira a conexão, o espaço livre e as permissões e tente novamente."})
+        sys.exit(1)

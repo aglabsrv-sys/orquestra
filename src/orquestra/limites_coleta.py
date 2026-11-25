@@ -99,9 +99,6 @@ def _estado():
             raise ValueError("O registro de limites não pode ser um link.")
         fd = os.open(lock, os.O_RDWR | os.O_CREAT, 0o600)
         with os.fdopen(fd, "r+b") as trava:
-            if os.fstat(trava.fileno()).st_size == 0:
-                trava.write(b"0")
-                trava.flush()
             inicio = time.monotonic()
             while True:
                 try:
@@ -118,6 +115,11 @@ def _estado():
                         raise LimiteColeta(PREFIXO + "outro processo está atualizando os limites. Tente novamente.") from None
                     time.sleep(0.02)
             try:
+                # A região pode ser travada mesmo com o arquivo vazio. Inicializar
+                # antes de adquiri-la disputa a escrita com processos já na trava.
+                if os.fstat(trava.fileno()).st_size == 0:
+                    trava.write(b"0")
+                    trava.flush()
                 try:
                     with caminho.open("rb") as entrada:
                         dados = entrada.read(1024 * 1024 + 1)

@@ -2,6 +2,16 @@
 
 ## Em desenvolvimento
 
+- A atualização deixa de bloquear por arquivos extras sem conflito. Alterações
+  do aplicativo podem ser guardadas em uma cópia ZIP antes de instalar a versão
+  oficial, com download pelo painel após a retomada. O comando `atualizar` usa
+  a mesma proteção, e o Windows ganha um recuperador para instalações antigas
+  presas no aviso de alterações locais. As notas do vault são preservadas.
+  No Windows, as dependências são preparadas separadamente para não bloquear
+  a instalação quando o aplicativo mantém seu executável em uso.
+- A inicialização das travas locais aguarda a região protegida antes de escrever,
+  evitando erros de permissão quando vários coletores começam juntos no Windows.
+
 - Notas e pastas oferecem um menu de clique direito com Abrir, Propriedades,
   Arquivar e Excluir, também acessível por Shift+F10. As ações mantêm confirmações,
   conferência de versão, proteção das configurações e restauração pela Lixeira.

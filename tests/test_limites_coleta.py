@@ -221,15 +221,70 @@ except limites.LimiteColeta:
         assert len(list(tmp_path.glob("*.bloqueada"))) == 2
     finally:
         (tmp_path / "liberar").touch()
+        falhas = []
         for processo in processos:
             stdout, stderr = processo.communicate(timeout=10)
-            assert processo.returncode == 0, (stdout, stderr)
+            if processo.returncode:
+                falhas.append((stdout + stderr).decode("utf-8", errors="replace"))
+        if falhas:
+            pytest.fail("\n".join(falhas))
 
 
 def test_registro_corrompido_nao_reinicia_as_cotas():
     (limites._pasta() / "estado.json").write_text("invalido")
     with pytest.raises(ValueError, match="registro local de limites está inválido"):
         limites._reservar("https://example.test")
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Trava de região obrigatória no Windows")
+def test_inicializacao_de_trava_vazia_aguarda_processo_que_ja_a_travou(tmp_path):
+    pasta = limites._pasta()
+    lock = pasta / "estado.lock"
+    lock.touch()
+    codigo_trava = '''
+import msvcrt,sys,time
+from pathlib import Path
+pasta=Path(sys.argv[1]); sinais=Path(sys.argv[2])
+with (pasta/'estado.lock').open('r+b',buffering=0) as arquivo:
+    msvcrt.locking(arquivo.fileno(),msvcrt.LK_NBLCK,1)
+    (sinais/'travou').touch()
+    try:
+        prazo=time.monotonic()+10
+        while not (sinais/'liberar').exists() and time.monotonic()<prazo:
+            time.sleep(.01)
+    finally:
+        msvcrt.locking(arquivo.fileno(),msvcrt.LK_UNLCK,1)
+'''
+    codigo_estado = '''
+import sys
+from pathlib import Path
+from orquestra import limites_coleta as limites
+Path(sys.argv[1]).touch()
+with limites._estado():
+    pass
+'''
+    dono = subprocess.Popen([sys.executable, "-c", codigo_trava, str(pasta), str(tmp_path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    concorrente = None
+    try:
+        prazo = time.monotonic() + 5
+        while not (tmp_path / "travou").exists() and time.monotonic() < prazo:
+            time.sleep(.01)
+        assert (tmp_path / "travou").exists()
+        concorrente = subprocess.Popen([sys.executable, "-c", codigo_estado, str(tmp_path / "iniciou")], env=dict(os.environ), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        prazo = time.monotonic() + 5
+        while not (tmp_path / "iniciou").exists() and time.monotonic() < prazo:
+            time.sleep(.01)
+        assert (tmp_path / "iniciou").exists()
+        time.sleep(.1)
+        assert concorrente.poll() is None, "A inicialização deve aguardar a trava, sem escrever na região ocupada."
+    finally:
+        (tmp_path / "liberar").touch()
+        for processo in (dono, concorrente):
+            if processo:
+                stdout, stderr = processo.communicate(timeout=10)
+                if processo.returncode:
+                    pytest.fail((stdout + stderr).decode("utf-8", errors="replace"))
+    assert lock.read_bytes() == b"0"
 
 
 def test_cota_global_abrange_hosts_diferentes(relogio):
