@@ -30,6 +30,8 @@ O menu aparece nas listas, cartões, árvore e notas do grafo. Arquivar e Exclui
 pedem confirmação e ficam indisponíveis para configurações e instruções protegidas.
 Se o conteúdo mudar antes da confirmação, reabra o menu para conferir a versão nova.
 
+![Menu de ações de uma nota demonstrativa](img/menu-contextual.png)
+
 **Arquivar** conserva a nota em `arquivo/` da sua área, para consulta futura.
 Em pastas pessoais sem área, `arquivo/` fica na pasta que continha a nota ou pasta.
 **Excluir**, no cabeçalho da nota, move o arquivo para a lixeira após confirmação.
@@ -127,6 +129,8 @@ nenhum arquivo existente é substituído. O resultado informa cada cópia e cada
 falha. Documentos têm a ação **Baixar**; Markdown e mídias usam as visualizações
 existentes. A importação exige acesso direto pelo computador em que o Orquestra
 está rodando.
+
+![Alvo para adicionar arquivos em um estudo demonstrativo](img/soltar-arquivos.png)
 
 Imagens podem ser inseridas como `![[foto.png]]` ou `![[foto.png|300]]`.
 No Markdown padrão, use `![Descrição]` seguido do caminho entre parênteses;

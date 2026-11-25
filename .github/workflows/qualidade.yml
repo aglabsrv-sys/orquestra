@@ -67,6 +67,7 @@ jobs:
       - run: uv run --frozen --group browser python scripts/verificar_editor.py
       - run: uv run --frozen --group browser python scripts/verificar_contatos.py
       - run: uv run --frozen --group browser python scripts/verificar_refinos.py
+      - run: uv run --frozen --group browser python scripts/verificar_interacoes_arquivos.py
 
   mcp-compativel:
     name: MCP SDK ${{ matrix.mcp }} / Python 3.11
