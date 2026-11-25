@@ -6,7 +6,7 @@ const {join}=require('node:path');
 const {runInNewContext}=require('node:vm');
 const fonte=readFileSync(join(__dirname,'../../src/orquestra/static/js/atualizacao.js'),'utf8');
 
-function ambiente({disponivel=false,local=true,pendente=false,modo,alteracoes_locais=0}={}) {
+function ambiente({disponivel=false,local=true,pendente=false,modo,alteracoes_locais=0,legado=false}={}) {
   const eventos={},pedidos=[],confirmacoes=[],avisos=[];
   let automatico,posts=0,recargas=0;
   const botao={hidden:true,classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(n,f){eventos[n]=f;}};
@@ -15,7 +15,7 @@ function ambiente({disponivel=false,local=true,pendente=false,modo,alteracoes_lo
   const fetch=async(url,opcoes)=>{
     pedidos.push({url,opcoes});
     if(url==='/api/local/capacidade') return {ok:true,json:async()=>({token:'capacidade-ficticia'})};
-    if(opcoes.method==='POST') { posts++;return {ok:true,json:async()=>({revisao:'nova'})}; }
+    if(opcoes.method==='POST') { posts++;return {ok:true,json:async()=>legado ? {modo:'reiniciar'} : {revisao:'nova'}}; }
     return {ok:true,json:async()=>({disponivel,local,modo,alteracoes_locais,pid:posts?2:1,instalada:posts?'nova':'antiga',revisao:'nova'})};
   };
   runInNewContext(fonte,{document,window,fetch,AbortController,Date,Event,location:{reload(){recargas++;}},setInterval(f){automatico=f;},
@@ -56,6 +56,12 @@ test('sem revisão disponível o clique oculta o aviso e não reinicia nem atual
   assert.equal(posts.length,0);
   assert.equal(p.botao.hidden,true);
   assert.equal(p.recargas(),0);
+});
+
+test('resposta da versão anterior sem revisão também confirma a retomada',async()=>{
+  const p=ambiente({disponivel:true,modo:'reiniciar',legado:true});await p.clicar();
+  assert.equal(p.confirmacoes.length,0);
+  assert.equal(p.recargas(),1);
 });
 
 test('revisão publicada usa atualização e confirma a revisão após reiniciar',async()=>{

@@ -48,14 +48,14 @@
       resposta = await fetch("/api/atualizacao", {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json", "X-Orquestra-Local":credencial.token, "X-Orquestra-Vault":document.body.dataset.vaultId}, body:"{}"});
       var dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.erro || "Não foi possível iniciar a atualização.");
-      revisao = dados.revisao || revisao;
+      revisao = dados.modo === "reiniciar" ? null : dados.revisao || revisao;
       ui.avisar("Atualizando…", "info");
       var prazo = Date.now() + 360000;
       while (Date.now() < prazo) {
         await new Promise(function (resolve) { setTimeout(resolve, 2000); });
         var novo;
         try { novo = await consultar(); } catch (_) { continue; }
-        if (novo.pid && novo.pid !== pid && novo.instalada === revisao) { location.reload(); return; }
+        if (novo.pid && novo.pid !== pid && (revisao ? novo.instalada === revisao : novo.instalada)) { location.reload(); return; }
         if (novo.estado === "falhou") throw new Error(novo.mensagem);
       }
       throw new Error("A retomada ainda não foi confirmada. Confira se o Orquestra está rodando antes de atualizar esta página.");
