@@ -8,6 +8,7 @@ from orquestra import atualizacao as a, processo
 
 def preparar(monkeypatch):
     monkeypatch.setattr(a, "conferir_instalacao", lambda: "a" * 40)
+    monkeypatch.setattr(a, "alteracoes_locais", lambda: [])
     comando = Mock()
     def responder(*args, **kwargs):
         if "ls-remote" in args:
@@ -46,15 +47,18 @@ def test_consulta_falha_sem_expor_saida_do_provedor(monkeypatch):
     assert estado == {"disponivel": False, "estado": "indisponivel"}
 
 
-def test_alteracoes_locais_impedem_iniciar_processo(monkeypatch, tmp_path):
+def test_alteracoes_locais_exigem_confirmar_copia(monkeypatch, tmp_path):
     preparar(monkeypatch)
     atualizador = a.Atualizador()
-    monkeypatch.setattr(a, "conferir_limpa", Mock(side_effect=RuntimeError("Há alterações locais")))
+    monkeypatch.setattr(a, "alteracoes_locais", lambda: ["arquivo.py"])
     iniciar = Mock()
     monkeypatch.setattr(a.subprocess, "Popen", iniciar)
-    with pytest.raises(RuntimeError, match="alterações locais"):
+    with pytest.raises(RuntimeError, match="Guardar cópia"):
         atualizador.iniciar(tmp_path, 8420, 123)
     iniciar.assert_not_called()
+    monkeypatch.setattr(a.shutil, "which", lambda _: "uv")
+    atualizador.iniciar(tmp_path, 8420, 123, preservar=True)
+    assert iniciar.call_args.args[0][-1] == "--preservar"
 
 
 def test_consulta_nao_anuncia_codigo_local_a_frente(monkeypatch):
@@ -91,7 +95,7 @@ def test_reinicio_local_aceita_arquivos_editados_e_preserva_vault(monkeypatch, t
     marca.return_value = "nova"
     monkeypatch.setattr(a.shutil, "which", lambda _: "uv")
     limpeza = Mock(side_effect=RuntimeError("Há alterações locais"))
-    monkeypatch.setattr(a, "conferir_limpa", limpeza)
+    monkeypatch.setattr(a, "alteracoes_locais", limpeza)
     iniciar = Mock()
     monkeypatch.setattr(a.subprocess, "Popen", iniciar)
     with pytest.raises(RuntimeError, match="mudou"):
@@ -116,7 +120,7 @@ def test_reinicio_local_aceita_arquivos_editados_e_preserva_vault(monkeypatch, t
 def test_falha_dependencias_preserva_processo_rodando(monkeypatch, tmp_path):
     preparar(monkeypatch)
     monkeypatch.setattr(a.time, "sleep", lambda _: None)
-    monkeypatch.setattr(a, "conferir_limpa", lambda: None)
+    monkeypatch.setattr(a.Instalacao, "atualizar", lambda *args, **kwargs: {})
     monkeypatch.setattr(processo, "consultar", lambda porta: {"pid": 123, "vault": str(tmp_path)})
     parar = Mock()
     monkeypatch.setattr(processo, "parar", parar)
@@ -155,7 +159,7 @@ def test_api_exige_capacidade_local_mesmo_com_host_autorizado(cliente, monkeypat
 def test_aplicar_prepara_antes_de_parar_e_preserva_porta_e_vault(monkeypatch, tmp_path):
     preparar(monkeypatch)
     monkeypatch.setattr(a.time, "sleep", lambda _: None)
-    monkeypatch.setattr(a, "conferir_limpa", lambda: None)
+    monkeypatch.setattr(a.Instalacao, "atualizar", lambda *args, **kwargs: {})
     monkeypatch.setattr(processo, "consultar", lambda porta: {"pid": 123, "vault": str(tmp_path)})
     passos = []
     def executar(*args, **kwargs):
@@ -170,13 +174,53 @@ def test_aplicar_prepara_antes_de_parar_e_preserva_porta_e_vault(monkeypatch, tm
     assert passos[-1] == ("uv", "run", "--frozen", "orquestra", "iniciar", "--vault", str(tmp_path), "--porta", "8427")
 
 
-def test_revisao_mudou_cancela_sem_merge_ou_parada(monkeypatch, tmp_path):
-    preparar(monkeypatch)
+def test_falha_na_preparacao_nao_para_painel(monkeypatch, tmp_path):
     monkeypatch.setattr(a.time, "sleep", lambda _: None)
-    monkeypatch.setattr(a, "conferir_limpa", lambda: None)
     monkeypatch.setattr(processo, "consultar", lambda porta: {"pid": 123, "vault": str(tmp_path)})
-    comando = Mock(return_value="c" * 40)
-    monkeypatch.setattr(a, "executar", comando)
+    monkeypatch.setattr(a.Instalacao, "atualizar", Mock(side_effect=RuntimeError("Uma nova revisão foi publicada")))
+    parar = Mock()
+    monkeypatch.setattr(processo, "parar", parar)
     with pytest.raises(RuntimeError, match="publicada"):
         a.aplicar(tmp_path, 8420, 123, "b" * 40, "uv")
-    assert not any("merge" in chamada.args for chamada in comando.call_args_list)
+    parar.assert_not_called()
+
+
+def test_copia_da_atualizacao_exige_capacidade_local(cliente, monkeypatch, tmp_path):
+    from orquestra.atualizacao_git import Instalacao
+    import zipfile
+
+    monkeypatch.setattr(a, "RAIZ", tmp_path / "app")
+    instalacao = Instalacao(a.RAIZ)
+    identificador = "a" * 32
+    instalacao.registrar(estado="preparado", copia={"id": identificador, "quantidade": 1})
+    with zipfile.ZipFile(instalacao.copias / (identificador + ".zip"), "w") as copia:
+        copia.writestr("arquivos/teste.txt", b"alteracao")
+    assert cliente.post("/api/atualizacao/copia", json={}).status_code == 403
+    token = cliente.get("/api/local/capacidade").json()["token"]
+    headers = {"X-Orquestra-Local": token}
+    resposta = cliente.post("/api/atualizacao/copia", headers=headers, json={})
+    assert resposta.status_code == 200
+    assert resposta.headers["content-type"] == "application/zip"
+    instalacao.registrar(copia={"id": "../../arquivo"})
+    assert cliente.post("/api/atualizacao/copia", headers=headers, json={}).status_code == 400
+
+
+def test_falha_do_processo_mostra_mensagem_guardada(monkeypatch):
+    preparar(monkeypatch)
+    atualizador = a.Atualizador()
+    atualizador.processo = Mock(poll=Mock(return_value=1))
+    a.Instalacao(a.RAIZ).registrar(estado="falhou", mensagem="Cópia guardada; confira espaço livre.")
+    assert atualizador.consultar()["mensagem"] == "Cópia guardada; confira espaço livre."
+
+
+def test_recuperacao_so_confirma_apos_novo_painel_no_mesmo_vault(monkeypatch, tmp_path):
+    aberto = {"vault": str(tmp_path), "porta": 8420, "pid": 123}
+    monkeypatch.setattr(processo, "localizar", lambda: aberto)
+    destacar = Mock()
+    monkeypatch.setattr(processo, "destacar", destacar)
+    monkeypatch.setattr(a.time, "sleep", lambda _: None)
+    consultar = Mock(side_effect=[aberto, {**aberto, "pid": 456, "vault": "outro"}, {**aberto, "pid": 456}])
+    monkeypatch.setattr(processo, "consultar", consultar)
+    a.retomar_recuperacao()
+    assert consultar.call_count == 3
+    destacar.assert_called_once_with(tmp_path, 8420, 123)

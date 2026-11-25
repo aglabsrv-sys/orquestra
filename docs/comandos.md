@@ -22,10 +22,12 @@ do seu terminal não chega até ele. Estes comandos encontram o painel onde ele 
 | `uv run --frozen orquestra reiniciar` | Para e abre de novo no mesmo vault e porta, já com o código atual |
 | `uv run --frozen orquestra atualizar` | Baixa a versão nova do GitHub e, se o painel estava aberto, reabre atualizado |
 
-**Para pegar uma atualização,** use `atualizar`. Ele confere se há algo novo, para o
-painel, faz o `git pull` e reabre com as dependências da versão nova. Se você mesmo
-fez o `git pull`, basta `reiniciar`. O `atualizar` não mexe se houver arquivos do
-aplicativo alterados nesta pasta.
+**Para pegar uma atualização,** use `atualizar`. Ele prepara o código e as
+dependências antes de parar o painel e reabrir com a versão nova. Alterações do
+aplicativo são guardadas em uma cópia ZIP, cuja pasta aparece no terminal, e a
+versão oficial passa a ser usada. Arquivos extras sem conflito ficam no lugar.
+Se você mesmo fez o `git pull`, basta `reiniciar`. Veja as proteções e a recuperação
+de instalações antigas em [atualização](atualizacao.md).
 
 Ao abrir, o painel se registra em `~/.orquestra/painel.json`, e é assim que os outros
 comandos o encontram. Se ele travou e não responde, `orquestra parar --forcar`

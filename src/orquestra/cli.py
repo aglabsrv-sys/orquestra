@@ -241,54 +241,38 @@ def reiniciar(args: argparse.Namespace) -> None:
     iniciar(args)
 
 
-def _git(*partes: str, pasta: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", *partes], cwd=pasta, capture_output=True, text=True, encoding="utf-8",
-                          errors="replace", timeout=120,
-                          **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
-
-
 def atualizar(args: argparse.Namespace) -> None:
-    """Baixa a versão nova (git pull) e, se o painel estava aberto, reabre já atualizado."""
+    """Instala a versão oficial guardando as alterações antes de reabrir o painel."""
     import shutil
 
     from orquestra import processo
+    from orquestra.atualizacao_git import Instalacao
 
-    raiz = Path(__file__).resolve().parents[2]
-    if not (raiz / ".git").exists() or not (raiz / "pyproject.toml").is_file():
-        sys.exit("Esta instalação não veio de um `git clone`; atualize pelo mesmo caminho em que instalou.")
-    if not shutil.which("git"):
-        sys.exit("O git não foi encontrado. Instale-o e tente de novo.")
-    alteradas = _git("status", "--porcelain", "--untracked-files=no", pasta=raiz).stdout.strip()
-    if alteradas:
-        sys.exit("Há arquivos do aplicativo alterados nesta pasta. Guarde ou desfaça essas mudanças antes de atualizar:\n"
-                 + alteradas)
-    print("Procurando a versão nova…")
-    busca = _git("fetch", "--quiet", pasta=raiz)
-    if busca.returncode != 0:
-        sys.exit("Não consegui falar com o GitHub:\n" + (busca.stderr.strip() or busca.stdout.strip()))
-    antes = _git("rev-parse", "HEAD", pasta=raiz).stdout.strip()
-    novos = _git("log", "--oneline", "HEAD..@{u}", pasta=raiz)
-    if novos.returncode != 0:
-        sys.exit("Esta pasta não acompanha um branch remoto. Use `git pull` manualmente.")
-    if not novos.stdout.strip():
-        print(f"Você já está na versão mais recente ({__version__}).")
-        return
-    aberto = processo.localizar()
-    if aberto:
-        parar(argparse.Namespace(porta=aberto["porta"], forcar=False))
-    puxar = _git("pull", "--ff-only", "--quiet", pasta=raiz)
-    if puxar.returncode != 0:
-        sys.exit("A atualização não pôde ser aplicada sem mesclar mudanças:\n" + puxar.stderr.strip())
-    depois = _git("log", "--oneline", f"{antes}..HEAD", pasta=raiz).stdout.strip().splitlines()
-    print(f"Atualizado: {len(depois)} mudança(s). Veja o que mudou no CHANGELOG.md.")
+    instalacao = Instalacao(Path(__file__).resolve().parents[2])
     uv = os.environ.get("UV") or shutil.which("uv")
-    if aberto and uv:
-        # Um `uv run` novo instala as dependências da versão nova antes de abrir o painel.
-        comando = [uv, "run", "--frozen", "orquestra", "iniciar", "--porta", str(aberto["porta"])]
-        if aberto.get("vault"):
-            comando += ["--vault", aberto["vault"]]
-        print("Abrindo o painel atualizado…\n")
-        sys.exit(subprocess.call(comando, cwd=raiz))
+    if not uv or not shutil.which("git"):
+        sys.exit("Instale Git e uv para atualizar esta cópia do Orquestra.")
+    aberto = processo.localizar()
+    vault = Path(aberto["vault"]) if aberto and aberto.get("vault") else localizar_vault()
+    print("Procurando a versão nova. Alterações do aplicativo serão guardadas em uma cópia antes da instalação…")
+    try:
+        resultado = instalacao.atualizar(preservar=True, vault=vault)
+        subprocess.run([uv, "sync", "--locked"], cwd=instalacao.raiz, check=True, timeout=300)
+        if resultado["copia"]:
+            print(f"Cópia das alterações: {instalacao.copias}")
+        print("Orquestra atualizado. Veja as novidades no CHANGELOG.md." if resultado["mudou"] else "Você já está na versão mais recente.")
+        if aberto:
+            info = processo.consultar(aberto["porta"])
+            if not info or info.get("pid") != aberto["pid"] or info.get("vault") != aberto.get("vault"):
+                sys.exit("O painel mudou durante a atualização. Abra novamente pelo atalho habitual.")
+            processo.parar(aberto["porta"], pid_esperado=aberto["pid"])
+            comando = [uv, "run", "--frozen", "orquestra", "iniciar", "--porta", str(aberto["porta"])]
+            if vault:
+                comando += ["--vault", str(vault)]
+            print("Abrindo o painel atualizado…\n")
+            sys.exit(subprocess.call(comando, cwd=instalacao.raiz))
+    except (OSError, RuntimeError, subprocess.SubprocessError) as erro:
+        sys.exit(str(erro) if isinstance(erro, RuntimeError) else "A atualização não terminou. Confira a conexão, o espaço livre e as permissões e tente novamente.")
     print("Para abrir: uv run --frozen orquestra")
 
 
