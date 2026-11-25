@@ -221,9 +221,13 @@ except limites.LimiteColeta:
         assert len(list(tmp_path.glob("*.bloqueada"))) == 2
     finally:
         (tmp_path / "liberar").touch()
+        falhas = []
         for processo in processos:
             stdout, stderr = processo.communicate(timeout=10)
-            assert processo.returncode == 0, (stdout, stderr)
+            if processo.returncode:
+                falhas.append((stdout + stderr).decode("utf-8", errors="replace"))
+        if falhas:
+            pytest.fail("\n".join(falhas))
 
 
 def test_registro_corrompido_nao_reinicia_as_cotas():

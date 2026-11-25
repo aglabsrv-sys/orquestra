@@ -246,7 +246,7 @@ def atualizar(args: argparse.Namespace) -> None:
     import shutil
 
     from orquestra import processo
-    from orquestra.atualizacao_git import Instalacao
+    from orquestra.atualizacao_git import Dependencias, Instalacao
 
     instalacao = Instalacao(Path(__file__).resolve().parents[2])
     uv = os.environ.get("UV") or shutil.which("uv")
@@ -257,7 +257,8 @@ def atualizar(args: argparse.Namespace) -> None:
     print("Procurando a versão nova. Alterações do aplicativo serão guardadas em uma cópia antes da instalação…")
     try:
         resultado = instalacao.atualizar(preservar=True, vault=vault)
-        subprocess.run([uv, "sync", "--locked"], cwd=instalacao.raiz, check=True, timeout=300)
+        dependencias = Dependencias(instalacao.raiz, uv, instalacao.copias)
+        dependencias.preparar()
         if resultado["copia"]:
             print(f"Cópia das alterações: {instalacao.copias}")
         print("Orquestra atualizado. Veja as novidades no CHANGELOG.md." if resultado["mudou"] else "Você já está na versão mais recente.")
@@ -266,11 +267,15 @@ def atualizar(args: argparse.Namespace) -> None:
             if not info or info.get("pid") != aberto["pid"] or info.get("vault") != aberto.get("vault"):
                 sys.exit("O painel mudou durante a atualização. Abra novamente pelo atalho habitual.")
             processo.parar(aberto["porta"], pid_esperado=aberto["pid"])
+            ambiente = dependencias.concluir()
+            dependencias.limpar()
             comando = [uv, "run", "--frozen", "orquestra", "iniciar", "--porta", str(aberto["porta"])]
             if vault:
                 comando += ["--vault", str(vault)]
             print("Abrindo o painel atualizado…\n")
-            sys.exit(subprocess.call(comando, cwd=instalacao.raiz))
+            sys.exit(subprocess.call(comando, cwd=instalacao.raiz, env=ambiente))
+        dependencias.concluir()
+        dependencias.limpar()
     except (OSError, RuntimeError, subprocess.SubprocessError) as erro:
         sys.exit(str(erro) if isinstance(erro, RuntimeError) else "A atualização não terminou. Confira a conexão, o espaço livre e as permissões e tente novamente.")
     print("Para abrir: uv run --frozen orquestra")

@@ -1,5 +1,6 @@
 """Atualização real entre repositórios locais, incluindo cópia e conflitos de caminhos."""
 import json
+import os
 import subprocess
 import zipfile
 from pathlib import Path
@@ -222,3 +223,39 @@ def test_tentar_novamente_mantem_acesso_a_copia(repos, monkeypatch):
     monkeypatch.setattr(instalacao, "git", original)
     assert instalacao.atualizar(preservar=True)["copia"] == copia
     assert (instalacao.copias / (copia["id"] + ".zip")).exists()
+
+
+def test_dependencias_preparam_fora_do_ambiente_em_uso_e_aplicam_offline(tmp_path, monkeypatch):
+    deps = g.Dependencias(tmp_path / "app", "uv", tmp_path / "copias")
+    chamadas = []
+    monkeypatch.setattr(deps, "sincronizar", lambda ambiente, **opcoes: chamadas.append((ambiente, opcoes)))
+    deps.preparar()
+    if os.name == "nt":
+        assert Path(chamadas[0][0]["UV_PROJECT_ENVIRONMENT"]).parent == deps.copias
+        assert chamadas[0][0] != deps.ambiente
+    assert deps.concluir() == deps.ambiente
+    if os.name == "nt":
+        assert chamadas[-1] == (deps.ambiente, {"offline": True})
+    deps.limpar()
+    assert not deps.preparado or not deps.preparado.exists()
+
+
+def test_executavel_ainda_ocupado_retoma_com_dependencias_preparadas(tmp_path, monkeypatch):
+    preparado = tmp_path / "copias/ambiente-teste"
+    preparado.mkdir(parents=True)
+    deps = g.Dependencias(tmp_path / "app", "uv", preparado.parent, preparado=preparado)
+    monkeypatch.setattr(deps, "sincronizar", lambda *a, **k: (_ for _ in ()).throw(OSError(32, "executável em uso")))
+    ambiente = deps.concluir()
+    assert ambiente["UV_PROJECT_ENVIRONMENT"] == str(preparado)
+    deps.limpar()
+    assert preparado.exists()
+
+
+def test_limpeza_de_ambiente_nao_atravessa_pasta_de_atualizacoes(tmp_path):
+    externo = tmp_path / "pessoal/ambiente-exemplo"
+    externo.mkdir(parents=True)
+    nota = externo / "nota.md"
+    nota.write_bytes(b"pessoal")
+    deps = g.Dependencias(tmp_path / "app", "uv", tmp_path / "copias", preparado=externo)
+    deps.limpar()
+    assert nota.read_bytes() == b"pessoal"

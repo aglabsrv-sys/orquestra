@@ -8,12 +8,61 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import uuid
 import zipfile
 from contextlib import contextmanager
 from pathlib import Path
 
 REMOTOS = {"https://github.com/aglabsrv-sys/orquestra.git", "https://github.com/aglabsrv-sys/orquestra", "git@github.com:aglabsrv-sys/orquestra.git"}
+
+
+class Dependencias:
+    """No Windows, prepara sem tocar nos executáveis que o painel mantém abertos."""
+    def __init__(self, raiz: Path, uv: str, copias: Path, *, preparado: Path | None = None, ambiente: dict | None = None):
+        self.raiz, self.uv, self.copias = raiz, uv, copias
+        self.ambiente = dict(os.environ if ambiente is None else ambiente)
+        self.ambiente.pop("VIRTUAL_ENV", None)
+        self.preparado = preparado
+        self.usando_preparado = False
+
+    def sincronizar(self, ambiente: dict, *, offline: bool = False) -> None:
+        resultado = subprocess.run([self.uv, "sync", "--locked", *(["--offline"] if offline else [])],
+                                   cwd=self.raiz, env=ambiente, capture_output=True, timeout=300,
+                                   **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
+        if resultado.returncode:
+            raise RuntimeError("Não foi possível preparar as dependências. Confira a conexão, o espaço livre e as permissões e tente novamente.")
+
+    def preparar(self) -> None:
+        ambiente = self.ambiente
+        if os.name == "nt":
+            self.copias.mkdir(parents=True, exist_ok=True, mode=0o700)
+            self.preparado = Path(tempfile.mkdtemp(prefix="ambiente-", dir=self.copias))
+            ambiente = {**ambiente, "UV_PROJECT_ENVIRONMENT": str(self.preparado)}
+        self.sincronizar(ambiente)
+
+    def concluir(self) -> dict:
+        if self.preparado:
+            try:
+                # Os pacotes e o projeto já foram preparados e estão no cache local.
+                self.sincronizar(self.ambiente, offline=True)
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                # Por exemplo, o próprio comando atualizar ainda mantém seu .exe aberto.
+                # O painel pode retomar com o ambiente já completo, sem depender dele.
+                self.usando_preparado = True
+                return {**self.ambiente, "UV_PROJECT_ENVIRONMENT": str(self.preparado)}
+        return self.ambiente
+
+    def limpar(self) -> None:
+        if not self.preparado or self.usando_preparado or self.preparado.resolve() == Path(sys.prefix).resolve():
+            return
+        alvo = self.preparado.resolve()
+        if alvo.parent != self.copias.resolve() or not alvo.name.startswith("ambiente-") or self.preparado.is_symlink():
+            return
+        try:
+            shutil.rmtree(alvo)
+        except OSError:
+            pass  # um arquivo ainda em uso pode ser removido pela pessoa mais tarde
 
 
 class Instalacao:
@@ -243,12 +292,19 @@ def main() -> None:
         except (OSError, ValueError, TypeError, AttributeError):
             vault = None
         resultado = instalacao.atualizar(preservar=True, vault=vault)
-        subprocess.run([uv, "sync", "--locked"], cwd=instalacao.raiz, check=True, timeout=300)
+        dependencias = Dependencias(instalacao.raiz, uv, instalacao.copias)
+        dependencias.preparar()
         if resultado["copia"]:
             print(f"Cópia das alterações: {instalacao.copias}")
         # O pacote atualizado localiza e reabre o painel usando o mesmo vault e porta.
-        subprocess.run([uv, "run", "--frozen", "python", "-c", "from orquestra.atualizacao import retomar_recuperacao; retomar_recuperacao()"],
-                       cwd=instalacao.raiz, check=True, timeout=90)
+        codigo = ("import json; from orquestra.atualizacao import retomar_recuperacao; r = retomar_recuperacao("
+                  + repr(str(dependencias.preparado) if dependencias.preparado else "") + ", "
+                  + repr(dependencias.ambiente.get("UV_PROJECT_ENVIRONMENT")) + "); print(json.dumps({'usando_preparado':r}))")
+        ambiente = {**dependencias.ambiente, **({"UV_PROJECT_ENVIRONMENT": str(dependencias.preparado)} if dependencias.preparado else {})}
+        retomada = subprocess.run([uv, "run", "--frozen", "python", "-c", codigo],
+                                  cwd=instalacao.raiz, env=ambiente, check=True, timeout=360, capture_output=True, text=True, encoding="utf-8")
+        dependencias.usando_preparado = json.loads(retomada.stdout)["usando_preparado"]
+        dependencias.limpar()
         print("Orquestra atualizado. Recarregue a página do painel. Se estava fechado, abra pelo atalho habitual.")
     except (OSError, RuntimeError, subprocess.SubprocessError) as erro:
         print(str(erro) if isinstance(erro, RuntimeError) else "A atualização não terminou. Confira a conexão e as permissões e tente novamente.", file=sys.stderr)

@@ -9,6 +9,8 @@ from orquestra import atualizacao as a, processo
 def preparar(monkeypatch):
     monkeypatch.setattr(a, "conferir_instalacao", lambda: "a" * 40)
     monkeypatch.setattr(a, "alteracoes_locais", lambda: [])
+    monkeypatch.setattr(a.Dependencias, "preparar", lambda self: a.executar(self.uv, "sync", "--locked"))
+    monkeypatch.setattr(a.Dependencias, "concluir", lambda self: {})
     comando = Mock()
     def responder(*args, **kwargs):
         if "ls-remote" in args:
@@ -216,11 +218,16 @@ def test_falha_do_processo_mostra_mensagem_guardada(monkeypatch):
 def test_recuperacao_so_confirma_apos_novo_painel_no_mesmo_vault(monkeypatch, tmp_path):
     aberto = {"vault": str(tmp_path), "porta": 8420, "pid": 123}
     monkeypatch.setattr(processo, "localizar", lambda: aberto)
-    destacar = Mock()
-    monkeypatch.setattr(processo, "destacar", destacar)
+    parar = Mock()
+    monkeypatch.setattr(processo, "parar", parar)
+    monkeypatch.setattr(a.shutil, "which", lambda _: "uv")
+    monkeypatch.setattr(a.Dependencias, "concluir", lambda self: {})
+    iniciar = Mock()
+    monkeypatch.setattr(a.subprocess, "run", iniciar)
     monkeypatch.setattr(a.time, "sleep", lambda _: None)
     consultar = Mock(side_effect=[aberto, {**aberto, "pid": 456, "vault": "outro"}, {**aberto, "pid": 456}])
     monkeypatch.setattr(processo, "consultar", consultar)
     a.retomar_recuperacao()
     assert consultar.call_count == 3
-    destacar.assert_called_once_with(tmp_path, 8420, 123)
+    parar.assert_called_once_with(8420, pid_esperado=123)
+    assert iniciar.call_args.args[0][:4] == ["uv", "run", "--frozen", "python"]

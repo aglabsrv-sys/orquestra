@@ -10,7 +10,7 @@ import threading
 import time
 from pathlib import Path
 
-from orquestra.atualizacao_git import Instalacao, REMOTOS
+from orquestra.atualizacao_git import Dependencias, Instalacao, REMOTOS
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -154,28 +154,44 @@ def aplicar(vault: Path, porta: int, pid: int, revisao: str, uv: str, preservar:
     conferir_painel()
     if revisao != "--local":
         Instalacao(RAIZ).atualizar(revisao, preservar=preservar, vault=vault)
-    executar(uv, "sync", "--locked", timeout=300)
+    dependencias = Dependencias(RAIZ, uv, Instalacao(RAIZ).copias)
+    dependencias.preparar()
     conferir_painel()
     processo.parar(porta, pid_esperado=pid)
+    ambiente = dependencias.concluir()
+    dependencias.limpar()
     # Um interpretador novo carrega o código e as dependências recém instalados.
-    subprocess.check_call([uv, "run", "--frozen", "orquestra", "iniciar", "--vault", str(vault), "--porta", str(porta)], cwd=RAIZ,
+    subprocess.check_call([uv, "run", "--frozen", "orquestra", "iniciar", "--vault", str(vault), "--porta", str(porta)], cwd=RAIZ, env=ambiente,
                           **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
 
 
-def retomar_recuperacao() -> None:
+def retomar_recuperacao(preparado: str = "", ambiente_anterior: str | None = None) -> bool:
     """Usado pelo recuperador independente, já com o pacote atualizado."""
     from orquestra import processo
 
     aberto = processo.localizar()
+    ambiente = dict(os.environ)
+    ambiente.pop("UV_PROJECT_ENVIRONMENT", None)
+    if ambiente_anterior is not None:
+        ambiente["UV_PROJECT_ENVIRONMENT"] = ambiente_anterior
+    if aberto:
+        processo.parar(aberto["porta"], pid_esperado=aberto["pid"])
+    uv = shutil.which("uv")
+    if not uv:
+        raise RuntimeError("O uv não foi encontrado para concluir a retomada.")
+    dependencias = Dependencias(RAIZ, uv, Instalacao(RAIZ).copias, preparado=Path(preparado) if preparado else None, ambiente=ambiente)
+    ambiente = dependencias.concluir()
     if not aberto:
-        return
-    processo.destacar(Path(aberto["vault"]), aberto["porta"], aberto["pid"])
+        return dependencias.usando_preparado
+    codigo = ("from pathlib import Path; from orquestra import processo; processo.destacar(Path("
+              + repr(aberto["vault"]) + "), " + str(aberto["porta"]) + ", 0)")
+    subprocess.run([uv, "run", "--frozen", "python", "-c", codigo], cwd=RAIZ, env=ambiente, check=True, timeout=30)
     prazo = time.monotonic() + 60
     while time.monotonic() < prazo:
         time.sleep(1)
         novo = processo.consultar(aberto["porta"])
         if novo and novo.get("pid") != aberto["pid"] and novo.get("vault") == aberto["vault"]:
-            return
+            return dependencias.usando_preparado
     raise RuntimeError("O código foi atualizado, mas a retomada não foi confirmada. Abra o painel pelo atalho habitual.")
 
 

@@ -44,6 +44,13 @@ também é preservado e a atualização orienta separar as pastas. As notas do v
 não são modificadas pela atualização.
 
 O painel continua aberto enquanto o código e as dependências são preparados.
+No Windows, essa preparação usa um ambiente separado na pasta de atualizações,
+para não tentar substituir o executável aberto. Depois de encerrar o processo
+anterior, a instalação habitual é concluída usando o cache local. Se ela ainda
+estiver ocupada, o painel retoma com o ambiente já preparado. As notas e a porta
+continuam as mesmas; a próxima abertura normal pelo uv prepara a instalação
+habitual quando ela estiver livre. Ambientes temporários são removidos quando
+não estão em uso; um ambiente usado na retomada permanece na pasta de dados.
 Se essa preparação falhar, o aviso informa o problema e as cópias já feitas
 permanecem guardadas. Se a
 retomada não for confirmada, confira o computador e use `uv run --frozen orquestra`

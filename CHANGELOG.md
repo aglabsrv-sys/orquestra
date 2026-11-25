@@ -7,6 +7,8 @@
   oficial, com download pelo painel após a retomada. O comando `atualizar` usa
   a mesma proteção, e o Windows ganha um recuperador para instalações antigas
   presas no aviso de alterações locais. As notas do vault são preservadas.
+  No Windows, as dependências são preparadas separadamente para não bloquear
+  a instalação quando o aplicativo mantém seu executável em uso.
 
 - Notas e pastas oferecem um menu de clique direito com Abrir, Propriedades,
   Arquivar e Excluir, também acessível por Shift+F10. As ações mantêm confirmações,
