@@ -9,6 +9,8 @@
   presas no aviso de alterações locais. As notas do vault são preservadas.
   No Windows, as dependências são preparadas separadamente para não bloquear
   a instalação quando o aplicativo mantém seu executável em uso.
+- A inicialização das travas locais aguarda a região protegida antes de escrever,
+  evitando erros de permissão quando vários coletores começam juntos no Windows.
 
 - Notas e pastas oferecem um menu de clique direito com Abrir, Propriedades,
   Arquivar e Excluir, também acessível por Shift+F10. As ações mantêm confirmações,

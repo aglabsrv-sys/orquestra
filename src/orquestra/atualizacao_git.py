@@ -124,9 +124,6 @@ class Instalacao:
             arquivo.seek(0)
             if os.name == "nt":
                 import msvcrt
-                arquivo.write(b"0")
-                arquivo.flush()
-                arquivo.seek(0)
                 try:
                     msvcrt.locking(arquivo.fileno(), msvcrt.LK_NBLCK, 1)
                 except OSError:
@@ -138,6 +135,9 @@ class Instalacao:
                 except OSError:
                     raise RuntimeError("Uma atualização já está em andamento. Aguarde sua conclusão.") from None
             try:
+                if os.fstat(arquivo.fileno()).st_size == 0:
+                    arquivo.write(b"0")
+                    arquivo.flush()
                 yield
             finally:
                 if os.name == "nt":

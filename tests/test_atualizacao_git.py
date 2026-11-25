@@ -186,6 +186,21 @@ def test_trava_impede_duas_atualizacoes(repos):
             instalacao.atualizar(preservar=True)
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Trava de região obrigatória no Windows")
+def test_atualizador_nao_escreve_em_trava_vazia_ocupada(repos):
+    import msvcrt
+
+    instalacao, _ = repos
+    instalacao.copias.mkdir(parents=True)
+    with (instalacao.copias / "operacao.lock").open("w+b", buffering=0) as arquivo:
+        msvcrt.locking(arquivo.fileno(), msvcrt.LK_NBLCK, 1)
+        try:
+            with pytest.raises(RuntimeError, match="andamento"):
+                instalacao.atualizar(preservar=True)
+        finally:
+            msvcrt.locking(arquivo.fileno(), msvcrt.LK_UNLCK, 1)
+
+
 def test_recusa_outro_repositorio(repos, monkeypatch):
     instalacao, _ = repos
     monkeypatch.setattr(g, "REMOTOS", {"https://outro.invalid"})
