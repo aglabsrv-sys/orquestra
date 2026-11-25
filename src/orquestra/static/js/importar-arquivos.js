@@ -15,7 +15,7 @@
   function esconder(){profundidade=0;camada.hidden=true;}
   function mostrar(alvo){if(window.Orquestra.fecharMenuContexto)window.Orquestra.fecharMenuContexto();document.getElementById('soltar-arquivos-destino').textContent='Em '+alvo.nome;camada.hidden=false;}
   document.addEventListener('dragenter',function(e){if(!arquivos(e)||importando)return;e.preventDefault();var alvo=destino();if(!alvo)return;profundidade++;mostrar(alvo);});
-  document.addEventListener('dragover',function(e){if(!arquivos(e))return;e.preventDefault();var alvo=destino();e.dataTransfer.dropEffect=alvo&&!importando?'copy':'none';if(alvo&&!importando)mostrar(alvo);});
+  document.addEventListener('dragover',function(e){if(!arquivos(e))return;e.preventDefault();var alvo=destino(),anexo=e.target.closest('[data-imagem-campo]');e.dataTransfer.dropEffect=!importando&&(alvo||anexo&&anexo.dataset.imagemCampo)?'copy':'none';if(alvo&&!importando)mostrar(alvo);});
   document.addEventListener('dragleave',function(e){if(camada.hidden)return;if(!e.relatedTarget||--profundidade<=0)esconder();});
   document.addEventListener('dragend',esconder);
   window.addEventListener('blur',esconder);

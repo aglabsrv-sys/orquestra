@@ -123,6 +123,14 @@ def jornadas(browser, base, vault, capturas):
       dados.items.add(new File([bytes], 'Imagem.png', {type:'image/png'}));
       return dados;
     }""")
+    # O DataTransfer sintético do Chromium não conserva dropEffect fora do evento.
+    assert pagina.evaluate("""() => {
+      const dados = {types:['Files'], dropEffect:'none'};
+      const evento = new Event('dragover', {bubbles:true, cancelable:true});
+      Object.defineProperty(evento, 'dataTransfer', {value:dados});
+      document.querySelector('.nota').dispatchEvent(evento);
+      return dados.dropEffect;
+    }""") == "copy"
     pagina.dispatch_event(".nota", "drop", {"dataTransfer": imagem})
     expect(pagina.locator("#nota-imagem-campo")).to_have_value(re.compile(r"midia/capas/.+\.png"))
     expect(pagina.locator("#importar-arquivos")).to_be_hidden()
