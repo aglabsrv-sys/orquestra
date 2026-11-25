@@ -8,7 +8,6 @@ from orquestra import atualizacao as a, processo
 
 def preparar(monkeypatch):
     monkeypatch.setattr(a, "conferir_instalacao", lambda: "a" * 40)
-    monkeypatch.setattr(a, "alteracoes_locais", lambda: [])
     monkeypatch.setattr(a.Dependencias, "preparar", lambda self: a.executar(self.uv, "sync", "--locked"))
     monkeypatch.setattr(a.Dependencias, "concluir", lambda self: {})
     comando = Mock()
@@ -49,18 +48,15 @@ def test_consulta_falha_sem_expor_saida_do_provedor(monkeypatch):
     assert estado == {"disponivel": False, "estado": "indisponivel"}
 
 
-def test_alteracoes_locais_exigem_confirmar_copia(monkeypatch, tmp_path):
+def test_atualizacao_inicia_sem_etapa_de_copia(monkeypatch, tmp_path):
     preparar(monkeypatch)
     atualizador = a.Atualizador()
-    monkeypatch.setattr(a, "alteracoes_locais", lambda: ["arquivo.py"])
+    monkeypatch.setattr(a.shutil, "which", lambda _: "uv")
     iniciar = Mock()
     monkeypatch.setattr(a.subprocess, "Popen", iniciar)
-    with pytest.raises(RuntimeError, match="Guardar cópia"):
-        atualizador.iniciar(tmp_path, 8420, 123)
-    iniciar.assert_not_called()
-    monkeypatch.setattr(a.shutil, "which", lambda _: "uv")
-    atualizador.iniciar(tmp_path, 8420, 123, preservar=True)
-    assert iniciar.call_args.args[0][-1] == "--preservar"
+    resposta = atualizador.iniciar(tmp_path, 8420, 123)
+    assert resposta["estado"] == "atualizando"
+    assert iniciar.call_args.args[0][-5:] == [str(tmp_path), "8420", "123", "b" * 40, "uv"]
 
 
 def test_consulta_nao_anuncia_codigo_local_a_frente(monkeypatch):
@@ -85,35 +81,32 @@ def test_codigo_local_mudou_com_consulta_remota_em_cache(monkeypatch, tmp_path):
     (cache / "painel.pyc").write_bytes(b"cache")
     assert atualizador.consultar().get("modo") is None
     codigo.write_text("x = 22")
-    assert atualizador.consultar()["modo"] == "reiniciar"
-    assert comando.call_count == chamadas
+    assert atualizador.consultar()["disponivel"]
+    assert comando.call_count > chamadas
 
 
-def test_reinicio_local_aceita_arquivos_editados_e_preserva_vault(monkeypatch, tmp_path):
+def test_arquivos_locais_usam_sincronizacao_e_preservam_vault(monkeypatch, tmp_path):
     preparar(monkeypatch)
     marca = Mock(return_value="antiga")
     monkeypatch.setattr(a, "marca_codigo", marca)
     atualizador = a.Atualizador()
     marca.return_value = "nova"
     monkeypatch.setattr(a.shutil, "which", lambda _: "uv")
-    limpeza = Mock(side_effect=RuntimeError("Há alterações locais"))
-    monkeypatch.setattr(a, "alteracoes_locais", limpeza)
     iniciar = Mock()
     monkeypatch.setattr(a.subprocess, "Popen", iniciar)
-    with pytest.raises(RuntimeError, match="mudou"):
-        atualizador.iniciar(tmp_path, 8427, 123, "baixar")
-    resposta = atualizador.iniciar(tmp_path, 8427, 123, "reiniciar")
-    assert resposta == {"estado": "atualizando", "modo": "reiniciar"}
-    assert iniciar.call_args.args[0][-5:] == [str(tmp_path), "8427", "123", "--local", "uv"]
-    limpeza.assert_not_called()
+    resposta = atualizador.iniciar(tmp_path, 8427, 123)
+    assert resposta == {"estado": "atualizando", "revisao": "b" * 40}
+    assert iniciar.call_args.args[0][-5:] == [str(tmp_path), "8427", "123", "b" * 40, "uv"]
     monkeypatch.setattr(a.time, "sleep", lambda _: None)
     monkeypatch.setattr(processo, "consultar", lambda porta: {"pid": 123, "vault": str(tmp_path)})
     passos = []
+    monkeypatch.setattr(a.Instalacao, "atualizar", lambda self, revisao, vault: passos.append(("sincronizar", revisao, vault)))
     monkeypatch.setattr(a, "executar", lambda *args, **kwargs: passos.append(args))
     monkeypatch.setattr(processo, "parar", lambda porta, pid_esperado: passos.append(("parar", porta, pid_esperado)))
     monkeypatch.setattr(a.subprocess, "check_call", lambda args, **kwargs: passos.append(tuple(args)))
-    a.aplicar(tmp_path, 8427, 123, "--local", "uv")
+    a.aplicar(tmp_path, 8427, 123, "b" * 40, "uv")
     assert passos == [
+        ("sincronizar", "b" * 40, tmp_path),
         ("uv", "sync", "--locked"), ("parar", 8427, 123),
         ("uv", "run", "--frozen", "orquestra", "iniciar", "--vault", str(tmp_path), "--porta", "8427"),
     ]
@@ -187,32 +180,12 @@ def test_falha_na_preparacao_nao_para_painel(monkeypatch, tmp_path):
     parar.assert_not_called()
 
 
-def test_copia_da_atualizacao_exige_capacidade_local(cliente, monkeypatch, tmp_path):
-    from orquestra.atualizacao_git import Instalacao
-    import zipfile
-
-    monkeypatch.setattr(a, "RAIZ", tmp_path / "app")
-    instalacao = Instalacao(a.RAIZ)
-    identificador = "a" * 32
-    instalacao.registrar(estado="preparado", copia={"id": identificador, "quantidade": 1})
-    with zipfile.ZipFile(instalacao.copias / (identificador + ".zip"), "w") as copia:
-        copia.writestr("arquivos/teste.txt", b"alteracao")
-    assert cliente.post("/api/atualizacao/copia", json={}).status_code == 403
-    token = cliente.get("/api/local/capacidade").json()["token"]
-    headers = {"X-Orquestra-Local": token}
-    resposta = cliente.post("/api/atualizacao/copia", headers=headers, json={})
-    assert resposta.status_code == 200
-    assert resposta.headers["content-type"] == "application/zip"
-    instalacao.registrar(copia={"id": "../../arquivo"})
-    assert cliente.post("/api/atualizacao/copia", headers=headers, json={}).status_code == 400
-
-
 def test_falha_do_processo_mostra_mensagem_guardada(monkeypatch):
     preparar(monkeypatch)
     atualizador = a.Atualizador()
     atualizador.processo = Mock(poll=Mock(return_value=1))
-    a.Instalacao(a.RAIZ).registrar(estado="falhou", mensagem="Cópia guardada; confira espaço livre.")
-    assert atualizador.consultar()["mensagem"] == "Cópia guardada; confira espaço livre."
+    a.Instalacao(a.RAIZ).registrar(estado="falhou", mensagem="Confira o espaço livre e tente novamente.")
+    assert atualizador.consultar()["mensagem"] == "Confira o espaço livre e tente novamente."
 
 
 def test_recuperacao_so_confirma_apos_novo_painel_no_mesmo_vault(monkeypatch, tmp_path):

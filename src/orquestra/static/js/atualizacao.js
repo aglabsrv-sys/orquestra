@@ -1,29 +1,9 @@
-/* Atualização do aplicativo: aviso discreto, confirmação e espera pela retomada. */
+/* Atualização do aplicativo pelo ícone, com espera pela retomada. */
 (function () {
   "use strict";
   var botao = document.querySelector("#atualizar-app"), ocupado = false, verificando = false;
   if (!botao) return;
   var ui = window.OrquestraInterface;
-  async function baixarCopia() {
-    try {
-      var resposta = await fetch("/api/local/capacidade", {cache:"no-store", credentials:"same-origin"});
-      var credencial = await resposta.json();
-      if (!resposta.ok || !credencial.token) throw new Error("Abra localhost neste computador para baixar a cópia.");
-      resposta = await fetch("/api/atualizacao/copia", {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json", "X-Orquestra-Local":credencial.token, "X-Orquestra-Vault":document.body.dataset.vaultId}, body:"{}"});
-      if (!resposta.ok) throw new Error("Não foi possível baixar a cópia. Ela continua na pasta de atualizações do Orquestra.");
-      var url = URL.createObjectURL(await resposta.blob()), link = document.createElement("a");
-      link.href = url; link.download = "alteracoes-orquestra.zip"; link.click();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
-    } catch (erro) { ui.avisar(erro.message, "erro"); }
-  }
-  function avisarCopia(estado) {
-    if (!estado.local || !estado.copia) return;
-    try {
-      if (sessionStorage.getItem("orquestra-copia-atualizacao") === estado.copia.id) return;
-      sessionStorage.setItem("orquestra-copia-atualizacao", estado.copia.id);
-    } catch (_) { /* O aviso também funciona quando o navegador bloqueia o armazenamento. */ }
-    ui.avisar("Atualização concluída. As alterações anteriores do aplicativo foram guardadas em uma cópia.", "sucesso", {rotulo:"Baixar cópia", fazer:baixarCopia});
-  }
   async function consultar() {
     var controle = new AbortController();
     var limite = setTimeout(function () { controle.abort(); }, 25000);
@@ -34,12 +14,9 @@
     } finally { clearTimeout(limite); }
   }
   function mostrarEstado(estado) {
-    avisarCopia(estado);
     botao.hidden = !estado.disponivel;
     botao.classList.toggle("tem-atualizacao", !!estado.disponivel);
-    botao.title = estado.modo === "reiniciar"
-      ? (estado.local ? "Arquivos novos · reiniciar Orquestra" : "Arquivos novos · abra localhost para reiniciar")
-      : (estado.local ? "Atualização disponível · atualizar Orquestra" : "Atualização disponível · abra localhost para instalar");
+    botao.title = estado.local ? "Atualizar Orquestra" : "Abra localhost para atualizar";
     botao.setAttribute("aria-label", botao.title);
   }
   async function verificar() {
@@ -60,25 +37,25 @@
       mostrarEstado(estado);
       if (!estado.disponivel) { ui.avisar("O Orquestra já está atualizado.", "info"); return; }
       if (!estado.local) { ui.avisar("Abra o painel em localhost no computador para atualizar.", "info"); return; }
-      var reinicio = estado.modo === "reiniciar", pid = estado.pid, revisao = estado.revisao;
-      if (!await ui.confirmar(reinicio
-        ? {titulo:"Reiniciar o Orquestra?", texto:"Salve as edições abertas antes de continuar. O painel vai reiniciar com os arquivos locais.", confirmar:"Reiniciar com os novos arquivos"}
-        : {titulo:"Atualizar o Orquestra?", texto:"Salve as edições abertas antes de continuar. Se houver arquivos do aplicativo alterados, uma cópia será guardada antes de instalar a versão oficial. Suas notas serão mantidas e o painel será reiniciado.", detalhes:estado.alteracoes_locais ? estado.alteracoes_locais + " arquivo(s) do aplicativo com alterações. Você poderá baixar a cópia quando o painel voltar. As personalizações ficam guardadas e a versão oficial passa a ser usada." : "", confirmar:estado.alteracoes_locais ? "Guardar cópia e atualizar" : "Atualizar e reiniciar"})) return;
+      if (!window.dispatchEvent(new Event("beforeunload", {cancelable:true}))) {
+        ui.avisar("Salve as edições antes de atualizar.", "info"); return;
+      }
+      var pid = estado.pid, revisao = estado.revisao;
       botao.disabled = true; botao.classList.add("atualizando");
       var resposta = await fetch("/api/local/capacidade", {cache:"no-store", credentials:"same-origin"});
       var credencial = await resposta.json();
       if (!resposta.ok || !credencial.token) throw new Error("Abra localhost diretamente neste computador para atualizar.");
-      resposta = await fetch("/api/atualizacao", {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json", "X-Orquestra-Local":credencial.token, "X-Orquestra-Vault":document.body.dataset.vaultId}, body:JSON.stringify({modo:reinicio?"reiniciar":"baixar", preservar:!reinicio})});
+      resposta = await fetch("/api/atualizacao", {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json", "X-Orquestra-Local":credencial.token, "X-Orquestra-Vault":document.body.dataset.vaultId}, body:"{}"});
       var dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.erro || "Não foi possível iniciar a atualização.");
       revisao = dados.revisao || revisao;
-      ui.avisar(reinicio ? "Reiniciando com os arquivos locais…" : "Atualizando o Orquestra. Aguarde a retomada do painel…", "info");
+      ui.avisar("Atualizando…", "info");
       var prazo = Date.now() + 360000;
       while (Date.now() < prazo) {
         await new Promise(function (resolve) { setTimeout(resolve, 2000); });
         var novo;
         try { novo = await consultar(); } catch (_) { continue; }
-        if (novo.pid && novo.pid !== pid && (reinicio || novo.instalada === revisao)) { location.reload(); return; }
+        if (novo.pid && novo.pid !== pid && novo.instalada === revisao) { location.reload(); return; }
         if (novo.estado === "falhou") throw new Error(novo.mensagem);
       }
       throw new Error("A retomada ainda não foi confirmada. Confira se o Orquestra está rodando antes de atualizar esta página.");
