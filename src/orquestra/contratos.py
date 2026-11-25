@@ -199,6 +199,17 @@ class AcaoPasta(Versao):
     acao: Literal["arquivar", "excluir"]
 
 
+class AcaoContexto(Versao):
+    acao: Literal["arquivar", "excluir"]
+    rel: str = Field(default="", max_length=2000)
+    modulo: str = Field(default="", max_length=200)
+    chave: str = Field(default="", max_length=1000)
+
+
+class OrdemHabitos(Versao):
+    ordem: list[Annotated[str, Field(min_length=1, max_length=2000)]] = Field(max_length=500)
+
+
 class NotaPasta(Pedido):
     pasta: str = ""
     titulo: str = Field(default="", max_length=500)

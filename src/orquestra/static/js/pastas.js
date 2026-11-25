@@ -246,6 +246,7 @@
     }
     function ponto(e){var b=canvas.getBoundingClientRect();return{x:(e.clientX-b.left-largura/2-dx)/zoom,y:(e.clientY-b.top-altura/2-dy)/zoom};}
     function atingir(p){return visiveis.find(function(n){return Math.hypot(n.x-p.x,n.y-p.y)<raio(n)+7/zoom;})||null;}
+    canvas.oncontextmenu=function(e){var no=atingir(ponto(e));if(!no||!window.Orquestra.abrirMenuContexto)return;e.preventDefault();e.stopPropagation();window.Orquestra.abrirMenuContexto({elemento:canvas,rel:no.id,url:no.url},e);};
     function aproximar(fator,cx,cy){
 
       var anterior=zoom,novo=Math.max(.01,Math.min(6,zoom*fator));cx=cx==null?largura/2:cx;cy=cy==null?altura/2:cy;
@@ -279,6 +280,7 @@
     canvas.onpointerup=soltar;canvas.onpointercancel=soltar;canvas.onpointerleave=function(){if(!gesto){sobre=selecionada;pintar();}};
     canvas.onwheel=function(e){e.preventDefault();var b=canvas.getBoundingClientRect();aproximar(Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.002),e.clientX-b.left,e.clientY-b.top);};
     canvas.onkeydown=function(e){
+      if((e.key==='ContextMenu'||e.shiftKey&&e.key==='F10')&&sobre&&window.Orquestra.abrirMenuContexto){e.preventDefault();e.stopPropagation();var caixa=canvas.getBoundingClientRect();window.Orquestra.abrirMenuContexto({elemento:canvas,rel:sobre.id,url:sobre.url},{clientX:caixa.left+largura/2+dx+sobre.x*zoom,clientY:caixa.top+altura/2+dy+sobre.y*zoom},true);return;}
       if(['+','=','-','0','Home','ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Enter','Escape'].indexOf(e.key)<0)return;e.preventDefault();
       if(e.key==='+'||e.key==='=')aproximar(1.2);else if(e.key==='-')aproximar(1/1.2);else if(e.key==='0'||e.key==='Home')recentralizar();
       else if(e.key==='Enter'&&sobre)abrirArquivo(sobre.url,sobre.titulo);

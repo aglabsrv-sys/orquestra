@@ -1531,7 +1531,7 @@
   }
 
   var temporizador = 0, avisouNovidade = false;
-  function ocupado() { return notaSuja || personalizacaoPendente() || (window.Orquestra.instrucoesPendentes && window.Orquestra.instrucoesPendentes()) || !!arrastando || !!$("dialog[open]") || (document.activeElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable)); }
+  function ocupado() { return notaSuja || personalizacaoPendente() || (window.Orquestra.instrucoesPendentes && window.Orquestra.instrucoesPendentes()) || (window.Orquestra.contextoOcupado && window.Orquestra.contextoOcupado()) || (window.Orquestra.arquivosOcupados && window.Orquestra.arquivosOcupados()) || (window.Orquestra.habitosOcupados && window.Orquestra.habitosOcupados()) || !!arrastando || !!$("dialog[open]") || (document.activeElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable)); }
   function recarregarLogo(resumoJaSolicitado, reconexao) {
     if (!resumoJaSolicitado) atualizarSelos();
     clearTimeout(temporizador);

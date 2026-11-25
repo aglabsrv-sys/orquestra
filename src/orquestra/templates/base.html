@@ -13,6 +13,7 @@
   {% block estilos %}{% endblock %}
   <link rel="stylesheet" href="/static/css/tipografia.css?v={{ marca }}">
   <link rel="stylesheet" href="/static/css/interacoes.css?v={{ marca }}">
+  <link rel="stylesheet" href="/static/css/arquivos-interacoes.css?v={{ marca }}">
   <style>{{ estilo|safe }}</style>
 {% if request.query_params.get('explorador') == '1' %}<link rel="stylesheet" href="/static/css/leitor.css?v={{ marca }}">{% endif %}
 </head>
@@ -111,11 +112,36 @@
   {% block dialogos %}{% endblock %}
   <div id="avisos" role="region" aria-live="off" aria-label="Notificações"></div>
 
+  <div id="menu-contexto" class="menu-contexto" role="menu" aria-label="Ações do item" popover="manual" hidden>
+    <div class="menu-contexto-cab"><span id="menu-contexto-tipo"></span><strong id="menu-contexto-nome"></strong></div>
+    {% for acao, nome, simbolo in [('abrir', 'Abrir', 'pasta'), ('propriedades', 'Propriedades', 'ajustes'), ('arquivar', 'Arquivar', 'caixa'), ('excluir', 'Excluir', 'lixeira')] %}
+    {% if acao == 'excluir' %}<div class="menu-contexto-separador" role="separator"></div>{% endif %}
+    <button type="button" role="menuitem" tabindex="-1" data-contexto-acao="{{ acao }}">{{ icone(simbolo, 17) }}<span>{{ nome }}</span></button>
+    {% endfor %}
+    <p id="menu-contexto-estado" role="status"></p>
+  </div>
+  <dialog id="contexto-propriedades" class="dialogo" aria-labelledby="contexto-propriedades-titulo">
+    <div class="dialogo-corpo">
+      <header class="propriedades-cab"><h2 id="contexto-propriedades-titulo">Propriedades da pasta</h2><button class="botao pequeno so-icone" type="button" data-contexto-fechar aria-label="Fechar propriedades">{{ icone('x', 16) }}</button></header>
+      <strong id="contexto-propriedades-nome"></strong>
+      <dl class="contexto-detalhes"><dt>Caminho no cofre</dt><dd id="contexto-propriedades-caminho"></dd></dl>
+      <a class="botao" id="contexto-personalizar" href="/personalizar/pastas">{{ icone('paleta', 16) }} Personalizar capa</a>
+    </div>
+  </dialog>
+  <div id="soltar-arquivos" class="soltar-arquivos" hidden aria-hidden="true">
+    <div class="soltar-arquivos-alvo">{{ icone('pasta', 48) }}<strong>Solte para adicionar</strong><span id="soltar-arquivos-destino"></span><small>Uma cópia fica no cofre · até 20 MB por arquivo</small></div>
+  </div>
+  <dialog id="importar-arquivos" class="dialogo" aria-labelledby="importar-arquivos-titulo">
+    <div class="dialogo-corpo"><h2 id="importar-arquivos-titulo">Adicionando arquivos</h2><p id="importar-arquivos-estado" role="status" aria-live="polite"></p><ul id="importar-arquivos-resultados" class="importar-resultados"></ul><div class="dialogo-acoes"><button class="botao principal" type="button" id="importar-arquivos-fechar" disabled>Concluir</button></div></div>
+  </dialog>
+
   <script id="cards-ordem" type="application/json">{{ cards_ids|default([])|tojson }}</script>
   <script src="/static/js/cenas.js?v={{ marca }}"></script>
   <script src="/static/js/notas-seguras.js?v={{ marca }}"></script>
   <script src="/static/js/interface.js?v={{ marca }}"></script>
   <script src="/static/js/app.js?v={{ marca }}"></script>
+  <script src="/static/js/menu-contexto.js?v={{ marca }}"></script>
+  <script src="/static/js/importar-arquivos.js?v={{ marca }}"></script>
   <script src="/static/js/atualizacao.js?v={{ marca }}"></script>
   <script src="/static/js/refino.js?v={{ marca }}"></script>
   <script src="/static/js/experiencia.js?v={{ marca }}"></script>

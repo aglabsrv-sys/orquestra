@@ -53,6 +53,11 @@ hoje e soma novas realizações a cada marcação. A Lista mantém título e des
 histórico de atividade à direita. Cards, indicadores e botões respeitam a
 personalização de bordas. O dia atual fica contornado e os registros realizados
 usam a cor de destaque do tema.
+
+Use a alça no topo de cada hábito para arrastá-lo até outra posição, em Progresso
+ou Lista. No teclado, foque a alça e use as setas para mover; **Esc** cancela um
+arraste em andamento. A ordem fica salva no cofre e é mantida ao reabrir o painel,
+mesmo após marcar uma realização. Isso não altera as notas nem os registros.
 Para hábitos com realizações repetidas, a intensidade da cor acompanha a
 contagem de cada dia. Quando todas as marcações são únicas, os tons variam
 visualmente entre os dias.

@@ -28,6 +28,7 @@ uv run --frozen --group browser python scripts/verificar_grafo.py
 uv run --frozen --group browser python scripts/verificar_refinos.py
 uv run --frozen --group browser python scripts/verificar_editor.py
 uv run --frozen --group browser python scripts/verificar_contatos.py
+uv run --frozen --group browser python scripts/verificar_interacoes_arquivos.py
 ```
 
 Em Linux sem as bibliotecas necessárias, use `playwright install --with-deps chromium`

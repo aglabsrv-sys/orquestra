@@ -28,6 +28,7 @@ def subpastas_fisicas(painel, rel: str) -> list[str]:
 
 
 def midias_da_pasta(painel, rel: str) -> list[dict]:
+    from orquestra.importacao import EXT_DOCUMENTOS
     pasta = painel.caminho_seguro(rel)
     if not pasta.is_dir():
         return []
@@ -37,9 +38,10 @@ def midias_da_pasta(painel, rel: str) -> list[dict]:
         if eh_link(filho) or not filho.is_file() or ignorar(caminho):
             continue
         ext = filho.suffix.lower()
-        if ext in EXT_MIDIA or ext in {".html", ".htm"}:
-            arquivos.append({"nome": filho.name, "rel": caminho, "url": "/documento/" + quote(caminho),
-                             "tipo": "html" if ext in {".html", ".htm"} else "midia",
+        if ext in EXT_MIDIA | EXT_DOCUMENTOS | {".html", ".htm"}:
+            documento = ext in EXT_DOCUMENTOS
+            arquivos.append({"nome": filho.name, "rel": caminho, "url": ("/download/" if documento else "/documento/") + quote(caminho),
+                             "tipo": "arquivo" if documento else "html" if ext in {".html", ".htm"} else "midia",
                              "imagem": "/arquivo/" + quote(caminho) if ext in _EXT_IMAGEM else ""})
     return arquivos
 

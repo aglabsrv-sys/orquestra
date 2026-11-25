@@ -23,7 +23,17 @@ receber uma escolha própria. Projetos usa Pastas de vidro por padrão e Estudos
 
 ## Arquivar e excluir notas
 
+Clique com o botão direito numa nota ou pasta para abrir **Abrir**,
+**Propriedades**, **Arquivar** e **Excluir**. Pelo teclado, foque o item e use
+**Shift+F10** ou a tecla de menu; as setas percorrem as ações e **Esc** fecha.
+O menu aparece nas listas, cartões, árvore e notas do grafo. Arquivar e Excluir
+pedem confirmação e ficam indisponíveis para configurações e instruções protegidas.
+Se o conteúdo mudar antes da confirmação, reabra o menu para conferir a versão nova.
+
+![Menu de ações de uma nota demonstrativa](img/menu-contextual.png)
+
 **Arquivar** conserva a nota em `arquivo/` da sua área, para consulta futura.
+Em pastas pessoais sem área, `arquivo/` fica na pasta que continha a nota ou pasta.
 **Excluir**, no cabeçalho da nota, move o arquivo para a lixeira após confirmação.
 Depois da exclusão, o painel volta ao contexto de origem.
 Anexos e notas relacionadas não são excluídos junto. Instruções de agentes,
@@ -104,6 +114,23 @@ mesmo que essas ligações não apareçam no recorte visual do grafo.
 Veja [formatos e limites](vinculos.md).
 
 ## Imagens e vídeos
+
+### Arrastar arquivos para uma pasta
+
+Com uma pasta aberta em **Pastas**, Projetos, Estudos ou numa área, arraste os
+arquivos do computador sobre o painel. O fundo fica desfocado e o alvo central
+mostra o destino. Solte para copiar; os originais permanecem no computador.
+Dentro de um projeto ou estudo, as cópias ficam junto às suas notas de apoio.
+
+É possível adicionar até 20 arquivos por vez, de até 20 MB cada: Markdown,
+imagens, MP4/WebM, HTML, PDF, texto, CSV/TSV, documentos de escritório e ZIP.
+Pastas inteiras não são importadas. Arquivos com nome repetido recebem um sufixo;
+nenhum arquivo existente é substituído. O resultado informa cada cópia e cada
+falha. Documentos têm a ação **Baixar**; Markdown e mídias usam as visualizações
+existentes. A importação exige acesso direto pelo computador em que o Orquestra
+está rodando.
+
+![Alvo para adicionar arquivos em um estudo demonstrativo](img/soltar-arquivos.png)
 
 Imagens podem ser inseridas como `![[foto.png]]` ou `![[foto.png|300]]`.
 No Markdown padrão, use `![Descrição]` seguido do caminho entre parênteses;

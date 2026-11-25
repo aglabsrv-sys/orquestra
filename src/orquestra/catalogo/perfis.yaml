@@ -12,11 +12,6 @@ criador:
   descricao: Pipeline de conteúdo, radar de referências, tarefas e seus números.
   modulos: [tarefas, conteudo, radar, numeros, entrada]
 
-para:
-  nome: PARA
-  descricao: Projetos, Áreas, Recursos e Arquivos, o método de Tiago Forte.
-  modulos: [projetos, areas, recursos, arquivos, entrada]
-
 negocio:
   nome: Negócio ou freelancer
   descricao: Clientes, projetos, finanças e as tarefas do dia.
@@ -25,7 +20,7 @@ negocio:
 estudos:
   nome: Estudos
   descricao: O que estudar, o que revisar e as referências que você junta.
-  modulos: [tarefas, estudos, recursos, entrada]
+  modulos: [tarefas, estudos, notas, entrada]
 
 vazio:
   nome: Em branco

@@ -397,6 +397,7 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         hoje = dt.date.today()
         contexto: dict[str, Any] = {
             "modulo": modulo,
+            "anexos_raiz": apoios.midias_da_pasta(painel, f"{modulo.id}/itens") if not modulo.itens_na_raiz else [],
             "opcoes_subpastas": ESTILOS_DE_SUBPASTAS,
             "estilo_da_area": estilo_da_area,
             "artes_pasta": ARTES_DE_PASTA,
@@ -897,6 +898,12 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
                 return resultado
         return await asyncio.to_thread(gravar_habito)
 
+    @app.post("/api/habitos/ordem")
+    async def reordenar_habitos(request: Request):
+        from orquestra import habitos
+        dados = await corpo_json(request, contratos.OrdemHabitos)
+        return await asyncio.to_thread(habitos.reordenar, painel, dados["ordem"], dados["versao"])
+
     @app.post("/api/habitos/marcar")
     async def marcar_habito(request: Request):
         from orquestra import habitos
@@ -1300,6 +1307,21 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
     async def api_arquivar(request: Request, rel: str):
         dados = await corpo_json(request, contratos.Versao)
         return {"rel": await asyncio.to_thread(painel.arquivar, rel, versao=dados["versao"])}
+
+    @app.get("/api/contexto")
+    @leitura
+    def api_contexto(request: Request, rel: str = "", modulo: str = "", chave: str = ""):
+        from orquestra import contexto
+        conferir_vault(request)
+        return JSONResponse(contexto.consultar(painel, rel, modulo, chave), headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/contexto/acao")
+    async def api_acao_contexto(request: Request):
+        from orquestra import contexto
+        dados = await corpo_json(request, contratos.AcaoContexto)
+        if erro := exigir_exclusao(request):
+            return erro
+        return await asyncio.to_thread(contexto.agir, painel, **dados)
 
     @app.post("/api/lote")
     async def api_lote(request: Request):
@@ -1832,6 +1854,22 @@ def criar_app(vault: Path, vigiar: bool = True, agendar: bool = True, hospedeiro
         dados = await corpo_json(request, contratos.NotaPasta)
         nota = await asyncio.to_thread(painel.criar_nota_em_pasta, dados.get("pasta", ""), dados.get("titulo", ""), dados.get("corpo", ""))
         return {"rel": nota.rel, "url": ap.url_nota(nota.rel), "versao": nota.versao}
+
+    @app.post("/api/pastas/importar")
+    async def api_importar_arquivo(request: Request, destino: str = "", nome: str = "", vinculo: str = ""):
+        from orquestra import importacao
+        if erro := exigir_local(request):
+            return erro
+        conferir_vault(request)
+        return await asyncio.to_thread(importacao.copiar, painel, destino, nome, await request.body(), vinculo)
+
+    @app.get("/download/{rel:path}")
+    def baixar_documento(rel: str):
+        from orquestra.importacao import EXT_DOCUMENTOS
+        caminho = painel.caminho_seguro(rel)
+        if ignorar(rel) or caminho.suffix.lower() not in EXT_DOCUMENTOS or not caminho.is_file():
+            raise NaoEncontrado(rel)
+        return FileResponse(caminho, media_type="application/octet-stream", filename=caminho.name)
 
     @app.post("/api/preferencias/humanas")
     async def api_preferencias_humanas(request: Request):

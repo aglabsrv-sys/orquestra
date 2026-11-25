@@ -28,7 +28,7 @@
   <div id="explorador-colecao" hidden>{{ pasta_ui.grade(pastas, modo_subpastas, 'Subpastas') }}</div>
   <div id="explorador-lista" class="pastas-linhas">
     {% for f in pastas %}
-    <div class="pasta-cartao pasta-linha{% if f.modulo %} e-area{% endif %}">
+    <div class="pasta-cartao pasta-linha{% if f.modulo %} e-area{% endif %}" {{ pasta_ui.contexto(f) }}>
       <a class="pasta-link" href="{{ f.url }}">
         {{ icone(f.modulo.icone if f.modulo else 'pasta', 20) }}
         <span class="pasta-nome">{{ f.titulo }}</span>

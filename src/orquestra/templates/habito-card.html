@@ -1,4 +1,5 @@
-<article class="habito-card{% if item.marcado %} habito-feito{% endif %}" data-habito="{{ item.rel }}" data-versao="{{ item.versao }}">
+<article class="habito-card{% if item.marcado %} habito-feito{% endif %}" data-contexto-nota="{{ item.rel }}" data-habito="{{ item.rel }}" data-versao="{{ item.versao }}">
+  <button type="button" class="habito-arraste" data-habito-arrastar aria-label="Reordenar {{ item.titulo }}" aria-describedby="habitos-ordem-estado" title="Arraste para reordenar. Pelo teclado, use as setas.">{{ icone('grade', 14) }}</button>
   <header class="habito-card-topo"><div><a class="habito-nome" href="{{ item.url }}">{{ item.titulo }}</a><p><b data-habito-semana>{{ item.semana }}</b> de <span data-habito-meta>{{ item.meta }}</span> dias nesta semana</p></div><div class="habito-acoes">
     <button class="habito-editar botao so-icone pequeno" type="button" data-habito-editar aria-label="Editar {{ item.titulo }}">{{ icone('editar',15) }}</button>
     {% set rotulo_acao = 'Marcar mais uma realização' if item.marcado else 'Marcar hoje' %}
