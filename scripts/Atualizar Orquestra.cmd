@@ -21,7 +21,7 @@ try {
         $seletor.Dispose()
     }
     $confirmacao = [System.Windows.Forms.MessageBox]::Show(
-        "Sincronizar e atualizar o Orquestra?`n`n$aplicativo",
+        "Sincronizar e atualizar o Orquestra?`n`n$aplicativo`n`nA atualizacao substitui alteracoes locais nos arquivos do aplicativo e nao cria backup em ZIP. Para preservar personalizacoes, cancele e confira uma copia fora da pasta do aplicativo e do vault antes de continuar.",
         'Atualizar Orquestra', 'OKCancel', 'Information')
     if ($confirmacao -ne [System.Windows.Forms.DialogResult]::OK) { exit }
     $uv = (Get-Command uv -ErrorAction Stop).Source
