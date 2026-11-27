@@ -25,6 +25,13 @@ O comando `uv run --frozen orquestra atualizar` usa a mesma sincronização.
 
 ## Instalações antigas no Windows
 
+> **Antes de confirmar:** o recuperador baixa o atualizador oficial mais recente.
+> Mesmo que um `.cmd` baixado anteriormente prometa criar um ZIP, a sincronização
+> atual não cria backup e substitui alterações locais nos arquivos do aplicativo.
+> Se quiser conservar alguma personalização, cancele e faça uma cópia da pasta do
+> aplicativo em um local fora do aplicativo e do vault. Confira a cópia antes de
+> rodar a atualização.
+
 Se uma versão antiga impedir a atualização por alterações locais, use
 [Atualizar Orquestra.cmd](../scripts/Atualizar%20Orquestra.cmd), disponível pelo
 botão **Download raw file** no GitHub. Abra-o, escolha a pasta do aplicativo
